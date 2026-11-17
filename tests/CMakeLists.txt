@@ -96,3 +96,18 @@ if(TARGET CoreApp)
   add_test(NAME desktop_self_test COMMAND CoreApp --self-test ${CMAKE_CURRENT_BINARY_DIR}/self-test.png)
   set_tests_properties(desktop_self_test PROPERTIES LABELS desktop TIMEOUT 600)
 endif()
+
+# Canaries: run before the suite in a sanitized build; each must trip its sanitizer, otherwise the
+# suite's green means nothing. Kept out of ctest on purpose (they are expected to fail).
+if(CORE_SANITIZE MATCHES "address")
+  add_executable(asan_canary canary.cpp)
+  target_compile_definitions(asan_canary PRIVATE CORE_CANARY_ASAN=1)
+endif()
+if(CORE_SANITIZE MATCHES "undefined" AND NOT MSVC)
+  add_executable(ubsan_canary canary.cpp)
+  target_compile_definitions(ubsan_canary PRIVATE CORE_CANARY_UBSAN=1)
+endif()
+if(CORE_SANITIZE MATCHES "thread")
+  add_executable(tsan_canary canary.cpp)
+  target_compile_definitions(tsan_canary PRIVATE CORE_CANARY_TSAN=1)
+endif()

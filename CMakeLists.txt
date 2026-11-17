@@ -25,6 +25,37 @@ if(MSVC)
   add_compile_options(/utf-8)
 endif()
 
+# Sanitizers (D92). cl.exe accepts only "address" and *silently ignores* undefined/thread (warning
+# D9002, exit 0), which would hand back a green ctest with nothing instrumented: refuse instead of warn.
+# Flags are computed here and applied per target at the bottom of this file, so vendored code stays out.
+set(CORE_SANITIZE "" CACHE STRING "Sanitizers to build with: address, undefined, thread (comma separated)")
+if(CORE_SANITIZE)
+  if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+    message(FATAL_ERROR "CORE_SANITIZE requires CMAKE_BUILD_TYPE=Debug (got '${CMAKE_BUILD_TYPE}')")
+  endif()
+  string(REPLACE "," ";" CORE_SANITIZE_LIST "${CORE_SANITIZE}")
+  foreach(san IN LISTS CORE_SANITIZE_LIST)
+    if(NOT san MATCHES "^(address|undefined|thread)$")
+      message(FATAL_ERROR "CORE_SANITIZE: unknown value '${san}' (address|undefined|thread)")
+    endif()
+  endforeach()
+  if("address" IN_LIST CORE_SANITIZE_LIST AND "thread" IN_LIST CORE_SANITIZE_LIST)
+    message(FATAL_ERROR "CORE_SANITIZE: address and thread cannot be combined; use separate build trees")
+  endif()
+  if(MSVC)
+    if(NOT CORE_SANITIZE_LIST STREQUAL "address")
+      message(FATAL_ERROR "CORE_SANITIZE='${CORE_SANITIZE}': MSVC supports address only. "
+                          "undefined/thread need Clang or GCC (e.g. a Linux build).")
+    endif()
+    set(CORE_SANITIZE_COMPILE_FLAGS /fsanitize=address)
+    # ASan needs debug info for readable reports and cannot link incrementally.
+    set(CORE_SANITIZE_LINK_FLAGS /fsanitize=address /DEBUG /INCREMENTAL:NO)
+  else()
+    set(CORE_SANITIZE_COMPILE_FLAGS -fsanitize=${CORE_SANITIZE} -fno-omit-frame-pointer -g)
+    set(CORE_SANITIZE_LINK_FLAGS -fsanitize=${CORE_SANITIZE})
+  endif()
+endif()
+
 option(CORE_BUILD_APP "Build the JUCE desktop app (downloads JUCE 9.0.5 unless FETCHCONTENT_SOURCE_DIR_JUCE is set)" ON)
 if(CORE_BUILD_APP AND WIN32)
   # JUCE is pinned by version and hash. To build from a local copy instead of downloading it:
@@ -53,4 +84,23 @@ option(CORE_BUILD_TESTS "Build Core's tests" ON)
 if(CORE_BUILD_TESTS)
   enable_testing()
   add_subdirectory(tests)
+endif()
+
+# Instrument our targets only (D92): miniaudio_impl, CoreSetupData and every juce_* target stay out.
+# Applied here, after all subdirectories, so the whole scope is one auditable list. Targets that JUCE
+# generates from these (e.g. CoreTestSynth_VST3) are not in it and are not instrumented.
+if(CORE_SANITIZE)
+  set(CORE_SANITIZED_TARGETS
+    core_engine_lib core-engine core_plugin_host
+    core_domain core_control core_engine_client core_sampling core_previews
+    CoreApp CoreTestSynth CoreTestGain CoreSetup
+    engine_tests domain_tests role_tests midi_tests bug_tests bitwig_tests
+    audit_tests audit2_tests hunt_tests round3_tests calls_tests
+    asan_canary ubsan_canary tsan_canary)
+  foreach(tgt IN LISTS CORE_SANITIZED_TARGETS)
+    if(TARGET ${tgt})
+      target_compile_options(${tgt} PRIVATE ${CORE_SANITIZE_COMPILE_FLAGS})
+      target_link_options(${tgt} PRIVATE ${CORE_SANITIZE_LINK_FLAGS})
+    endif()
+  endforeach()
 endif()
