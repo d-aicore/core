@@ -7,7 +7,9 @@ editam esta página. Regras de trabalho em [AGENTS.md](AGENTS.md).
 | | |
 | --- | --- |
 | Repo | `D:\CORE\CORE` · remote `https://github.com/d-aicore/core.git` (nome antigo `dmo-app/qwen-core` → histórico, D81) |
-| HEAD / `origin/main` | `4cc08b4f44b87ddf71dc3f8da8dfb373b5d32ef7` — medido por `git rev-parse` + `git ls-remote`. Base de produto: `b80017efdbb6b47bc65a82338c403548e095967f` («Core: estado inicial do Pattern Maker + Tools») + wiring de sanitizers `54addba` (D92). Commits documentais do escrivão: `eb9d847`, `1bf65f3`, `e502be9`, `9d87065` |
+| HEAD local | `7ad8ccaa72cadd132b2f19c33142c4b3eed85e68` — medido 17-11 **21:18** por `git rev-parse HEAD` |
+| `origin/main` | `7ad8ccaa72cadd132b2f19c33142c4b3eed85e68` — medido 17-11 **21:18** por `git rev-parse origin/main` **e** `git ls-remote origin main`; `git status -sb` = `## main...origin/main`, **ahead 0** |
+| Nota datada (21:18) | `8850edd` (ledger D92/D93) **já está publicado** como ancestral de HEAD (`git merge-base --is-ancestor 8850edd HEAD` → sim). A linha anterior deste cabeçalho dava `4cc08b4` como «HEAD / origin/main» e estava **desactualizada**: esse era o remoto, não o HEAD local. Base de produto: `b80017efdbb6b47bc65a82338c403548e095967f` («Core: estado inicial do Pattern Maker + Tools») + wiring de sanitizers `54addba` (D92) + launcher `3097c83`. Commits documentais do escrivão: `eb9d847`, `1bf65f3`, `e502be9`, `9d87065`, `8850edd` |
 | Âmbito do ledger | **só o Core** — verbatim do dono, 17/11: «preciso que vas apontando decisoes sobre o core num ficheiro» · «apenas sobre o core nada de aicore e fundmmentals» |
 | Origem desta página | reconciliação do histórico confirmada **de uma vez** pelo dono em 17-11-2026 19:17 (D73). Rascunho confirmado: `D:\CORE\.escriva\RECONCILIACAO-RASCUNHO.md`; mapa old→new em [`docs/historico/MIGRACAO-LEDGER.md`](docs/historico/MIGRACAO-LEDGER.md); página anterior arquivada em [`docs/historico/ESTADO-2026-11-17-anterior.md`](docs/historico/ESTADO-2026-11-17-anterior.md) |
 | Formato | `D### · data · citação verbatim · fonte · âmbito/gatilho · estado · supersede/invalida` (D72) |
@@ -72,6 +74,47 @@ estão nesta tabela; D44 mantém-se listada em Invalidadas.
 | D92 | 17/11 20:24 | «D92/D93 (ratifico já)» — resposta a «Que número uso no `Autorizado-por`?» | sessão Qoder `a571968b-ec84-4479-9d7e-de29f9340301`, `C:\Users\vk_do\.qoder\projects\D--CORE-CORE\a571968b-ec84-4479-9d7e-de29f9340301.jsonl` **L861**, `tool_result` do AskUserQuestion, ts `2026-11-17T20:24:49.174Z`. Conteúdo proposto em L616 desta sessão (19:30) | build, sanitizers, testes — **âmbito definido pela opção escolhida (proposta da equipa), não por palavras ditadas**: wiring `CORE_SANITIZE` + canários + assertiva de cobertura. A citação verbatim é só a resposta acima | ratificada | ocupa os números que C12 disputava (resolução por referência abaixo); implementação em `54addba` |
 | D93 | 17/11 20:24 | «Alinhar primeiro (recomendado)» — resposta a «E os quatro desvios ao teu texto do wiring?»; ratificação no mesmo registo: «D92/D93 (ratifico já)» | mesma fonte: `a571968b…jsonl` **L861**, ts `2026-11-17T20:24:49.174Z` | toolchain, âmbito de execução — **âmbito da opção escolhida, não ditado**: os três passos (tidy + ASan/UBSan + TSan) correm em WSL, zero instalações; no host fica só ASan MSVC como prova de Windows; não se instala LLVM no host | ratificada | alinha os quatro desvios ao texto do wiring antes de commitar; materializado em `54addba` + `4cc08b4` |
 
+### Ratificadas por endosso explícito de texto do executor (17-11 ~21:45)
+
+**Proveniência, sem disfarçar.** O texto das duas entradas **não foi dito pelo dono**: é recomendação do
+executor (Qoder) que o dono **confirmou por endosso explícito** às ~21:45, na sessão do coordenador, colada com
+os slugs `D-SanLauncher` e `D-JuceAideAscii`. Palavras do dono são o endosso e a ordem de registo, não o corpo.
+Por isso ficam nesta subsecção e **não** na tabela acima, que é do bloco confirmado em L335. Pelo precedente de
+D77, um slug fora do formato `D###` não é decisão até ganhar número. **Números:** o pedido de ledger propunha
+D94/D95; esses dois estão **ocupados** — a linha «D94, D95» da Reserva de números e a fila de 20:24 atribuem-nos
+`D-LinuxHost` e `D-TransportSplit`, ainda **pendentes e não ratificadas**. As decisões entram então como os
+dois livres seguintes, **D96 e D97**, pelo mesmo critério com que C12 foi resolvida. `grep` por `D96`/`D97`
+nesta página antes de escrever: **0 ocorrências**.
+
+| D### | Data | Citação (texto endossado, não ditado) | Fonte | Âmbito/gatilho | Estado | Supersede / invalida |
+| --- | --- | --- | --- | --- | --- | --- |
+| D96 | 17/11 ~21:45 | «CORE_SANITIZE não é exposto no launcher GUI; sanitizers correm só pelo fluxo de auditoria (canários + gate de scope + verbose). O wiring permanece no CMake. Launcher mantém-se simples (repo/build dir/tipo/app/tests/JUCE); follow-up remove o combo de sanitize.» | sessão do coordenador de 17-11 (~21:45), texto colado pelo dono com o slug `D-SanLauncher`; corpo = recomendação do executor (Qoder); o que o dono dá é o endosso explícito — **não é verbatim ditado** | launcher `ci/compilar.bat` + wiring `CORE_SANITIZE` (`54addba`, D92) — ferramenta de build; nada no caminho de áudio, nenhuma dependência nova | **ratificada por endosso**, com a correcção datada **CO-1** abaixo | não invalida nada; fecha a pergunta «expor `CORE_SANITIZE`?» no sentido **não expor**; **não** abre trabalho de código (CO-1) |
+| D97 | 17/11 ~21:45 | «Limitação do juceaide com caminhos não-ASCII aceite e documentada como limitação JUCE; não se patcha o vendored. Launcher e gate validam build dir ASCII (e sem espaços) e recusam com mensagem clara. Report upstream ao JUCE opcional, sem bloquear nada.» | mesma sessão e mesmo estatuto (slug `D-JuceAideAscii`). Delta de versão: na colagem das ~21:45 a última frase era «Report upstream opcional»; no pedido de ledger é «Report upstream ao JUCE opcional, sem bloquear nada» — registada a forma mais completa, o sentido não muda | launcher `ci/compilar.bat` + `ci/gate.ps1`, caminhos de build, JUCE **sem patch** (não está no repo: `FetchContent` de 9.0.5 fixado por versão e hash em `CMakeLists.txt:64-66`, ou cópia local via `FETCHCONTENT_SOURCE_DIR_JUCE`; os únicos vendored em `engine/third_party/` são `json.hpp` e `miniaudio.h`) | **ratificada por endosso**, com a ressalva medida **CO-2** abaixo; **consequência de código por entregar** | fecha a pergunta «caminhos não-ASCII (`juceaide`)»; proibir caminhos com espaços é default que muda comportamento → gatilho D50, satisfeito por esta entrada numerada |
+
+**CO-1 — correcção datada à D96 (medido 17-11 ~21:55).** A cláusula «follow-up remove o combo de sanitize»
+**não tem objecto**: o launcher comitado **nunca expôs** sanitizers. `ci/compilar.bat` (401 linhas, `3097c83`) tem
+**0** ocorrências de `CORE_SANITIZE`, `sanitize`, `asan`, `ubsan` e `tsan` (grep case-insensitive, corrido nesta
+ronda); em todo `ci/`, as ocorrências de `CORE_SANITIZE` também são **0**. O dropdown existia na proposta do
+Qwen **recusada** — QW-02, relatório do launcher `:16` — e nunca chegou à árvore. Regista-se a **regra**
+(sanitizers fora do launcher; wiring no CMake) e **não se promete remover código que não existe**. Detalhe
+medido do «mantém-se simples»: os campos actuais são Repo (`:64`), Build (`:67`), JUCE (`:70`), Tipo (`:75`),
+**Jobs** (`:78`), APP (`:84`), TESTES (`:85`) e o checkbox **«Gate também com a app»** (`:86`) — os dois últimos
+não vêm no inciso da D96, que lista «repo/build dir/tipo/app/tests/JUCE»; ficam **fora desse inciso sem
+que a decisão os condene**, por isso não se apagam sem pergunta.
+
+**CO-2 — ressalva medida à D97 (17-11 ~21:55).** A parte «sem espaços» **não se apoia em falhanço medido**: o
+mesmo launcher mediu pasta de build **com espaços** a funcionar — `Configurar` em `D:\Core-build\prova espaco`
+→ **exit 0, 24 s** (relatório JU-01 `:23`, Verificação passo 6 `:42`, recapitulada nesta página na linha
+«Build com espaços | exit 0, 24 s» da ronda do launcher). O que falha é **não-ASCII**: exit 1, `Running juceaide
+failed`, `JUCEUtils.cmake:630`. Fica a decisão **como está** — é a palavra do dono, e a recusa antecipada com
+mensagem clara custa menos que um falhanço a meio do configure do JUCE — mas a limitação real do JUCE é só a
+dos caracteres não-ASCII, e quem reler esta linha não deve procurar aí um bug que não foi medido.
+
+**O que D96/D97 não fazem.** Nada foi implementado nesta ronda: o pedido era **só** `ESTADO.md`, e `ESTADO.md`
+é o único ficheiro que escrevi. A validação de build dir em `ci/compilar.bat` e `ci/gate.ps1` e a documentação
+da limitação do `juceaide` ficam como **trabalho consequente por entregar**; o âmbito já está fixado pela D97,
+mas nenhuma entrega o executou até ~21:55. Report upstream ao JUCE: opcional, não bloqueia nada.
+
 ### Reserva de números (D74)
 
 | Intervalo | Estatuto |
@@ -82,6 +125,7 @@ estão nesta tabela; D44 mantém-se listada em Invalidadas.
 | D74+ | sequência de ratificações, em uso desde esta entrega |
 | D92, D93 | **ratificadas** em 17-11 20:24 (sanitizers: wiring e toolchain) |
 | D94, D95 | **pendentes**, não ratificadas: `D-LinuxHost` e `D-TransportSplit` (coladas às 20:13) |
+| D96, D97 | **ratificadas** em 17-11 ~21:45 **por endosso explícito de texto do executor** (launcher: `CORE_SANITIZE` fora da GUI; limitação não-ASCII do `juceaide` aceite e documentada). O pedido de ledger chamava-lhes D94/D95; não se usaram porque esses números estão ocupados pela linha de cima — ver a subsecção «Ratificadas por endosso» |
 
 ---
 
@@ -129,6 +173,23 @@ Nada avança sem palavras dele: «Só palavras explícitas tuas criam decisões.
 | Alvos numéricos de performance | D86 («performance top grade», «sem crash») | teto de CPU, xruns, ΔRSS, soak, taxa de adopção sem crash: os números existentes (T27–T29) são proposta da equipa |
 | Desenho da remodelação | D87 | o que entra, sai e muda de forma |
 | Do lado `core-main` | RESUMO | PR #25 (fechar ou mesclar) e ratificar D58 — nada disto toca este repo |
+| **Launcher: expor `CORE_SANITIZE`?** | [relatório do launcher](docs/relatorios/2026-11-17-compilar-gui.md) §Pendências, `:58` | Pergunta ao dono, **não decisão**. Hoje o launcher não expõe sanitizers de propósito (pertencem ao fluxo de auditoria, não ao de compilar). **Premissa corrigida:** o texto da pergunta diz «o wiring existe apenas por commitar» — já não está por commitar, está em `54addba` (D92). Se quiseres o dropdown, passa a ser um campo a mais, com os `FATAL_ERROR` do wiring a protegerem os falsos verdes. **Não decidi nenhuma** |
+| **Caminhos de build não-ASCII (`juceaide`)** | mesmo relatório `:59`, resultado JU-01 | Limitação **medida do JUCE** (`Running juceaide failed`, `JUCEUtils.cmake:630`), não do launcher: aceitar e documentar, ou investigar um workaround no JUCE (fora do âmbito daquele pedido)? **Não decidi nenhuma** |
+
+### Pendências do launcher — **fechadas por referência** (D96/D97, 17-11 ~21:45)
+
+As duas linhas da tabela «Do repo actual» («Launcher: expor `CORE_SANITIZE`?» e «Caminhos de build não-ASCII
+(`juceaide`)») deixaram de estar em aberto. Ficam escritas como foram, sem edição nem apagamento (D72); a
+resolução é por referência.
+
+| Pergunta (como estava escrita) | Resolução | O que fica a fazer |
+| --- | --- | --- |
+| «Launcher: expor `CORE_SANITIZE`?» | **D96** — não exposto; sanitizers só no fluxo de auditoria (canários + gate de scope + verbose); o wiring permanece no CMake. Ver **CO-1**: não existe combo para remover, portanto a regra não gera commit | nada de código; é regra de desenho do launcher |
+| «Caminhos de build não-ASCII (`juceaide`)» | **D97** — limitação aceite e documentada **como limitação JUCE**; não se patcha o JUCE (fetched/local, fora do repo); launcher e gate passam a validar build dir ASCII e sem espaços, com recusa clara. Ver **CO-2**: a parte «sem espaços» não tem falhanço medido por trás | implementar a validação nos dois scripts + documentar a limitação em relatório próprio; report upstream ao JUCE **opcional**, não bloqueia |
+
+Continuam **sem resposta** nas duas decisões, e portanto por exercitar no launcher: tipo **Debug**, os diálogos
+«…» (`FolderBrowserDialog`), a guarda de gerador diferente de Ninja (relatório do launcher `:23` e `:58-59`).
+Isto não reabre as duas perguntas fechadas acima; é a lista que a própria entrega declarou em aberto.
 
 ### Colisão C12 — **resolvida por referência** (D92/D93, 17-11 20:24)
 
@@ -143,6 +204,13 @@ Registada e perguntada como manda a regra COLISÕES de D72; o dono resolveu. A l
 Chegaram em 20:13 com os IDs `D-LinuxHost` e `D-TransportSplit`. Pelo precedente de D77, IDs fora do formato não
 são decisões: ou mapeiam para as já ratificadas, ou ganham número quando o dono ratificar. **Fila de números (actualizada 20:24):** C12 foi resolvida — **D92/D93 ratificadas** e ocupadas. Estas duas
 (20:13) seguem como **D94/D95, pendentes, não ratificadas**. Nada foi implementado a partir delas.
+
+**Actualização da fila (17-11 ~21:55).** Às ~21:45 chegaram duas decisões com os slugs `D-SanLauncher` e
+`D-JuceAideAscii`, e o pedido de ledger propunha registá-las como D94/D95. **Não puderam usar esses números**:
+D94/D95 estão ocupados pelas duas propostas acima, que continuam pendentes e não ratificadas. As decisões
+ratificadas usam os dois livres seguintes, **D96/D97** (ver a subsecção «Ratificadas por endosso» em Decisões),
+pelo mesmo critério aplicado a C12. A fila D94/D95 **mantém-se** onde estava, com os mesmos números, à espera de
+palavras do dono; nada foi implementado a partir dela.
 
 | Proposta | Citação verbatim | Fonte | Verificação que fiz ao código (medido, não assumido) | O que falta |
 | --- | --- | --- | --- | --- |
@@ -194,7 +262,7 @@ são decisões: ou mapeiam para as já ratificadas, ou ganham número quando o d
 | Itens do audit não medidos | 7, 8, 15, 18, 27, 28, 31 (Windows-puro: só compilação/leitura) | reportado |
 | Limites conhecidos | 3a = hash dos primeiros 64 KiB; 3b = revalida só o cabeçalho WAV; índice da biblioteca ficou na versão 2 de propósito | reportado (`RESUMO.md`) |
 | Contagem de casos/verificações em Windows | **Correcção 20:5x — existe.** A ronda ASan MSVC 19.51 no host dá **113 casos / 1456 verificações / 0 falhas**, com contagem por suite (evidência §7). O que era verdade: os logs do gate de 18:43 e 19:37 **não traziam** contagens, só 15/15 | medido por mim no ficheiro commitado [`2026-11-17-sanitizadores-evidencia.txt`](docs/relatorios/2026-11-17-sanitizadores-evidencia.txt); somas conferidas (113 e 1456) |
-| Concurrent writer no mesmo checkout | Outra entrega escreveu `CMakeLists.txt` (19:37), `tests/CMakeLists.txt` e `tests/canary.cpp` (19:38) — o trabalho de sanitizers do texto L616 (C12). **Não comitei nem alterei esses ficheiros.** **Correcção 20:5x:** esse trabalho **está commitado** em `54addba` (build) e `4cc08b4` (docs+evidência), e `origin/main` = `4cc08b4f44b87ddf71dc3f8da8dfb373b5d32ef7` — o que arrasta também os meus 4 commits documentais (`eb9d847`, `1bf65f3`, `e502be9`, `9d87065`), que eu não tinha pushed | medido (`git log`, `git rev-parse origin/main`, `git ls-remote origin main`) |
+| Concurrent writer no mesmo checkout | Outra entrega escreveu `CMakeLists.txt` (19:37), `tests/CMakeLists.txt` e `tests/canary.cpp` (19:38) — o trabalho de sanitizers do texto L616 (C12). **Não comitei nem alterei esses ficheiros.** **Correcção 20:5x:** esse trabalho **está commitado** em `54addba` (build) e `4cc08b4` (docs+evidência), e `origin/main` = `4cc08b4f44b87ddf71dc3f8da8dfb373b5d32ef7` — o que arrasta também os meus 4 commits documentais (`eb9d847`, `1bf65f3`, `e502be9`, `9d87065`), que eu não tinha pushed. **Nota datada 21:18:** `origin/main` é agora **`7ad8ccaa72cadd132b2f19c33142c4b3eed85e68`** — a entrega do launcher (`3097c83` + `7ad8cca`, 21:14) foi commitada e publicada depois, arrastando o `8850edd`. O `4cc08b4` nesta linha fica como o valor medido às 20:5x, não como o remoto actual | medido (`git log`, `git rev-parse origin/main`, `git ls-remote origin main`; re-medido 21:18) |
 | O gate das 19:37 não apanhou esses edits (**histórico, mantém-se**) | `CMakeCache.txt` e `build.ninja` da pasta nova têm mtime **19:34** e **0** ocorrências de `CORE_SANITIZE`, `canary` ou `fsanitize` (cache, `build.ninja` e `gate.log`); o configure foi anterior às edições | medido por contagem nos três ficheiros |
 | Terceira execução do gate por mim | **não feita** — construiria o trabalho em curso de outra entrega e disputaria locks de build. **Correcção 20:5x:** a ronda D92/D93 correu quatro gates (abaixo), por isso a re-execução pedida por D90 está satisfeita mais do que uma vez | decisão de método, registada |
 | Runtime da app nesta sessão | build + 15 testes de gate corridos em Windows; **a app não foi aberta**, nenhum self-test desktop, nenhum áudio ouvido | medido por mim |
@@ -225,6 +293,64 @@ Somas por suite conferidas por mim: 20+9+21+8+10+2+7+5+14+7+10 = **113**; 81+64+
 | Gate de scope (`ci/tidy_scope.py`) | exit 0; 52 pedidos → **50 analisados, 2 excluídos, 0 em falta**; controlo negativo **exit 1** (tem de ser 1). Excluídos declarados: `app/engine-client/src/engine_client.cpp` (`#error` no :5, alvo Windows-only) e `engine/src/plugins/juce_host.cpp` (JUCE ausente pela guarda `CORE_BUILD_APP`/`WIN32`) | evidência §9. **São exactamente as duas lacunas que D94/D95 propõem fechar** |
 | clang-tidy | WSL LLVM 18.1.3: **766 avisos / 0 erros**; **456 nossos + 310 `json.hpp` vendored**; `tidy-round1.txt` = **6551 linhas**. Top nosso: `graph.cpp` 49, `project.hpp` 44, `edit.cpp` 32, `clip_grains.hpp` 27, `song_clock.hpp` 24 | **conferido por mim**: contagem independente de `warning:`/`error:` e das linhas com `json.hpp` dá 766/0/310 → 456 |
 | O que continua não provado | nenhum destes gates abre a app, toca áudio ou prova o runtime Windows dos itens 7/8/15/18/27/28/31; TSan não corre no host (D93), por isso o transporte Win32 fica sem prova de races | limite declarado |
+
+### Ronda do launcher `ci/compilar.bat` — entrega de outro actor, **reportado pela entrega**
+
+Commitada em **`3097c83`** (build: `ci/compilar.bat`, novo, **401 linhas**) e **`7ad8cca`** (docs: relatório +
+evidência). Evidência: `docs/relatorios/evidencia/2026-11-17-compilar-gui/`, **14 ficheiros** (8 PNG +
+`gate-resumo.txt` + 5 logs), contados por `git ls-tree`. Relatório:
+[`2026-11-17-compilar-gui.md`](docs/relatorios/2026-11-17-compilar-gui.md). **Não re-executei nada desta ronda.**
+
+**Correcção ao estado da árvore descrito no relatório:** o §5 e a linha proposta `:63` dizem «wiring de
+sanitizers **por commitar**». Isso **já não é verdade** — esse wiring está commitado em `54addba`/`4cc08b4`
+(D92/D93). As medições foram feitas sobre a árvore de trabalho em `9d87065` com essas alterações ainda por
+commitar, isto é, sobre o conteúdo que hoje é `54addba`. Não copiei a linha `:63` verbatim por causa disto.
+
+| Percurso (conduzido por botões da GUI, Win32 `BM_CLICK`, não por cliques humanos) | Resultado reportado |
+| --- | --- |
+| Configurar (pasta nova) | exit 0, 24 s, VERDE |
+| Config+Compilar | exit 0, **196 s**, ninja **[329/329]**, `Core Setup.exe` ligado |
+| Compilar (no-op) | exit 0, 1 s |
+| Gate (merge) | exit 0, 10 s, **15/15** VERDE |
+| Gate merge+desktop | exit 0, 26 s, **16/16** (`desktop` 1 teste, 16.70 s; `merge` 15 testes, 6.06 s) |
+| Parar aos 15 s | exit 1, 17 s, VERMELHO, `cl/ninja restantes: 0` |
+| Build com espaços | exit 0, 24 s |
+| Build não-ASCII | exit 1, 24 s, `Running juceaide failed`, `JUCEUtils.cmake:630` — limitação do JUCE, não do launcher |
+| Guardas GU-01 / GU-02 | recusam sem criar nada e sem tocar na cache alheia |
+
+Contagens por âmbito: `merge` = 15 testes ctest, `desktop` = 1. **Os 113 casos / 1456 verificações não foram
+re-medidos aqui** — são da ronda sanitizers acima. Por exercitar: tipo **Debug**, diálogos «…», guarda de
+gerador diferente de Ninja. Duas incidências registadas pela própria entrega: capturas de 850 bytes descartadas
+(janela minimizada por actor externo) e uma ronda em que o driver de prova fechou por engano uma janela do
+Explorador intitulada «CORE» (sem perda de dados; ronda refeita identificando o processo).
+
+Estatuto: **reportado pela entrega** (`3097c83`/`7ad8cca`). Verificado por mim: os SHAs, a contagem de evidência
+(14) e o facto do repo sobre labels. Divergência menor: o relatório §29 diz «7 capturas + 3 logs»; a pasta
+commitada tem 8 PNG + 6 txt.
+
+### Testes novos e o gate de merge — **facto do repo**, não do launcher (adendum `:68-91`)
+
+Medido pela entrega numa **cópia** da árvore (`cp -a`, 24 MB, em scratch removido no fim; o repo partilhado não
+foi tocado), passos T1–T5 conduzidos pelos botões da GUI:
+
+| Passo | Acção | Resultado reportado |
+| --- | --- | --- |
+| T1 | `prova_novo` (`LABELS merge`) acrescentado antes do configure + Config+Compilar | exit 0, 233 s, VERDE |
+| T2 | Gate | **17/17** = 16 merge (15 + `prova_novo`) + `desktop_self_test`; o checkbox «Gate também com a app» tinha ficado memorizado ligado |
+| T3 | `prova_dois` (merge) e `prova_sem_label` (sem label) acrescentados **depois** do configure; só `Compilar` | exit 0, 2 s; `tests/CTestTestfile.cmake` passa a conter os dois → o Ninja re-configurou sozinho |
+| T4 | Gate (checkbox ligado = todos) | **19/19**, inclui `prova_sem_label` (#19) e `desktop_self_test` (#16) |
+| T5 | checkbox desligado; Gate (merge) | **17/17** = 15 + `prova_novo` + `prova_dois`; **sem** `prova_sem_label`, **sem** desktop |
+
+**Conclusões.** (1) Testes novos entram **sem actualizar o launcher** — por Configurar, por Config+Compilar e
+até por Compilar sozinho: `build.ninja` tem `RERUN_CMAKE` dependente de `tests/CMakeLists.txt`, e o botão Gate
+chama `ci/gate.ps1`, que configura explicitamente em todas as execuções; não há contagens fixas no launcher.
+(2) **O gate de merge só corre testes com `LABELS merge`**: um teste novo sem label fica **fora do gate de
+merge** (entra no gate com a app, que corre todos). **É desenho actual do repo, não do launcher** — confirmado
+por mim em `tests/CMakeLists.txt:90-91` (lista explícita de 15 nomes com `LABELS merge`) e `:97`
+(`desktop_self_test` com `LABELS desktop`). Quem acrescentar testes fora dessa lista fica fora do gate de merge.
+
+Evidência: `log-t2.txt`, `log-t4.txt`, `log-t5.txt`, `22-testes-novos.png`. Estatuto: T1–T5 **reportados pela
+entrega**; o mecanismo e a lista de labels **confirmados por leitura do código**.
 
 ---
 
