@@ -1,0 +1,7 @@
+﻿Gate do Core: VERDE
+Codigo: D:\CORE\CORE @ 9d87065 (com alteracoes por commitar)
+Build:  D:\Core-build\gui-prova
+Testes: todos (merge + desktop)
+Tempo:  25 s
+
+100% tests passed out of 16

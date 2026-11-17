@@ -1,0 +1,99 @@
+== Gate (merge) ==  2026-11-17 20:44:35
+repo  : D:\Core-build\prova-testes\src @ 9d87065 (com alteracoes por commitar)
+build : D:\Core-build\prova-testes\b  (Release, jobs 8, APP=ON, TESTS=ON)
+JUCE  : D:\Core-deps\JUCE-9.0.5 (copia local)
+runner: D:\Core-build\prova-testes\b\compilar-run.bat
+> powershell -NoProfile -ExecutionPolicy Bypass -File "D:\Core-build\prova-testes\src\ci\gate.ps1" -Build "D:\Core-build\prova-testes\b" -Jobs 8 -Juce "D:\Core-deps\JUCE-9.0.5" -Desktop
+
+nota: o gate configura Release + TESTES=ON nesta pasta; a escolha de Tipo acima nao se aplica ao gate.
+CMake Warning (author) at C:/Users/vk_do/AppData/Local/Microsoft/WinGet/Packages/Kitware.CMake_Microsoft.Winget.Source_8wekyb3d8bbwe/cmake-4.4.4-windows-x86_64/share/cmake-4.4/Modules/FetchContent.cmake:1386 (message):
+  The DOWNLOAD_EXTRACT_TIMESTAMP option was not given and policy CMP0135 is
+  not set.  The policy's OLD behavior will be used.  When using a URL
+  download, the timestamps of extracted files should preferably be that of
+  the time of extraction, otherwise code that depends on the extracted
+  contents might not be rebuilt if the URL changes.  The OLD behavior
+  preserves the timestamps from the archive instead, but this is usually not
+  what you want.  Update your project to the NEW behavior or specify the
+  DOWNLOAD_EXTRACT_TIMESTAMP option with a value of true to avoid this
+  robustness issue.
+Call Stack (most recent call first):
+  CMakeLists.txt:64 (FetchContent_Declare)
+This warning is for project developers.  Use -Wno-author to suppress it.
+
+-- Configuring juceaide
+-- Building juceaide
+-- Exporting juceaide
+-- Testing juceaide
+-- Finished setting up juceaide
+-- Configuring done (0.8s)
+-- Generating done (0.1s)
+-- Build files have been written to: D:/Core-build/prova-testes/b
+[0/2] Re-checking globbed directories...
+[1/15] Building VST3 manifest helper for CoreTestSynth
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/prova-testes/b/vst3_helpers/CoreTestSynth
+ninja: no work to do.
+[2/15] Building VST3 manifest helper for CoreTestGain
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/prova-testes/b/vst3_helpers/CoreTestGain
+ninja: no work to do.
+[3/15] Core version
+Test project D:/Core-build/prova-testes/b
+      Start  1: engine_tests
+ 1/19 Test  #1: engine_tests .....................   Passed    0.18 sec
+      Start  2: domain_tests
+ 2/19 Test  #2: domain_tests .....................   Passed    1.59 sec
+      Start  3: role_tests
+ 3/19 Test  #3: role_tests .......................   Passed    0.02 sec
+      Start  4: midi_tests
+ 4/19 Test  #4: midi_tests .......................   Passed    0.01 sec
+      Start  5: bug_tests
+ 5/19 Test  #5: bug_tests ........................   Passed    0.01 sec
+      Start  6: bitwig_tests
+ 6/19 Test  #6: bitwig_tests .....................   Passed    0.01 sec
+      Start  7: audit_tests
+ 7/19 Test  #7: audit_tests ......................   Passed    0.11 sec
+      Start  8: audit2_tests
+ 8/19 Test  #8: audit2_tests .....................   Passed    0.01 sec
+      Start  9: hunt_tests
+ 9/19 Test  #9: hunt_tests .......................   Passed    1.17 sec
+      Start 10: round3_tests
+10/19 Test #10: round3_tests .....................   Passed    0.01 sec
+      Start 11: calls_tests
+11/19 Test #11: calls_tests ......................   Passed    0.01 sec
+      Start 12: cli_version
+12/19 Test #12: cli_version ......................   Passed    0.01 sec
+      Start 13: cli_demo_render
+13/19 Test #13: cli_demo_render ..................   Passed    0.08 sec
+      Start 14: cli_measure
+14/19 Test #14: cli_measure ......................   Passed    2.27 sec
+      Start 15: cli_unicode
+15/19 Test #15: cli_unicode ......................   Passed    0.05 sec
+      Start 16: desktop_self_test
+16/19 Test #16: desktop_self_test ................   Passed   16.60 sec
+      Start 17: prova_novo
+17/19 Test #17: prova_novo .......................   Passed    0.02 sec
+      Start 18: prova_dois
+18/19 Test #18: prova_dois .......................   Passed    0.02 sec
+      Start 19: prova_sem_label
+19/19 Test #19: prova_sem_label ..................   Passed    0.02 sec
+
+100% tests passed out of 19
+
+Label Time Summary:
+desktop    =  16.60 sec*proc (1 test)
+merge      =   5.59 sec*proc (17 tests)
+
+Total Test time (real) =  22.22 sec
+Gate do Core: VERDE
+Codigo: D:\Core-build\prova-testes\src @ 9d87065 (com alteracoes por commitar)
+Build:  D:\Core-build\prova-testes\b
+Testes: todos (merge + desktop)
+Tempo:  25 s
+
+100% tests passed out of 19
+
+== exit 0  (25 s) ==
+log: D:\Core-build\prova-testes\b\compilar.log

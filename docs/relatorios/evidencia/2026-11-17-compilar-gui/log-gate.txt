@@ -1,0 +1,90 @@
+== Gate (merge) ==  2026-11-17 20:23:25
+repo  : D:\CORE\CORE @ 9d87065 (com alteracoes por commitar)
+build : D:\Core-build\gui-prova  (Release, jobs 8, APP=ON, TESTS=ON)
+JUCE  : D:\Core-deps\JUCE-9.0.5 (copia local)
+runner: D:\Core-build\gui-prova\compilar-run.bat
+> powershell -NoProfile -ExecutionPolicy Bypass -File "D:\CORE\CORE\ci\gate.ps1" -Build "D:\Core-build\gui-prova" -Jobs 8 -Juce "D:\Core-deps\JUCE-9.0.5"
+
+nota: o gate configura Release + TESTES=ON nesta pasta; a escolha de Tipo acima nao se aplica ao gate.
+CMake Warning (author) at C:/Users/vk_do/AppData/Local/Microsoft/WinGet/Packages/Kitware.CMake_Microsoft.Winget.Source_8wekyb3d8bbwe/cmake-4.4.4-windows-x86_64/share/cmake-4.4/Modules/FetchContent.cmake:1386 (message):
+  The DOWNLOAD_EXTRACT_TIMESTAMP option was not given and policy CMP0135 is
+  not set.  The policy's OLD behavior will be used.  When using a URL
+  download, the timestamps of extracted files should preferably be that of
+  the time of extraction, otherwise code that depends on the extracted
+  contents might not be rebuilt if the URL changes.  The OLD behavior
+  preserves the timestamps from the archive instead, but this is usually not
+  what you want.  Update your project to the NEW behavior or specify the
+  DOWNLOAD_EXTRACT_TIMESTAMP option with a value of true to avoid this
+  robustness issue.
+Call Stack (most recent call first):
+  CMakeLists.txt:60 (FetchContent_Declare)
+This warning is for project developers.  Use -Wno-author to suppress it.
+
+-- Configuring juceaide
+-- Building juceaide
+-- Exporting juceaide
+-- Testing juceaide
+-- Finished setting up juceaide
+-- Configuring done (0.8s)
+-- Generating done (0.1s)
+-- Build files have been written to: D:/Core-build/gui-prova
+[0/2] Re-checking globbed directories...
+[1/15] Core version
+[2/4] Building VST3 manifest helper for CoreTestSynth
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/gui-prova/vst3_helpers/CoreTestSynth
+ninja: no work to do.
+[3/4] Building VST3 manifest helper for CoreTestGain
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/gui-prova/vst3_helpers/CoreTestGain
+ninja: no work to do.
+Test project D:/Core-build/gui-prova
+      Start  1: engine_tests
+ 1/15 Test  #1: engine_tests .....................   Passed    0.21 sec
+      Start  2: domain_tests
+ 2/15 Test  #2: domain_tests .....................   Passed    1.64 sec
+      Start  3: role_tests
+ 3/15 Test  #3: role_tests .......................   Passed    0.07 sec
+      Start  4: midi_tests
+ 4/15 Test  #4: midi_tests .......................   Passed    0.06 sec
+      Start  5: bug_tests
+ 5/15 Test  #5: bug_tests ........................   Passed    0.04 sec
+      Start  6: bitwig_tests
+ 6/15 Test  #6: bitwig_tests .....................   Passed    0.04 sec
+      Start  7: audit_tests
+ 7/15 Test  #7: audit_tests ......................   Passed    0.16 sec
+      Start  8: audit2_tests
+ 8/15 Test  #8: audit2_tests .....................   Passed    0.05 sec
+      Start  9: hunt_tests
+ 9/15 Test  #9: hunt_tests .......................   Passed    1.20 sec
+      Start 10: round3_tests
+10/15 Test #10: round3_tests .....................   Passed    0.18 sec
+      Start 11: calls_tests
+11/15 Test #11: calls_tests ......................   Passed    0.14 sec
+      Start 12: cli_version
+12/15 Test #12: cli_version ......................   Passed    0.08 sec
+      Start 13: cli_demo_render
+13/15 Test #13: cli_demo_render ..................   Passed    0.08 sec
+      Start 14: cli_measure
+14/15 Test #14: cli_measure ......................   Passed    2.29 sec
+      Start 15: cli_unicode
+15/15 Test #15: cli_unicode ......................   Passed    0.05 sec
+
+100% tests passed out of 15
+
+Label Time Summary:
+merge    =   6.30 sec*proc (15 tests)
+
+Total Test time (real) =   6.90 sec
+Gate do Core: VERDE
+Codigo: D:\CORE\CORE @ 9d87065 (com alteracoes por commitar)
+Build:  D:\Core-build\gui-prova
+Testes: merge
+Tempo:  9 s
+
+100% tests passed out of 15
+
+== exit 0  (10 s) ==
+log: D:\Core-build\gui-prova\compilar.log
