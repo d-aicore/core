@@ -12,7 +12,7 @@ ts `2026-11-17T19:17:54.706Z`.
 
 | # | Acção | Ordem que a manda | Prova |
 | --- | --- | --- | --- |
-| 1 | `ESTADO.md` reescrito como ledger canónico com a estrutura ditada: Decisões/Proveniência, Pendentes (owner=Diogo), Invalidadas (por referência), Estado medido, Ligações | D72/D73 | 197 linhas; 36 entradas `D###`; numeração contínua D40→D91 sem buracos não explicados (verificado por script); 25 links relativos, **0 partidos** |
+| 1 | `ESTADO.md` reescrito como ledger canónico com a estrutura ditada: Decisões/Proveniência, Pendentes (owner=Diogo), Invalidadas (por referência), Estado medido, Ligações | D72/D73 | 203 linhas; 36 entradas `D###`; numeração contínua D40→D91 sem buracos não explicados (verificado por script); 25 links relativos, **0 partidos** |
 | 2 | D40–D57 carregadas do predecessor A com citação verbatim, linha-fonte e id de mensagem; reserva da D56 levantada | D84 | citações conferidas contra `D:\Core Master\ESTADO.md` (linhas 41–58); D56 confirmada por «confirmo que ENVIEI o rascunho, é meu» |
 | 3 | Ratificações novas **D74…D91**, uma por linha da confirmação (C1–C11, §1.1, §1.2, definição do Core, remodelação, ordem de 14/11 sobre o DSP próprio, §2 PROD, §5 gate, Q9 hosting da AI) | D74 («próximas ratificações D74+») | cada linha cita L335 verbatim |
 | 4 | `docs/historico/` criado: rascunho `DECISOES.md` arquivado, página anterior do ESTADO arquivada, mapa old→new com SHA-256 das fontes | D73/D79/D82 | `DECISOES-rascunho-2026-11-17.md` (`a45c875d…`, 85 linhas), `ESTADO-2026-11-17-anterior.md` (`ffa3a52e…`, 72 linhas), `MIGRACAO-LEDGER.md` |
@@ -24,8 +24,9 @@ ts `2026-11-17T19:17:54.706Z`.
 ## O que NÃO foi feito (dito à maneira da regra da honestidade)
 
 - **Nada foi implementado.** Nenhuma linha de `app/`, `engine/`, `tests/`, `ci/` ou `patterns/` mudou.
-- **Nenhum teste do produto foi corrido até ao momento deste relatório.** A re-execução do gate em árvore
-  limpa está pedida por D90 e o resultado entra como adendum datado abaixo.
+- **À data da primeira escrita deste relatório, nenhum teste do produto tinha sido corrido.** Correcção datada
+  (19:37, depois do commit `eb9d847`): o gate foi re-executado em pasta nova — **15/15 verdes**, ver adendum.
+  Continua verdade que **a app não foi aberta** e que nenhum self-test desktop correu.
 - Os relatórios de 17/11 sobre UI/DSP **não foram reescritos**: ficam como evidência do que foi feito, com o
   índice a dizer que o código está fora da árvore (D83).
 - O `docs/relatorios/2026-11-17-preflight-sanitizadores-clang-tidy.md` apareceu por comitar na árvore durante
@@ -48,6 +49,44 @@ implementado a partir desse texto.
    autoria de `docs/contracts/core-calls.md`, CI, preço da hash 3a, PR #25/D58).
 4. PROD-01…PROD-10 na parte sem verbatim (D89).
 
-## Adendum — gate Windows em árvore limpa
+## Verificação das citações (feita por script, não por olho)
 
-*(a preencher com a medição depois do commit; D90 pede a re-execução)*
+Cada fragmento entre «» de cada linha `D###` foi comparado por substring exacta com a fonte declarada:
+
+| Bloco | Fragmentos | Ausentes na fonte |
+| --- | --- | --- |
+| D40–D57 (fonte: `D:\Core Master\ESTADO.md`) | 42 | **0** |
+| D74–D91 (fonte: turno L335) | 15 | **0** |
+
+**Correcção feita nesta entrega:** na primeira escrita, 5 fragmentos (D48 ×2, D49, D50 ×2) tinham perdido os
+marcadores `**` da fonte ou trocado «declarem»/«declarar». Foram repostos exactamente como estão em A e
+re-verificados. Registo aqui porque a regra é verbatim, e uma citação quase-verbatim é uma citação falsa.
+
+Numeração: D40→D91 contínua; D43/D44 explicadas como não-decisões; D58–D71 reservados (D74). Buracos não
+explicados: **0**. Links relativos do ESTADO: 25, partidos: **0**.
+
+## Adendum — gate Windows em árvore de código limpa (medido às 19:37)
+
+Pedido por D90 («re-correr em árvore limpa depois do commit»). Corrido **depois** do commit `eb9d847`, em pasta
+de build nova para não reutilizar objetos da árvore suja das 18:43:
+
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File ci/gate.ps1 -Build "D:/Core-build/gate-CORE-limpa"
+```
+
+| Medição | Valor |
+| --- | --- |
+| Resultado | **VERDE — 100% tests passed out of 15** (label `merge`), `rc=0` |
+| Snapshot | `eb9d847` (código idêntico a `b80017e`; `git diff` sobre `app engine tests ci patterns` = vazio) |
+| Build | completo, 925 passos, `D:/Core-build/gate-CORE-limpa` |
+| Tempo | 228 s de gate; 6.90 s de execução de testes (6.27 sec*proc) |
+| Por teste | 0.03–2.28 s; os mesmos 15 nomes das 18:43, todos `Passed` |
+| Proveniência | `gate-resumo.txt` 186 bytes SHA-256 `c182ef1d…`; `gate.log` 96 770 bytes SHA-256 `43ce9015…` — texto integral em [`2026-11-17-gate-windows.txt`](2026-11-17-gate-windows.txt) |
+
+**Ressalva que o script imprime e que não é do código:** «com alteracoes por commitar». `ci/gate.ps1:56` usa
+`git status --porcelain`, que conta ficheiros não comitados. Nesse momento estavam por comitar as correcções
+documentais desta entrega e dois ficheiros de outra origem (`.qoderignore`,
+`docs/relatorios/2026-11-17-preflight-sanitizadores-clang-tidy.md`). O código estava limpo — medido.
+
+**O que este gate não prova:** que a app abre, toca, guarda/reabre ou exporta. Não corri `-Desktop`, não abri o
+Core, não ouvi áudio. Os itens 7/8/15/18/27/28/31 do audit continuam sem runtime medido.

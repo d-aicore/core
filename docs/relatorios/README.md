@@ -14,7 +14,7 @@ Cada relatório pertence ao snapshot/ambiente que identifica. Para o presente, c
 | 2026-11-17 | [Master vertical e seleção](2026-11-17-master-vertical-selecao.md) | Reporta build Release 16/16 e captura; **o código descrito está fora da árvore** — stash `refs/escriva/unratified-2026-11-17` por ordem do dono (D83). Re-land só por decisão numerada |
 | 2026-11-17 | [Refinamento visual e DSP Performance](2026-11-17-refinamento-ui-dsp.md) | Reporta 16/16 em Windows e gráfico em WASAPI; **código fora da árvore** (D83, mesma ordem e mesmo stash) |
 | 2026-11-17 | [Maqueta da interface](2026-11-17-maqueta-interface.md) | Captura e oito percursos em Edge headless; proposta, **sem código na árvore** (D83) |
-| 2026-11-17 | [Ledger canónico — reconciliação](2026-11-17-ledger-canonico.md) | Só documentação/governação: ESTADO canónico (D40→D91), arquivo em `docs/historico/`, AGENTS/README emendados (D80), work UI/DSP em stash recuperável (D83), log do gate ancorado (D90). Nenhum código de produto alterado; colisão C12 registada |
+| 2026-11-17 | [Ledger canónico — reconciliação](2026-11-17-ledger-canonico.md) | Só documentação/governação: ESTADO canónico (D40→D91, 57 citações verificadas verbatim), arquivo em `docs/historico/`, AGENTS/README emendados (D80), work UI/DSP em stash recuperável (D83), log do gate ancorado (D90) e **gate re-executado: 15/15 verdes @ `eb9d847`**. Nenhum código de produto alterado; colisão C12 registada |
 
 Acrescentar novas entradas aqui; não substituir relatórios antigos. Relatório é evidência ligada ao snapshot que
 identifica: manter o texto e os números originais, corrigir por cima com linha datada se algo se revelou falso.
