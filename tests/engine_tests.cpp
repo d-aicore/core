@@ -17,6 +17,7 @@
 #include "core/project.hpp"
 #include "core/server.hpp"
 #include "io/audio_file.hpp"
+#include "io/device.hpp"
 #include "io/wav.hpp"
 
 using namespace core;
@@ -475,6 +476,53 @@ TEST("engine.start: uma saída que falha não deixa a app sem som (audit 14)") {
   CHECK(!host.logs[0]->running);           // esta largada quando a nova responde
   CHECK_EQ(host.logs[0]->starts, 3);       // reaberta em cada uma das duas recusas
   CHECK_EQ(host.logs[0]->stops, 3);
+}
+
+// --- FL-1: M5 (live threads) OFF por omissão, contra a D51 ------------------------------------------------------
+
+TEST("engine.start: M5 fica 0 (serial) por omissão, sem CORE_LIVE_THREADS nem liveThreads (FL-1, D51)") {
+  // D51 (ESTADO.md:39): «M5 OFF por defeito. Só passa a ON por nova decisão minha, depois de soak 8 h +
+  // bit-a-bit vs serial no meu PC com CORE_LIVE_THREADS=4.» O opt-in por argumento e por ambiente fica.
+  // Guarda o CORE_LIVE_THREADS do caller, limpa-o para medir o default, e repõe no fim (mesmo em excepção).
+  struct EnvGuard {
+    std::string saved; bool had = false;
+    EnvGuard() {
+#ifdef _MSC_VER
+      char* buf = nullptr; size_t len = 0;
+      if (_dupenv_s(&buf, &len, "CORE_LIVE_THREADS") == 0 && buf) { had = true; saved = buf; free(buf); }
+#else
+      if (const char* e = std::getenv("CORE_LIVE_THREADS")) { had = true; saved = e; }
+#endif
+    }
+    void set(const char* v) {
+#ifdef _MSC_VER
+      _putenv_s("CORE_LIVE_THREADS", v);
+#else
+      if (*v) setenv("CORE_LIVE_THREADS", v, 1); else unsetenv("CORE_LIVE_THREADS");
+#endif
+    }
+    ~EnvGuard() {
+#ifdef _MSC_VER
+      _putenv_s("CORE_LIVE_THREADS", had ? saved.c_str() : "");
+#else
+      if (had) setenv("CORE_LIVE_THREADS", saved.c_str(), 1); else unsetenv("CORE_LIVE_THREADS");
+#endif
+    }
+  } env;
+
+  Server server([] { return makeMiniaudioOutput(); }, kSr);
+  // Default: sem argumento e sem ambiente → 0 (serial). Nesta máquina de 16 lógicos, antes da correcção: 4.
+  env.set("");
+  server.execute("engine.start", {{"backend", "null"}});
+  CHECK_EQ(server.execute("engine.stats", json::object()).value("liveThreads", -1), 0);
+  // Guarda: o opt-in por argumento liveThreads continua a funcionar.
+  server.execute("engine.start", {{"backend", "null"}, {"liveThreads", 2}});
+  CHECK_EQ(server.execute("engine.stats", json::object()).value("liveThreads", -1), 2);
+  // Guarda: o opt-in por CORE_LIVE_THREADS continua a funcionar.
+  env.set("4");
+  server.execute("engine.start", {{"backend", "null"}});
+  CHECK_EQ(server.execute("engine.stats", json::object()).value("liveThreads", -1), 4);
+  server.execute("engine.stop", json::object());
 }
 
 // --- A-009: canção antiga com instrumento retirado -------------------------------------------------------------

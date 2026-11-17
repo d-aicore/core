@@ -20,7 +20,7 @@ namespace core {
 
 namespace {
 const char* kCommands[][2] = {
-  {"engine.start", "Start the audio device {sampleRate?, blockSize?, backend?: 'wasapi'|'null'|..., exclusive?, device?, liveThreads?: workers that play tracks with the audio thread (default 4, 0 = one core)} -> {sampleRate, blockSize, latencyMs, latency: {tracksSamples, masterSamples, graphMs, deviceMs, totalMs}}"},
+  {"engine.start", "Start the audio device {sampleRate?, blockSize?, backend?: 'wasapi'|'null'|..., exclusive?, device?, liveThreads?: workers that play tracks with the audio thread (default 0 = serial, D51; opt-in by argument or CORE_LIVE_THREADS)} -> {sampleRate, blockSize, latencyMs, latency: {tracksSamples, masterSamples, graphMs, deviceMs, totalMs}}"},
   {"engine.stop", "Stop the audio device"},
   {"engine.stats", "Timing stats: callbacks, overruns, late callbacks, render time, edit->audio delay"},
   {"engine.cpu", "Where the audio time went since the last call (M0b), in % of one core = % of real time -> {intervalMs, load: {avgPct, maxPct, marginPct}, totalPct, tracks: [{id, cpuPct, instrument: {name, cpuPct}, effects: [{id, name, cpuPct}]}], master: {cpuPct, effects}}"},
@@ -86,8 +86,9 @@ int64_t integerArg(const json& args, const char* key, int64_t fallback, int64_t 
     throw std::runtime_error(std::string("'") + key + "' is outside the allowed range.");
   return (int64_t)value;
 }
-// M5: CORE_LIVE_THREADS=<n> workers for real time when engine.start does not say (0 = serial); otherwise
-// 4, or one less than the cores (PC 2026-11-05, 22 Surge XT tracks: p99 72 % -> 23 %, 6 threads barely better).
+// M5: CORE_LIVE_THREADS=<n> workers for real time when engine.start does not say; default 0 (serial), D51 —
+// ON only by a new owner decision after an 8 h soak + bit-exact vs serial. (PC 2026-11-05, 22 Surge XT tracks:
+// p99 72 % -> 23 %, 6 threads barely better — the measurement that motivates the opt-in, not a default.)
 int liveThreadsFromEnv() {
   std::string v;
 #ifdef _MSC_VER
@@ -97,7 +98,7 @@ int liveThreadsFromEnv() {
 #else
   if (const char* e = std::getenv("CORE_LIVE_THREADS")) v = e;
 #endif
-  if (v.empty()) return WorkerPool::forThisMachine(4);
+  if (v.empty()) return 0;  // D51: M5 OFF by default; opt-in by CORE_LIVE_THREADS or {liveThreads}
   char* end = nullptr;
   const long n = std::strtol(v.c_str(), &end, 10);
   return end != v.c_str() && n > 0 ? (int)std::min<long>(n, 32) : 0;
@@ -321,7 +322,7 @@ json Server::execute(const std::string& cmd, const json& args) {
     // the device stopped).
     double sr = numArg(args, "sampleRate", sampleRate_);
     if (!(sr >= 8000 && sr <= 384000)) throw std::runtime_error("sampleRate must be 8000-384000.");
-    // M5: tracks on several cores while playing. {liveThreads: n} or CORE_LIVE_THREADS; default 4 (0 = serial).
+    // M5: tracks on several cores while playing. {liveThreads: n} or CORE_LIVE_THREADS; default 0 (serial), D51.
     const int live = (int)std::clamp(numArg(args, "liveThreads", (double)liveThreadsFromEnv()), 0.0, 32.0);
     if (args.contains("listenDb") && !args["listenDb"].is_number()) throw std::runtime_error("listenDb must be a number (dB).");
     // The device that is playing is put aside, not thrown away: if the new one does not come up the old
