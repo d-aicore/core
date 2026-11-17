@@ -78,7 +78,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File ci/gate.ps1 -Build "D:/Core-
 | --- | --- |
 | Resultado | **VERDE — 100% tests passed out of 15** (label `merge`), `rc=0` |
 | Snapshot | `eb9d847` (código idêntico a `b80017e`; `git diff` sobre `app engine tests ci patterns` = vazio) |
-| Build | completo, 925 passos, `D:/Core-build/gate-CORE-limpa` |
+| Build | completo em pasta nova, **329 passos planeados / 328 executados**, `D:/Core-build/gate-CORE-limpa` |
 | Tempo | 228 s de gate; 6.90 s de execução de testes (6.27 sec*proc) |
 | Por teste | 0.03–2.28 s; os mesmos 15 nomes das 18:43, todos `Passed` |
 | Proveniência | `gate-resumo.txt` 186 bytes SHA-256 `c182ef1d…`; `gate.log` 96 770 bytes SHA-256 `43ce9015…` — texto integral em [`2026-11-17-gate-windows.txt`](2026-11-17-gate-windows.txt) |
@@ -90,3 +90,27 @@ documentais desta entrega e dois ficheiros de outra origem (`.qoderignore`,
 
 **O que este gate não prova:** que a app abre, toca, guarda/reabre ou exporta. Não corri `-Desktop`, não abri o
 Core, não ouvi áudio. Os itens 7/8/15/18/27/28/31 do audit continuam sem runtime medido.
+
+### Prova de que o gate não apanhou trabalho de outra entrega
+
+Durante esta sessão outro actor começou a escrever no mesmo checkout: `CMakeLists.txt` (mtime 19:37) com
+`CORE_SANITIZE`, `tests/CMakeLists.txt` e `tests/canary.cpp` (19:38) — o trabalho de sanitizers do turno L616
+(colisão C12). O gate das 19:37 **não** os inclui, e isto é medido, não assumido:
+
+| Ficheiro da pasta de build | mtime | `CORE_SANITIZE` | `canary` | `fsanitize` |
+| --- | --- | --- | --- | --- |
+| `CMakeCache.txt` | 19:34 | 0 | 0 | 0 |
+| `build.ninja` | 19:34 | 0 | 0 | 0 |
+| `gate.log` | 19:37 | 0 | 0 | 0 |
+
+O configure (19:34) é anterior às edições (19:37/19:38). **Não fiz uma terceira execução do gate**: construiria
+o trabalho em curso de outra entrega e disputaria locks de build. A re-execução pedida por D90 fica satisfeita
+pela das 19:37, sobre código igual a `b80017e`.
+
+### Correcção de um número que eu próprio dei mal
+
+Na primeira escrita do adendum (e na mensagem ao dono) disse «925 passos». **Estava errado**: li o log com a
+descodificação trocada (o redireccionamento do bash é UTF-8; o `gate.log` do script é UTF-16LE). O valor medido
+é **329 passos planeados / 328 executados**, contado independentemente nos dois ficheiros (`gate.log` e
+`gate-limpa-run.log`: 333 linhas de passo = 5 de `[n/2]` + 328 de `[n/329]`, último `[328/329]`). Os três
+sítios onde o número errado tinha sido escrito foram corrigidos; fica aqui o registo do erro.

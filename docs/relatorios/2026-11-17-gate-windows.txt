@@ -87,7 +87,13 @@ Total Test time (real) =   7.20 sec
 
 Comando: `powershell -NoProfile -ExecutionPolicy Bypass -File ci/gate.ps1 -Build "D:/Core-build/gate-CORE-limpa"`
 (código em `D:\CORE\CORE`, commit `eb9d847`; pasta nova para não reutilizar objetos da árvore suja das 18:43).
-Saída do processo: `rc=0`. Build completo: 925 passos.
+Saída do processo: `rc=0`. Build completo numa pasta nova: **329 passos planeados, 328 executados** (medido por
+contagem das linhas `[n/329]` no `gate.log` descodificado de UTF-16LE; o último é `[328/329]`).
+
+> **Correcção datada (19:41):** a primeira escrita deste adendum dizia «925 passos». Era um número lido de uma
+> descodificação errada do log (o ficheiro redireccionado pelo bash é UTF-8, o `gate.log` do script é UTF-16LE).
+> O valor correcto é 329, contado nos dois ficheiros independentemente: `gate.log` e `gate-limpa-run.log` dão
+> ambos 333 linhas de passo = 5 de `[n/2]` + 328 de `[n/329]`.
 
 | Origem | Tamanho | mtime | SHA-256 |
 | --- | --- | --- | --- |
