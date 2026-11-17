@@ -70,6 +70,13 @@ Ainda diferido. Possui modelo, configuração/chaves, chat, base de conhecimento
 
 ## 4. O que vive onde — matriz ficheiro a ficheiro
 
+**Proveniência dos permalinks desta matriz (D81, 17-11-2026 19:17: «re-ancorar links/SHAs a d-aicore/core;
+anteriores históricos».**). O repo canónico é `https://github.com/d-aicore/core` e a referência viva é
+caminho+linha sobre `b80017e`. Os links abaixo apontam para `dmo-app/qwen-core/blob/599d558…`, o snapshot que a
+auditoria da fronteira usou. Medido em `d-aicore/core`: `git cat-file -t 599d558` → *Not a valid object name* —
+os objectos anteriores ao commit único deste repo **não existem** aqui, por isso estes permalinks ficam
+**históricos** e não foram reescritos para o novo nome (reencaminhar para `d-aicore/core` produziria 404).
+
 Destino é responsabilidade normativa; “extrair” é plano condicionado, não acção autorizada. Não mover ficheiros mistos inteiros por conveniência.
 
 ### 4.1 Core: ficheiros de integração e propriedade

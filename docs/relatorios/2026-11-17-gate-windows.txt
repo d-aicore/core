@@ -1,0 +1,82 @@
+Gate do Core em Windows — log guardado por instrução do dono de 17-11-2026, 19:17
+("§5: ancorar o gate Windows ao log que colei (guarda-o em docs/relatorios/2026-11-17-gate-windows.txt),
+caveat árvore suja; re-correr em árvore limpa depois do commit.")
+
+## Proveniência das linhas abaixo (medido no ficheiro, não transcrito de memória)
+
+| Origem | Tamanho | mtime | SHA-256 | Codificação |
+| --- | --- | --- | --- | --- |
+| `D:/Core-build/gate-CORE/gate-resumo.txt` | 180 bytes | 2026-11-17 18:43 | `09ca8211cbcd4178c4d724eccafb01816fe985deec31787d9ec4f3ac5d419888` | UTF-8 com BOM, CRLF |
+| `D:/Core-build/gate-CORE/gate.log` | 96 698 bytes | 2026-11-17 18:43 | `88b163f598c7a2bc7aa610f5be027e52bebb2c29311a2b9e78dc86e59a60df1d` | UTF-16LE (decodificada para este ficheiro) |
+
+Snapshot do código no momento do gate: `b80017efdbb6b47bc65a82338c403548e095967f` **com alterações por
+commitar** — é o próprio registo que o diz ("com alteracoes por commitar"). As alterações em causa são as
+superfícies UI/DSP não ratificadas que ficaram em stash recuperável (ver `ESTADO.md`, D83). **Este gate não é
+um gate de árvore limpa**, e é por isso que a instrução pede a re-execução depois do commit.
+
+---
+
+## gate-resumo.txt (verbatim)
+
+```
+Gate do Core: VERDE
+Codigo: D:\CORE\CORE @ b80017e (com alteracoes por commitar)
+Build:  D:\Core-build\gate-CORE
+Testes: merge
+Tempo:  212 s
+
+100% tests passed out of 15
+```
+
+## gate.log — secção de execução dos testes (UTF-16LE decodificado)
+
+```
+Test project D:/Core-build/gate-CORE
+      Start  1: engine_tests
+ 1/15 Test  #1: engine_tests .....................   Passed    0.21 sec
+      Start  2: domain_tests
+ 2/15 Test  #2: domain_tests .....................   Passed    1.72 sec
+      Start  3: role_tests
+ 3/15 Test  #3: role_tests .......................   Passed    0.08 sec
+      Start  4: midi_tests
+ 4/15 Test  #4: midi_tests .......................   Passed    0.07 sec
+      Start  5: bug_tests
+ 5/15 Test  #5: bug_tests ........................   Passed    0.04 sec
+      Start  6: bitwig_tests
+ 6/15 Test  #6: bitwig_tests .....................   Passed    0.04 sec
+      Start  7: audit_tests
+ 7/15 Test  #7: audit_tests ......................   Passed    0.15 sec
+      Start  8: audit2_tests
+ 8/15 Test  #8: audit2_tests .....................   Passed    0.05 sec
+      Start  9: hunt_tests
+ 9/15 Test  #9: hunt_tests .......................   Passed    1.23 sec
+      Start 10: round3_tests
+10/15 Test #10: round3_tests .....................   Passed    0.20 sec
+      Start 11: calls_tests
+11/15 Test #11: calls_tests ......................   Passed    0.15 sec
+      Start 12: cli_version
+12/15 Test #12: cli_version ......................   Passed    0.10 sec
+      Start 13: cli_demo_render
+13/15 Test #13: cli_demo_render ..................   Passed    0.09 sec
+      Start 14: cli_measure
+14/15 Test #14: cli_measure ......................   Passed    2.37 sec
+      Start 15: cli_unicode
+15/15 Test #15: cli_unicode ......................   Passed    0.06 sec
+
+100% tests passed out of 15
+
+Label Time Summary:
+merge    =   6.55 sec*proc (15 tests)
+
+Total Test time (real) =   7.20 sec
+```
+
+## O que este log prova e o que não prova
+
+- Prova: 15 testes com a label `merge` passaram em Windows x64 sobre `b80017e`, Release, build Ninja em
+  `D:/Core-build/gate-CORE`, tempo total do gate 212 s (compilação incluída), 7.20 s de execução de testes.
+- Não prova: que a árvore limpa de `b80017e` passa (havia alterações por commitar), nem o comportamento dos
+  itens 7/8/15/18/27/28/31 do audit, nem que o executável desktop abre. O `gate.log` tem 329 passos de build;
+  a linha `[328/329] Linking ... Core Setup.exe` mostra que o instalador foi linkerado, não corrido.
+- Contagem de casos/verificações: **não está neste log**. Os 113 casos / 1456 verificações são do audit em
+  Linux (`2026-11-17-auditoria-core.md`) e continuam ligados àquele ambiente.
