@@ -397,6 +397,16 @@ void EngineSession::run() {
         snap_.playing = transportIntent_;  // what the engine does now; its next state events say the same
       continue;
     }
+    // ART-003: the output died or changed (the status line already says so). Reopen it once, like a device
+    // selection: a successful start clears the engine's notification; a failed one leaves "No audio device".
+    if (connected && deviceReopenPending_) {
+      deviceReopenPending_ = false;
+      lock.unlock();
+      openDevice(*client_);
+      restoreTransport(*client_);  // a device at another rate means a new audio engine
+      lock.lock();
+      continue;
+    }
     // Audit 2, bug 2: a project.load that got no answer is sent again by itself, with a new revision (the engine
     // may have taken the old one late and would refuse it again as stale).
     if (connected && retryPending_ && snap_.status == EngineStatus::Diverged && std::chrono::steady_clock::now() >= retryAt_) {
@@ -412,7 +422,7 @@ void EngineSession::run() {
     }
     auto ready = [&] {
       const bool canSend = client_ && snap_.status != EngineStatus::Stopped;
-      return quit_ || restartRequested_ || (canSend && !actions_.empty()) ||
+      return quit_ || restartRequested_ || (canSend && !actions_.empty()) || (canSend && deviceReopenPending_) ||
              (canSend && wantedRevision_ > sentRevision_ && snap_.status != EngineStatus::Diverged) ||
              (canSend && retryPending_ && std::chrono::steady_clock::now() >= retryAt_);
     };
@@ -626,6 +636,22 @@ void EngineSession::onEvent(const json& event) {
   if (tracks.is_object())
     for (auto it = tracks.begin(); it != tracks.end(); ++it)
       if (stereoPeak(it.value())) snap_.trackPeaks[it.key()] = {it.value()[0].get<float>(), it.value()[1].get<float>()};
+  // ART-003: the output stopped or changed without the user asking (the engine now says so). Do not pretend
+  // to play; show it in the existing status line and ask the worker to reopen the device once. Edge-triggered
+  // (once per episode): a failed reopen keeps the same notification, so it is not retried in a loop.
+  const int deviceNotification = event.value("deviceNotification", 0);
+  if (deviceNotification != 0) {
+    snap_.playing = false;  // the output is dead: nothing is heard
+    if (deviceNotification != lastDeviceNotification_) {
+      snap_.status = EngineStatus::NoDevice;
+      snap_.message = deviceNotification == 2
+          ? "A saída mudou de dispositivo (o dispositivo por omissão mudou). A reabrir..."
+          : "A saída de áudio parou (dispositivo desligado?). A reabrir...";
+      deviceReopenPending_ = true;
+      wake_.notify_all();
+    }
+  }
+  lastDeviceNotification_ = deviceNotification;
   if (snap_.status == EngineStatus::Ready || snap_.status == EngineStatus::Syncing)
     snap_.status = snap_.appliedRevision == wantedRevision_ ? EngineStatus::Ready : EngineStatus::Syncing;
 }

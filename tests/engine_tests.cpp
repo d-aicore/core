@@ -525,6 +525,38 @@ TEST("engine.start: M5 fica 0 (serial) por omissão, sem CORE_LIVE_THREADS nem l
   server.execute("engine.stop", json::object());
 }
 
+// --- ART-003: a saída de áudio morre em silêncio ---------------------------------------------------------------
+
+TEST("ART-003: o Server reporta uma saída que parou ou mudou (dispositivo desligado / rerouted)") {
+  // Uma saída falsa que simula o dispositivo a parar (notification=1) ou a mudar por omissão (2), como o
+  // callback de notificação do miniaudio faria. O Server tem de o dizer a quem pergunta (engine.stats e o
+  // evento de estado que a app lê). Antes da correcção: nenhum campo, playing fica verdadeiro, silêncio.
+  struct State { std::atomic<int> notification{0}; };
+  struct Output final : AudioOutput {
+    State* s;
+    explicit Output(State* st) : s(st) {}
+    json start(Engine&, const json&) override {
+      s->notification.store(0, std::memory_order_release);
+      return {{"sampleRate", 48000.0}, {"blockSize", 512}, {"backend", "fake"}, {"device", "art-fake"}};
+    }
+    void stop() override {}
+    json devices(const json&) override { return json::array(); }
+    int deviceNotification() const override { return s->notification.load(std::memory_order_acquire); }
+  };
+  auto state = std::make_shared<State>();
+  Server server([state] { return std::make_unique<Output>(state.get()); }, kSr);
+  server.execute("engine.start", json::object());
+  CHECK_EQ(server.execute("engine.stats", json::object()).value("deviceNotification", 0), 0);  // a tocar
+  // O dispositivo pára (interface desligada): o Server tem de o reportar.
+  state->notification.store(1, std::memory_order_release);
+  CHECK_EQ(server.execute("engine.stats", json::object()).value("deviceNotification", 0), 1);
+  CHECK_EQ(server.stateEvent().value("deviceNotification", 0), 1);  // e a app vê-o no evento de estado
+  // O dispositivo por omissão muda (rerouted): também reportado, para a app reabrir e reamostrar certo.
+  state->notification.store(2, std::memory_order_release);
+  CHECK_EQ(server.execute("engine.stats", json::object()).value("deviceNotification", 0), 2);
+  CHECK_EQ(server.stateEvent().value("deviceNotification", 0), 2);
+}
+
 // --- A-009: canção antiga com instrumento retirado -------------------------------------------------------------
 
 TEST("A-009: canção com instrument='elastic' abre em 'none', conversão reportada, e o grafo não crasha") {

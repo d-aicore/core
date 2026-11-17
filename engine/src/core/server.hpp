@@ -21,6 +21,11 @@ public:
   virtual json start(Engine& engine, const json& args) = 0;
   virtual void stop() = 0;
   virtual json devices(const json& args) = 0;  // {backend?}
+  // The device's last notification: 0 = running/none, 1 = stopped (e.g. the interface was unplugged),
+  // 2 = rerouted (the default device changed). Set by the device's notification callback (an atomic store,
+  // never a lock); keeps until the next successful start. Default 0: an output that cannot notify (a fake,
+  // a null device) never reports a loss. ART-003: so the engine and the app learn the output died silently.
+  virtual int deviceNotification() const { return 0; }
 };
 
 struct RenderResult {

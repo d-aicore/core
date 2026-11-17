@@ -195,6 +195,8 @@ private:
   SessionSnapshot snap_;
   int transportPending_ = 0;     // Play/Stop/Home queued and not yet taken by the engine
   bool transportIntent_ = false;  // playing, as the last of them asked
+  int lastDeviceNotification_ = 0;    // ART-003: last device notification seen (0 running, 1 stopped, 2 rerouted)
+  bool deviceReopenPending_ = false;  // ART-003: the worker reopens the output once when it dies or changes
   std::unique_ptr<client::EngineClient> client_;
   std::thread worker_;
 };

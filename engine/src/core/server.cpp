@@ -421,7 +421,7 @@ json Server::execute(const std::string& cmd, const json& args) {
             {"pluginFailures", pluginFailures()}, {"nativeFailures", nativeFailures()}, {"failedUnits", failedUnits()}, {"failedPlugins", failedPlugins()},
             {"liveThreads", engine_->liveThreads()}, {"liveFallback", engine_->liveFallback()},
             {"liveStalls", s.liveStalls.load()}, {"liveStallBlocks", s.liveStallBlocks.load()},
-            {"device", outputInfo_}, {"latency", latencyJson()}};
+            {"device", outputInfo_}, {"deviceNotification", output_ ? output_->deviceNotification() : 0}, {"latency", latencyJson()}};
   }
   if (cmd == "project.get") return toJson(project_);
   if (cmd == "plugins.missing") return missingPlugins();
@@ -742,6 +742,9 @@ json Server::stateEvent() {
           {"position", engine_->position()}, {"tick", engine_->positionTicks()}, {"playing", engine_->playing()},
           {"master", {master[0], master[1]}}, {"gainReduction", std::round(engine_->takeMasterReduction() * 10) / 10}, {"tracks", t},
           {"earGuard", std::round(engine_->takeEarGuardReduction() * 10) / 10}};
+  // ART-003: the output stopped or changed without the user asking (0 running, 1 stopped, 2 rerouted). The
+  // app shows it in the existing status line and reopens the device once; the engine no longer dies silently.
+  state["deviceNotification"] = output_ ? output_->deviceNotification() : 0;
   // The master's loudness (null: silence, or not long enough yet for that window).
   const LoudnessReading lr = engine_->loudness();
   auto rounded = [](double v, const char* format) {  // printed as such (not -15.450000000000001)

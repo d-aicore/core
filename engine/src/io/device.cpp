@@ -1,6 +1,7 @@
 #include "device.hpp"
 #include "../dsp/float_mode.hpp"
 #include <algorithm>
+#include <atomic>
 #include <cstring>
 #include <stdexcept>
 #include <vector>
@@ -52,6 +53,23 @@ class MiniaudioOutput final : public AudioOutput {
   std::vector<float> L_, R_;
   uint64_t lastStartNs_ = 0;
   double sampleRate_ = 48000;
+  // ART-003: the device's last notification, written by the notification callback (device thread) and read
+  // by the control thread (Server::engine.stats / stateEvent). 0 running, 1 stopped, 2 rerouted. An atomic
+  // store/load only: no lock, allocation or I/O on the device thread.
+  std::atomic<int> deviceNotification_{0};
+
+  // miniaudio: the device stopped (unplugged), was rerouted (the default device changed), or started.
+  // "Do not restart or uninitialize the device from the callback" (miniaudio.h) — only flag it here; the
+  // app learns it from the Server and reopens. The stopped notification does not fire on a reroute.
+  static void notification(const ma_device_notification* n) {
+    auto* self = static_cast<MiniaudioOutput*>(n->pDevice->pUserData);
+    switch (n->type) {
+      case ma_device_notification_type_stopped: self->deviceNotification_.store(1, std::memory_order_release); break;
+      case ma_device_notification_type_rerouted: self->deviceNotification_.store(2, std::memory_order_release); break;
+      case ma_device_notification_type_started: self->deviceNotification_.store(0, std::memory_order_release); break;
+      default: break;  // interruption_began/ended, unlocked: mobile backends, not used on Windows
+    }
+  }
 
   static void callback(ma_device* device, void* output, const void*, ma_uint32 frames) {
     auto* self = static_cast<MiniaudioOutput*>(device->pUserData);
@@ -103,6 +121,10 @@ class MiniaudioOutput final : public AudioOutput {
 public:
   ~MiniaudioOutput() override { stop(); if (contextReady_) ma_context_uninit(&context_); }
 
+  // ART-003: 0 running, 1 stopped, 2 rerouted — read by the Server (control thread), written by the
+  // notification callback (device thread). An atomic load only.
+  int deviceNotification() const override { return deviceNotification_.load(std::memory_order_acquire); }
+
   json devices(const json& args) override {
     initContext(args);
     ma_device_info* playback; ma_uint32 count;
@@ -114,6 +136,7 @@ public:
 
   json start(Engine& engine, const json& args) override {
     stop();
+    deviceNotification_.store(0, std::memory_order_release);  // a fresh start: any previous loss is cleared
     initContext(args);
     engine_ = &engine;
     sampleRate_ = engine.sampleRate();
@@ -129,6 +152,7 @@ public:
     config.noPreSilencedOutputBuffer = MA_TRUE;  // the engine clears its buffers
     config.noClip = MA_TRUE;
     config.dataCallback = callback;
+    config.notificationCallback = notification;  // ART-003: stopped / rerouted reach the engine and the app
     config.pUserData = this;
     config.wasapi.noAutoConvertSRC = MA_TRUE;
     config.wasapi.noDefaultQualitySRC = MA_TRUE;
@@ -162,6 +186,7 @@ public:
     engine.setDeviceBuffer((uint64_t)((double)device_.playback.internalPeriodSizeInFrames * device_.playback.internalPeriods * 1e9 / device_.sampleRate));
     r = ma_device_start(&device_);
     if (r != MA_SUCCESS) { stop(); throw std::runtime_error(std::string("Cannot start the audio device: ") + ma_result_description(r)); }
+    deviceNotification_.store(0, std::memory_order_release);  // running again (the started notification also clears it)
     const double period = device_.playback.internalPeriodSizeInFrames;
     const double periods = device_.playback.internalPeriods;
     return {{"sampleRate", (double)device_.sampleRate}, {"blockSize", (int)period},
