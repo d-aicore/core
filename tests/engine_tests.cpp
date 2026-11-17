@@ -477,4 +477,41 @@ TEST("engine.start: uma saída que falha não deixa a app sem som (audit 14)") {
   CHECK_EQ(host.logs[0]->stops, 3);
 }
 
+// --- A-009: canção antiga com instrumento retirado -------------------------------------------------------------
+
+TEST("A-009: canção com instrument='elastic' abre em 'none', conversão reportada, e o grafo não crasha") {
+  // "elastic" saiu do engine em 2026-11-16: não está no registo (plugin/audio/bus/none). Decisão do dono
+  // (2026-11-17): converter, não recusar — a faixa fica "none" com as suas notas, conversionNotes nomeia a
+  // faixa e o nome desconhecido, e o aviso chega ao cliente no retorno de project.load (campo "converted").
+  json notes = json::array({{{"tick", 0}, {"length", kPpq}, {"pitch", 60}, {"velocity", 0.8}}});
+  json track = {{"id", "elastic1"}, {"name", "Elastic"}, {"instrument", "elastic"}, {"patternTicks", 4 * kPpq}, {"notes", notes}};
+  json song = {{"format", kProjectFormat}, {"version", 2}, {"name", "canção antiga"}, {"bpm", 120.0},
+               {"lengthTicks", 4 * 4 * kPpq}, {"masterGainDb", 0.0}, {"tracks", json::array({track})}};
+  const Project p = fromJson(song);
+  CHECK_EQ(p.tracks.size(), (size_t)1);
+  CHECK_EQ(p.tracks[0].instrument, std::string("none"));
+  CHECK_EQ(p.tracks[0].notes.size(), (size_t)1);  // a conversão preserva as notas da canção
+  bool named = false;
+  for (const auto& n : p.conversionNotes)
+    if (n.find("elastic1") != std::string::npos && n.find("elastic") != std::string::npos) named = true;
+  CHECK(named);  // conversionNotes nomeia a faixa e o instrumento desconhecido
+  // O aviso chega ao cliente no retorno de project.load (nada de conversão silenciosa).
+  FakeHost host;
+  Server server([&host] { return host.make(); }, kSr);
+  const json loaded = server.execute("project.load", {{"project", song}});
+  bool clientNamed = false;
+  if (loaded.contains("converted") && loaded["converted"].is_array())
+    for (const auto& n : loaded["converted"])
+      if (n.is_string() && n.get<std::string>().find("elastic1") != std::string::npos &&
+          n.get<std::string>().find("elastic") != std::string::npos) clientNamed = true;
+  CHECK(clientNamed);
+  // O Graph construído a partir deste projecto não crasha em allNotesOff() nem em process(): sem a
+  // validação, makeInstrument("elastic") é nullptr e allNotesOff() desreferencia-o (graph.cpp:870).
+  Graph g(p, kSr);
+  g.allNotesOff();
+  std::vector<float> L(512), R(512);
+  for (int64_t pos = 0; pos < 48000; pos += 512) g.process(L.data(), R.data(), 512, pos, false);
+  g.allNotesOff();
+}
+
 CORE_TEST_MAIN
