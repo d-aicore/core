@@ -7,7 +7,7 @@ editam esta página. Regras de trabalho em [AGENTS.md](AGENTS.md).
 | | |
 | --- | --- |
 | Repo | `D:\CORE\CORE` · remote `https://github.com/d-aicore/core.git` (nome antigo `dmo-app/qwen-core` → histórico, D81) |
-| HEAD | `b80017efdbb6b47bc65a82338c403548e095967f` — «Core: estado inicial do Pattern Maker + Tools» |
+| HEAD / `origin/main` | `4cc08b4f44b87ddf71dc3f8da8dfb373b5d32ef7` — medido por `git rev-parse` + `git ls-remote`. Base de produto: `b80017efdbb6b47bc65a82338c403548e095967f` («Core: estado inicial do Pattern Maker + Tools») + wiring de sanitizers `54addba` (D92). Commits documentais do escrivão: `eb9d847`, `1bf65f3`, `e502be9`, `9d87065` |
 | Âmbito do ledger | **só o Core** — verbatim do dono, 17/11: «preciso que vas apontando decisoes sobre o core num ficheiro» · «apenas sobre o core nada de aicore e fundmmentals» |
 | Origem desta página | reconciliação do histórico confirmada **de uma vez** pelo dono em 17-11-2026 19:17 (D73). Rascunho confirmado: `D:\CORE\.escriva\RECONCILIACAO-RASCUNHO.md`; mapa old→new em [`docs/historico/MIGRACAO-LEDGER.md`](docs/historico/MIGRACAO-LEDGER.md); página anterior arquivada em [`docs/historico/ESTADO-2026-11-17-anterior.md`](docs/historico/ESTADO-2026-11-17-anterior.md) |
 | Formato | `D### · data · citação verbatim · fonte · âmbito/gatilho · estado · supersede/invalida` (D72) |
@@ -69,6 +69,8 @@ estão nesta tabela; D44 mantém-se listada em Invalidadas.
 | D89 | 17/11 19:17 | «§2: PROD pendente excepto as partes com o verbatim acima.» | L335 | âmbito de produto | ratificada | PROD-01…PROD-10 ficam em Pendentes; só a parte coberta por D86/D46 está decidida |
 | D90 | 17/11 19:17 | «§5: ancorar o gate Windows ao log que colei (guarda-o em docs/relatorios/2026-11-17-gate-windows.txt), caveat árvore suja; re-correr em árvore limpa depois do commit.» | L335 | gate, medição | ratificada · **executada** | invalida a linha «gate Windows sem artefacto local» da página anterior |
 | D91 | 17/11 19:17 | «Q9: AI = processo separado + painel cliente fino, descoberto como add-on (addon.json); NÃO VST3 in-process. "plugin próprio" = pacote fora do binário.» | L335 | arquitectura, AI | ratificada | concretiza D45/D52; recusa a leitura in-process; a escolha de transporte continua pendente (A04) |
+| D92 | 17/11 20:24 | «D92/D93 (ratifico já)» — resposta a «Que número uso no `Autorizado-por`?» | sessão Qoder `a571968b-ec84-4479-9d7e-de29f9340301`, `C:\Users\vk_do\.qoder\projects\D--CORE-CORE\a571968b-ec84-4479-9d7e-de29f9340301.jsonl` **L861**, `tool_result` do AskUserQuestion, ts `2026-11-17T20:24:49.174Z`. Conteúdo proposto em L616 desta sessão (19:30) | build, sanitizers, testes — **âmbito definido pela opção escolhida (proposta da equipa), não por palavras ditadas**: wiring `CORE_SANITIZE` + canários + assertiva de cobertura. A citação verbatim é só a resposta acima | ratificada | ocupa os números que C12 disputava (resolução por referência abaixo); implementação em `54addba` |
+| D93 | 17/11 20:24 | «Alinhar primeiro (recomendado)» — resposta a «E os quatro desvios ao teu texto do wiring?»; ratificação no mesmo registo: «D92/D93 (ratifico já)» | mesma fonte: `a571968b…jsonl` **L861**, ts `2026-11-17T20:24:49.174Z` | toolchain, âmbito de execução — **âmbito da opção escolhida, não ditado**: os três passos (tidy + ASan/UBSan + TSan) correm em WSL, zero instalações; no host fica só ASan MSVC como prova de Windows; não se instala LLVM no host | ratificada | alinha os quatro desvios ao texto do wiring antes de commitar; materializado em `54addba` + `4cc08b4` |
 
 ### Reserva de números (D74)
 
@@ -78,6 +80,8 @@ estão nesta tabela; D44 mantém-se listada em Invalidadas.
 | D67–D71 | reservados, sem conteúdo atribuído; não usar como decisão |
 | D72, D73 | mantidas como ditadas pelo dono |
 | D74+ | sequência de ratificações, em uso desde esta entrega |
+| D92, D93 | **ratificadas** em 17-11 20:24 (sanitizers: wiring e toolchain) |
+| D94, D95 | **pendentes**, não ratificadas: `D-LinuxHost` e `D-TransportSplit` (coladas às 20:13) |
 
 ---
 
@@ -126,17 +130,19 @@ Nada avança sem palavras dele: «Só palavras explícitas tuas criam decisões.
 | Desenho da remodelação | D87 | o que entra, sai e muda de forma |
 | Do lado `core-main` | RESUMO | PR #25 (fechar ou mesclar) e ratificar D58 — nada disto toca este repo |
 
-### Colisão em aberto — pede resolução (regra COLISÕES de D72: registar e perguntar, não escolher)
+### Colisão C12 — **resolvida por referência** (D92/D93, 17-11 20:24)
+
+Registada e perguntada como manda a regra COLISÕES de D72; o dono resolveu. A linha fica, com a resolução datada.
 
 | # | Colisão | Evidência verbatim | Fonte | Opções (não escolho) |
 | --- | --- | --- | --- | --- |
-| **C12** | Texto de decisões sobre sanitizers chegou com os números **D75 e D76**, que já estão ratificados hoje para outra coisa (D75 = namespace `BUG-`; D76 = folha do coordenador pendente). O primeiro vem escrito «75:» sem o `D`. | «75: ligo CORE_SANITIZE no CMake: address→MSVC (/fsanitize=address + /DEBUG); undefined/thread→só Clang/GCC, FATAL_ERROR se o compilador não suporta (nunca D9002 ignorado); exige Debug; instrumenta só os nossos targets (JUCE/miniaudio ficam de fora, declarado). Acrescento canários (asan/tsan/ubsan) que falham se o sanitizer estiver silencioso, e uma assertiva de cobertura que falha se algum ficheiro do scope não estiver no compile_commands.» · «D76: os três passos correm em WSL (zero instalações; TSan não tem caminho em Windows); no host fica só ASan MSVC como prova de Windows. Não instalo LLVM no host.» | esta sessão, `D--CORE/61b1abc0…jsonl` **L616**, ts `2026-11-17T19:30:21.934Z` (turno interrompido) | (a) entram como **D92/D93** (próximos livres) com esta citação e fonte; (b) pertencem a outro ledger/sessão e ficam fora deste; (c) o dono reescreve com número. **Nada foi implementado nem ratificado por mim a partir deste texto.** O relatório de pré-flight correspondente (`docs/relatorios/2026-11-17-preflight-sanitizadores-clang-tidy.md`) apareceu por comitar na árvore durante esta sessão — sinal de outra entrega a escrever no mesmo checkout; não o comitei. **Medido depois (19:41):** essa entrega implementou o texto na árvore — `CMakeLists.txt` com `CORE_SANITIZE` e `FATAL_ERROR` em vez de D9002 (mtime 19:37), `tests/CMakeLists.txt` e `tests/canary.cpp` (19:38). O conteúdo está a ser executado; **os números D75/D76 continuam em colisão** com as ratificações de 19:17. Não comitei nem alterei nenhum desses ficheiros |
+| **C12** | Texto de decisões sobre sanitizers chegou com os números **D75 e D76**, que já estão ratificados hoje para outra coisa (D75 = namespace `BUG-`; D76 = folha do coordenador pendente). O primeiro vem escrito «75:» sem o `D`. | «75: ligo CORE_SANITIZE no CMake: address→MSVC (/fsanitize=address + /DEBUG); undefined/thread→só Clang/GCC, FATAL_ERROR se o compilador não suporta (nunca D9002 ignorado); exige Debug; instrumenta só os nossos targets (JUCE/miniaudio ficam de fora, declarado). Acrescento canários (asan/tsan/ubsan) que falham se o sanitizer estiver silencioso, e uma assertiva de cobertura que falha se algum ficheiro do scope não estiver no compile_commands.» · «D76: os três passos correm em WSL (zero instalações; TSan não tem caminho em Windows); no host fica só ASan MSVC como prova de Windows. Não instalo LLVM no host.» | esta sessão, `D--CORE/61b1abc0…jsonl` **L616**, ts `2026-11-17T19:30:21.934Z` (turno interrompido) | (a) entram como **D92/D93** (próximos livres) com esta citação e fonte; (b) pertencem a outro ledger/sessão e ficam fora deste; (c) o dono reescreve com número. **Nada foi implementado nem ratificado por mim a partir deste texto.** O relatório de pré-flight correspondente (`docs/relatorios/2026-11-17-preflight-sanitizadores-clang-tidy.md`) apareceu por comitar na árvore durante esta sessão — sinal de outra entrega a escrever no mesmo checkout; não o comitei. **Medido depois (19:41):** essa entrega implementou o texto na árvore — `CMakeLists.txt` com `CORE_SANITIZE` e `FATAL_ERROR` em vez de D9002 (mtime 19:37), `tests/CMakeLists.txt` e `tests/canary.cpp` (19:38). O conteúdo está a ser executado; **os números D75/D76 continuam em colisão** com as ratificações de 19:17. Não comitei nem alterei nenhum desses ficheiros. **RESOLVIDA por referência em 17-11 20:24 (D92/D93):** o dono ratificou os dois próximos livres — «D92/D93 (ratifico já)» — e os números ficam para D92 (wiring `CORE_SANITIZE` + canários + assertiva) e D93 (três passos em WSL, host só ASan MSVC, sem LLVM). A colisão de numeração deixa de existir: o texto de L616 é o conteúdo, D92/D93 são as entradas ratificadas. **Correcção datada da frase «Nada foi implementado»:** continua verdadeira quanto a mim (não implementei nada), mas está desactualizada quanto ao repo — o trabalho **está implementado, medido e commitado** em `54addba` (build) e `4cc08b4` (docs+evidência), e verifiquei que `origin/main` = `4cc08b4f44b87ddf71dc3f8da8dfb373b5d32ef7`. A opção (b) «pertence a outro ledger» ficou descartada |
 
 ### Propostas coladas nesta sessão, por ratificar (IDs fora do formato `D###`)
 
 Chegaram em 20:13 com os IDs `D-LinuxHost` e `D-TransportSplit`. Pelo precedente de D77, IDs fora do formato não
-são decisões: ou mapeiam para as já ratificadas, ou ganham número quando o dono ratificar. **Fila de números:**
-C12 (19:30) primeiro → D92/D93; estas (20:13) a seguir → D94/D95. Nada foi implementado.
+são decisões: ou mapeiam para as já ratificadas, ou ganham número quando o dono ratificar. **Fila de números (actualizada 20:24):** C12 foi resolvida — **D92/D93 ratificadas** e ocupadas. Estas duas
+(20:13) seguem como **D94/D95, pendentes, não ratificadas**. Nada foi implementado a partir delas.
 
 | Proposta | Citação verbatim | Fonte | Verificação que fiz ao código (medido, não assumido) | O que falta |
 | --- | --- | --- | --- | --- |
@@ -169,6 +175,9 @@ C12 (19:30) primeiro → D92/D93; estas (20:13) a seguir → D94/D95. Nada foi i
 | **D83** | as linhas «Master vertical e seleção», «Refinamento visual e DSP Performance» e «Maqueta da interface» da página anterior como trabalho **no binário** — ver [`ESTADO-2026-11-17-anterior.md`](docs/historico/ESTADO-2026-11-17-anterior.md) | L335 |
 | **D90** | a linha anterior «gate Windows: sem artefacto local / delta a reconciliar» | L335 + [`2026-11-17-gate-windows.txt`](docs/relatorios/2026-11-17-gate-windows.txt) |
 | **D91** | a leitura de «integraçao de ai atraves de um pllugin proprio» como VST3 de AI dentro de `Core.exe` | L335 |
+| **D92/D93** (resolução de C12) | a colisão de numeração C12 e as suas três opções; o texto de L616 passa a ser o conteúdo das entradas D92/D93 | `a571968b…jsonl` L861, ts 20:24:49.174Z |
+| **D92/D93 + evidência §7** | a linha «Contagem de casos em Windows: não existe no log» como afirmação sobre o estado actual — existe 113/1456 em ASan MSVC | [`2026-11-17-sanitizadores-evidencia.txt`](docs/relatorios/2026-11-17-sanitizadores-evidencia.txt) §7 |
+| **`54addba` + `4cc08b4`** | «o trabalho dos sanitizers está por comitar / nada foi implementado» como descrição do repo — está implementado, medido e em `origin/main` | `git log`, `git ls-remote origin main` |
 
 ---
 
@@ -184,11 +193,38 @@ C12 (19:30) primeiro → D92/D93; estas (20:13) a seguir → D94/D95. Nada foi i
 | Recuperação do que foi revertido | stash-commit `1abade528f6fe506152311183d55e38ada681288` em `refs/escriva/unratified-2026-11-17` (506+/129− em 11 ficheiros) + cópia em `D:\CORE\.escriva\unratified-2026-11-17\` (inclui `DspPerformance.*` e os 4 relatórios) | medido |
 | Itens do audit não medidos | 7, 8, 15, 18, 27, 28, 31 (Windows-puro: só compilação/leitura) | reportado |
 | Limites conhecidos | 3a = hash dos primeiros 64 KiB; 3b = revalida só o cabeçalho WAV; índice da biblioteca ficou na versão 2 de propósito | reportado (`RESUMO.md`) |
-| Contagem de casos em Windows | **não existe no log** — 113/1456 são do ambiente Linux | medido (a ausência é o facto) |
-| Concurrent writer no mesmo checkout | Outra entrega escreveu `CMakeLists.txt` (19:37), `tests/CMakeLists.txt` e `tests/canary.cpp` (19:38) — o trabalho de sanitizers do texto L616 (C12). **Não comitei nem alterei esses ficheiros.** | medido (`git status --porcelain`, mtimes, `git diff`) |
-| O gate das 19:37 não apanhou esses edits | `CMakeCache.txt` e `build.ninja` da pasta nova têm mtime **19:34** e **0** ocorrências de `CORE_SANITIZE`, `canary` ou `fsanitize` (cache, `build.ninja` e `gate.log`); o configure foi anterior às edições | medido por contagem nos três ficheiros |
-| Terceira execução do gate | **não feita** — construiria o trabalho em curso de outra entrega e disputaria locks de build. A re-execução pedida por D90 fica satisfeita pela das 19:37 | decisão de método, registada |
+| Contagem de casos/verificações em Windows | **Correcção 20:5x — existe.** A ronda ASan MSVC 19.51 no host dá **113 casos / 1456 verificações / 0 falhas**, com contagem por suite (evidência §7). O que era verdade: os logs do gate de 18:43 e 19:37 **não traziam** contagens, só 15/15 | medido por mim no ficheiro commitado [`2026-11-17-sanitizadores-evidencia.txt`](docs/relatorios/2026-11-17-sanitizadores-evidencia.txt); somas conferidas (113 e 1456) |
+| Concurrent writer no mesmo checkout | Outra entrega escreveu `CMakeLists.txt` (19:37), `tests/CMakeLists.txt` e `tests/canary.cpp` (19:38) — o trabalho de sanitizers do texto L616 (C12). **Não comitei nem alterei esses ficheiros.** **Correcção 20:5x:** esse trabalho **está commitado** em `54addba` (build) e `4cc08b4` (docs+evidência), e `origin/main` = `4cc08b4f44b87ddf71dc3f8da8dfb373b5d32ef7` — o que arrasta também os meus 4 commits documentais (`eb9d847`, `1bf65f3`, `e502be9`, `9d87065`), que eu não tinha pushed | medido (`git log`, `git rev-parse origin/main`, `git ls-remote origin main`) |
+| O gate das 19:37 não apanhou esses edits (**histórico, mantém-se**) | `CMakeCache.txt` e `build.ninja` da pasta nova têm mtime **19:34** e **0** ocorrências de `CORE_SANITIZE`, `canary` ou `fsanitize` (cache, `build.ninja` e `gate.log`); o configure foi anterior às edições | medido por contagem nos três ficheiros |
+| Terceira execução do gate por mim | **não feita** — construiria o trabalho em curso de outra entrega e disputaria locks de build. **Correcção 20:5x:** a ronda D92/D93 correu quatro gates (abaixo), por isso a re-execução pedida por D90 está satisfeita mais do que uma vez | decisão de método, registada |
 | Runtime da app nesta sessão | build + 15 testes de gate corridos em Windows; **a app não foi aberta**, nenhum self-test desktop, nenhum áudio ouvido | medido por mim |
+
+### Ronda sanitizers + clang-tidy (D92/D93) — medida noutra entrega, conferida por mim nos ficheiros commitados
+
+Fonte: `54addba` (build) e `4cc08b4` (docs+evidência), ambos em `origin/main`. Evidência ancorada em
+[`2026-11-17-sanitizadores-evidencia.txt`](docs/relatorios/2026-11-17-sanitizadores-evidencia.txt) (169 linhas),
+relatório [`2026-11-17-preflight-sanitizadores-clang-tidy.md`](docs/relatorios/2026-11-17-preflight-sanitizadores-clang-tidy.md)
+(PF-01…PF-15 + três adenda) e [`tidy-round1.txt`](docs/relatorios/tidy-round1.txt). **Não re-executei nada**:
+conferi totais, somas e contagens por leitura independente.
+
+| Corrida `merge` | Ambiente | Testes | Casos / verificações | Tempo | Reports de sanitizer |
+| --- | --- | --- | --- | --- | --- |
+| ASan + UBSan | WSL GCC 13 | **15/15** | 113 / 1456, 0 falhas | 116.17 s | ASan=0 · runtime error=0 · LSan=0 · TSan=0 · FATAL=0 |
+| TSan | WSL GCC 13 | **15/15** | 113 / 1456, 0 falhas | 228.23 s | idem, todos 0 |
+| Normal (sem `CORE_SANITIZE`) | WSL GCC 13 | **15/15** | 113 / 1456, 0 falhas | 71.46 s | idem, todos 0 |
+| ASan MSVC 19.51 | **host Windows** | **15/15** | 113 / 1456, 0 falhas | 303.41 s | ASan=0 · runtime error=0 |
+
+Somas por suite conferidas por mim: 20+9+21+8+10+2+7+5+14+7+10 = **113**; 81+64+216+115+49+25+65+66+649+82+44 = **1456**.
+
+| Item | Valor medido | Estatuto |
+| --- | --- | --- |
+| Instrumentação por árvore | ASan **65/66** TUs · MSVC **65/66** · TSan **64/65**; único de fora: `miniaudio_impl.c`. Tidy 51 TUs no banco (0 instrumentados, build normal); plain 64 TUs | evidência §3; JUCE e `CoreSetupData` fora, declarado |
+| Canários (fora do `ctest`) | asan **3/3** exit 1 · ubsan **3/3** exit 1 · tsan **5/5** exit 66, com reports reais (`heap-use-after-free` canary.cpp:10, `signed integer overflow` :20, `data race` :38). `ctest -N`: Total Tests **15**, ocorrências de canary **0** | evidência §2 e §8 |
+| Defeito próprio da ronda | o desenho anterior do canário TSan era **flaky** (falhou 3 de 5, exit 0 sem report) → substituído por 200 000 acessos de cada lado libertados por um atomic; binários ligados ao libtsan (`ldd` verificado). Segundo defeito: o `--require` do gate não falhava e escrevia um ficheiro com o nome do fonte exigido | registado e corrigido na própria entrega (commit `4cc08b4`) |
+| Recusas do wiring | **5** `FATAL_ERROR` exit 1: MSVC `address,undefined` · MSVC `thread` · mistura `address+thread` · `Release` em vez de Debug · valor desconhecido `bogus` (WSL) | evidência §1 — o D9002 silencioso não volta |
+| Gate de scope (`ci/tidy_scope.py`) | exit 0; 52 pedidos → **50 analisados, 2 excluídos, 0 em falta**; controlo negativo **exit 1** (tem de ser 1). Excluídos declarados: `app/engine-client/src/engine_client.cpp` (`#error` no :5, alvo Windows-only) e `engine/src/plugins/juce_host.cpp` (JUCE ausente pela guarda `CORE_BUILD_APP`/`WIN32`) | evidência §9. **São exactamente as duas lacunas que D94/D95 propõem fechar** |
+| clang-tidy | WSL LLVM 18.1.3: **766 avisos / 0 erros**; **456 nossos + 310 `json.hpp` vendored**; `tidy-round1.txt` = **6551 linhas**. Top nosso: `graph.cpp` 49, `project.hpp` 44, `edit.cpp` 32, `clip_grains.hpp` 27, `song_clock.hpp` 24 | **conferido por mim**: contagem independente de `warning:`/`error:` e das linhas com `json.hpp` dá 766/0/310 → 456 |
+| O que continua não provado | nenhum destes gates abre a app, toca áudio ou prova o runtime Windows dos itens 7/8/15/18/27/28/31; TSan não corre no host (D93), por isso o transporte Win32 fica sem prova de races | limite declarado |
 
 ---
 
