@@ -1,0 +1,169 @@
+Evidencia - sanitizers + clang-tidy, 17-11-2026 (noite), alinhado a D92/D93
+Base: eb9d847 (codigo); HEAD documental seguinte: 9d87065. Alteracoes por commitar nesta entrega.
+Relatorio: 2026-11-17-preflight-sanitizadores-clang-tidy.md (adenda 1-3)
+Logs completos: D:/Core-build (host MSVC) e ~/core-build (WSL GCC 13). Nada disto e output de UI.
+
+=== 1. RECUSAS DO WIRING (todas FATAL_ERROR, exit 1) ===
+--- msvc-refuse ---
+CMake Error at CMakeLists.txt:43 (message):
+  CORE_SANITIZE='address,undefined': MSVC supports address only.
+  undefined/thread need Clang or GCC (e.g.  a Linux build).
+--- msvc-refuse2 ---
+CMake Error at CMakeLists.txt:43 (message):
+  CORE_SANITIZE='thread': MSVC supports address only.  undefined/thread need
+  Clang or GCC (e.g.  a Linux build).
+--- msvc-refuse3 ---
+CMake Error at CMakeLists.txt:39 (message):
+  CORE_SANITIZE: address and thread cannot be combined; use separate build
+  trees
+--- msvc-refuse-release ---
+CMake Error at CMakeLists.txt:34 (message):
+  CORE_SANITIZE requires CMAKE_BUILD_TYPE=Debug (got 'Release')
+
+--- valor desconhecido (WSL, GCC) ---
+CORE_SANITIZE: unknown value 'bogus' (address|undefined|thread)  [exit 1]
+
+=== 2. CANARIOS + REPETIBILIDADE (exit codes medidos sem pipeline) ===
+asan_canary run1: report=1
+asan_canary run2: report=1
+asan_canary run3: report=1
+ubsan_canary run1: report=1
+ubsan_canary run2: report=1
+ubsan_canary run3: report=1
+tsan_canary run1: report=1
+tsan_canary run2: report=1
+tsan_canary run3: report=1
+tsan_canary run4: report=1
+tsan_canary run5: report=1
+exit codes: asan=1 (3/3), ubsan=1 (3/3), tsan=66 (5/5)
+SUMMARY: AddressSanitizer: heap-use-after-free /home/diogo/core-src/tests/canary.cpp:10 in main
+/home/diogo/core-src/tests/canary.cpp:20:32: runtime error: signed integer overflow: 2147483647 + 1 cannot be represented in type 'int'
+SUMMARY: ThreadSanitizer: data race /home/diogo/core-src/tests/canary.cpp:38 in operator()
+HISTORICO: o desenho anterior do canario tsan (um par de escritas) falhou em 3 de 5 corridas
+(exit 0, sem report). Era flaky e nao provava instrumentacao; substituido por 200000 acessos
+de cada lado libertados por um atomic. Binarios sempre ligados ao libtsan (ldd verificado).
+--- asan_canary MSVC host (exit 1, com simbolos) ---
+==45464==ERROR: AddressSanitizer: heap-use-after-free on address 0x11d5d9ea01fc at pc 0x7ff602ee10f4 bp 0x0044c8f5f9e0 sp 0x0044c8f5f9e8
+    #0 0x7ff602ee10f3 in main D:\CORE\CORE\tests\canary.cpp:10
+
+=== 3. INSTRUMENTACAO POR ARVORE (so targets nossos, D92) ===
+tidy   TUs=51 instrumentados=0 de_fora=50 ficheiros (build normal)
+asan   TUs=66 instrumentados=65 de_fora=['miniaudio_impl.c']
+tsan   TUs=65 instrumentados=64 de_fora=['miniaudio_impl.c']
+plain  TUs=64 instrumentados=0 de_fora=61 ficheiros (build normal)
+msvc   TUs=66 instrumentados=65 de_fora=['miniaudio_impl.c']
+
+=== 4. SUITE merge - ASan+UBSan WSL (GCC 13) ===
+100% tests passed, 0 tests failed out of 15
+Total Test time (real) = 116.17 sec
+output proprio: 113 linhas ok, 15 prefixos de teste
+reports: AddressSanitizer=0 runtime error:=0 LeakSanitizer=0 ThreadSanitizer=0 FATAL=0
+por suite (testes, verificacoes, falhas):
+  20 testes, 81 verificacoes, 0 falhas
+  9 testes, 64 verificacoes, 0 falhas
+  21 testes, 216 verificacoes, 0 falhas
+  8 testes, 115 verificacoes, 0 falhas
+  10 testes, 49 verificacoes, 0 falhas
+  2 testes, 25 verificacoes, 0 falhas
+  7 testes, 65 verificacoes, 0 falhas
+  5 testes, 66 verificacoes, 0 falhas
+  14 testes, 649 verificacoes, 0 falhas
+  7 testes, 82 verificacoes, 0 falhas
+  10 testes, 44 verificacoes, 0 falhas
+  TOTAL casos=113 verificacoes=1456 falhas=0
+
+=== 5. SUITE merge - TSan WSL (GCC 13) ===
+100% tests passed, 0 tests failed out of 15
+Total Test time (real) = 228.23 sec
+output proprio: 113 linhas ok, 15 prefixos de teste
+reports: AddressSanitizer=0 runtime error:=0 LeakSanitizer=0 ThreadSanitizer=0 FATAL=0
+por suite (testes, verificacoes, falhas):
+  20 testes, 81 verificacoes, 0 falhas
+  9 testes, 64 verificacoes, 0 falhas
+  21 testes, 216 verificacoes, 0 falhas
+  8 testes, 115 verificacoes, 0 falhas
+  10 testes, 49 verificacoes, 0 falhas
+  2 testes, 25 verificacoes, 0 falhas
+  7 testes, 65 verificacoes, 0 falhas
+  5 testes, 66 verificacoes, 0 falhas
+  14 testes, 649 verificacoes, 0 falhas
+  7 testes, 82 verificacoes, 0 falhas
+  10 testes, 44 verificacoes, 0 falhas
+  TOTAL casos=113 verificacoes=1456 falhas=0
+
+=== 6. SUITE merge - build normal WSL, sem CORE_SANITIZE ===
+100% tests passed, 0 tests failed out of 15
+Total Test time (real) =  71.46 sec
+output proprio: 113 linhas ok, 15 prefixos de teste
+reports: AddressSanitizer=0 runtime error:=0 LeakSanitizer=0 ThreadSanitizer=0 FATAL=0
+por suite (testes, verificacoes, falhas):
+  20 testes, 81 verificacoes, 0 falhas
+  9 testes, 64 verificacoes, 0 falhas
+  21 testes, 216 verificacoes, 0 falhas
+  8 testes, 115 verificacoes, 0 falhas
+  10 testes, 49 verificacoes, 0 falhas
+  2 testes, 25 verificacoes, 0 falhas
+  7 testes, 65 verificacoes, 0 falhas
+  5 testes, 66 verificacoes, 0 falhas
+  14 testes, 649 verificacoes, 0 falhas
+  7 testes, 82 verificacoes, 0 falhas
+  10 testes, 44 verificacoes, 0 falhas
+  TOTAL casos=113 verificacoes=1456 falhas=0
+
+=== 7. SUITE merge - ASan MSVC 19.51 (host Windows) ===
+100% tests passed out of 15
+Total Test time (real) = 303.41 sec
+output proprio: 113 linhas ok, 15 prefixos de teste
+reports: AddressSanitizer=0 runtime error:=0
+  TOTAL casos=113 verificacoes=1456 falhas=0
+
+=== 8. CANARIOS FORA DO CTEST (contagens merge inalteradas) ===
+
+Total Tests: 15
+ocorrencias de canary na lista de testes: 0
+
+=== 9. GATE DE SCOPE (ci/tidy_scope.py, no repo) ===
+gate exit=0
+TUs no banco: 51 | windows=False juce=False
+scope: 52 pedidos -> 50 analisados, 2 excluidos, 0 em falta
+  EXCLUIDO app/engine-client/src/engine_client.cpp (Windows-only target; #error at engine_client.cpp:5)
+  EXCLUIDO engine/src/plugins/juce_host.cpp (JUCE target absent from this build (CORE_BUILD_APP/WIN32 gate))
+lista escrita: /home/diogo/core-build/tidy-scope.txt
+controlo negativo exit=1 (tem de ser 1)
+  EM FALTA engine/src/plugins/juce_host.cpp
+SCOPE INCOMPLETO: ['engine/src/plugins/juce_host.cpp']
+
+=== 10. CLANG-TIDY (WSL, LLVM 18.1.3; nao repetido na ronda 3: scope inalterado) ===
+warnings=766 errors=0
+terceiros (json.hpp vendored)=310  nosso=456
+por check (so codigo nosso):
+      193 [bugprone-easily-swappable-parameters]
+       95 [bugprone-implicit-widening-of-multiplication-result]
+       63 [bugprone-narrowing-conversions]
+       15 [performance-enum-size]
+       12 [performance-inefficient-vector-operation]
+       10 [concurrency-mt-unsafe]
+        9 [performance-inefficient-string-concatenation]
+        7 [bugprone-misplaced-widening-cast]
+        7 [bugprone-empty-catch]
+        6 [bugprone-suspicious-string-compare]
+        5 [performance-avoid-endl]
+        4 [bugprone-not-null-terminated-result]
+        4 [bugprone-branch-clone]
+        3 [bugprone-assignment-in-if-condition]
+        2 [performance-no-automatic-move]
+        1 [performance-unnecessary-value-param]
+        1 [performance-faster-string-find]
+por ficheiro (so codigo nosso, top 12, caminhos normalizados):
+       49 engine/src/core/graph.cpp
+       44 engine/src/core/project.hpp
+       32 app/domain/src/edit.cpp
+       27 engine/src/dsp/clip_grains.hpp
+       24 engine/src/dsp/song_clock.hpp
+       22 app/domain/src/pcore.cpp
+       18 engine/src/core/plugins.hpp
+       16 engine/src/core/server.cpp
+       14 app/domain/src/randomize.cpp
+       13 app/domain/src/samples.cpp
+       13 app/domain/src/document.cpp
+       12 engine/src/core/engine.hpp
