@@ -182,6 +182,9 @@ private:
   void edit(const std::function<void(doc::Document&)>& change, const juce::String& label);
   void beginGesture(const juce::String& label);
   void endGesture();
+  // BUG-SWEEP-21 (ratified): the split of a frozen clip is refused; this is the offer the refusal names —
+  // unfreeze (one Undo step) then split (its own step). Never a half-frozen clip.
+  void offerUnfreezeSplit(const std::string& trackId, const std::string& clipId, int64_t atTick);
   void documentChanged(bool rebuildRows);  // after undo/redo/open: controls follow the document
   void undo();
   void redo();
@@ -246,7 +249,7 @@ private:
   bool templatesLoaded_ = false;
   void showTrackMenu(const std::string& trackId);  // right click on a track
   void showAddTrackMenu();
-  // The Patterns window (P-Core's channel rack), a window of its own beside this one (Diogo, 2026-11-08). While it
+  // The Patterns window (Pattern Maker's channel rack), a window of its own beside this one (Diogo, 2026-11-08). While it
   // plays a pattern, the engine gets that pattern alone, looped (doc::rackPlayDocument); stopping gives the song back.
   void giveSilentTracksPlugins();  // Plugins menu: old (builtin) and empty tracks get their role's plugin
   // Core's tools (doc::corePlugins: the Tools panel, the Plugins menu, a track's right-click "Tools"): the same
@@ -255,8 +258,8 @@ private:
   juce::PopupMenu coreToolMenu(const std::string& toolId, const std::string& trackId);
   juce::PopupMenu coreToolsMenu(const std::string& trackId);
   void openCorePlugin(const doc::CorePluginInfo& info, juce::Component* near);
-  // The PLUGINS tab of the Tools panel (Diogo 2026-11-17): a maker's card opens its plugins' options; the F-Core
-  // intents can also be applied over chosen bars, on this track, the selected ones or all that play notes.
+  // The PLUGINS tab of the Tools panel (Diogo 2026-11-17): a maker's card opens its plugins' options; the effects
+  // by intent can also be applied over chosen bars, on this track, the selected ones or all that play notes.
   void showVendorPlugins(const doc::PluginVendorGroup& group, juce::Component* near);
   void askIntentZone(const std::string& intent, const std::string& trackId);
   void refreshInstalledCards();
@@ -550,6 +553,10 @@ private:
     std::string gainId;    // the test synth's "Gain" parameter, as the engine names it
     std::string copyTrack; // the plugin track the self-test duplicated
     uint64_t pluginEditsSeen = 0;  // snap_.pluginEdits before the self-test moved a plugin's parameter
+    nlohmann::json throwPlugin;  // the test effect that throws while playing (BUG-SWEEP-05: Try again)
+    int retryEffect = -1;        // where the throwing effect sits in the bass chain
+    float retryHeard = 0;        // the bass peak latched while the retried instance is in the song
+    int retryAttempts = 0;       // Try again clicks: a busy machine can hide the rebuilt instance's healthy window
   };
   std::unique_ptr<SelfTest> test_;
   void selfTestSynth();  // the self-test's synth on every note track without a plugin

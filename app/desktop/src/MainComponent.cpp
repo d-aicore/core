@@ -1195,6 +1195,8 @@ private:
     if (!c) return;
     const int64_t at = hasSelection() ? tickOf(selFrom_) : (int64_t)owner_.snap_.positionTick;
     const std::string t = trackId_, id = clipId_;
+    // A frozen clip refuses the split (BUG-SWEEP-21): offer the unfreeze (one Undo) then split.
+    if (c->freezeSeconds > 0) { owner_.offerUnfreezeSplit(t, id, at); return; }
     owner_.edit([&](doc::Document& d) { doc::splitAudioClip(d, t, id, at); }, u8("Split audio clip"));
     selFrom_ = selTo_ = 0;
     documentChanged();
@@ -2004,11 +2006,11 @@ MainComponent::MainComponent(EngineSession::Options options, doc::Document docum
   editor_.bpm = [this] { return doc::bpmAt(history_.current(), (int64_t)shownPosition()); };
   editor_.patternLibrary = [this] { return loadPatterns(); };
   editor_.pcoreCatalog = [this]() -> const doc::PCoreCatalog* {
-    // pcore/styles.json beside Core.exe, read once (a broken file is logged and P-Core says it is missing).
+    // pcore/styles.json beside Core.exe, read once (a broken file is logged and Pattern Maker says it is missing).
     if (!pcoreTried_) {
       pcoreTried_ = true;
       const juce::File f = juce::File::getSpecialLocation(juce::File::currentExecutableFile).getParentDirectory().getChildFile("pcore").getChildFile("styles.json");
-      try { pcoreCatalog_ = doc::loadPCoreCatalog(pathOf(f)); } catch (const std::exception& e) { logLine(u8("P-Core catalogue not read: ") + u8(e.what())); }
+      try { pcoreCatalog_ = doc::loadPCoreCatalog(pathOf(f)); } catch (const std::exception& e) { logLine(u8("Pattern Maker catalogue not read: ") + u8(e.what())); }
     }
     return pcoreCatalog_ ? &*pcoreCatalog_ : nullptr;
   };
@@ -2087,8 +2089,9 @@ void MainComponent::edit(const std::function<void(doc::Document&)>& change, cons
     showError(u8("Could not do that"), u8(e.what()));
     return;
   }
-  // A change that takes a plugin away (a track removed, another instrument, a sample on a plugin track, an effect
-  // removed): what the plugins hold now goes into the document first, or Undo brings them back as last saved.
+  // A change that takes a plugin away (a track removed, another instrument, an effect removed): what the plugins
+  // hold now goes into the document first, or Undo brings them back as last saved. (A sample on a plugin track is
+  // refused outright — BUG-SWEEP-10 — so it never takes the plugin away.)
   if (!capturePluginsBefore(next, &next)) return;
   const doc::Loop before = history_.current().loop;
   if (history_.inGesture()) history_.updateGesture(next);
@@ -2118,7 +2121,7 @@ void MainComponent::edit(const std::function<void(doc::Document&)>& change, cons
 bool MainComponent::takePluginStates(json* taken) {
   if (!doc::hasPlugins(history_.current())) return true;
   if (session_->snapshot().status == EngineStatus::Stopped) return true;
-  json states = session_->pluginStates(5000);
+  json states = session_->pluginStates(5000, doc::pluginKeys(history_.current()));
   if (!states.is_object()) {
     showError(u8("Plugins"), u8("The engine did not give the plugins' current settings in time, so nothing was changed: "
                                 "a plugin taken away now would come back with Undo as it was last saved. Try again."));
@@ -2221,7 +2224,7 @@ void MainComponent::openCoreWindow(const std::string& what, const std::string& t
     repaint();
     return;
   }
-  if (what == "patterns") {  // P-Core: the Patterns window, its own window, that track chosen there
+  if (what == "patterns") {  // Pattern Maker: the Patterns window, its own window, that track chosen there
     selectTrack(track);
     openPatterns();
     if (patternsWindow_ && t && doc::playsPatterns(*t)) patternsWindow_->panel().select(track);
@@ -2324,9 +2327,7 @@ juce::PopupMenu MainComponent::coreToolMenu(const std::string& toolId, const std
   const juce::String on = t ? u8(" on ") + u8(t->name) : juce::String();
   std::string rolesProblem;
   const doc::RoleMap roleMap = PluginCatalog::roles(&rolesProblem);
-  if (toolId == "pcore") {
-    m.addItem(juce::PopupMenu::Item(u8("Open the Patterns window…")).setAction([safe] { if (safe) safe->openPatterns(); }));
-  } else if (toolId == "wcore") {
+  if (toolId == "wcore") {
     for (const char* role : {"bass", "lead", "pad", "pluck", "drums"}) {
       const juce::String label = u8(doc::findRole(role) ? doc::findRole(role)->label : role);
       if (notes)
@@ -2357,7 +2358,7 @@ juce::PopupMenu MainComponent::coreToolMenu(const std::string& toolId, const std
       for (const auto& intent : doc::fxIntents()) {
         juce::PopupMenu sub = where([safe, trackId, intent](const doc::SongSpan& span) {
           if (!safe) return;
-          safe->runTool(u8("F-Core: ") + u8(intent), [&](doc::Document& d, const doc::RoleMap& r) {
+          safe->runTool(u8("Effects: ") + u8(intent), [&](doc::Document& d, const doc::RoleMap& r) {
             return withSkipped(doc::toolIntentFx(d, trackId, r, intent, span.start, span.end, 0.7));
           });
         }, true);
@@ -2379,7 +2380,7 @@ juce::PopupMenu MainComponent::coreToolMenu(const std::string& toolId, const std
         m.addItem(juce::PopupMenu::Item(u8(capital(p.id)) + u8(": ") + u8(p.what) + u8(" (") + juce::String((int)tracks.size()) + u8(" tracks)"))
                       .setAction([safe, tracks, kind, id = p.id] {
                         if (!safe) return;
-                        safe->runTool(u8(kind == "reverb" ? "R-Core " : "D-Core ") + u8(id), [&](doc::Document& d, const doc::RoleMap& r) {
+                        safe->runTool(u8(kind == "reverb" ? "Reverb " : "Delay ") + u8(id), [&](doc::Document& d, const doc::RoleMap& r) {
                           return doc::toolSharedBus(d, tracks, r, kind, id).sentence;
                         });
                       }));
@@ -2420,9 +2421,9 @@ juce::PopupMenu MainComponent::coreToolMenu(const std::string& toolId, const std
 juce::PopupMenu MainComponent::coreToolsMenu(const std::string& trackId) {
   juce::PopupMenu m;
   for (const auto& p : doc::corePlugins()) {
-    juce::PopupMenu one = coreToolMenu(p.id, trackId);
-    if (p.id == "pcore") { m.addItem(juce::PopupMenu::Item(u8("P-Core: the Patterns window…")).setAction([this] { openPatterns(); })); continue; }
-    m.addSubMenu(u8(p.shortName) + u8(" · ") + u8(p.word), one);
+    // Pattern Maker opens its window directly; the other cards are menus (where it works, then it writes).
+    if (p.id == "pcore") { m.addItem(juce::PopupMenu::Item(u8("Pattern Maker: the Patterns window…")).setAction([this] { openPatterns(); })); continue; }
+    m.addSubMenu(u8(p.shortName) + u8(" · ") + u8(p.word), coreToolMenu(p.id, trackId));
   }
   return m;
 }
@@ -2481,7 +2482,7 @@ void MainComponent::showVendorPlugins(const doc::PluginVendorGroup& group, juce:
   m.showMenuAsync(options);
 }
 
-// F-Core over a chosen zone (Diogo 2026-11-17: "ao selecionar a zona aplicava nas pistas que queria ou em todas e
+// Effects by intent over a chosen zone (Diogo 2026-11-17: "ao selecionar a zona aplicava nas pistas que queria ou em todas e
 // ainda tinha opçao de escolher os numero do bar inicial e final"): first and last bar, the tracks, and the amount.
 // The write itself is toolIntentFxTracks, through runTool: one undo step, a refusal changes nothing.
 void MainComponent::askIntentZone(const std::string& intent, const std::string& trackId) {
@@ -2490,7 +2491,7 @@ void MainComponent::askIntentZone(const std::string& intent, const std::string& 
   const int totalBars = (int)std::max<int64_t>(1, song.lengthTicks / kBar);
   const doc::Track* t = song.findTrack(trackId);
   const std::vector<std::string> selected = selectedTracks();
-  auto* w = new juce::AlertWindow(u8("F-Core: ") + u8(intent), juce::String(), juce::MessageBoxIconType::NoIcon, this);
+  auto* w = new juce::AlertWindow(u8("Effects: ") + u8(intent), juce::String(), juce::MessageBoxIconType::NoIcon, this);
   w->addTextEditor("from", "1", lang::tr("First bar:"));
   w->addTextEditor("to", juce::String(totalBars), lang::tr("Last bar:"));
   juce::StringArray choices;
@@ -2511,7 +2512,7 @@ void MainComponent::askIntentZone(const std::string& intent, const std::string& 
     const int from = safe->getTextEditorContents("from").getIntValue();
     const int to = safe->getTextEditorContents("to").getIntValue();
     if (from < 1 || to < from || to > totalBars) {
-      showError(u8("F-Core: ") + u8(intent),
+      showError(u8("Effects: ") + u8(intent),
                 u8("Choose bars between 1 and ") + juce::String(totalBars) + u8(", the first no later than the last."));
       return;
     }
@@ -2522,7 +2523,7 @@ void MainComponent::askIntentZone(const std::string& intent, const std::string& 
     else if (choice == 2) { for (const auto& tr : history_.current().tracks) if (doc::playsPatterns(tr)) tracks.push_back(tr.id); }
     else tracks.push_back(trackId);
     const double strength = amount->getValue();
-    runTool(u8("F-Core: ") + u8(intent), [&](doc::Document& d, const doc::RoleMap& r) {
+    runTool(u8("Effects: ") + u8(intent), [&](doc::Document& d, const doc::RoleMap& r) {
       return withSkipped(doc::toolIntentFxTracks(d, tracks, r, intent, start, end, strength));
     });
   }), true);
@@ -3300,6 +3301,25 @@ void MainComponent::filesDropped(const juce::StringArray& files, int x, int y) {
   importFiles(wavs, t ? t->id : std::string(), row ? row->dropTick(screen) : -1);
 }
 
+// BUG-SWEEP-21 (owner ratified 2026-11-18): «split em clip congelado = recusa com mensagem + oferta de unfreeze
+// (um Undo); nunca meio-congelado.» The domain refuses the split of a frozen clip; this is the offer: unfreeze
+// as its own Undo step, then the split the user asked for (its own step). Undo walks back through both.
+void MainComponent::offerUnfreezeSplit(const std::string& trackId, const std::string& clipId, int64_t atTick) {
+  auto* w = new juce::AlertWindow(u8("Frozen clip"),
+      u8("This clip is frozen: it holds a piece of the file for its whole length. Splitting it is refused, because the second piece would hold a different part of the file.\n\nUnfreeze it (one Undo) and split?"),
+      juce::MessageBoxIconType::QuestionIcon, this);
+  w->addButton(u8("Unfreeze and split"), 1, juce::KeyPress(juce::KeyPress::returnKey));
+  w->addButton(u8("Cancel"), 0, juce::KeyPress(juce::KeyPress::escapeKey));
+  juce::Component::SafePointer<juce::AlertWindow> safe(w);
+  w->enterModalState(true, juce::ModalCallbackFunction::create([this, safe, trackId, clipId, atTick](int result) {
+    if (result != 1 || safe == nullptr) return;
+    edit([&](doc::Document& d) { doc::unfreezeAudioClip(d, trackId, clipId); }, u8("Unfreeze audio clip"));
+    std::string second;
+    edit([&](doc::Document& d) { second = doc::splitAudioClip(d, trackId, clipId, atTick); }, u8("Split audio clip"));
+    if (!second.empty()) selectClip(trackId, second);
+  }), true);
+}
+
 void MainComponent::showAudioClipMenu(const std::string& trackId, const std::string& clipId, int64_t tick) {
   const doc::Track* t = history_.current().findTrack(trackId);
   if (!t) return;
@@ -3327,6 +3347,11 @@ void MainComponent::showAudioClipMenu(const std::string& trackId, const std::str
       edit([&](doc::Document& d) { for (auto& c : doc::trackById(d, trackId).audioClips) if (c.id == clipId) f(c); }, label);
     };
     if (chosen == 1) {
+      // A frozen clip refuses the split (BUG-SWEEP-21): offer the unfreeze (one Undo) then split.
+      const doc::Track* tr = history_.current().findTrack(trackId);
+      const doc::AudioClip* c = nullptr;
+      if (tr) for (const auto& x : tr->audioClips) if (x.id == clipId) c = &x;
+      if (c && c->freezeSeconds > 0) { offerUnfreezeSplit(trackId, clipId, splitAt); return; }
       std::string second;
       edit([&](doc::Document& d) { second = doc::splitAudioClip(d, trackId, clipId, splitAt); }, u8("Split audio clip"));
       if (!second.empty()) selectClip(trackId, second);
@@ -3874,7 +3899,7 @@ void MainComponent::scanPlugins() {
 // replaces a plugin (so Undo brings it back as it sounded). False when the engine gave no answer.
 bool MainComponent::fetchPluginStates() {
   if (!doc::hasPlugins(history_.current())) return true;
-  const json states = session_->pluginStates(5000);
+  const json states = session_->pluginStates(5000, doc::pluginKeys(history_.current()));
   if (!states.is_object()) return false;  // no answer from the engine ({} is an answer: nothing to take)
   adoptPluginStates(states);
   return true;
@@ -3884,9 +3909,15 @@ bool MainComponent::fetchPluginStates() {
 // which is what a restarted engine makes its plugins from.
 void MainComponent::adoptPluginStates(const json& states) {
   doc::Document withStates = history_.current();
-  if (doc::applyPluginStates(withStates, states) == 0) return;
+  std::vector<std::string> changed;
+  if (doc::applyPluginStates(withStates, states, &changed) == 0) return;
   history_.amend(withStates);
-  session_->setDocument(engineDocument());  // the same plugins: the engine keeps them as they are
+  session_->setDocument(engineDocument());
+  // The engine's stored copy is what an export makes its plugins from: the refreshed states ride the next
+  // project.load (the projection itself carries no blobs any more, STATE-PER-EDIT). Only the keys that changed.
+  json push = json::object();
+  for (const auto& key : changed) push[key] = states[key];
+  session_->pushPluginStates(push);
 }
 
 MainComponent::SaveResult MainComponent::writeTo(const juce::File& target) {
@@ -4350,6 +4381,24 @@ void MainComponent::randomizeSong(int strength, const std::string& axis) {
   o.seed = (uint64_t)(juce::Random::getSystemRandom().nextInt64() & 0x1FFFFFFFFFFFFFLL) | 1;  // fits a JSON number exactly
   o.strength = strength;
   if (!axis.empty()) o.axes = {axis};  // tempo (J) or sound (K) alone: the groove stays
+  // K on the role plugins (BUG-SWEEP-11, owner ratified 2026-11-18): the engine's parameter catalog for each
+  // plugin track, so the sound axis randomizes their parameters. No answer (engine stopped, plugin not loaded):
+  // an empty catalog, and the domain's plugin path is a graceful no-op — never an error.
+  if (axis.empty() || axis == "sound")
+    for (const auto& trackId : doc::soundAxisPluginTracks(next)) {
+      doc::PluginTrackParams pp;
+      pp.trackId = trackId;
+      for (const auto& p : session_->pluginParams(doc::pluginKey(trackId), 1500)) {
+        if (!p.is_object()) continue;
+        doc::PluginParamInfo pi;
+        pi.id = p.value("id", std::string());
+        pi.name = p.value("name", std::string());
+        pi.value = p.value("value", 0.5);
+        pi.steps = p.value("steps", 0);
+        if (!pi.id.empty()) pp.params.push_back(std::move(pi));
+      }
+      if (!pp.params.empty()) o.pluginParams.push_back(std::move(pp));
+    }
   std::vector<std::string> changes;
   try {
     changes = doc::randomizeStyle(next, o);
@@ -4601,14 +4650,17 @@ void MainComponent::showAddTrackMenu() {
     if (instruments.empty()) menu.addItem(juce::PopupMenu::Item(u8("None found yet: Plugins menu > Scan plugins")).setID(menuids::kNoPlugins).setEnabled(false));
   }
   menu.addSeparator();
+  // The fixed entries come from the offer model (BUG-SWEEP-09): only an audio track and import. Core's own
+  // instruments left the engine (2026-11-16), so the menu offers none of them and no sampler track — each would
+  // create a silent "none" track (PROD-06). The plugin instruments above are the creative choices.
   const std::vector<doc::InstrumentChoice>& native = doc::builtinInstruments();
-  menu.addSectionHeader(u8("Core's own instruments"));
-  for (size_t i = 0; i < native.size(); ++i)
-    if (native[i].name != std::string("sampler")) menu.addItem(menuids::kBuiltinAddFirst + (int)i, u8(native[i].label));
-  menu.addItem(menuids::kSamplerTrack, u8("Sampler track (empty)"));
-  menu.addSeparator();
-  menu.addItem(menuids::kAudioTrack, u8("Audio track (empty)"));
-  menu.addItem(menuids::kImportAudio, u8("Import audio (WAV)…"));
+  for (int id : menuids::addTrackFixedItems()) {
+    if (id == menuids::kAudioTrack) menu.addItem(id, u8("Audio track (empty)"));
+    else if (id == menuids::kImportAudio) menu.addItem(id, u8("Import audio (WAV)…"));
+    else if (id == menuids::kSamplerTrack) menu.addItem(id, u8("Sampler track (empty)"));
+    else if (id >= menuids::kBuiltinAddFirst && id - menuids::kBuiltinAddFirst < (int)native.size())
+      menu.addItem(id, u8(native[(size_t)(id - menuids::kBuiltinAddFirst)].label));
+  }
   menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&addTrack_), [this, instruments](int chosen) {
     const menuids::AddTrackChoice choice = menuids::decodeAddTrackMenu(chosen, (int)instruments.size(), (int)doc::builtinInstruments().size());
     switch (choice.action) {
@@ -4655,7 +4707,8 @@ void MainComponent::showTrackMenu(const std::string& trackId) {
   menu.addItem(menuids::kAutomation, u8("Automation (volume, pan, effects)…"));
   // Another instrument for this track (its notes, effects, volume and automation stay).
   const doc::Track* current = history_.current().findTrack(trackId);
-  // Core's own instruments (ids kBuiltinReplaceFirst + place in builtinInstruments()).
+  // Replace instrument: external plugins only (BUG-SWEEP-09). The built-in id band (kBuiltinReplaceFirst) stays
+  // allocated in MenuIds.h but is never offered; Core's own instruments left the engine.
   juce::PopupMenu replace;
   const std::vector<nlohmann::json> instruments = plugins_->instruments(), pluginFx = plugins_->effects();
   const menuids::TrackMenuIds ids = menuids::trackMenuIds((int)instruments.size(), (int)pluginFx.size());
@@ -4700,11 +4753,16 @@ void MainComponent::showTrackMenu(const std::string& trackId) {
       return current->instrument.kind == "plugin" && current->instrument.plugin.value("id", std::string()) == p.value("id", std::string()) &&
              current->instrument.plugin.value("file", std::string()) == p.value("file", std::string());
     }));
-    replace.addSeparator();
+    // The fixed entries come from the offer model (BUG-SWEEP-09): none. Core's own instruments left the engine
+    // (2026-11-16), so Replace instrument offers only external plugins (the submenu above). A legacy built-in
+    // track is replaced by a plugin, never by another silent built-in (PROD-06).
     const std::vector<doc::InstrumentChoice>& native = doc::builtinInstruments();
-    for (size_t i = 0; i < native.size(); ++i)
-      replace.addItem(juce::PopupMenu::Item(u8(native[i].label)).setID(menuids::kBuiltinReplaceFirst + (int)i)
-                          .setTicked(current->instrument.kind == "builtin" && current->instrument.name == native[i].name));
+    for (int id : menuids::replaceFixedItems()) {
+      const int i = id - menuids::kBuiltinReplaceFirst;
+      if (i >= 0 && i < (int)native.size())
+        replace.addItem(juce::PopupMenu::Item(u8(native[(size_t)i].label)).setID(id)
+                            .setTicked(current->instrument.kind == "builtin" && current->instrument.name == native[(size_t)i].name));
+    }
     menu.addSubMenu(u8("Replace instrument"), replace);
   }
   std::vector<std::string> offered;
@@ -5250,7 +5308,7 @@ bool MainComponent::previewLibrarySample(const doc::LibrarySample& sample, const
 namespace { enum MenuId { kMidiNone = 200, kMidiDevice = 201, kNewEmpty = 50, kOpen = 1, kSave, kSaveAs, kExport24, kExport32, kQuit, kUndo, kRedo, kImportAudio, kRelocate, kDevice = 100,
                        kMidiDevicesEnd = 400, kPluginCoreFirst = 420 /* + place in doc::corePlugins(), up to 20 */,
                        kPluginPatterns = 440, kPluginSilent = 442,
-                       kPluginScan = 460, kPluginFolder, kPluginRetry, kMasterFx = 2400 /* + 60 */, kMasterFxAdd = 2500 /* + 400 */,
+                       kPluginScan = 460, kPluginFolder, kPluginRetry, kPluginRetryFailed, kMasterFx = 2400 /* + 60 */, kMasterFxAdd = 2500 /* + 400 */,
                        kOpenLogs = 580, kAbout = 581, kExportMono = 590, kImportMidi = 595, kExportMidi = 596, kExportBitwig = 597,
                        kSampleFolder = 1600, kSampleRescan, kSampleApply, kSampleAuto, kSampleShuffle, kSampleCatalogUndo,
                                               kRandomize = 1700 /* + strength 1..3; + 4: tempo per section; + 5: sound */, kViewLibrary = 1800, kViewInspector, kViewMixer, kViewScale = 1810 /* + 0 auto, + 1..5: 100..200 % */,
@@ -5350,6 +5408,10 @@ juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&) {
     const auto quarantine = plugins_->quarantine();
     menu.addItem(juce::PopupMenu::Item(u8("Try the set-aside plugins again (") + juce::String((int)quarantine.size()) + ")")
                      .setID(kPluginRetry).setEnabled(!quarantine.empty() && !plugins_->scanning()));
+    // BUG-SWEEP-05: a plugin that failed while playing is silent until it is retried or replaced — offer the
+    // retry here (the engine builds a new instance from the song; plugin.retry), not only on the next change.
+    menu.addItem(juce::PopupMenu::Item(u8("Try the failed plugins again (") + juce::String((int)snap_.failedPlugins.size()) + ")")
+                     .setID(kPluginRetryFailed).setEnabled(!snap_.failedPlugins.empty()));
     menu.addSectionHeader(u8("Found: ") + juce::String((int)plugins_->instruments().size()) + u8(" instruments, ") +
                           juce::String((int)plugins_->effects().size()) + u8(" effects"));
     for (const auto& f : plugins_->folders()) menu.addItem(juce::PopupMenu::Item(f).setEnabled(false));
@@ -5440,7 +5502,10 @@ juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&) {
     menu.addItem(juce::PopupMenu::Item(u8("Randomize (medium)")).setID(kRandomize + 2).setEnabled(styled));
     menu.addItem(juce::PopupMenu::Item(u8("Randomize (bold)")).setID(kRandomize + 3).setEnabled(styled));
     menu.addItem(juce::PopupMenu::Item(u8("Randomize tempo per section")).setID(kRandomize + 4).setEnabled(styled));
-    menu.addItem(juce::PopupMenu::Item(u8("Randomize sound (built-in instruments)")).setID(kRandomize + 5).setEnabled(styled));
+    // Randomize sound (K): the role plugins' parameters (owner ratified 2026-11-18), or a legacy built-in song's
+    // instruments. HIDDEN when the song has neither — no apparently-active option that does nothing (PROD :83).
+    if (styled && doc::soundAxisAvailable(history_.current()))
+      menu.addItem(juce::PopupMenu::Item(u8("Randomize sound")).setID(kRandomize + 5));
   }
   // Shortcut hints on the right, as in other Windows programs.
   juce::PopupMenu::MenuItemIterator it(menu);
@@ -5519,6 +5584,11 @@ void MainComponent::menuItemSelected(int id, int) {
     case kPluginSilent: giveSilentTracksPlugins(); break;
     case kPluginScan: scanPlugins(); break;
     case kPluginRetry: plugins_->clearQuarantine(); scanPlugins(); break;
+    case kPluginRetryFailed:
+      // BUG-SWEEP-05: each failed plugin gets a new instance from the song's state (the engine's plugin.retry).
+      for (const auto& entry : snap_.failedPlugins) session_->retryPlugin(entry.first);
+      if (!snap_.failedPlugins.empty()) logLine("Engine: retrying " + juce::String((int)snap_.failedPlugins.size()) + " failed plugin(s)");
+      break;
     case kPluginFolder: {
       chooser_ = std::make_unique<juce::FileChooser>(u8("A folder with VST3 plugins"), juce::File("C:\\Program Files\\Common Files\\VST3"));
       juce::Component::SafePointer<MainComponent> safe(this);
@@ -6464,7 +6534,19 @@ void MainComponent::timerCallback() {
     else if (job.state == "cancelled") notice_ = u8("Export cancelled; no file was changed.");
     else if (job.state == "failed") {
       notice_ = u8("The export failed.");
-      if (!test_) showError(u8("Could not export"), u8(job.error) + u8("\n\nNo existing file was changed."));
+      if (!test_) {
+        // BUG-SWEEP-03: say what really happened to the user's files. The old text claimed "No existing
+        // file was changed." even when the original sat in a kept .previous copy the undo could not put back.
+        juce::String detail = u8(job.error);
+        if (job.backups.empty()) {
+          detail += u8("\n\nNo existing file was changed.");
+        } else {
+          detail += u8("\n\nThe previous files could not be put back. Every old copy was kept (named above); rename a copy back to its original name to recover it.");
+        }
+        if (job.published > 0)
+          detail += u8("\n\nNew files that could not be taken back and are in place: ") + juce::String(job.published);
+        showError(u8("Could not export"), detail);
+      }
     } else if (exporting) notice_ = job.files > 1 ? u8("Exporting ") + juce::String(job.files) + u8(" files...") : u8("Exporting ") + juce::File(path).getFileName() + "...";
   }
   if (test_) selfTestStep();
@@ -6476,7 +6558,8 @@ void MainComponent::timerCallback() {
   }
   repaint(timelineArea());
   editor_.playheadMoved();  // only the old and the new line, not the whole piano roll
-  // A sound or effect that failed while playing is silent until the next change: say which, once.
+  // A sound or effect that failed while playing is silent until it is retried or replaced: say which, once,
+  // and offer the way back (BUG-SWEEP-05: the Plugins menu's "Try the failed plugins again").
   {
     std::string failedNow;
     for (const auto& u : snap_.failedUnits) failedNow += u + ", ";
@@ -6484,7 +6567,7 @@ void MainComponent::timerCallback() {
       failedSeen_ = failedNow;
       if (!failedNow.empty()) {
         failedNow.resize(failedNow.size() - 2);
-        notice_ = u8("Stopped after a fault, silent until your next change: ") + u8(failedNow);
+        notice_ = u8("Stopped after a fault: ") + u8(failedNow) + u8(". Try again from the Plugins menu, or replace the plugin; it stays silent until then.");
         logLine("Engine: failed units - " + u8(failedNow));
       }
     }
@@ -6501,7 +6584,8 @@ void MainComponent::timerCallback() {
   // Menus show the undo labels and the save state: rebuild them only when those change.
   const juce::String menuState = u8(history_.undoLabel()) + "|" + u8(history_.redoLabel()) + "|" + juce::String((int)history_.canUndo()) +
                                  juce::String((int)history_.canRedo()) + juce::String((int)unsaved()) +
-                                 juce::String((int)snap_.exportJob.active()) + u8(snap_.device) + juce::String((int)snap_.devices.size()) + juce::String((int)missing_.size());
+                                 juce::String((int)snap_.exportJob.active()) + u8(snap_.device) + juce::String((int)snap_.devices.size()) + juce::String((int)missing_.size()) +
+                                 juce::String((int)snap_.failedPlugins.size());
   if (menuState != menuState_) { menuState_ = menuState; menuItemsChanged(); }
   autosaveTick();
 }
@@ -6684,6 +6768,15 @@ void MainComponent::runSelfTest(juce::File picture, std::function<void(bool, juc
   if (found.is_array() && !found.empty()) test_->synth = found[0];
   else logLine("Self-test: the test synth was not read: " + problem);
 #endif
+#ifdef CORE_TEST_THROW_VST3
+  {
+    juce::String problem;
+    const nlohmann::json found = PluginCatalog::scanFile(juce::File::getSpecialLocation(juce::File::currentExecutableFile).getSiblingFile("core-engine.exe"),
+                                                         juce::File(CORE_TEST_THROW_VST3), &problem);
+    if (found.is_array() && !found.empty()) test_->throwPlugin = found[0];
+    else logLine("Self-test: the test throw plugin was not read: " + problem);
+  }
+#endif
   selfTestSynth();
   test_->started = test_->stepStarted = juce::Time::getMillisecondCounterHiRes();
 }
@@ -6709,6 +6802,10 @@ void MainComponent::selfTestStep() {
   const double now = juce::Time::getMillisecondCounterHiRes(), inStep = now - t.stepStarted;
   t.loudest = std::max({t.loudest, snap_.masterPeak[0], snap_.masterPeak[1]});
   if (!snap_.trackPeaks.empty()) t.trackMeters = true;
+  // BUG-SWEEP-05: latch the bass peak across the retry steps (the rebuilt instance is heard while it lives).
+  if (t.step >= 115 && t.step <= 119)
+    if (const auto it = snap_.trackPeaks.find("bass"); it != snap_.trackPeaks.end())
+      t.retryHeard = std::max({t.retryHeard, it->second.first, it->second.second});
   const bool applied = snap_.appliedRevision == snap_.documentRevision;
   auto next = [&](const juce::String& done) { t.log << done << "; "; ++t.step; t.stepStarted = now; };
   auto finish = [&](bool ok, const juce::String& why) {
@@ -7319,10 +7416,85 @@ void MainComponent::selfTestStep() {
       if (snap_.status == EngineStatus::Ready && applied && inStep > 500) {
         undo();
         next("restarted after timeouts");
-        t.step = 35;
+        t.step = 115;
         t.stepStarted = now;
       } else if (inStep > 8000) {
         return finish(false, "the engine did not restart after the timeouts");
+      }
+      break;
+    // BUG-SWEEP-05: a plugin that fails while playing must be offered a "Try again" that brings it back,
+    // not silence until the next change. The test effect throws 0.1 s into processing, so the endpoints are
+    // deterministic: fail -> offer -> retry (the failure list empties: a new instance) -> it plays and fails again.
+    case 115:  // the bass gets an effect that throws while playing
+#ifdef CORE_TEST_THROW_VST3
+      if (t.throwPlugin.is_null()) return finish(false, "the test throw plugin was not read");
+      if (applied && !snap_.playing && inStep > 300) {
+        edit([&t](doc::Document& d) {
+          d.loop.enabled = false;
+          for (auto& tr : d.tracks) if (tr.id == "bass") tr.mix.mute = false;
+          t.retryEffect = doc::addPluginEffect(d, "bass", t.throwPlugin);
+        }, "Add a failing effect");
+        session_->home();
+        session_->play();
+        next("failing effect added");
+      } else if (inStep > 5000) {
+        return finish(false, "not ready to add the failing effect");
+      }
+#else
+      t.step = 35;
+      t.stepStarted = now;
+#endif
+      break;
+    case 116:  // the engine reports the failed plugin (it already did before the fix)
+      if (!snap_.failedUnits.empty()) {
+        next("plugin failed while playing");
+      } else if (inStep > 8000) {
+        return finish(false, "the failing plugin was not reported as failed");
+      }
+      break;
+    case 117: {  // the notice offers a way back, and the Plugins menu has an enabled Try again for it
+      if (inStep < 150) break;  // the notice of this failure is set after the steps in the same timer pass
+      if (!notice_.containsIgnoreCase("try again") || notice_.contains("silent until your next change"))
+        return finish(false, "the failed-plugin notice offers no Try again: " + notice_);
+      const juce::PopupMenu menu = getMenuForIndex(4, "Plugins");  // top-level index: File, Edit, View, Audio, Plugins
+      int retryId = 0;
+      bool enabled = false;
+      for (juce::PopupMenu::MenuItemIterator it(menu); it.next();) {
+        const auto& item = it.getItem();
+        if (item.text.containsIgnoreCase("Try the failed plugins again")) { retryId = item.itemID; enabled = item.isEnabled; }
+      }
+      if (retryId == 0 || !enabled) return finish(false, "no enabled Try again item in the Plugins menu for the failed plugin");
+      menuItemSelected(retryId, 4);  // the user's path: the engine builds a new instance from the song
+      next("Try again offered and used");
+      break;
+    }
+    // The device processes on while the transport is stopped (live notes), so the rebuilt instance throws again
+    // ~0.1 s after the retry: its healthy window is short. Seeing the failure list empty proves the rebuild (a
+    // failed instance is never called again and never clears by itself); a busy machine that hides the window
+    // gets another Try again — the plugin has failed again by then, so the retry is always offered once more.
+    case 118:
+      if (snap_.failedUnits.empty()) {
+        session_->liveNote("bass", 45, 0.9, true);  // a held note through the new instance
+        next("retried plugin rebuilt healthy");
+      } else if (inStep > 1500) {
+        if (t.retryAttempts >= 5) return finish(false, "the retry never rebuilt the plugin (no healthy window seen)");
+        ++t.retryAttempts;
+        menuItemSelected(kPluginRetryFailed, 4);
+        t.stepStarted = now;
+      }
+      break;
+    case 119:  // the new instance plays: it processes the song and throws again 0.1 s in. Only a new instance can
+               // fail again (the failed one is never called), so the second failure proves the retry rebuilt it playing.
+      if (!snap_.failedUnits.empty() && inStep > 250) {  // the held note has reached the engine and its peak arrived
+        session_->liveNote("bass", 45, 0, false);
+        if (t.retryHeard < 0.01f) return finish(false, "the retried plugin's track did not play: bass peak " + juce::String(t.retryHeard, 4));
+        edit([&t](doc::Document& d) { doc::removeEffect(d, "bass", t.retryEffect); }, "Remove the failing effect");
+        session_->stop();
+        t.log << "retried plugin played again; ";
+        t.step = 35;
+        t.stepStarted = now;
+      } else if (inStep > 8000) {
+        return finish(false, "the retried plugin never failed again (did it play?)");
       }
       break;
     case 35: {  // the picture shows the waveforms once they are computed
@@ -7395,11 +7567,176 @@ void MainComponent::selfTestStep() {
     case 38:
       if (inStep > 300 && applied) {
         session_->stop();
+        // The kept surfaces after the module cleanup (2026-11-18): Pattern Maker's Patterns window, the Tools
+        // cards (no legacy *-Core title left on them) and the score open and show. The piano roll and the Mixer
+        // were exercised above (steps 16-19 and 36-37). No extra logged transition: the checks ride in this step.
+        openPatterns();
+        if (!patternsWindow_ || !patternsWindow_->isVisible() || patternsWindow_->panel().patternOf("kick") == nullptr)
+          return finish(false, "patterns window");
+        patternsWindow_->closeButtonPressed();
+        togglePlugins();
+        if (!pluginCards_.isVisible()) return finish(false, "tools panel not shown");
+        const std::vector<std::string> titles = pluginCards_.cardTitles();
+        if (titles.size() != doc::corePlugins().size()) return finish(false, "tools cards missing");
+        for (const auto& title : titles)
+          if (title.find("Core") != std::string::npos) return finish(false, "legacy card title: " + u8(title));
+        // The Pattern Maker card opens its window (the card handler's wiring).
+        if (pluginCards_.onOpen) pluginCards_.onOpen(doc::corePlugins()[0], pluginCards_);
+        if (!patternsWindow_ || !patternsWindow_->isVisible()) return finish(false, "pattern maker card did not open the window");
+        patternsWindow_->closeButtonPressed();
+        togglePlugins();
+        openCoreWindow("score", "");
+        if (!score_.isVisible()) return finish(false, "score not shown");
+        closePanels();
         // M6: this session's logs are there, with the engine's life in them.
         if (!engineLogFile().existsAsFile() || !appLogFile().loadFileAsString().contains("Engine: Ready"))
           return finish(false, "diagnostics: no log in " + logsFolder().getFullPathName());
-        return finish(true, "M1c + M2 path, live notes, audio clips, mixer, save with audio");
+        next("diagnostics");
       }
+      break;
+    case 39: {  // piano roll, Pulse gestures (UX slice): drag-to-size create with the last used length, Shift+drag
+      // clones, Alt bypasses snap, Ctrl+drag lassos in any tool, Alt+wheel velocity (Ctrl+Alt fine), Ctrl+wheel = Keys+.
+      if (applied && inStep > 300) {
+        selectTrack("bass");
+        std::string p3;
+        edit([&](doc::Document& d) { p3 = doc::addPattern(doc::trackById(d, "bass"), 4 * kBar); }, u8("New pattern"));
+        editor_.setTrack("bass", p3);
+        auto& ed = editor_;
+        auto mouse = [&](juce::Point<int> at, juce::Point<int> down, juce::ModifierKeys mods) {
+          return juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(), at.toFloat(), mods, 0, 0, 0, 0, 0, &ed, &ed,
+                                  juce::Time::getCurrentTime(), down.toFloat(), juce::Time::getCurrentTime(), 1, at != down);
+        };
+        const auto left = juce::ModifierKeys(juce::ModifierKeys::leftButtonModifier);
+        const auto alt = juce::ModifierKeys(juce::ModifierKeys::leftButtonModifier | juce::ModifierKeys::altModifier);
+        const auto shift = juce::ModifierKeys(juce::ModifierKeys::leftButtonModifier | juce::ModifierKeys::shiftModifier);
+        const auto ctrl = juce::ModifierKeys(juce::ModifierKeys::leftButtonModifier | juce::ModifierKeys::ctrlModifier);
+        auto notes = [&]() -> const std::vector<doc::Note>& { return history_.current().findTrack("bass")->findPattern(p3)->notes; };
+        ed.setTool(PatternEditor::Tool::Draw);
+        // 1. A click on empty space and a drag define the length, in one undo step.
+        const auto a = ed.cellGrabPoint(0, 40), b = ed.cellGrabPoint(2 * kBeat, 40);
+        ed.mouseDown(mouse(a, a, left));
+        ed.mouseDrag(mouse(b, a, left));
+        ed.mouseUp(mouse(b, a, left));
+        if (notes().size() != 1 || notes()[0].length != 2 * kBeat || history_.undoLabel() != "Note") return finish(false, "create drag length");
+        undo();
+        if (!notes().empty()) return finish(false, "create drag one undo");
+        // 2. A plain click creates with the last used length (the drag above set it to two beats).
+        ed.mouseDown(mouse(a, a, left));
+        ed.mouseUp(mouse(a, a, left));
+        if (notes().size() != 1 || notes()[0].length != 2 * kBeat) return finish(false, "last used length");
+        // 3. Shift+drag clones the selection and drags the copies; one undo step gives the original back.
+        const auto c = ed.cellGrabPoint(2 * kBeat, 40);
+        ed.mouseDown(mouse(a, a, shift));
+        ed.mouseDrag(mouse(c, a, shift));
+        ed.mouseUp(mouse(c, a, shift));
+        if (notes().size() != 2 || history_.undoLabel() != "Clone notes") return finish(false, "shift clone");
+        undo();
+        if (notes().size() != 1 || notes()[0].tick != 0) return finish(false, "clone one undo");
+        // 4. Alt moves off the grid (the tick is not a snap multiple).
+        const auto d = ed.cellGrabPoint(kBeat, 40);
+        const juce::Point<int> off(d.x + 7, d.y);
+        ed.mouseDown(mouse(a, a, alt));
+        ed.mouseDrag(mouse(off, a, alt));
+        ed.mouseUp(mouse(off, a, alt));
+        if (notes().size() != 1 || notes()[0].tick % 240 == 0) return finish(false, "alt free move");
+        undo();
+        // 5. Ctrl+drag in empty space lassos with the Draw tool: selection, not a new note.
+        const auto m0 = ed.cellGrabPoint(0, 43), m1 = ed.cellGrabPoint(2 * kBeat, 37);
+        ed.mouseDown(mouse(m0, m0, ctrl));
+        ed.mouseDrag(mouse(m1, m0, ctrl));
+        ed.mouseUp(mouse(m1, m0, ctrl));
+        if (notes().size() != 1 || ed.selection().size() != 1) return finish(false, "ctrl lasso any tool");
+        // 6. Plain wheel over a note scrolls (no velocity change); Alt+wheel is velocity; Ctrl+Alt fine.
+        const double v0 = notes()[0].velocity;
+        const juce::MouseWheelDetails up{0.0f, 1.0f, false, false};  // deltaX, deltaY: one notch up
+        ed.mouseWheelMove(mouse(ed.cellGrabPoint(notes()[0].tick, notes()[0].pitch), ed.cellGrabPoint(notes()[0].tick, notes()[0].pitch), left), up);
+        if (notes()[0].velocity != v0) return finish(false, "plain wheel velocity");
+        ed.mouseWheelMove(mouse(ed.cellGrabPoint(notes()[0].tick, notes()[0].pitch), ed.cellGrabPoint(notes()[0].tick, notes()[0].pitch), alt), up);
+        if (std::abs(notes()[0].velocity - (v0 + 0.05)) > 1e-9) return finish(false, "alt wheel velocity");
+        const auto fine = juce::ModifierKeys(juce::ModifierKeys::altModifier | juce::ModifierKeys::ctrlModifier);
+        ed.mouseWheelMove(mouse(ed.cellGrabPoint(notes()[0].tick, notes()[0].pitch), ed.cellGrabPoint(notes()[0].tick, notes()[0].pitch), fine), up);
+        if (std::abs(notes()[0].velocity - (v0 + 0.06)) > 1e-9) return finish(false, "ctrl alt fine velocity");
+        // 7. Ctrl+wheel expands the key range (Keys+): a key far above the view comes into it.
+        if (ed.cellGrabPoint(0, 100).y != 0) return finish(false, "keys view precondition");
+        for (int i = 0; i < 20; ++i) ed.mouseWheelMove(mouse(a, a, ctrl), up);
+        if (ed.cellGrabPoint(0, 100).y <= 0) {
+          juce::String ys;
+          for (int p : {0, 23, 50, 90, 95, 99, 100, 105, 115, 127}) ys += juce::String(p) + ":" + juce::String(ed.cellGrabPoint(0, p).y) + " ";
+          return finish(false, "ctrl wheel keys+ keys=" + juce::String(ed.keysShown()) + " " + ys);
+        }
+        ed.deleteSelection();
+        next("piano gestures");
+      }
+      break;
+    }
+    case 40: {  // piano roll, new surfaces: Paint seeds per cell, Fit keys/Keys±, the scale guide's root mark,
+      // and the Note tools window opened from the piano roll button with its Quantize acting in one undo step.
+      if (applied && inStep > 300) {
+        auto& ed = editor_;
+        auto mouse = [&](juce::Point<int> at, juce::Point<int> down, juce::ModifierKeys mods) {
+          return juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(), at.toFloat(), mods, 0, 0, 0, 0, 0, &ed, &ed,
+                                  juce::Time::getCurrentTime(), down.toFloat(), juce::Time::getCurrentTime(), 1, at != down);
+        };
+        const auto left = juce::ModifierKeys(juce::ModifierKeys::leftButtonModifier);
+        auto notes = [&]() -> const std::vector<doc::Note>& { return history_.current().findTrack("bass")->findPattern(ed.patternId())->notes; };
+        ed.setTool(PatternEditor::Tool::Paint);
+        const auto p0 = ed.cellGrabPoint(0, 50);
+        ed.mouseDown(mouse(p0, p0, left));
+        for (int i = 1; i <= 3; ++i) {
+          const auto p = ed.cellGrabPoint(i * 240, 50);
+          ed.mouseDrag(mouse(p, p0, left));
+        }
+        ed.mouseUp(mouse(ed.cellGrabPoint(3 * 240, 50), p0, left));
+        if (notes().size() != 4 || history_.undoLabel() != "Paint notes") return finish(false, "paint seeds per cell");
+        undo();
+        if (!notes().empty()) return finish(false, "paint one undo");
+        ed.setTool(PatternEditor::Tool::Draw);
+        ed.fitKeys();
+        if (ed.keysShown() != 128 || ed.cellGrabPoint(0, 127).y <= 0) return finish(false, "fit keys 128");
+        ed.keysLess();
+        if (ed.keysShown() != 124) return finish(false, "keys-");
+        ed.keysMore();
+        if (ed.keysShown() != 128) return finish(false, "keys+");
+        // The scale guide paints a solid highlight mark on every root key: more exact-accent pixels than without.
+        ed.mouseExit(mouse({-1, -1}, {-1, -1}, left));
+        auto rootPixels = [&] {
+          const juce::Image shot = ed.createComponentSnapshot(ed.getLocalBounds(), false, 1.0f);
+          int n = 0;
+          for (int y = 0; y < shot.getHeight(); ++y)
+            for (int x = 0; x < shot.getWidth(); ++x)
+              if (shot.getPixelAt(x, y) == theme::kAccent) ++n;
+          return n;
+        };
+        const int before = rootPixels();
+        ed.setScaleGuide(0, "Major");
+        const int withGuide = rootPixels();
+        if (withGuide < before + 12) return finish(false, "scale root mark before=" + juce::String(before) + " with=" + juce::String(withGuide));
+        ed.setScaleGuide(0, "");
+        // The Note tools window: the button's wiring, and its Quantize button acting on the notes in one undo step.
+        ed.openNoteTools();
+        if (!ed.noteToolsVisible() || !ed.noteToolsWindow()) return finish(false, "note tools open");
+        ed.clickCell(0, 40);
+        edit([&](doc::Document& d) { doc::patternById(doc::trackById(d, "bass"), ed.patternId()).notes[0].tick = 100; }, u8("Offset"));
+        juce::TextButton* q = nullptr;
+        std::function<void(juce::Component*)> find = [&](juce::Component* c) {
+          if (auto* b = dynamic_cast<juce::TextButton*>(c); b && b->getButtonText() == "Quantize") q = b;
+          for (auto* ch : c->getChildren()) find(ch);
+        };
+        find(ed.noteToolsWindow()->getContentComponent());
+        if (!q) return finish(false, "note tools quantize button");
+        q->onClick();  // synchronous, as the arrangement button's programmatic click: triggerClick posts a message this step would not wait for
+        if (notes().empty() || notes()[0].tick % 240 != 0 || history_.undoLabel() != "Quantize")
+          return finish(false, "note tools quantize n=" + juce::String((int)notes().size()) + " tick=" + juce::String(notes().empty() ? -1 : notes()[0].tick) +
+                               " label=" + history_.undoLabel() + " str=" + juce::String(ed.quantizeStrength, 2) + " sel=" + juce::String((int)ed.selection().size()));
+        ed.noteToolsWindow()->closeButtonPressed();
+        if (ed.noteToolsVisible()) return finish(false, "note tools close");
+        next("piano surfaces");
+      }
+      break;
+    }
+    case 41:
+      if (inStep > 300 && applied)
+        return finish(true, "M1c + M2 path, live notes, audio clips, mixer, save with audio, piano roll Pulse gestures");
       break;
   }
 }

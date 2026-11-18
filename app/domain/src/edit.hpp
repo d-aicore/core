@@ -169,8 +169,16 @@ void replaceInstrumentWithPlugin(Document& doc, const std::string& trackId, cons
 // Where the engine keeps a plugin: "track:<id>", or "fx:<track id or master>:<effect id>".
 std::string pluginKey(const std::string& trackId, const std::string& effectId = "");
 bool hasPlugins(const Document& doc);
+// Every plugin place of the document (instruments and effects, by pluginKey): the keys the app asks the engine's
+// plugins.states for (only the ones the song has, not every instance the engine ever loaded).
+std::vector<std::string> pluginKeys(const Document& doc);
+// The states of the named keys that the document holds ({key: base64}, non-empty states only): what the app answers
+// the engine's project.load statesNeeded with (STATE-PER-EDIT: the projection carries no blobs).
+json pluginStatesFor(const Document& doc, const std::vector<std::string>& keys);
 // The states the engine gave ({key: base64}) written into the document; returns how many changed.
-int applyPluginStates(Document& doc, const json& states);
+// changedKeys (optional): the keys whose state changed — what the app pushes back to the engine, whose stored
+// copy is what an export makes its instances from (the projection itself carries no blobs any more).
+int applyPluginStates(Document& doc, const json& states, std::vector<std::string>* changedKeys = nullptr);
 // The plugins (instruments and effects, by pluginKey) that `before` has and `after` no longer has in the same
 // place: gone, or another plugin (file or id) under the same key. The engine lets their instances go when it
 // gets `after`, and what they hold is only there: it must be in the document first, or Undo brings them back
@@ -241,8 +249,13 @@ void moveAudioClip(Document& doc, const std::string& trackId, const std::string&
 // changes the duration. Both are limited to the file.
 void trimAudioClipStart(Document& doc, const std::string& trackId, const std::string& clipId, int64_t startTick);
 void trimAudioClipEnd(Document& doc, const std::string& trackId, const std::string& clipId, double durationSeconds);
-// Two clips that play exactly what the one did. Returns the id of the second.
+// Two clips that play exactly what the one did. Returns the id of the second. A FROZEN clip
+// (freezeSeconds > 0) is refused with an unfreeze offer (BUG-SWEEP-21, ratified): the split's offset
+// re-anchor would make the second piece hold a different part of the file — never a half-frozen state.
 std::string splitAudioClip(Document& doc, const std::string& trackId, const std::string& clipId, int64_t atTick);
+// Lets the frozen hold go: the clip plays its file normally again (the unfreeze the split refusal offers,
+// one Undo step in the app). A clip without a freeze is unchanged.
+void unfreezeAudioClip(Document& doc, const std::string& trackId, const std::string& clipId);
 void removeAudioClip(Document& doc, const std::string& trackId, const std::string& clipId);
 // The audio editor's selection (song ticks): keep only that part of the clip, or remove it (the clip
 // becomes two, with a gap; at an edge, the clip just gets shorter).

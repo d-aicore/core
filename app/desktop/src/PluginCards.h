@@ -42,6 +42,13 @@ public:
     repaint();
   }
 
+  // The tool cards' titles, in card order (the self-test checks that no legacy module title remains).
+  std::vector<std::string> cardTitles() const {
+    std::vector<std::string> out;
+    for (const auto& c : cards_) out.push_back(c->info().shortName);
+    return out;
+  }
+
   // The installed plugins (instruments and effects together), grouped by maker for the PLUGINS tab.
   void setInstalled(const std::vector<doc::json>& plugins) {
     doc::json all = doc::json::array();
@@ -105,6 +112,7 @@ private:
       setMouseCursor(juce::MouseCursor::PointingHandCursor);
       setTooltip(juce::String::fromUTF8(p.about.c_str()));
     }
+    const doc::CorePluginInfo& info() const { return info_; }
     void setMissing(const doc::RoleMap& map) {
       missing_.clear();
       bool any = info_.roles.empty();

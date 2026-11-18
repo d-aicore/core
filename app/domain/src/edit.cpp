@@ -59,7 +59,9 @@ bool wellFormedUtf8(const std::string& s) {
 } // namespace
 
 const std::vector<InstrumentChoice>& builtinInstruments() {
-  static const std::vector<InstrumentChoice> list = {{"kick", "Kick"}, {"bass", "Bass"}, {"wave", "W-Core"}, {"hats", "Hats"}, {"snare", "Snare + clap"}, {"drums", "Drums (kick + hats)"},
+  // The legacy built-in list (menus and old track names): "wave" is the catalogue's "Synth" — the W-Core
+  // module title left with the module cleanup (2026-11-18); the engine identifier "wave" stays for old songs.
+  static const std::vector<InstrumentChoice> list = {{"kick", "Kick"}, {"bass", "Bass"}, {"wave", "Synth"}, {"hats", "Hats"}, {"snare", "Snare + clap"}, {"drums", "Drums (kick + hats)"},
                                                               {"sampler", "Sampler"}, {"samplepath", "Core Glitch"}};
   return list;
 }
@@ -1565,7 +1567,43 @@ bool hasPlugins(const Document& doc) {
   return false;
 }
 
-int applyPluginStates(Document& doc, const json& states) {
+std::vector<std::string> pluginKeys(const Document& doc) {
+  std::vector<std::string> keys;
+  auto chain = [&](const json& list, const std::string& trackId) {
+    for (const auto& fx : list)
+      if (fx.is_object() && fx.value("type", "") == "plugin" && fx.contains("id") && fx["id"].is_string() && fx.contains("plugin"))
+        keys.push_back(pluginKey(trackId, fx["id"].get<std::string>()));
+  };
+  chain(doc.masterEffects, "");
+  for (const auto& t : doc.tracks) {
+    if (t.instrument.kind == "plugin") keys.push_back(pluginKey(t.id));
+    chain(t.effects, t.id);
+  }
+  return keys;
+}
+
+json pluginStatesFor(const Document& doc, const std::vector<std::string>& keys) {
+  const std::set<std::string> wanted(keys.begin(), keys.end());
+  json out = json::object();
+  auto take = [&](const json& plugin, const std::string& key) {
+    if (!wanted.count(key) || !plugin.is_object()) return;
+    const std::string state = plugin.value("state", "");
+    if (!state.empty()) out[key] = state;
+  };
+  auto chain = [&](const json& list, const std::string& trackId) {
+    for (const auto& fx : list)
+      if (fx.is_object() && fx.value("type", "") == "plugin" && fx.contains("id") && fx["id"].is_string() && fx.contains("plugin"))
+        take(fx["plugin"], pluginKey(trackId, fx["id"].get<std::string>()));
+  };
+  chain(doc.masterEffects, "");
+  for (const auto& t : doc.tracks) {
+    if (t.instrument.kind == "plugin") take(t.instrument.plugin, pluginKey(t.id));
+    chain(t.effects, t.id);
+  }
+  return out;
+}
+
+int applyPluginStates(Document& doc, const json& states, std::vector<std::string>* changedKeys) {
   if (!states.is_object()) return 0;
   int changed = 0;
   auto set = [&](json& plugin, const std::string& key) {
@@ -1573,6 +1611,7 @@ int applyPluginStates(Document& doc, const json& states) {
     if (plugin.value("state", "") == states[key].get<std::string>()) return;
     plugin["state"] = states[key];
     ++changed;
+    if (changedKeys) changedKeys->push_back(key);
   };
   auto chain = [&](json& list, const std::string& trackId) {
     for (auto& fx : list)
@@ -2105,6 +2144,13 @@ void trimAudioClipEnd(Document& doc, const std::string& trackId, const std::stri
 std::string splitAudioClip(Document& doc, const std::string& trackId, const std::string& clipId, int64_t atTick) {
   Track& t = trackById(doc, trackId);
   AudioClip& c = audioClipById(t, clipId);
+  // BUG-SWEEP-21 (owner ratified 2026-11-18): «split em clip congelado = recusa com mensagem + oferta de unfreeze
+  // (um Undo); nunca meio-congelado.» A frozen clip holds the piece of the file from offsetSeconds for its whole
+  // length (clip_grains.hpp); the split's offset re-anchor (offsetSeconds += cut below) would make the second
+  // piece hold a DIFFERENT piece — a half-frozen state. Refuse with the unfreeze offer; unfreezeAudioClip (one
+  // Undo step in the app) then split plays the file sample for sample (engine_tests null proof).
+  if (c.freezeSeconds > 0)
+    throw DocumentError("audioClips", "the clip is frozen: splitting it is refused (the second piece would hold a different part of the file). Unfreeze it first (one Undo), then split.");
   const double cut = secondsBetween(doc, (double)c.startTick, (double)atTick);
   if (cut < kMinClipSeconds || c.durationSeconds - cut < kMinClipSeconds) throw DocumentError("audioClips", "the split point must be inside the clip");
   if (t.audioClips.size() >= 1024) throw DocumentError("audioClips", "the track has the maximum of 1024 audio clips");
@@ -2120,6 +2166,12 @@ std::string splitAudioClip(Document& doc, const std::string& trackId, const std:
   c.fadeInSeconds = std::min(c.fadeInSeconds, c.durationSeconds);  // a fade longer than the piece ends with it
   t.audioClips.push_back(second);  // c may move: take the id from the copy
   return second.id;
+}
+
+void unfreezeAudioClip(Document& doc, const std::string& trackId, const std::string& clipId) {
+  // BUG-SWEEP-21: the unfreeze the split refusal offers. The clip plays its file normally again (the held piece
+  // is let go); one Undo step in the app brings the freeze back. A plain clip is unchanged (no step).
+  audioClipById(trackById(doc, trackId), clipId).freezeSeconds = 0;
 }
 
 std::string duplicateAudioClip(Document& doc, const std::string& trackId, const std::string& clipId, int64_t startTick) {

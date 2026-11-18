@@ -26,7 +26,7 @@ const char* kCommands[][2] = {
   {"engine.cpu", "Where the audio time went since the last call (M0b), in % of one core = % of real time -> {intervalMs, load: {avgPct, maxPct, marginPct}, totalPct, tracks: [{id, cpuPct, instrument: {name, cpuPct}, effects: [{id, name, cpuPct}]}], master: {cpuPct, effects}}"},
   {"engine.resetStats", "Zero the timing stats (e.g. after the device has warmed up)"},
   {"devices.list", "{backend?} -> {backend, devices: [{name, default}]}"},
-  {"project.load", "Replace the whole project {project} (core-project v1 from the JS editor, or v2)"},
+  {"project.load", "Replace the whole project {project, revision?, states?: {key: base64}} (core-project v1 from the JS editor, or v2). A projection that names state instead of carrying it (hasState marks the places with state) is answered {statesNeeded: [keys]} and NOT accepted until those states arrive in 'states'; an accepted load answers statesNeeded: []"},
   {"project.get", "The project as core-project v2 (ticks, PPQ 960)"},
   {"tempo.set", "{bpm} 40-600"},
   {"track.add", "{track} in the v1 shape (kind synth|drums, pattern in steps) or v2 (instrument, notes in ticks, or clips: [{startTick, lengthTicks, patternTicks, notes}])"},
@@ -54,7 +54,7 @@ const char* kCommands[][2] = {
   {"plugins.failed", "Plugins that failed while playing (M3b: exception, crash, NaN/Inf or runaway level) -> [{key, plugin, why}]: each is silent (its track mutes; on the master the mix goes through) until plugin.retry, the song is loaded again or the plugin replaced"},
   {"plugin.retry", "{key} a failed plugin gets a new instance from the song's state -> {retried, loaded}"},
   {"plugins.versions", "Plugins whose installed version is not the one the song was saved with -> [{key, plugin, saved, installed}]"},
-    {"plugins.states", "The state of every loaded plugin -> {key: base64} (saved in the document)"},
+    {"plugins.states", "{keys?: [key]} The state of the loaded plugins named (every loaded plugin when absent) -> {key: base64} (saved in the document)"},
     {"plugin.editor", "{key, open} opens or closes a plugin's own editor window"},
     {"plugins.release", "Another song: every loaded plugin is let go (the next load starts from that song's states)"},
     {"plugin.preset", "{key} the loaded plugin's sound as a .vstpreset file -> {preset: base64} (VST3 only)"},
@@ -103,6 +103,41 @@ int liveThreadsFromEnv() {
   char* end = nullptr;
   const long n = std::strtol(v.c_str(), &end, 10);
   return end != v.c_str() && n > 0 ? (int)std::min<long>(n, 32) : 0;
+}
+
+// STATE-PER-EDIT (2026-11-18): every plugin place of a project, under the key the graph loads it by
+// ("track:<id>", "fx:<track id or master>:<effect id>"). The projection names the state (hasState); the blob
+// itself stays in the document and arrives through project.load's "states", asked for by statesNeeded.
+template <class F> void forEachPlugin(Project& p, F f) {
+  auto chain = [&](json& list, const std::string& owner) {
+    for (auto& fx : list)
+      if (fx.is_object() && fx.value("type", "") == "plugin" && fx.contains("plugin") && fx["plugin"].is_object())
+        f("fx:" + owner + ":" + fx.value("id", std::string()), fx["plugin"]);
+  };
+  chain(p.masterEffects, "master");
+  for (auto& t : p.tracks) {
+    if (t.instrument == "plugin" && t.plugin.is_object()) f("track:" + t.id, t.plugin);
+    chain(t.effects, t.id);
+  }
+}
+std::map<std::string, const json*> pluginsByKey(const Project& p) {
+  std::map<std::string, const json*> found;
+  auto chain = [&](const json& list, const std::string& owner) {
+    for (const auto& fx : list)
+      if (fx.is_object() && fx.value("type", "") == "plugin" && fx.contains("plugin") && fx["plugin"].is_object())
+        found["fx:" + owner + ":" + fx.value("id", std::string())] = &fx["plugin"];
+  };
+  chain(p.masterEffects, "master");
+  for (const auto& t : p.tracks) {
+    if (t.instrument == "plugin" && t.plugin.is_object()) found["track:" + t.id] = &t.plugin;
+    chain(t.effects, t.id);
+  }
+  return found;
+}
+// The identity the host keeps a live instance by (juce_host.cpp): another stateId is another state the document
+// chose (a preset, an undo of one), so the instance is made again from that state.
+std::string pluginIdentity(const json& plugin) {
+  return plugin.value("file", "") + "|" + plugin.value("id", "") + "|" + plugin.value("stateId", "");
 }
 } // namespace
 
@@ -462,6 +497,35 @@ json Server::execute(const std::string& cmd, const json& args) {
     if (!args.contains("project")) throw std::runtime_error("'project' is required.");
     const json& p = args["project"];
     Project next = fromJson(p);  // validates (and migrates v1)
+    // States supplied with the load: the app's answer to statesNeeded, or the refreshed live states it adopts
+    // before Save/Export (the projection itself carries no blobs any more). Same identity: the live instances
+    // keep playing; the stored state is what an export makes its own instances from.
+    if (args.contains("states") && !args["states"].is_null()) {
+      if (!args["states"].is_object()) throw std::runtime_error("'states' must be an object {key: base64}.");
+      forEachPlugin(next, [&](const std::string& key, json& plugin) {
+        const auto it = args["states"].find(key);
+        if (it == args["states"].end()) return;
+        if (!it->is_string()) throw std::runtime_error("plugin state must be base64 text.");
+        plugin["state"] = *it;
+        plugin.erase("hasState");
+      });
+    }
+    // A place marked hasState whose state the engine does not hold under that identity is answered as
+    // statesNeeded: nothing is accepted (no revision spent, the old graph keeps playing) until it arrives.
+    // A place whose identity the engine already holds keeps the stored state: an ordinary edit carries none.
+    const std::map<std::string, const json*> stored = pluginsByKey(project_);
+    json needed = json::array();
+    forEachPlugin(next, [&](const std::string& key, json& plugin) {
+      if (!plugin.value("hasState", false)) return;
+      const auto it = stored.find(key);
+      if (it != stored.end() && pluginIdentity(*it->second) == pluginIdentity(plugin) && !it->second->value("state", "").empty()) {
+        plugin["state"] = (*it->second)["state"];
+        plugin.erase("hasState");
+      } else {
+        needed.push_back(key);
+      }
+    });
+    if (!needed.empty()) return {{"statesNeeded", std::move(needed)}, {"tracks", next.tracks.size()}};
     clearFailedUnits();  // the new graph's units are fresh: they play again
     std::map<std::string, Source> sources;
     if (p.value("version", 0) == 1) {
@@ -474,7 +538,8 @@ json Server::execute(const std::string& cmd, const json& args) {
     sources_ = std::move(sources);
     projectFromV1_ = p.value("version", 0) == 1;
     commit(revision);
-    json loaded = {{"tracks", project_.tracks.size()}, {"missing", missingPlugins()}, {"missingAssets", missingAssets_}, {"lengthSamples", tempo().sampleOfTick(project_.lengthTicks)}};
+    json loaded = {{"tracks", project_.tracks.size()}, {"missing", missingPlugins()}, {"missingAssets", missingAssets_}, {"lengthSamples", tempo().sampleOfTick(project_.lengthTicks)},
+                   {"statesNeeded", json::array()}};
     if (json versions = pluginVersions(); !versions.empty()) loaded["versionChanged"] = std::move(versions);  // never silent
     if (!project_.renamedEffects.empty()) loaded["renamedEffects"] = project_.renamedEffects;  // ids with ':' (E6)
     if (!project_.conversionNotes.empty()) loaded["converted"] = project_.conversionNotes;  // what an old version lost
@@ -590,7 +655,17 @@ json Server::execute(const std::string& cmd, const json& args) {
   if (cmd == "render") return render(args);
   if (cmd == "plugins.states") {
     if (!plugins_) return json::object();
-    return plugins_->captureStates();
+    // {keys?: [key]}: only the plugins named (the app asks for the keys of its song, not every instance ever
+    // loaded); absent or null = every loaded plugin, as before.
+    std::vector<std::string> keys;
+    if (args.contains("keys") && !args["keys"].is_null()) {
+      if (!args["keys"].is_array()) throw std::runtime_error("'keys' must be a list of plugin keys.");
+      for (const auto& k : args["keys"]) {
+        if (!k.is_string()) throw std::runtime_error("'keys' must be a list of plugin keys.");
+        keys.push_back(k.get<std::string>());
+      }
+    }
+    return plugins_->captureStates(keys);
   }
   if (cmd == "plugins.release") {
     if (plugins_) plugins_->releaseAll();

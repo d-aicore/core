@@ -1,0 +1,5 @@
+core: realtime audio priority refused (Invalid operation); reopening the device at normal priority (BUG-SWEEP-06)
+core: realtime audio priority refused (Invalid operation); reopening the device at normal priority (BUG-SWEEP-06)
+core: realtime audio priority refused (Invalid operation); reopening the device at normal priority (BUG-SWEEP-06)
+ok   engine.start: M5 fica 0 (serial) por omissão, sem CORE_LIVE_THREADS nem liveThreads (FL-1, D51)
+1 testes, 3 verificacoes, 0 falhas

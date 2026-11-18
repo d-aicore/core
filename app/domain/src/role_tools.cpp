@@ -235,7 +235,9 @@ bool isPlaceBus(const Track& t, const std::string& kind) {
 std::string busNameFor(const SpacePreset& p) {
   std::string place = p.id;
   if (!place.empty()) place[0] = (char)std::toupper((unsigned char)place[0]);
-  return std::string(p.kind == "reverb" ? "R-Core" : "D-Core") + " \xC2\xB7 " + place;
+  // Plain names since the module cleanup (2026-11-18): a bus made before it keeps its "R-Core / D-Core"
+  // name (the song's data); the place tag, not the name, is what finds it again (isPlaceBus).
+  return std::string(p.kind == "reverb" ? "Reverb" : "Delay") + " \xC2\xB7 " + place;
 }
 }  // namespace
 
@@ -249,7 +251,7 @@ SongSpan sectionSpan(const Document& doc, const std::string& section) {
   throw DocumentError("section", "no section called '" + section + "'");
 }
 
-// Send levels and section moves from the old R-Core / D-Core presets (a reverb at 15-35 % mix on the track is about
+// Send levels and section moves from the old shared-bus presets (a reverb at 15-35 % mix on the track is about
 // -16 to -9 dB of tail; drops drier, breaks open). Size / feedback are the plugin's macro, 0..1.
 const std::vector<SpacePreset>& spacePresets() {
   static const std::vector<SpacePreset> presets = {
@@ -302,7 +304,7 @@ SharedBusResult toolSharedBus(Document& doc, const std::vector<std::string>& tra
   const char* sizeMacro = kind == "reverb" ? "size" : "feedback";
   r.sizeSet = hasMacro(map, kind, sizeMacro);
   if (r.sizeSet) writeRoleSweep(doc, r.busId, map, kind, sizeMacro, 0, doc.lengthTicks, p->size, p->size);
-  // One place of a kind per track: a send to another R-Core (D-Core) bus moves here; a bus nobody feeds goes.
+  // One place of a kind per track: a send to another shared reverb (delay) bus moves here; a bus nobody feeds goes.
   // Round 3 (R3-E): each track changes on its own and only if it works. Before, the old send went first and a
   // full track (8 sends) or a routing loop then lost both, in silence. Now the track keeps what it had and is named.
   std::set<std::string> left;
@@ -350,7 +352,7 @@ SharedBusResult toolSharedBus(Document& doc, const std::vector<std::string>& tra
       if (db > 0) ++opener;
     }
   r.sections = drier + opener;
-  r.sentence = std::string(kind == "reverb" ? "R-Core" : "D-Core") + " " + p->id + ": " + std::to_string(r.sends) +
+  r.sentence = std::string(kind == "reverb" ? "Reverb" : "Delay") + " " + p->id + ": " + std::to_string(r.sends) +
                (r.sends == 1 ? " track shares one " : " tracks share one ") + kind + " on " + trackById(doc, r.busId).name;
   if (drier > 0) r.sentence += ", quieter in the drops";
   if (opener > 0) r.sentence += ", louder in the breaks";
@@ -523,11 +525,11 @@ RollResult toolRoll(Document& doc, const std::string& trackId, int64_t start, in
 const std::vector<SongToolInfo>& songToolCatalog() {
   using P = SongToolParam;
   static const std::vector<SongToolInfo> list = {
-      {"space", "Tracks share one reverb or one delay on a bus that follows the sections (R-Core / D-Core)",
+      {"space", "Tracks share one reverb or one delay on a bus that follows the sections",
        {"reverb", "delay"},
-       {P{"tracks", "tracks", "", "the tracks that share it"}, P{"kind", "choice", "reverb|delay", "reverb (R-Core) or delay (D-Core)"},
+       {P{"tracks", "tracks", "", "the tracks that share it"}, P{"kind", "choice", "reverb|delay", "reverb or delay"},
         P{"preset", "choice", "room|hall|plate|huge|tight|throw|dotted|eighths|sixteenths|slow", "the place; reverb: room..tight, delay: throw..slow"}}},
-      {"fx", "Effects by intent over a section, on one track (F-Core)",
+      {"fx", "Effects by intent over a section, on one track",
        {"filter", "reverb", "delay", "drive"},
        {P{"track", "track", "", "the track"}, P{"intent", "choice", "buildup|suck|intro|outro|impact|break", "what the moment is for"},
         P{"section", "section", "", "the section by name (\"Build-up 1\"); empty: the whole song"},

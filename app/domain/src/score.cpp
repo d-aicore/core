@@ -245,7 +245,7 @@ void scoreSetPlays(Document& doc, const std::string& trackId, const std::string&
   const Section& s = next.sections[sectionIndex(next, sectionId)];
   const int64_t a = s.startTick, b = s.startTick + s.lengthTicks;
   const std::string pattern = patternFor(t, a, b);
-  if (pattern.empty()) throw DocumentError("score", t.name + " has no pattern yet: write one with P-Core");
+  if (pattern.empty()) throw DocumentError("score", t.name + " has no pattern yet: write one with Pattern Maker");
   clearRange(t, a, b);
   if (on) addClip(t, pattern, a, b - a);
   doc = std::move(next);

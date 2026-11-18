@@ -1,0 +1,7 @@
+=== domain_tests BUG-SWEEP-11 (green) ===
+ok   BUG-SWEEP-11: Randomize sound on a plugin-only styled song is a graceful no-op and the axis is unavailable
+1 testes, 4 verificacoes, 0 falhas
+=== domain_tests full ===
+34 testes, 579 verificacoes, 0 falhas
+=== merge ===
+100% tests passed out of 20

@@ -9,6 +9,7 @@
 //   add-track menu: plugin instruments [4000, 4000 + instrumentCount)
 // So no plugin index can share an action id at any catalog size, and the two track bands never overlap.
 #pragma once
+#include <vector>
 
 namespace core::app::menu {
 
@@ -94,5 +95,17 @@ inline AddTrackChoice decodeAddTrackMenu(int chosen, int instrumentCount, int bu
   if (chosen == kImportAudio) return {AddTrackAction::importAudio, -1};
   return {};
 }
+
+// ---- The fixed (non-plugin) entries each menu offers, as item ids in menu order (BUG-SWEEP-09) ----
+// Core's own instruments left the engine (Diogo 2026-11-16: the sound comes from plugins). addTrack always
+// creates kind "none" — a silent track with no instrument — so a menu entry naming a built-in instrument or a
+// sampler track promises a sound the engine no longer makes (PROD-06: "Nenhum menu oferece um instrumento/efeito
+// criativo interno como se produzisse som"; "Apenas plugins externos instalados como escolhas criativas"). The
+// menus offer only external plugins (the uncapped bands above), an audio track and import. The built-in id bands
+// stay allocated (BUG-SWEEP-32) and the routing model is unchanged; the entries are simply never offered. The
+// catalogue itself stays: addTrack names a track from it (edit.cpp), and a legacy song still opens with its
+// built-in data kept (projection "none") until a plugin replaces it.
+inline std::vector<int> addTrackFixedItems() { return {kAudioTrack, kImportAudio}; }
+inline std::vector<int> replaceFixedItems() { return {}; }  // plugins only
 
 }  // namespace core::app::menu

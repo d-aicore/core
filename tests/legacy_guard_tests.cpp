@@ -1,8 +1,9 @@
 // Characterization guards for the dead-code removal of lots L1/L2 (2026-11-18, dead-code inventory).
 // These pin the LIVE behavior the removals must not change: old songs with Core's own instruments,
 // sampler zones, synth data, modulators and ducking still open, save and reopen byte for byte, and
-// stay out of the engine projection; the five visible templates still open and render; a legacy
-// engine project still loads and renders, bit for bit, at any block size.
+// stay out of the engine projection; a legacy engine project still loads and renders, bit for bit, at
+// any block size. (The shipped templates were removed 2026-11-18, owner «remove templates com efeitos»;
+// the live template->engine render path is guarded in domain_tests.)
 // Run: legacy_guard_tests [part-of-name]
 #include <algorithm>
 #include <cmath>
@@ -116,26 +117,6 @@ TEST("legacy guard: the projection sends none of the removed built-ins to the en
   // The engine accepts the projection of an old song.
   const core::Project proj = core::fromJson(p);
   CHECK_EQ(proj.tracks.size(), (size_t)3);
-}
-
-TEST("legacy guard: the five visible templates open, project and render finite") {
-  const fs::path user = tempDir() / "user-empty";
-  fs::create_directories(user);
-  const TemplateLibrary lib = loadTemplates(CORE_TEMPLATES_DIR, user, false);
-  for (const auto& p : lib.problems) coretest::fail(p.file.string().c_str(), 0, p.message);
-  CHECK_EQ(lib.templates.size(), (size_t)5);  // the owner keeps the five visible ones (2026-11-18)
-  for (const auto& e : lib.templates) {
-    CHECK(!isBaseTemplate(e.tmpl));
-    const Document d = documentFromTemplate(e.tmpl);
-    const core::Project p = core::fromJson(toProjection(d));
-    core::Project short4 = p;
-    short4.lengthTicks = std::min<int64_t>(p.lengthTicks, 4 * 4 * core::kPpq);
-    const core::RenderResult r = core::renderProject(short4, 48000, 512, false, 0.1, nullptr, nullptr, nullptr, 0);
-    bool finite = true;
-    for (float s : r.L) finite = finite && std::isfinite(s);
-    for (float s : r.R) finite = finite && std::isfinite(s);
-    CHECK(finite);
-  }
 }
 
 TEST("legacy guard: the engine loads a legacy project (sampler zones, synth, bus with samples)") {

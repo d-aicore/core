@@ -1,6 +1,7 @@
 #include "EngineSession.h"
 #include <thread>
 #include <juce_events/juce_events.h>
+#include "edit.hpp"
 
 namespace core::app {
 
@@ -17,6 +18,15 @@ void readJob(ExportJob& job, const json& j) {
   job.revision = revision.is_number_integer() ? revision.get<int64_t>() : -1;
   if (j.contains("files") && j["files"].is_array()) job.files = std::max(1, (int)j["files"].size());
   job.file = j.value("file", job.file);
+  // The rollback of a failed export (BUG-SWEEP-03): the real outcome, not an assumed one.
+  job.published = j.value("published", 0);
+  job.rollbackAttempted = j.value("rollbackAttempted", false);
+  job.restored.clear();
+  job.backups.clear();
+  if (j.contains("restored") && j["restored"].is_array())
+    for (const auto& v : j["restored"]) if (v.is_string()) job.restored.push_back(v.get<std::string>());
+  if (j.contains("backups") && j["backups"].is_array())
+    for (const auto& v : j["backups"]) if (v.is_string()) job.backups.push_back(v.get<std::string>());
 }
 }
 
@@ -98,8 +108,9 @@ void EngineSession::cpuAsync(int timeoutMs, std::function<void(json)> done) {
   answerLater(answer, timeoutMs, std::move(done));
 }
 
-json EngineSession::pluginStates(int timeoutMs) {
+json EngineSession::pluginStates(int timeoutMs, const std::vector<std::string>& keys) {
   Action a{Action::PluginStates};
+  if (!keys.empty()) a.args = {{"keys", keys}};
   a.reply = std::make_shared<std::promise<json>>();
   std::future<json> answer = a.reply->get_future();
   queue(a);
@@ -113,12 +124,24 @@ json EngineSession::pluginStates(int timeoutMs) {
   }
 }
 
-void EngineSession::pluginStatesAsync(int timeoutMs, std::function<void(json)> done) {
+void EngineSession::pluginStatesAsync(int timeoutMs, std::function<void(json)> done, const std::vector<std::string>& keys) {
   Action a{Action::PluginStates};
+  if (!keys.empty()) a.args = {{"keys", keys}};
   a.reply = std::make_shared<std::promise<json>>();
   auto answer = std::make_shared<std::future<json>>(a.reply->get_future());
   queue(a);
   answerLater(answer, timeoutMs, std::move(done));
+}
+
+void EngineSession::pushPluginStates(const json& states) {
+  if (!states.is_object() || states.empty()) return;
+  std::lock_guard<std::mutex> g(mutex_);
+  for (auto it = states.begin(); it != states.end(); ++it) pendingStates_[it.key()] = it.value();
+  // The projection carries no blobs (STATE-PER-EDIT): a refresh changes nothing in it, so setDocument sends
+  // nothing. The sync is asked for here — the engine's stored copy is what an export makes its instances from,
+  // and it must receive the refreshed states even when no edit is pending.
+  snap_.documentRevision = ++wantedRevision_;
+  wake_.notify_all();
 }
 
 json EngineSession::pluginParams(const std::string& key, int timeoutMs) {
@@ -174,10 +197,17 @@ void EngineSession::openPluginEditor(const std::string& key) {
   queue(a);
 }
 
+void EngineSession::retryPlugin(const std::string& key) {
+  Action a{Action::RetryPlugin};
+  a.text = key;
+  queue(a);
+}
+
 void EngineSession::newSong() {
   std::lock_guard<std::mutex> g(mutex_);
   ++documentEpoch_;
   acceptedDocument_.reset();
+  pendingStates_ = json::object();  // another song: the refreshed states of the old one are not this one's
   snap_.hasAcceptedDocument = false;
 }
 
@@ -322,7 +352,7 @@ void EngineSession::run() {
       // plugin's window or reading its parameters: a plugin just added is only in the engine once its edit is sent
       // (audit R05: the editor was asked for a plugin the engine did not have yet).
       const bool needsDocument = action.kind == Action::Export || action.kind == Action::PluginEditor || action.kind == Action::PluginParams ||
-                                 action.kind == Action::PluginParam || action.kind == Action::PluginPreset;
+                                 action.kind == Action::PluginParam || action.kind == Action::PluginPreset || action.kind == Action::RetryPlugin;
       if (needsDocument && wantedRevision_ > sentRevision_ && snap_.status != EngineStatus::Diverged) sync(lock);
       if (action.kind == Action::Export && (snap_.status == EngineStatus::Diverged || snap_.acceptedRevision != wantedRevision_)) {
         snap_.exportJob.state = "failed";
@@ -393,7 +423,7 @@ void EngineSession::run() {
             action.reply->set_value(client_->command("engine.cpu"));
             break;
           case Action::PluginStates:
-            action.reply->set_value(client_->command("plugins.states"));
+            action.reply->set_value(client_->command("plugins.states", action.args.is_object() ? action.args : json::object()));
             break;
           case Action::PluginParams:
             action.reply->set_value(client_->command("plugin.params", {{"key", action.text}}));
@@ -406,6 +436,9 @@ void EngineSession::run() {
             break;
           case Action::PluginEditor:
             client_->command("plugin.editor", {{"key", action.text}, {"open", true}});
+            break;
+          case Action::RetryPlugin:
+            client_->command("plugin.retry", {{"key", action.text}});
             break;
           case Action::ReleasePlugins:
             client_->command("plugins.release");
@@ -567,6 +600,7 @@ void EngineSession::openDevice(client::EngineClient& engine) {
 void EngineSession::sync(std::unique_lock<std::mutex>& lock) {
   const json projection = wantedProjection_;
   const doc::Document document = wantedDocument_;
+  const json states = pendingStates_;  // refreshed live states ride this load; kept until the engine accepts
   const auto epoch = documentEpoch_;
   const int64_t revision = wantedRevision_;
   sentRevision_ = revision;
@@ -578,8 +612,29 @@ void EngineSession::sync(std::unique_lock<std::mutex>& lock) {
   lock.unlock();
   try {
     if (simulateTimeout > 0) throw EngineError(EngineError::Kind::Timeout, "no reply in time (simulated by the self-test)");
-    const json result = engine->command("project.load", {{"project", projection}, {"revision", revision}});
+    json loadArgs = {{"project", projection}, {"revision", revision}};
+    if (!states.empty()) loadArgs["states"] = states;
+    json result = engine->command("project.load", loadArgs);
+    const json needed = result.value("statesNeeded", json::array());
+    if (!needed.empty()) {
+      // STATE-PER-EDIT: the engine does not hold the state of these places (a first load, another stateId, a
+      // plugin brought back by Undo). The document has it: send exactly those keys, same revision — nothing
+      // was accepted yet, the engine keeps playing what it had until this second pass.
+      std::vector<std::string> keys;
+      for (const auto& k : needed) if (k.is_string()) keys.push_back(k.get<std::string>());
+      json supply = doc::pluginStatesFor(document, keys);
+      for (auto it = states.begin(); it != states.end(); ++it) supply[it.key()] = it.value();
+      loadArgs["states"] = supply;
+      result = engine->command("project.load", loadArgs);
+      if (!result.value("statesNeeded", json::array()).empty())
+        throw EngineError(EngineError::Kind::Rejected, "the engine still needs plugin state it was just given");
+    }
     lock.lock();
+    // Accepted: the engine holds the states sent. A newer push for the same key during the send stays for the next.
+    for (auto it = states.begin(); it != states.end(); ++it) {
+      const auto p = pendingStates_.find(it.key());
+      if (p != pendingStates_.end() && *p == it.value()) pendingStates_.erase(p);
+    }
     if (epoch == documentEpoch_) { acceptedDocument_ = document; snap_.hasAcceptedDocument = true; }
     syncRetry_.succeeded();
     syncTimeoutsForTest_ = 0;  // a real answer ends the simulation
@@ -668,8 +723,13 @@ void EngineSession::onEvent(const json& event) {
   }
   snap_.failedUnits.clear();
   for (const json& u : event.value("failedUnits", json::array())) if (u.is_string()) snap_.failedUnits.push_back(u.get<std::string>());
+  snap_.failedPlugins.clear();
   for (const json& p : event.value("failedPlugins", json::array()))
-    if (p.is_object()) snap_.failedUnits.push_back(p.value("plugin", std::string("plugin")) + ": " + p.value("why", std::string("failed")));
+    if (p.is_object()) {
+      const std::string why = p.value("plugin", std::string("plugin")) + ": " + p.value("why", std::string("failed"));
+      snap_.failedUnits.push_back(why);
+      if (p.contains("key") && p["key"].is_string()) snap_.failedPlugins[p["key"].get<std::string>()] = why;
+    }
   // The engine names each peak with the ids of the graph that produced it (the applied revision).
   snap_.trackPeaks.clear();
   if (tracks.is_object())

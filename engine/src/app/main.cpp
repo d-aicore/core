@@ -76,7 +76,7 @@ public:
     return host_.get(key, plugin, sr, offline, why);
   }
   void keepOnly(const std::vector<std::string>& keys) override { host_.keepOnly(keys); }
-  core::json captureStates() override { return host_.captureStates(); }
+  core::json captureStates(const std::vector<std::string>& keys) override { return host_.captureStates(keys); }
   bool showEditor(const std::string& key, bool open, std::string* why) override { return host_.showEditor(key, open, why); }
   bool takeChanged() override { return host_.takeChanged(); }
   void releaseAll() override { host_.releaseAll(); }
@@ -687,11 +687,19 @@ int main(int argc, char** argv) {
 #endif
       json r = server.handle({{"cmd", "project.load"}, {"args", {{"project", project}}}});
       if (!r["ok"]) throw std::runtime_error(r["error"].get<std::string>());
+      // A projection that names state instead of carrying it (hasState) is not accepted until the states arrive:
+      // the CLI renders songs with their state in the file, it does not answer statesNeeded.
+      const json needed = r.value("result", json::object()).value("statesNeeded", json::array());
+      if (!needed.empty()) throw std::runtime_error("the project needs plugin state for " + std::to_string(needed.size()) + " places (statesNeeded); render a song with its state in the file");
       // A render with a plugin or a sample that did not load still renders (they are silent), but says so.
       const json loaded = r.value("result", json::object());
       const json missing = loaded.value("missing", json::array()), missingAssets = loaded.value("missingAssets", json::array());
       for (const auto& m : missing) std::cerr << "missing plugin: " << m.dump() << '\n';
       for (const auto& m : missingAssets) std::cerr << "missing audio: " << m.dump() << '\n';
+      // L10b (2026-11-18): what an older version's conversion could not carry over is reported, never hidden.
+      // A song silenced by conversion (every track -> "none") names each track here and in the result JSON.
+      const json converted = loaded.value("converted", json::array());
+      for (const auto& n : converted) std::cerr << "conversion: " << n.dump() << '\n';
       json renderArgs = {{"path", args[2]}, {"stems", flag(args, "--stems")}, {"bits", std::stoi(option(args, "--bits", "24"))},
                          {"mono", flag(args, "--mono")}};
       // A region (training clips, Diogo 2026-11-05): ticks of the song; the tail after it in ms (default 2000).
@@ -699,7 +707,7 @@ int main(int argc, char** argv) {
       if (const std::string e = option(args, "--end-tick", ""); !e.empty()) renderArgs["endTick"] = std::stoll(e);
       if (const std::string t = option(args, "--tail-ms", ""); !t.empty()) renderArgs["tailMs"] = std::stod(t);
       r = server.handle({{"cmd", "render"}, {"args", renderArgs}});
-      if (r["ok"] && r.contains("result") && r["result"].is_object()) { r["result"]["missing"] = missing; r["result"]["missingAssets"] = missingAssets; }
+      if (r["ok"] && r.contains("result") && r["result"].is_object()) { r["result"]["missing"] = missing; r["result"]["missingAssets"] = missingAssets; r["result"]["conversionNotes"] = converted; }
       std::cout << r.dump(2) << '\n';
       return r["ok"] ? 0 : 1;
     }

@@ -1,12 +1,17 @@
 // Testes do MIDI (midi.hpp): exportar a musica como toca (rolls expandidos, loops, fim da musica, tempo) e importar
 // .mid para pistas e padroes. Os ficheiros sao gerados nos testes.
+#include <algorithm>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
 #include "support/check.hpp"
 #include "edit.hpp"
+#include "follow.hpp"
 #include "groove.hpp"
 #include "midi.hpp"
+#include "pattern_rack.hpp"
+#include "pattern_tools.hpp"
 #include "storage.hpp"
 
 using namespace core::doc;
@@ -340,8 +345,8 @@ TEST("MIDI SWEEP-30: Louder and Softer scale a roll's played hit velocities with
 }
 
 TEST("MIDI SWEEP-30: the ordinary-note control and the single-hit velocity contract stay intact") {
-  // Control: the same note with the roll cleared (hasRoll AND the payload: a stale count alone still
-  // expands, BUG-SWEEP-19) is an ordinary note; Louder must keep changing its exported MIDI.
+  // Control: the same note with the roll cleared (hasRoll AND the payload, the BUG-SWEEP-19 contract: a
+  // cleared roll leaves no stale count behind) is an ordinary note; Louder must keep changing its exported MIDI.
   Document d = rollSong();
   Pattern& p = d.tracks[0].patterns[0];
   p.notes[1].hasRoll = false;
@@ -421,6 +426,190 @@ TEST("MIDI export: a successful overwrite reads back the same bytes and keeps th
   CHECK_EQ(bytesIn(backupPath(file)), before);  // before: the previous export was gone, no backup
   CHECK_NEAR(parseMidi(readMidiFile(file)).tempos[0].bpm, 200, 0.01);
   for (const auto& e : fs::directory_iterator(dir)) CHECK(fs::file_size(e.path()) > 0);
+}
+
+// BUG-SWEEP-19 (roll preservation, 2026-11-18): songToMidi read roll.count without hasRoll, and Density's
+// octave/ratchet copies cleared hasRoll but kept the copied roll payload. The stale count still exported the
+// copies as 4-hit rolls, while the serializer writes roll only when hasRoll: after save/reopen the same song
+// exported fewer notes (the export shrank after reopen). The exporter must read the roll only when hasRoll
+// says there is one (as the engine projection does), and a cleared roll must leave no payload behind (the
+// stutter precedent). Valid rolls keep exporting exactly as before.
+TEST("MIDI SWEEP-19: the exporter reads a roll only when hasRoll says there is one") {
+  Document d = rollSong();
+  d.tracks[0].patterns[0].notes[1].hasRoll = false;  // the payload stays stale (count 4)
+  const MidiFile f = songToMidi(d);
+  CHECK_EQ(f.tracks[0].notes.size(), (size_t)4);  // before: 10, the stale count still expanded
+  CHECK_EQ(f.tracks[0].notes[1].length, (int64_t)kPpq);  // the whole note, as the engine plays it
+  d.tracks[0].patterns[0].notes[1].hasRoll = true;  // a valid roll is untouched: the 4 hits return
+  CHECK_EQ(songToMidi(d).tracks[0].notes.size(), (size_t)10);
+}
+
+TEST("MIDI SWEEP-19: density copies carry no stale roll; the export survives save/reopen unchanged") {
+  for (const char* how : {"octave", "ratchet"}) {
+    Document d = rollSong();
+    Pattern& p = d.tracks[0].patterns[0];
+    DensityOptions o;
+    o.mode = "count";
+    o.amount = 2;
+    o.how = how;
+    o.seed = 7;
+    const DensityResult r = changeDensity(p, wholePattern(p), o);
+    CHECK_EQ(r.added, 2);
+    for (const auto& n : p.notes)
+      if (!n.hasRoll) CHECK_EQ(n.roll.count, 0);  // before: the copy kept the copied count 4
+    const size_t before = songToMidi(d).tracks[0].notes.size();
+    const Document reopened = parseDocument(toJson(d));
+    const size_t after = songToMidi(reopened).tracks[0].notes.size();
+    CHECK_EQ(after, before);  // before: 20 exported, 14 after reopen (the stale roll did not survive the save)
+  }
+}
+
+TEST("MIDI SWEEP-19: a preset cut from a rolled pattern carries no stale roll payload") {
+  const Document d = rollSong();
+  const PatternPreset p = presetFromPattern(d.tracks[0].patterns[0], 0, kBar, "rolled");
+  CHECK_EQ(p.notes.size(), (size_t)2);
+  for (const auto& n : p.notes) {
+    CHECK(!n.hasRoll);  // presets stay plain (the existing contract)
+    CHECK_EQ(n.roll.count, 0);  // before: the copied payload kept count 4
+  }
+}
+
+// BUG-SWEEP-30 follow-up (owner ratified 2026-11-18): «escala de envelope consistente em ALL base-writers via
+// helper partilhado (ratifica a política para o follow-up avançar).» The 30 fix moved Louder/Softer, the velocity
+// lane, the wheel, the Inspector, the Patterns panel and Normalize onto doc::setNoteVelocity; the remaining
+// base-writers (humanizeNotes, varyNotes accent, the build-up velocity ramp, follow's write-back, toggleRackStep)
+// still wrote only Note.velocity, which a multi-hit roll never plays. All of them now go through the shared
+// helper: proportional realized factor, clamp [0,1], zero stays zero, count <= 1 untouched.
+TEST("MIDI SWEEP-30 follow-up: humanizeNotes scales a roll's played envelope with its base") {
+  Document d = rollSong();
+  Pattern& p = d.tracks[0].patterns[0];
+  const std::vector<uint8_t> before = exportMidi(d);
+  const int changed = humanizeNotes(p, {}, 0, 0.2, 7);  // timing 0: only the velocity moves
+  CHECK(changed >= 1);
+  const double v = p.notes[1].velocity;
+  CHECK(v != 0.5);  // the seed moves the roll note's base (otherwise this case proves nothing)
+  const double factor = v / 0.5;  // the realized factor, after humanize's own rounding/clamping
+  CHECK_NEAR(p.notes[1].roll.velocityFrom, std::clamp(0.25 * factor, 0.0, 1.0), 1e-9);
+  CHECK_NEAR(p.notes[1].roll.velocityTo, std::clamp(1.0 * factor, 0.0, 1.0), 1e-9);
+  CHECK_EQ(p.notes[1].roll.count, 4);  // the hit count is untouched
+  CHECK(before != exportMidi(d));  // the bug: the exported bytes stayed identical on a roll
+  const MidiFile f = songToMidi(d);
+  const auto& n = f.tracks[0].notes;
+  CHECK_EQ(n.size(), (size_t)10);
+  for (int i = 0; i < 4; ++i) {
+    const double vel = p.notes[1].roll.velocityFrom + (p.notes[1].roll.velocityTo - p.notes[1].roll.velocityFrom) * (double)i / 3.0;
+    const int expected = std::clamp((int)std::lround(std::min(1.0, vel) * 127.0), 1, 127);
+    CHECK_EQ(n[(size_t)1 + i].velocity, expected);
+    CHECK_EQ(n[(size_t)6 + i].velocity, expected);  // the loop repeats the same hits
+  }
+  // Single-note contract: count <= 1 plays the base once; the dead envelope stays untouched.
+  Document s = rollSong();
+  Pattern& q = s.tracks[0].patterns[0];
+  q.notes[1].roll.count = 1;
+  humanizeNotes(q, {}, 0, 0.2, 7);
+  CHECK_NEAR(q.notes[1].velocity, v, 1e-9);  // the same seed, the same base move
+  CHECK_NEAR(q.notes[1].roll.velocityFrom, 0.25, 1e-9);
+  CHECK_NEAR(q.notes[1].roll.velocityTo, 1.0, 1e-9);
+}
+
+TEST("MIDI SWEEP-30 follow-up: varyNotes accent scales a roll's played envelope with its base") {
+  Document d = rollSong();
+  Pattern& p = d.tracks[0].patterns[0];
+  const std::vector<uint8_t> before = exportMidi(d);
+  // The roll note sits on the beat (tick 960): accent lifts 0.5 -> 0.65, realized factor 1.3.
+  CHECK_EQ(varyNotes(p, {}, "accent", 1), 1);  // n1 is already at 1.0 (clamped): only the roll note moves
+  CHECK_NEAR(p.notes[1].velocity, 0.65, 1e-9);
+  CHECK_NEAR(p.notes[1].roll.velocityFrom, 0.325, 1e-9);  // 0.25 * 1.3
+  CHECK_NEAR(p.notes[1].roll.velocityTo, 1.0, 1e-9);      // 1.0 * 1.3 clamped at 1
+  CHECK(before != exportMidi(d));
+  const MidiFile f = songToMidi(d);
+  const auto& n = f.tracks[0].notes;
+  CHECK_EQ(n.size(), (size_t)10);
+  const int accented[4] = {41, 70, 98, 127};  // 0.325..1 over 4 hits, * 127 rounded
+  for (int i = 0; i < 4; ++i) {
+    CHECK_EQ(n[(size_t)1 + i].velocity, accented[i]);
+    CHECK_EQ(n[(size_t)6 + i].velocity, accented[i]);
+  }
+  CHECK_EQ(n[0].velocity, 127);  // the ordinary note stays at 1.0
+  // Off the beat the accent softens: the same proportional rule (0.5 -> 0.4, factor 0.8, no clamp).
+  Document s = rollSong();
+  Pattern& q = s.tracks[0].patterns[0];
+  q.notes[1].tick = 2 * kPpq + kPpq / 2;
+  CHECK_EQ(varyNotes(q, {}, "accent", 1), 1);
+  CHECK_NEAR(q.notes[1].velocity, 0.4, 1e-9);
+  CHECK_NEAR(q.notes[1].roll.velocityFrom, 0.2, 1e-9);  // 0.25 * 0.8
+  CHECK_NEAR(q.notes[1].roll.velocityTo, 0.8, 1e-9);    // 1.0 * 0.8
+  // Single-note contract: count <= 1 keeps the dead envelope untouched.
+  Document u = rollSong();
+  Pattern& r = u.tracks[0].patterns[0];
+  r.notes[1].roll.count = 1;
+  CHECK_EQ(varyNotes(r, {}, "accent", 1), 1);
+  CHECK_NEAR(r.notes[1].velocity, 0.65, 1e-9);
+  CHECK_NEAR(r.notes[1].roll.velocityFrom, 0.25, 1e-9);
+  CHECK_NEAR(r.notes[1].roll.velocityTo, 1.0, 1e-9);
+}
+
+TEST("MIDI SWEEP-30 follow-up: buildup ramp, rack steps and follow write through the shared helper unchanged") {
+  // makeBuildup's velocity ramp writes NEW notes: the ramp is the base velocity, no envelope (single-note
+  // contract). The shared helper must keep the ramp exactly as before, and the export one hit per note.
+  Document d = newEmptyDocument();
+  d.lengthTicks = 4 * kBar;
+  const std::string id = addTrack(d, "", "Snare");
+  Track& t = trackById(d, id);
+  Pattern& p = t.patterns[0];
+  p.lengthTicks = 4 * kBar;
+  p.notes.clear();
+  t.clips = {{"c1", p.id, 0, 4 * kBar, 0, json::object()}};
+  BuildupOptions o;
+  o.start = 0; o.length = 2 * kBar; o.pitch = 38; o.velocityFrom = 0.3; o.velocityTo = 0.9;
+  const int written = makeBuildup(p, o);
+  CHECK(written > 4);
+  CHECK_EQ((int)p.notes.size(), written);
+  double last = 0;
+  for (const auto& n : p.notes) {
+    CHECK(!n.hasRoll);
+    CHECK_EQ(n.roll.count, 0);  // a new note: the envelope is dead data, untouched
+    CHECK(n.velocity >= 0.3 && n.velocity <= 0.9);
+    CHECK(n.velocity >= last);  // the ramp rises
+    last = n.velocity;
+  }
+  CHECK_NEAR(p.notes.front().velocity, 0.3, 1e-9);
+  const MidiFile f = songToMidi(d);
+  CHECK_EQ(f.tracks[0].notes.size(), p.notes.size());  // one hit per note: no roll expansion
+  // toggleRackStep writes a NEW note with the clamped velocity: no envelope, exactly as before.
+  Pattern r;
+  r.lengthTicks = kBar;
+  CHECK(toggleRackStep(r, 0, kPpq / 4, 36, 0.73, 0.0));
+  CHECK_EQ(r.notes.size(), (size_t)1);
+  CHECK_NEAR(r.notes[0].velocity, 0.73, 1e-9);
+  CHECK(!r.notes[0].hasRoll);
+  CHECK_EQ(r.notes[0].roll.count, 0);
+  // follow: a rolled note in the margin the offset needs is written back with its base unchanged (factor 1):
+  // the shared helper keeps its envelope exactly; the zone's new notes are plain.
+  Document g = rollSong();
+  Track& gt = g.tracks[0];
+  Pattern& gp = gt.patterns[0];
+  gp.lengthTicks = 2 * kBar;
+  Note m; m.id = "n3"; m.tick = 1850; m.length = 60; m.pitch = 36; m.velocity = 0.5;
+  m.hasRoll = true; m.roll.count = 4; m.roll.velocityFrom = 0.25; m.roll.velocityTo = 1.0;
+  gp.notes.push_back(m);
+  gt.clips = {{"c1", gp.id, 0, 2 * kBar, 0, json::object()}};
+  g.lengthTicks = 2 * kBar;
+  FollowSettings fs;
+  fs.offsetTicks = -120; fs.looseTicks = 0; fs.seed = 1;  // the zone [1920, 2160) writes from 1800: 1850 is margin
+  const std::vector<FollowZone> zones = {{1920, 2160, {1920}}};
+  CHECK(kickFollow(g, gt.id, zones, fs) > 0);
+  const Note* kept = nullptr;
+  for (const auto& pat : gt.patterns)
+    for (const auto& n : pat.notes)
+      if (n.pitch == 36 && n.hasRoll) kept = &n;
+  CHECK(kept != nullptr);  // the margin's roll survived the write-back
+  if (kept) {
+    CHECK_NEAR(kept->velocity, 0.5, 1e-9);
+    CHECK_EQ(kept->roll.count, 4);
+    CHECK_NEAR(kept->roll.velocityFrom, 0.25, 1e-9);
+    CHECK_NEAR(kept->roll.velocityTo, 1.0, 1e-9);
+  }
 }
 
 CORE_TEST_MAIN

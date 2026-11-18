@@ -228,7 +228,7 @@ struct Score {
       n.tick = s.at - to->startTick;
       n.length = std::max<int64_t>(1, std::min(s.length, to->lengthTicks - n.tick));
       n.pitch = s.pitch;
-      n.velocity = s.velocity;
+      setNoteVelocity(n, s.velocity);  // BUG-SWEEP-30 follow-up (ratified): a written-back roll scales its envelope by the realized factor
       home[to->id].push_back(std::move(n));
     }
     for (const auto& id : inside) {
@@ -259,7 +259,7 @@ struct Score {
             n.tick = s.at - s0;
             n.length = std::max<int64_t>(1, std::min(s.length, s1 - s.at));
             n.pitch = s.pitch;
-            n.velocity = s.velocity;
+            setNoteVelocity(n, s.velocity);  // BUG-SWEEP-30 follow-up (ratified): the shared helper, as above
             v.push_back(std::move(n));
           }
         if (v.empty()) continue;

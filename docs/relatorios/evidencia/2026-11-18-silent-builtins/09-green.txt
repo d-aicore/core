@@ -1,0 +1,9 @@
+=== bug_tests BUG-SWEEP-09 (green) ===
+ok   BUG-SWEEP-09: the track menus offer no built-in instrument (each would create a silent, unassigned track)
+1 testes, 21 verificacoes, 0 falhas
+=== menu_tests (menu32 preserved) ===
+7 testes, 366 verificacoes, 0 falhas
+=== domain_tests ===
+31 testes, 566 verificacoes, 0 falhas
+=== bug_tests ===
+40 testes, 377 verificacoes, 0 falhas

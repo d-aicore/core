@@ -1,0 +1,24 @@
+Per-suite counts, flawless-roll2 @ c26dc085c040663e5654ad586272420f0bd42895 (ctest -L merge -V, exit 0)
+
+engine_tests: 25 cases / 130 verifications / 0 failures
+domain_tests: 30 cases / 525 verifications / 0 failures
+legacy_guard_tests: 9 cases / 169 verifications / 0 failures
+role_tests: 21 cases / 216 verifications / 0 failures
+midi_tests: 17 cases / 226 verifications / 0 failures
+bug_tests: 41 cases / 394 verifications / 0 failures
+bitwig_tests: 2 cases / 25 verifications / 0 failures
+audit_tests: 7 cases / 65 verifications / 0 failures
+audit2_tests: 6 cases / 80 verifications / 0 failures
+hunt_tests: 13 cases / 647 verifications / 0 failures
+round3_tests: 7 cases / 82 verifications / 0 failures
+calls_tests: 12 cases / 69 verifications / 0 failures
+menu_tests: 7 cases / 366 verifications / 0 failures
+engine_process_tests: 10 cases / 121 verifications / 0 failures
+
+Counting total: 207 cases / 3115 verifications / 0 failures
+Baseline f6b86dc (integration-evidence/per-suite-counts-finaltip2.txt): 202 / 3059 / 0.
+Additions only: midi_tests +3/+18 (BUG-SWEEP-19), bug_tests +2/+38 (BUG-SWEEP-20). No suite shrunk.
+core-engine --version: 0.7.0+c26dc085c0 == HEAD, no .modified.
+Gate renders byte-identical to the f6b86dc baseline (0.00 dB):
+demo.wav sha256 77507ee8682b963b913bed7f5f683b994125b3aca6649424fd6020bdcb4d7912
+plugin-crash.wav sha256 cfb52d1a58e61c08655d2d6e8bc953266af972397530a47421e973d2c980d523

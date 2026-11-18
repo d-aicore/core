@@ -1203,7 +1203,11 @@ void skipLeadingSilence(Instrument& in, const LibrarySample& s, const std::strin
 
 Instrument samplerInstrument(const SampleIndex& index, const LibrarySample& sample, const std::string& role) {
   Instrument in;
-  in.kind = "builtin";
+  // The user-sample host (BUG-SWEEP-10 positive, owner ratified 2026-11-18: «sampler = host de samples do
+  // utilizador, sem fontes de som próprias.»): kind "sample" PLAYS the user's audio files through the engine's
+  // audio path (dsp/sample_host.hpp). It has no sound source of its own — no oscillator, no filter; the zones
+  // below are the user's files, and the params are playback controls (level, start, pitch, loop, fades).
+  in.kind = "sample";
   in.name = "sampler";
   in.version = kSamplerVersion;
   if (role == "bass") {
@@ -1269,11 +1273,18 @@ double riserStartMs(const Document& doc, const Track& t, const LibrarySample& s)
 void setTrackSample(Document& doc, const std::string& trackId, const SampleIndex& index, const LibrarySample& sample) {
   Track& t = trackById(doc, trackId);
   if (!playsPatterns(t)) throw DocumentError("instrument", "an audio track or a bus does not play samples");
+  // BUG-SWEEP-10: a track played by a plugin keeps its plugin. Assigning a sample here would replace a working
+  // plugin and erase its instrument automation (PROD :113: a missing plugin is explicit, never silently replaced).
+  // Refuse, as an audio track or a bus is refused above; the working plugin is never destroyed.
+  if (t.instrument.kind == "plugin")
+    throw DocumentError("instrument", "this track is played by a plugin: a sample would replace it. "
+                                      "Keep the plugin, or replace the instrument first.");
   std::string role = trackSampleRole(t);
   if (role.empty()) role = sample.info.role == "bass" ? "bass" : sample.info.role;
-  // A new sample starts from its own sound: the sampler's defaults plus what suits this sample (how keys play,
+  // A new sample starts from its own sound: the host's defaults plus what suits this sample (how keys play,
   // whether a note restarts it, where it starts, its level). Nothing of the previous sample's knobs or of its
   // automation carries over, so changing samples again and again never stacks anything; Undo brings the old one back.
+  // The host (kind "sample") PLAYS the user's file — no synthesis (owner ratified 2026-11-18).
   Instrument next = samplerInstrument(index, sample, role);
   // The level brings it to its role's loudness, so the template's mix stays in balance.
   next.params["level"] = levelFor(sample, role);
@@ -1329,6 +1340,7 @@ std::vector<std::string> applySuggestedSamples(Document& doc, const SampleIndex&
   auto key = [](const LibrarySample& s) { return s.sha256.empty() ? s.file : s.sha256; };
   for (Track* t : order) {
     if (!playsPatterns(*t)) continue;
+    if (t->instrument.kind == "plugin") continue;  // BUG-SWEEP-10: a plugin role track keeps its plugin (setTrackSample refuses it); the bulk flow skips it, never throws
     const std::string role = trackSampleRole(*t);
     if (role.empty()) continue;
     std::vector<SampleSuggestion> pool;

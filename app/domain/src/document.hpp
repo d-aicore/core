@@ -100,11 +100,11 @@ constexpr double kMinSampleLoopSeconds = 0.002;
 // band-limited when played above its rate (version 4).
 constexpr int kSamplerVersion = 4;
 struct Instrument {
-  std::string kind = "none";           // "plugin" | "none" (notes, no instrument yet) | "audio" | "bus" | "builtin" (an old Core instrument, kept, not played)
-  std::string name;                    // builtin: kick | wave (W-Core) | hats | drums | sampler (validated by the engine)
+  std::string kind = "none";           // "plugin" | "none" (notes, no instrument yet) | "sample" (user-sample host) | "audio" | "bus" | "builtin" (an old Core instrument, kept, not played)
+  std::string name;                    // builtin: kick | wave (W-Core) | hats | drums | sampler; sample: "sampler" (the host)
   int version = 1;                     // builtin sound version
   std::map<std::string, double> params;  // only the values set; the engine fills the defaults
-  std::vector<SampleRef> samples;      // builtin "sampler": its zones (the first one holding the key plays)
+  std::vector<SampleRef> samples;      // "sampler" (builtin kept, or the sample host): its zones (the first one holding the key plays)
   // builtin "wave" (W-Core, version 2): its modulation, {"layers": [{"lfos": [...], "links": [...]}]}
   // (engine/src/dsp/wave_mod.hpp). null = none.
   json synth;

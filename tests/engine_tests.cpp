@@ -2,12 +2,14 @@
 // Correr: engine_tests [parte-do-nome]
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <memory>
 #include <new>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <vector>
 #include "support/check.hpp"
 #include "support/signals.hpp"
@@ -210,20 +212,32 @@ TEST("projecto: entrada invalida e recusada") {
   CHECK_THROWS(fromJson(noInstrument));
 }
 
-// Regressao (2026-11-16): com a saida dos instrumentos proprios, uma musica antiga com automacao num parametro do
-// W-Core ("tone") deixava de abrir ("envelope on unknown parameter 'tone'"). Abre, a automacao sai com uma nota.
-TEST("projecto: musica antiga com automacao num instrumento proprio abre") {
-  Project p;
-  CHECK_EQ((p = fromJson(demoProject(145)), (int)p.tracks.size()), 3);
+// Regression (2026-11-16): when Core's own instruments left, an old song with automation on a W-Core ("tone")
+// parameter stopped opening ("envelope on unknown parameter 'tone'"). It opens; the automation leaves with a note.
+// The demo is now generated audio (L10), so this guards the live legacy load on an explicit old builtin song.
+TEST("project: an old song with automation on a built-in instrument opens") {
+  auto legacySong = [] {
+    const json bass = {{"id", "bass"}, {"name", "Bass"}, {"instrument", "wave"}, {"instrumentVersion", 2}, {"patternTicks", 4 * kPpq},
+                       {"notes", json::array()},
+                       {"envelopes", json::array({{{"param", "tone"}, {"points", json::array({{{"tick", 0}, {"value", 160}}, {{"tick", 8 * 4 * kPpq}, {"value", 1400}}})}}})}};
+    return json{{"format", kProjectFormat}, {"version", 2}, {"name", "old"}, {"bpm", 145.0},
+                {"lengthTicks", 8 * 4 * kPpq}, {"masterGainDb", -8},
+                {"tracks", json::array({
+                    {{"id", "kick"}, {"instrument", "kick"}, {"patternTicks", 4 * kPpq}, {"notes", json::array()}},
+                    bass,
+                    {{"id", "hats"}, {"instrument", "hats"}, {"patternTicks", kPpq}, {"notes", json::array()}}})}};
+  };
+  Project p = fromJson(legacySong());
+  CHECK_EQ((int)p.tracks.size(), 3);
   bool noted = false;
   for (const auto& t : p.tracks) {
     CHECK_EQ(t.instrument, std::string("none"));
     for (const auto& n : t.loadNotes) noted = noted || n.find("tone") != std::string::npos;
   }
   CHECK(noted);
-  // A automacao de mistura (gainDb) de uma pista antiga continua.
-  json song = demoProject(145);
-  song["tracks"][1]["envelopes"].push_back({{"param", "gainDb"}, {"points", {{{"tick", 0}, {"value", -6}}}}});
+  // An old track's mix automation (gainDb) stays.
+  json song = legacySong();
+  song["tracks"][1]["envelopes"].push_back({{"param", "gainDb"}, {"points", json::array({{{"tick", 0}, {"value", -6}}})}});
   Project q = fromJson(song);
   CHECK_EQ((int)q.tracks[1].envelopes.size(), 1);
   CHECK_EQ(q.tracks[1].envelopes[0].param, std::string("gainDb"));
@@ -231,8 +245,14 @@ TEST("projecto: musica antiga com automacao num instrumento proprio abre") {
 
 // --- Render ----------------------------------------------------------------------------------------------------
 
-TEST("render: musica sem som da silencio finito com a duracao certa") {
-  Project p = fromJson(demoProject(145));
+// A song with no sound (a track waiting for a plugin) renders finite silence with the right duration. The demo
+// now sounds from generated audio (L10), so this uses an explicit silent legacy track, not the demo.
+TEST("render: a silent song gives finite silence with the right duration") {
+  const json silent = {{"format", kProjectFormat}, {"version", 2}, {"name", "silent"}, {"bpm", 145.0},
+                       {"lengthTicks", 8 * 4 * kPpq}, {"masterGainDb", 0.0},
+                       {"tracks", json::array({{{"id", "kick"}, {"instrument", "kick"}, {"patternTicks", 4 * kPpq},
+                           {"notes", json::array({{{"tick", 0}, {"length", 240}, {"pitch", 36}, {"velocity", 0.9}}})}}})}};
+  Project p = fromJson(silent);  // kick -> "none": silent, waits for a plugin
   RenderResult r = renderProject(p, kSr, 512, false, 1.0, nullptr, nullptr, nullptr, 0);
   CHECK(allFinite(r.L) && allFinite(r.R));
   CHECK_NEAR(r.peak, 0, 0);
@@ -300,6 +320,165 @@ TEST("render: ficheiro em falta nao parte o render") {
   RenderResult r = renderProject(p, kSr, 512, false, 0.1, nullptr, &assets, nullptr, 0);
   CHECK(allFinite(r.L));
   CHECK_NEAR(r.peak, 0, 0);
+}
+
+// --- Sample host (BUG-SWEEP-10 positive, owner ratified 2026-11-18) -----------------------------------------
+// The "sample" instrument is a HOST for the user's samples: a note plays the user's audio file (loaded by the
+// AssetStore, the audio clips' path), with no sound source of its own — no oscillator, no filter, no synthesis.
+// The files are generated here. «sampler = host de samples do utilizador, sem fontes de som próprias.»
+
+namespace {
+// A song with one sample-host track: one zone over the whole keyboard, the given notes and host params.
+json sampleHostSong(const std::string& path, const json& notes, const json& params = json::object(),
+                    double loopStart = 0, double loopEnd = 0, int rootKey = 60) {
+  json zone = {{"file", path}, {"rootKey", rootKey}, {"loKey", 0}, {"hiKey", 127}};
+  if (loopEnd > 0) { zone["loopStart"] = loopStart; zone["loopEnd"] = loopEnd; }
+  json track = {{"id", "kick"}, {"name", "Kick"}, {"instrument", "sample"}, {"params", params},
+                {"samples", json::array({zone})}, {"patternTicks", 4 * kPpq}, {"notes", notes}};
+  // One bar: the pattern plays once, so the silence after the file's end is not another repeat.
+  return {{"format", kProjectFormat}, {"version", 2}, {"name", "sample-host"}, {"bpm", 150.0},
+          {"lengthTicks", 4 * kPpq}, {"masterGainDb", 0}, {"tracks", json::array({track})}};
+}
+const json oneHit = json::array({{{"tick", 0}, {"length", 240}, {"pitch", 60}, {"velocity", 1.0}}});
+}  // namespace
+
+TEST("sample host: a note plays the user's file at its level, to the file's end (not silence)") {
+  const std::string path = writeSine("host-sine.wav", 440, 0.2, 0.5f);
+  Project p = fromJson(sampleHostSong(path, oneHit));
+  CHECK_EQ(p.tracks[0].instrument, std::string("sample"));  // the host, not projected to a silent "none"
+  CHECK_EQ(toJson(p)["tracks"][0]["samples"].size(), (size_t)1);  // the zone survives the load
+  AssetStore assets;
+  RenderResult r = renderProject(p, kSr, 512, false, 0.1, nullptr, &assets, nullptr, 0);
+  CHECK(allFinite(r.L) && allFinite(r.R));
+  CHECK(r.peak > 0.1f);           // the user's file sounds: the render is not silence
+  CHECK_NEAR(r.peak, 0.5, 0.02);  // velocity 1, level 0 dB, master 0 dB: the file's own peak
+  // The one-shot plays to the file's end (0.2 s), past the note's gate (240 ticks = 0.1 s at 150 BPM):
+  // the file's own tail is the sound. After it, silence.
+  CHECK_NEAR(peakOf(std::vector<float>(r.L.begin() + (size_t)(0.15 * kSr), r.L.begin() + (size_t)(0.19 * kSr))), 0.5, 0.02);
+  CHECK_NEAR(peakOf(std::vector<float>(r.L.begin() + (size_t)(0.21 * kSr), r.L.end())), 0, 1e-6);
+}
+
+TEST("sample host: the level and the velocity scale the file's gain") {
+  const std::string path = writeSine("host-level.wav", 440, 0.2, 0.5f);
+  AssetStore assets;
+  RenderResult a = renderProject(fromJson(sampleHostSong(path, oneHit)), kSr, 512, false, 0.05, nullptr, &assets, nullptr, 0);
+  RenderResult b = renderProject(fromJson(sampleHostSong(path, oneHit, {{"level", -6.0206}})), kSr, 512, false, 0.05, nullptr, &assets, nullptr, 0);
+  const json halfVel = json::array({{{"tick", 0}, {"length", 240}, {"pitch", 60}, {"velocity", 0.5}}});
+  RenderResult c = renderProject(fromJson(sampleHostSong(path, halfVel)), kSr, 512, false, 0.05, nullptr, &assets, nullptr, 0);
+  CHECK(a.peak > 0.1f);
+  CHECK_NEAR(b.peak / a.peak, 0.5, 0.01);  // -6 dB: half the level
+  CHECK_NEAR(c.peak / a.peak, 0.5, 0.01);  // velocity 0.5: half the level
+}
+
+TEST("sample host: a pitched zone follows the key (an octave up reads twice as fast)") {
+  const std::string path = writeSine("host-pitch.wav", 440, 0.2, 0.5f);
+  const json up = json::array({{{"tick", 0}, {"length", 240}, {"pitch", 72}, {"velocity", 1.0}}});
+  AssetStore assets;
+  // pitched 1: the note at 72 (root 60) reads the file at double rate: it ends in 0.1 s, an octave up.
+  RenderResult r = renderProject(fromJson(sampleHostSong(path, up, {{"pitched", 1}})), kSr, 512, false, 0.05, nullptr, &assets, nullptr, 0);
+  CHECK(r.peak > 0.1f);
+  CHECK_NEAR(peakOf(std::vector<float>(r.L.begin() + (size_t)(0.05 * kSr), r.L.begin() + (size_t)(0.09 * kSr))), 0.5, 0.02);
+  CHECK_NEAR(peakOf(std::vector<float>(r.L.begin() + (size_t)(0.11 * kSr), r.L.end())), 0, 1e-6);
+  // pitched 0 (the default): every key plays the file as it is (a drum hit), the full 0.2 s.
+  RenderResult d = renderProject(fromJson(sampleHostSong(path, up)), kSr, 512, false, 0.05, nullptr, &assets, nullptr, 0);
+  CHECK_NEAR(peakOf(std::vector<float>(d.L.begin() + (size_t)(0.15 * kSr), d.L.begin() + (size_t)(0.19 * kSr))), 0.5, 0.02);
+}
+
+TEST("sample host: a held zone loops while the note is held and releases after it") {
+  const std::string path = writeSine("host-loop.wav", 440, 0.2, 0.5f);
+  // The zone loops 0.05..0.15 s of the file; the note holds 2 beats (0.8 s at 150 BPM).
+  const json held = json::array({{{"tick", 0}, {"length", 2 * kPpq}, {"pitch", 60}, {"velocity", 1.0}}});
+  AssetStore assets;
+  RenderResult r = renderProject(fromJson(sampleHostSong(path, held, json::object(), 0.05, 0.15)), kSr, 512, false, 0.05, nullptr, &assets, nullptr, 0);
+  CHECK(r.peak > 0.1f);
+  // Past the file's own end (0.2 s) the loop keeps sounding while the note is held (0.3..0.7 s).
+  CHECK_NEAR(peakOf(std::vector<float>(r.L.begin() + (size_t)(0.3 * kSr), r.L.begin() + (size_t)(0.7 * kSr))), 0.5, 0.02);
+  // After the note-off (0.8 s) and the release (30 ms default), silence.
+  CHECK_NEAR(peakOf(std::vector<float>(r.L.begin() + (size_t)(0.85 * kSr), r.L.end())), 0, 1e-6);
+}
+
+TEST("sample host: the block size does not change the render") {
+  const std::string path = writeSine("host-block.wav", 220, 0.3, 0.4f);
+  const json notes = json::array({{{"tick", 0}, {"length", 240}, {"pitch", 60}, {"velocity", 0.9}},
+                                  {{"tick", 480}, {"length", 240}, {"pitch", 67}, {"velocity", 0.7}}});
+  Project p = fromJson(sampleHostSong(path, notes, {{"pitched", 1}}));
+  AssetStore assets;
+  RenderResult ref = renderProject(p, kSr, 512, false, 0.05, nullptr, &assets, nullptr, 0);
+  CHECK(ref.peak > 0.1f);
+  for (int block : {1, 64, 333, 1024}) {
+    RenderResult r = renderProject(p, kSr, block, false, 0.05, nullptr, &assets, nullptr, 0);
+    CHECK_EQ(r.L.size(), ref.L.size());
+    double worst = 0;
+    for (size_t i = 0; i < r.L.size() && i < ref.L.size(); ++i) worst = std::max(worst, (double)std::fabs(r.L[i] - ref.L[i]));
+    CHECK_NEAR(worst, 0, 0);
+  }
+}
+
+TEST("sample host: a missing file is silent and reported, the song plays on") {
+  const std::string gone = (tempDir() / "host-gone.wav").string();
+  Project p = fromJson(sampleHostSong(gone, oneHit));
+  AssetStore assets;
+  Graph g(p, kSr, &assets);
+  CHECK(!g.missingAssets().empty());  // reported, never dropped in silence
+  std::vector<float> L(512), R(512);
+  g.process(L.data(), R.data(), 512, 0, false);
+  CHECK(allFinite(L));
+  CHECK_NEAR(peakOf(L), 0, 0);
+}
+
+// --- L10 amplitude (2026-11-18): a render must actually sound --------------------------------------------------
+// The old builtin demo projected to silent "none" tracks (peak 0) and no test caught it: the gate compared
+// silence with silence. These close that gap. The demo test is RED on the silent builtin demo and GREEN once
+// the demo is rebuilt on generated audio; the generated-audio/test-synth test is a general sound-out check.
+
+TEST("render: the demo sounds (amplitude > 0), not silence-by-conversion") {
+  Project p = fromJson(demoProject(190));
+  AssetStore assets;
+  RenderResult r = renderProject(p, kSr, 512, false, 0.2, nullptr, &assets, nullptr, 0);
+  CHECK(allFinite(r.L) && allFinite(r.R));
+  // A song whose every track was silenced by conversion (instrument -> "none" with a load note) must not pass
+  // as "rendered": that is the silent-by-construction gap. The rebuilt demo sounds from generated audio.
+  bool allSilencedByConversion = !p.tracks.empty();
+  for (const auto& t : p.tracks)
+    allSilencedByConversion = allSilencedByConversion && t.instrument == "none" && !t.loadNotes.empty();
+  CHECK(!allSilencedByConversion);
+  CHECK(r.peak > 0.0f);  // the demo really sounds
+  if (r.peak <= 0.0f) coretest::fail(__FILE__, __LINE__, "the demo rendered silence (peak 0)");
+}
+
+TEST("render: generated audio and the test synth sound out (amplitude > 0)") {
+  // Generated audio (tests/support/signals.hpp): a sine clip renders non-silent at its own level.
+  const std::string path = writeSine("amplitude-sine.wav", 440, 1.0, 0.5f);
+  AssetStore assets;
+  RenderResult ra = renderProject(fromJson(audioSong(path, 1.0)), kSr, 512, false, 0.1, nullptr, &assets, nullptr, 0);
+  CHECK(allFinite(ra.L));
+  CHECK(ra.peak > 0.0f);
+  // The test synth (app/selftest-plugins) stand-in: a plugin instrument track renders non-silent. The real
+  // VST3 test synth's sound-out is asserted by cli_plugin_crash_render and cli_demo_render in the gate.
+  FakeProvider provider;
+  const json notes = json::array({{{"tick", 0}, {"length", 960}, {"pitch", 60}, {"velocity", 0.8}}});
+  RenderResult rs = renderProject(fromJson(pluginSong(120, notes, json::array())), kSr, 512, false, 0.1, nullptr, nullptr, &provider, 0);
+  CHECK(allFinite(rs.L));
+  CHECK(rs.peak > 0.0f);
+}
+
+// L10: the demo is now generated audio (no note-ons), so the grid-scheduling accuracy the demo sweep used to
+// measure is guarded here on a plugin note track: every note-on lands on the exact fractional grid position,
+// rounded once, never a whole sample late (the same criterion cli_measure applies to the sweep).
+TEST("render: note-ons land on the exact grid (scheduling accuracy)") {
+  FakeProvider provider;
+  json notes = json::array();
+  for (int beat = 0; beat < 16; ++beat)
+    notes.push_back({{"tick", beat * kPpq}, {"length", 240}, {"pitch", 36}, {"velocity", 0.9}});
+  Project p = fromJson(pluginSong(190, notes, json::array(), 4 * 4 * kPpq));
+  EventLog log;
+  renderProject(p, kSr, 512, false, 0.1, &log, nullptr, &provider, 0);
+  const double spt = samplesPerTick(190, kSr);
+  double maxErr = 0;
+  for (const auto& e : log.entries) maxErr = std::max(maxErr, std::fabs((double)e.sample - e.tick * spt));
+  CHECK(log.entries.size() >= 16);
+  CHECK(maxErr < 1.0);
+  if (maxErr >= 1.0) coretest::fail(__FILE__, __LINE__, coretest::pair(maxErr, 1.0));
 }
 
 // --- Loop e mudanca de tempo (sweep: o loop era convertido duas vezes) ------------------------------------------
@@ -583,6 +762,25 @@ TEST("engine.start: M5 fica 0 (serial) por omissão, sem CORE_LIVE_THREADS nem l
   server.execute("engine.stop", json::object());
 }
 
+// --- BUG-SWEEP-06: the null device opens even when the OS refuses realtime priority --------------------------
+
+TEST("engine.start: the null device opens and reopens; a refused realtime priority falls back to normal (BUG-SWEEP-06)") {
+  // On Linux an unprivileged process cannot create a realtime-priority thread (EPERM): before the fix the
+  // first start threw "Cannot open the audio device: Invalid operation" and this case never reached a CHECK.
+  // The fallback rebuilds the context at normal priority and opens again. Every engine.start makes a fresh
+  // output (server.cpp), so the second start proves each new output falls back cleanly on its own.
+  // On Windows TIME_CRITICAL needs no privilege, so this passes at realtime priority, unchanged.
+  Server server([] { return makeMiniaudioOutput(); }, kSr);
+  const json first = server.execute("engine.start", {{"backend", "null"}});
+  CHECK(first.contains("blockSize"));
+  CHECK(first.value("backend", std::string()) == "Null");  // ma_get_backend_name(ma_backend_null)
+  CHECK(first.contains("scheduling"));
+  const json second = server.execute("engine.start", {{"backend", "null"}});
+  CHECK(second.contains("blockSize"));
+  CHECK(server.execute("engine.stats", json::object())["device"].contains("blockSize"));
+  server.execute("engine.stop", json::object());
+}
+
 // --- ART-003: a saída de áudio morre em silêncio ---------------------------------------------------------------
 
 TEST("ART-003: o Server reporta uma saída que parou ou mudou (dispositivo desligado / rerouted)") {
@@ -660,15 +858,18 @@ namespace {
 struct StateHost final : PluginHost {
   std::string state;
   std::vector<std::string> keys;
-  std::shared_ptr<PluginProcessor> get(const std::string& key, const json&, double, bool offline, std::string* why) override {
+  std::vector<std::pair<std::string, json>> offlineGets;  // what an export's graph asked of the provider: the state it renders from
+  std::shared_ptr<PluginProcessor> get(const std::string& key, const json& plugin, double, bool offline, std::string* why) override {
     if (why) why->clear();
+    if (offline) offlineGets.emplace_back(key, plugin);
     if (!offline && std::find(keys.begin(), keys.end(), key) == keys.end()) keys.push_back(key);
     return std::make_shared<FakeProc>();
   }
   void keepOnly(const std::vector<std::string>&) override {}
-  json captureStates() override {
+  json captureStates(const std::vector<std::string>& keys) override {
     json out = json::object();
-    for (const auto& k : keys) out[k] = state;
+    for (const auto& k : this->keys)
+      if (keys.empty() || std::find(keys.begin(), keys.end(), k) != keys.end()) out[k] = state;
     return out;
   }
   bool showEditor(const std::string&, bool, std::string*) override { return false; }
@@ -717,6 +918,277 @@ TEST("protocol: a song with more than 8 MB of plugin state is read, loaded and a
   CHECK(answer.size() > (size_t)(8u << 20));               // the answer that ended the engine
   CHECK(answer.size() <= Server::kMaxMessageBytes);
   CHECK(answer.rfind("{\"id\":2,", 0) == 0);               // an answer starts with its id: the client relies on it
+}
+
+// --- M5 re-arm: one late worker must not mean serial for the Engine's whole life --------------------------------
+// engine.cpp set liveFallback_ on the first stall recovery and never stored false again: the Engine played
+// serial until it was rebuilt (only a rate/thread-count change rebuilds it, server.cpp engine.start). A single
+// OS-scheduling hiccup cost multicore for the rest of the session. The fix re-arms the live workers on the
+// first publish after a cooldown, within a stall budget (a plugin that keeps stalling stays serial for good).
+
+namespace {
+// A plugin that only adds a constant level: no shared state, safe to play from a worker thread (the provider
+// gives one instance per track, as the real host does).
+struct LevelProc final : PluginProcessor {
+  void process(float* left, float* right, int frames, const MidiNote*, int) override {
+    for (int i = 0; i < frames; ++i) { left[i] += 0.25f; right[i] += 0.25f; }
+  }
+  bool isInstrument() const override { return true; }
+  int latencySamples() const override { return 0; }
+};
+struct LevelProvider final : PluginProvider {
+  std::shared_ptr<PluginProcessor> get(const std::string&, const json&, double, bool, std::string* why) override {
+    if (why) why->clear();
+    return std::make_shared<LevelProc>();
+  }
+  void keepOnly(const std::vector<std::string>&) override {}
+};
+// Two plugin tracks: the live path plays only with at least two (Graph::processLive).
+json twoTrackSong() {
+  json tracks = json::array();
+  for (const char* id : {"a", "b"})
+    tracks.push_back({{"id", id}, {"name", id}, {"instrument", "plugin"},
+                      {"plugin", {{"format", "vst3"}, {"id", "fake"}}}, {"patternTicks", 4 * kPpq}, {"notes", json::array()}});
+  return {{"format", kProjectFormat}, {"version", 2}, {"name", "m5"}, {"bpm", 120.0},
+          {"lengthTicks", 16LL * 4 * kPpq}, {"masterGainDb", 0.0}, {"tracks", tracks}};
+}
+}  // namespace
+
+TEST("M5: a worker that was late once is re-armed after the cooldown; a stalling plugin stays serial (budget)") {
+  Engine e(kSr, 1);  // one live worker (opt-in; the default stays 0, FL-1/D51)
+  e.setLiveDeadline(0.05);  // a fraction of the buffer's time: the delayed worker misses it for sure
+  LevelProvider provider;
+  const Project song = fromJson(twoTrackSong());
+  std::vector<float> L(256), R(256);
+  auto publish = [&] { e.publish(std::make_unique<Graph>(song, kSr, nullptr, &provider)); };
+  auto block = [&] { e.process(L.data(), R.data(), 256); };
+  auto drain = [&] {  // the silence-until-idle guard: silent blocks while the late worker finishes
+    for (int i = 0; i < 500 && !e.livePool()->idle(); ++i) { block(); std::this_thread::sleep_for(std::chrono::milliseconds(1)); }
+    block();  // the recovery block: the pool is idle, the engine plays on (serial until re-armed)
+  };
+  publish();
+  e.play();
+  // The worker sleeps 50 ms before its job: the deadline (a fraction of 256/48000 s) passes, the block is
+  // silence and the engine falls back to serial.
+  e.livePool()->testDelayNs = 50000000;
+  block();
+  CHECK_EQ(e.stats().liveStalls.load(), (uint64_t)1);
+  drain();
+  CHECK(e.liveFallback());  // the recovery block marks the fallback (engine.cpp: stalled_ -> idle -> serial)
+  CHECK(e.stats().liveStallBlocks.load() > (uint64_t)0);  // the guard held: silence until the worker was done
+  CHECK_EQ(e.stats().liveStalls.load(), (uint64_t)1);
+  // Re-arm: the first publish after the cooldown (2 s) uses the live workers again.
+  e.livePool()->testDelayNs = 0;
+  std::this_thread::sleep_for(std::chrono::milliseconds(2100));
+  publish();
+  CHECK(!e.liveFallback());  // before the fix: true for the Engine's whole life
+  // Proof the new graph really plays on the workers: delay them again and it stalls again.
+  e.livePool()->testDelayNs = 50000000;
+  block();
+  CHECK_EQ(e.stats().liveStalls.load(), (uint64_t)2);  // before the fix: still 1 (a serial graph never stalls)
+  drain();
+  // The budget: after the third stall the engine stays serial for good, cooldown elapsed or not.
+  e.livePool()->testDelayNs = 0;
+  std::this_thread::sleep_for(std::chrono::milliseconds(2100));
+  publish();
+  CHECK(!e.liveFallback());  // the second stall is still within the budget
+  e.livePool()->testDelayNs = 50000000;
+  block();
+  CHECK_EQ(e.stats().liveStalls.load(), (uint64_t)3);
+  drain();
+  e.livePool()->testDelayNs = 0;
+  std::this_thread::sleep_for(std::chrono::milliseconds(2100));
+  publish();
+  CHECK(e.liveFallback());  // the budget is spent: serial from here on, no thrash
+  e.livePool()->testDelayNs = 50000000;
+  block();
+  CHECK_EQ(e.stats().liveStalls.load(), (uint64_t)3);  // a serial graph never stalls
+  e.livePool()->testDelayNs = 0;
+}
+
+// --- A-004: a live plugin swap must re-chase the held notes into the fresh instance ------------------------------
+// adopt() copied held_ from the old wrapper unconditionally, and reconcile() skips a track whose held pitches
+// did not change: a fresh instance (Retry, plugin change) got the phantom held bits but no note-on, so the
+// held note went silent until the next note-on or seek. The fix matches the processor identity: the same
+// instance keeps its state; a different one is re-triggered with the notes the old wrapper held.
+
+namespace {
+// A plugin that sounds only while a note is held (a constant-level fake cannot prove audibility).
+struct HeldSynth final : PluginProcessor {
+  std::vector<MidiNote> seen;
+  bool held[128] = {};
+  void process(float* left, float* right, int frames, const MidiNote* notes, int count) override {
+    for (int i = 0; i < count; ++i) { seen.push_back(notes[i]); held[notes[i].pitch & 127] = notes[i].on; }
+    bool any = false;
+    for (int p = 0; p < 128; ++p) if (held[p]) { any = true; break; }
+    if (any) for (int i = 0; i < frames; ++i) { left[i] += 0.5f; right[i] += 0.5f; }
+  }
+  bool isInstrument() const override { return true; }
+  int latencySamples() const override { return 0; }
+};
+struct SwapProvider final : PluginProvider {
+  std::shared_ptr<HeldSynth> proc = std::make_shared<HeldSynth>();
+  std::shared_ptr<PluginProcessor> get(const std::string&, const json&, double, bool, std::string* why) override {
+    if (why) why->clear();
+    return proc;
+  }
+  void keepOnly(const std::vector<std::string>&) override {}
+};
+}  // namespace
+
+TEST("A-004: swapping a plugin instance keeps the held note sounding (re-chased into the fresh instance)") {
+  const json notes = json::array({{{"tick", 0}, {"length", 4 * kPpq}, {"pitch", 60}, {"velocity", 0.8}}});
+  SwapProvider provider;
+  const Project song = fromJson(pluginSong(120, notes, json::array()));
+  Engine e(kSr);  // serial: the swap edge is the same on both paths
+  std::vector<float> L(256), R(256);
+  auto publish = [&] { e.publish(std::make_unique<Graph>(song, kSr, nullptr, &provider)); };
+  auto peakOfBlocks = [&](int blocks) {
+    float peak = 0;
+    for (int b = 0; b < blocks; ++b) {
+      e.process(L.data(), R.data(), 256);
+      for (int i = 0; i < 256; ++i) peak = std::max(peak, std::max(std::fabs(L[i]), std::fabs(R[i])));
+    }
+    return peak;
+  };
+  publish();
+  e.play();
+  CHECK(peakOfBlocks(8) > 0.2f);  // the held note sounds in the first instance
+  // Live swap: the provider hands out a fresh instance (Retry / plugin change); the song is unchanged.
+  auto fresh = std::make_shared<HeldSynth>();
+  provider.proc = fresh;
+  publish();
+  const float after = peakOfBlocks(8);
+  CHECK(after > 0.2f);  // before the fix: silence — the fresh instance never got the held note
+  bool on = false;
+  float vel = 0;
+  for (const auto& ev : fresh->seen) if (ev.on && ev.pitch == 60) { on = true; vel = ev.velocity; }
+  CHECK(on);  // the held note was re-chased into the fresh instance
+  CHECK_NEAR(vel, 0.8, 1e-6);  // with the velocity it was held at
+  CHECK(after <= 0.5f + 1e-3f);  // one voice, not doubled
+}
+
+// STATE-PER-EDIT (2026-11-18, work plan item 2): the projection carries stateId only. project.load answers WHICH
+// keys need state (a place marked hasState whose state the engine does not hold under that identity), accepts
+// nothing until they arrive in "states", and an ordinary edit is accepted at once with no blobs. plugins.states
+// takes a list of keys. A legacy song with its state in the projection is still accepted in one pass.
+TEST("protocol: project.load asks for the state it needs and edits carry none (STATE-PER-EDIT)") {
+  StateHost host;
+  host.state = "U1RBVEU=";
+  Server server(nullptr, kSr, &host);
+  auto track = [](const std::string& id, const json& plugin) {
+    return json{{"id", id}, {"name", id}, {"instrument", "plugin"}, {"plugin", plugin},
+                {"patternTicks", 4 * kPpq}, {"notes", json::array()}};
+  };
+  const json song = {{"format", kProjectFormat}, {"version", 2}, {"name", "state on demand"}, {"bpm", 120.0},
+                     {"lengthTicks", 4LL * 4 * kPpq}, {"masterGainDb", 0.0},
+                     {"tracks", json::array({track("t0", {{"format", "vst3"}, {"id", "fake"}, {"stateId", "s1"}, {"hasState", true}}),
+                                             track("t1", {{"format", "vst3"}, {"id", "fake"}})})}};
+  // The engine names the keys it needs and accepts nothing yet (no revision spent, the old project keeps playing).
+  const json first = server.execute("project.load", {{"project", song}});
+  const json neededFirst = first.value("statesNeeded", json::array());
+  CHECK_EQ(neededFirst.size(), (size_t)1);  // t0 only: t1 has no state to ask for
+  if (neededFirst.size() == 1) CHECK_EQ(neededFirst[0], std::string("track:t0"));
+  CHECK_EQ(server.project().tracks.size(), (size_t)0);
+  // The app answers with the state for exactly those keys: the load is accepted.
+  const json accepted = server.execute("project.load", {{"project", song}, {"states", {{"track:t0", "U1RBVEU="}}}});
+  CHECK(accepted.value("statesNeeded", json::array()).empty());
+  CHECK_EQ(accepted.value("tracks", (size_t)0), (size_t)2);
+  CHECK_EQ(server.project().tracks.size(), (size_t)2);
+  CHECK_EQ(server.project().tracks[0].plugin.value("state", std::string()), std::string("U1RBVEU="));
+  // An ordinary edit (a fader) carries no blob and is accepted at once; the state the engine holds stays.
+  json edit = song;
+  edit["tracks"][0]["gainDb"] = -3.0;
+  const json edited = server.execute("project.load", {{"project", edit}});
+  CHECK(edited.value("statesNeeded", json::array()).empty());
+  CHECK_EQ(server.project().tracks.size(), (size_t)2);
+  CHECK_EQ(server.project().tracks[0].plugin.value("state", std::string()), std::string("U1RBVEU="));
+  CHECK_NEAR(server.project().tracks[0].gainDb, -3.0, 1e-9);
+  // plugins.states takes a list of keys: only those come back (empty list absent = every loaded plugin).
+  const json some = server.execute("plugins.states", {{"keys", json::array({"track:t1"})}});
+  CHECK_EQ(some.size(), (size_t)1);
+  CHECK(some.contains("track:t1"));
+  const json all = server.execute("plugins.states", json::object());
+  CHECK_EQ(all.size(), (size_t)2);
+  // Refreshed live state rides project.load (what the app sends before Save/Export): same identity, new content,
+  // accepted at once, and it is what an offline render makes its instances from.
+  const json refreshed = server.execute("project.load", {{"project", edit}, {"states", {{"track:t0", "TkVX"}}}});
+  CHECK(refreshed.value("statesNeeded", json::array()).empty());
+  CHECK_EQ(server.project().tracks[0].plugin.value("state", std::string()), std::string("TkVX"));
+  host.offlineGets.clear();
+  renderProject(server.project(), kSr, 512, false, 0.05, nullptr, nullptr, &host, 0);
+  CHECK(!host.offlineGets.empty());
+  bool exportReadsRefreshed = false;
+  for (const auto& [key, plugin] : host.offlineGets)
+    if (key == "track:t0" && plugin.value("state", std::string()) == "TkVX") exportReadsRefreshed = true;
+  CHECK(exportReadsRefreshed);  // the export makes its instance from the refreshed state
+  // A new identity (the document chose another state, e.g. a preset) needs its state again.
+  json preset = edit;
+  preset["tracks"][0]["plugin"]["stateId"] = "s2";
+  const json asked = server.execute("project.load", {{"project", preset}});
+  const json neededPreset = asked.value("statesNeeded", json::array());
+  CHECK_EQ(neededPreset.size(), (size_t)1);
+  if (neededPreset.size() == 1) CHECK_EQ(neededPreset[0], std::string("track:t0"));
+  CHECK_EQ(server.project().tracks[0].plugin.value("stateId", std::string()), std::string("s1"));  // nothing accepted yet
+  const json presetOk = server.execute("project.load", {{"project", preset}, {"states", {{"track:t0", "UFJFU0VU"}}}});
+  CHECK(presetOk.value("statesNeeded", json::array()).empty());
+  CHECK_EQ(server.project().tracks[0].plugin.value("state", std::string()), std::string("UFJFU0VU"));
+  // Legacy: a song with its state in the projection is accepted in one pass, as always.
+  json legacy = song;
+  legacy["tracks"][0]["plugin"]["state"] = "TEVHQUNZ";
+  legacy["tracks"][0]["plugin"].erase("hasState");
+  const json one = server.execute("project.load", {{"project", legacy}});
+  CHECK(one.value("statesNeeded", json::array()).empty());
+  CHECK_EQ(server.project().tracks[0].plugin.value("state", std::string()), std::string("TEVHQUNZ"));
+}
+// BUG-SWEEP-21 (ratified 2026-11-18), owner verbatim: «split em clip congelado = recusa com mensagem + oferta de
+// unfreeze (um Undo); nunca meio-congelado.» The domain refuses the split of a frozen clip; the sanctioned path is
+// unfreeze (one Undo) then split. This is the null proof of that path: the two unfrozen pieces render sample for
+// sample identical to the unsplit clip (the engine's split offset re-anchor, graph.cpp). It also measures WHY the
+// frozen split is refused: the old re-anchor moved the held piece (freezeSeconds kept, offsetSeconds += cut), so
+// the second piece sounded a different part of the file.
+TEST("freeze split BUG-SWEEP-21: unfreeze then split is null-identical; the old frozen split changed the held source") {
+  const std::string path = (tempDir() / "split-null.wav").string();
+  const auto s = sine(440, kSr, (int64_t)(0.5 * kSr), 0.6f);
+  writeWav(path, s, s, (int)kSr, 32);
+  AssetStore assets;
+  auto render = [&](const json& clips) {
+    json track = {{"id", "audio"}, {"name", "Audio"}, {"instrument", "audio"}, {"audioClips", clips}};
+    json p = {{"format", kProjectFormat}, {"version", 2}, {"name", "split-null"}, {"bpm", 150.0},
+              {"lengthTicks", 4 * 4 * kPpq}, {"masterGainDb", 0.0}, {"tracks", json::array({track})}};
+    return renderProject(fromJson(p), kSr, 512, false, 0.05, nullptr, &assets, nullptr, 0);
+  };
+  // 0.2 s at 150 bpm = tick 480 (kPpq 960): the split point the domain test uses.
+  const double cut = 0.2, whole = 0.5;
+  json one = json::array({{{"startTick", 0}, {"path", path}, {"offsetSeconds", 0.0}, {"durationSeconds", whole}, {"gainDb", 0.0}}});
+  json split = json::array({
+      {{"startTick", 0}, {"path", path}, {"offsetSeconds", 0.0}, {"durationSeconds", cut}, {"gainDb", 0.0}},
+      {{"startTick", 480}, {"path", path}, {"offsetSeconds", cut}, {"durationSeconds", whole - cut}, {"gainDb", 0.0}}});
+  const RenderResult a = render(one);
+  const RenderResult b = render(split);
+  CHECK_EQ(a.L.size(), b.L.size());
+  CHECK_EQ(a.R.size(), b.R.size());
+  CHECK(allFinite(a.L));
+  float nullL = 0, nullR = 0;
+  for (size_t i = 0; i < a.L.size() && i < b.L.size(); ++i) {
+    nullL = std::max(nullL, std::fabs(a.L[i] - b.L[i]));
+    nullR = std::max(nullR, std::fabs(a.R[i] - b.R[i]));
+  }
+  CHECK_NEAR(nullL, 0.0, 0.0);  // bit-identical: the unfreeze+split path loses nothing
+  CHECK_NEAR(nullR, 0.0, 0.0);
+  CHECK(peakOf(a.L) > 0.1f);  // the file really sounded (a null of silence would prove nothing)
+  // The old frozen split: freezeSeconds kept on both pieces, the second's offset re-anchored (+cut).
+  json frozenOne = one;
+  frozenOne[0]["freezeSeconds"] = 0.05;
+  json frozenSplit = split;
+  frozenSplit[0]["freezeSeconds"] = 0.05;
+  frozenSplit[1]["freezeSeconds"] = 0.05;
+  const RenderResult f1 = render(frozenOne);
+  const RenderResult f2 = render(frozenSplit);
+  CHECK_EQ(f1.L.size(), f2.L.size());
+  float drift = 0;
+  for (size_t i = 0; i < f1.L.size() && i < f2.L.size(); ++i) drift = std::max(drift, std::fabs(f1.L[i] - f2.L[i]));
+  CHECK(drift > 0.01f);  // the half-frozen second piece held a different part of the file: audible corruption
 }
 
 CORE_TEST_MAIN

@@ -1,6 +1,8 @@
 #include "render_job.hpp"
 #include <algorithm>
+#include <cerrno>
 #include <cmath>
+#include <cstring>
 #include <filesystem>
 #include <stdexcept>
 #include "engine.hpp"
@@ -12,6 +14,9 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
+#else
+#include <fcntl.h>
+#include <unistd.h>
 #endif
 
 namespace core {
@@ -50,6 +55,39 @@ bool sameTarget(const fs::path& a, const fs::path& b) {
 constexpr int kBlock = 4096;  // frames per step: cancel is checked this often (~85 ms of audio)
 }
 
+std::string reserveRenderWorkingFile(const std::string& target) {
+  // BUG-SWEEP-02: the working file belongs to the operation that created it. A fixed "<target>.part"
+  // was opened with truncation (consuming a retained partial export) and shared by every process
+  // exporting the same target. The name carries the process id and a process-wide sequence, and the
+  // exclusive create IS the reservation: an existing candidate is never opened, only skipped.
+  static std::atomic<uint64_t> sequence{0};
+#ifdef _WIN32
+  const uint64_t pid = GetCurrentProcessId();
+#else
+  const uint64_t pid = (uint64_t)getpid();
+#endif
+  const fs::path folder = utf8(target).parent_path();
+  if (!folder.empty()) { std::error_code e; fs::create_directories(folder, e); }  // as WavWriter does; the create below reports a blocked folder
+  for (int attempt = 0; attempt < 4096; ++attempt) {
+    const std::string candidate = target + "." + std::to_string(pid) + "-" + std::to_string(sequence.fetch_add(1)) + ".part";
+    const fs::path path = utf8(candidate);
+#ifdef _WIN32
+    const HANDLE h = CreateFileW(path.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (h != INVALID_HANDLE_VALUE) { CloseHandle(h); return candidate; }
+    const DWORD err = GetLastError();
+    if (err != ERROR_FILE_EXISTS && err != ERROR_ALREADY_EXISTS)
+      throw std::runtime_error("Cannot reserve a working file for " + target + " (error " + std::to_string(err) + ").");
+#else
+    const int fd = ::open(path.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0666);
+    if (fd >= 0) { ::close(fd); return candidate; }
+    if (errno != EEXIST)
+      throw std::runtime_error("Cannot reserve a working file for " + target + " (" + std::strerror(errno) + ").");
+#endif
+    // Taken (a retained file or another operation's reservation): the next name, never this file.
+  }
+  throw std::runtime_error("Cannot reserve a working file for " + target + ": too many name collisions.");
+}
+
 void validateRenderOutputs(const std::vector<RenderOutput>& outputs) {
   std::error_code e;
   std::vector<fs::path> targets;
@@ -69,32 +107,45 @@ void validateRenderOutputs(const std::vector<RenderOutput>& outputs) {
         throw std::runtime_error("One file is another one's working copy (.part): " + u.string() + ".");
 }
 
-void publishRenderOutputs(const std::vector<RenderOutput>& outputs, int& published, const std::function<void()>& beforePlace) {
+void publishRenderOutputs(const std::vector<RenderOutput>& outputs, int& published, const std::function<void()>& beforePlace,
+                          const std::vector<std::string>& workingPaths, PublishRollback* rollback) {
   const size_t count = outputs.size();
-  auto partOf = [](const std::string& path) { return utf8(path + ".part"); };
+  if (!workingPaths.empty() && workingPaths.size() != count)
+    throw std::runtime_error("The working files do not match the outputs.");
+  // The reserved working file of each output; without one, the legacy "<path>.part" (the synchronous CLI).
+  auto partOf = [&](size_t f) { return workingPaths.empty() ? utf8(outputs[f].path + ".part") : utf8(workingPaths[f]); };
   published = 0;
   // Reserve backups before moving anything; all paths use the same alias rules.
   std::vector<fs::path> asides(count);
+  std::vector<std::string> asideNames(count);  // the same paths as text, for the rollback report
   {
     std::vector<fs::path> taken;
-    for (const auto& o : outputs) { taken.push_back(utf8(o.path).lexically_normal()); taken.push_back(partOf(o.path).lexically_normal()); }
+    for (size_t f = 0; f < count; ++f) { taken.push_back(utf8(outputs[f].path).lexically_normal()); taken.push_back(partOf(f).lexically_normal()); }
     for (size_t f = 0; f < count; ++f) {
       for (int k = 1;; ++k) {
-        const fs::path candidate = utf8(outputs[f].path + ".previous" + (k == 1 ? std::string() : "-" + std::to_string(k)));
+        const std::string name = outputs[f].path + ".previous" + (k == 1 ? std::string() : "-" + std::to_string(k));
+        const fs::path candidate = utf8(name);
         std::error_code ignored;
         bool clash = fs::exists(candidate, ignored);
         for (const auto& t : taken) clash = clash || sameTarget(t, candidate);
-        if (!clash) { asides[f] = candidate; taken.push_back(candidate.lexically_normal()); break; }
+        if (!clash) { asides[f] = candidate; asideNames[f] = name; taken.push_back(candidate.lexically_normal()); break; }
       }
     }
   }
   std::vector<char> aside(count, 0), placed(count, 0);
+  PublishRollback rb;
   auto undo = [&] {
+    rb.attempted = true;
     int left = 0;  // new files that could not be taken back (reported as "published")
     for (size_t f = 0; f < count; ++f) {
       std::error_code ignored;
       if (placed[f]) { fs::remove(utf8(outputs[f].path), ignored); if (ignored) ++left; }
-      if (aside[f]) { fs::rename(asides[f], utf8(outputs[f].path), ignored); (void)ignored; }
+      if (aside[f]) {
+        fs::rename(asides[f], utf8(outputs[f].path), ignored);
+        // A restore that fails leaves the old copy where it is: kept and named, never deleted (BUG-SWEEP-03).
+        if (ignored) rb.backups.push_back(asideNames[f]);
+        else rb.restored.push_back(outputs[f].path);
+      }
     }
     published = left;
   };
@@ -111,11 +162,22 @@ void publishRenderOutputs(const std::vector<RenderOutput>& outputs, int& publish
     if (beforePlace) beforePlace();
     for (size_t f = 0; f < count; ++f) {
       std::error_code e;
-      fs::rename(partOf(outputs[f].path), utf8(outputs[f].path), e);
+      fs::rename(partOf(f), utf8(outputs[f].path), e);
       if (e) { throw std::runtime_error("Cannot replace " + outputs[f].path + ": " + e.message()); }
       placed[f] = 1;
     }
-  } catch (...) { undo(); throw; }
+  } catch (const std::exception& ex) {
+    undo();
+    if (rollback) *rollback = rb;
+    // The kept copies go into the error itself: the CLI and any other caller can name them too.
+    std::string msg = ex.what();
+    if (!rb.backups.empty()) {
+      msg += rb.backups.size() == 1 ? " The previous file was kept as a copy: " : " The previous files were kept as copies: ";
+      for (size_t i = 0; i < rb.backups.size(); ++i) msg += (i ? "; " : "") + rb.backups[i];
+    }
+    throw std::runtime_error(msg);
+  } catch (...) { undo(); if (rollback) *rollback = rb; throw; }
+  if (rollback) *rollback = rb;
   for (size_t f = 0; f < count; ++f) {
     std::error_code ignored;
     if (aside[f]) fs::remove(asides[f], ignored);
@@ -137,6 +199,7 @@ struct RenderJobs::Job {
   float peak = 0;
   double renderMs = 0;
   int published = 0;  // files put in place (all of them on success; on a failure only those that could not be undone)
+  PublishRollback rollback;  // what the undo of a failed publication did: restored files and kept .previous copies
   int threads = 0;  // export workers besides the job's own thread (M4a)
   // Last values reported by takeUpdates().
   State reportedState = State::Queued;
@@ -273,11 +336,16 @@ json RenderJobs::start(RenderJobRequest request) {
 void RenderJobs::run(std::shared_ptr<Job> job) {
   const RenderJobRequest& r = job->request;
   const size_t count = r.outputs.size();
-  auto partOf = [](const std::string& path) { return utf8(path + ".part"); };
   const uint64_t t0 = nowNs();
+  // BUG-SWEEP-02: each working file is reserved with a unique name this job owns (exclusive create,
+  // never an existing file). Cleanup removes only these: a retained "<target>.part" of an earlier
+  // operation is never touched, and two processes exporting the same target never share a path.
+  std::vector<std::string> working(count);
+  std::vector<char> owned(count, 0);
   auto discard = [&] {
     std::error_code ignored;
-    for (const auto& out : r.outputs) fs::remove(partOf(out.path), ignored);
+    for (size_t f = 0; f < count; ++f)
+      if (owned[f]) fs::remove(utf8(working[f]), ignored);
   };
   try {
     // Every song sample up to the region's end and its tail is played; the ones before the region are
@@ -299,7 +367,9 @@ void RenderJobs::run(std::shared_ptr<Job> job) {
       }
       graph.useWorkers(&workers);
       graph.preroll();  // effect latency: the song starts on sample 0 of the file
-      WavWriter wav(r.outputs[f].path + ".part", (int)r.sampleRate, r.bits, r.outputs[f].mono ? 1 : 2);
+      working[f] = reserveRenderWorkingFile(r.outputs[f].path);
+      owned[f] = 1;
+      WavWriter wav(working[f], (int)r.sampleRate, r.bits, r.outputs[f].mono ? 1 : 2);
       std::vector<float> L(kBlock), R(kBlock);
       ExportLevel level;
       int n = 0;
@@ -318,7 +388,7 @@ void RenderJobs::run(std::shared_ptr<Job> job) {
         }
         job->progress = ((double)f + (double)(pos + n) / (double)std::max<int64_t>(1, total)) / (double)count;
       }
-      // A cancelled file's writer closes when it goes out of scope; then the partial files are removed.
+      // A cancelled file's writer closes when it goes out of scope; then this job's working files are removed.
       if (!job->cancel.load()) { wav.finish(); checkExportLevel(level, r.outputs[f]); }
     }
     if (testHooks.beforePublish) testHooks.beforePublish(job->id);
@@ -332,7 +402,7 @@ void RenderJobs::run(std::shared_ptr<Job> job) {
       return;
     }
     if (testHooks.afterPublishClaimed) testHooks.afterPublishClaimed(job->id);
-    publishRenderOutputs(r.outputs, job->published, [&] { if (testHooks.beforePlace) testHooks.beforePlace(job->id); });
+    publishRenderOutputs(r.outputs, job->published, [&] { if (testHooks.beforePlace) testHooks.beforePlace(job->id); }, working, &job->rollback);
     job->renderMs = (nowNs() - t0) / 1e6;
     job->progress = 1;
     job->state = State::Succeeded;  // only now: the final files are closed and in place
@@ -362,6 +432,11 @@ json RenderJobs::describe(const Job& job) const {
     if (s == State::Failed) {
       out["error"] = job.error;
       if (job.published > 0) out["published"] = job.published;  // new files the failure could not take back
+      if (job.rollback.attempted) {
+        out["rollbackAttempted"] = true;
+        out["restored"] = job.rollback.restored;  // old files put back at their paths
+        out["backups"] = job.rollback.backups;    // old copies kept as .previous: named so they can be recovered
+      }
     }
   }
   return out;

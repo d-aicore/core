@@ -1,0 +1,59 @@
+[1/23] Building CXX object engine/CMakeFiles/core_engine_lib.dir/src/dsp/loudness.cpp.o
+[2/23] Building CXX object engine/CMakeFiles/core_engine_lib.dir/src/dsp/registry.cpp.o
+[3/23] Building CXX object engine/CMakeFiles/core_engine_lib.dir/src/dsp/effects.cpp.o
+[4/23] Building CXX object engine/CMakeFiles/core_engine_lib.dir/src/dsp/instruments.cpp.o
+[5/23] Building CXX object engine/CMakeFiles/core_engine_lib.dir/src/io/wav.cpp.o
+[6/23] Building CXX object engine/CMakeFiles/core_engine_lib.dir/src/dsp/analyzer.cpp.o
+[7/23] Building CXX object engine/CMakeFiles/core_engine_lib.dir/src/core/assets.cpp.o
+[8/23] Building CXX object engine/CMakeFiles/core_engine_lib.dir/src/dsp/output_guard.cpp.o
+[9/23] Building CXX object engine/CMakeFiles/core_engine_lib.dir/src/core/engine.cpp.o
+[10/23] Building CXX object engine/CMakeFiles/core_engine_lib.dir/src/core/qualify.cpp.o
+[11/23] Building CXX object engine/CMakeFiles/core_engine_lib.dir/src/io/audio_file.cpp.o
+[12/23] Building CXX object engine/CMakeFiles/core_engine_lib.dir/src/core/tempo_map.cpp.o
+[13/23] Building CXX object engine/CMakeFiles/core_engine_lib.dir/src/core/render_job.cpp.o
+[14/23] Building CXX object tests/CMakeFiles/engine_tests.dir/__/engine/src/io/device.cpp.o
+[15/23] Building CXX object tests/CMakeFiles/engine_tests.dir/__/engine/src/app/measure.cpp.o
+[16/23] Building CXX object engine/CMakeFiles/core_engine_lib.dir/src/core/graph.cpp.o
+/home/diogo/core-src/engine/src/core/graph.cpp: In constructor ‘core::Graph::Graph(const core::Project&, double, core::AssetStore*, core::PluginProvider*, bool)’:
+/home/diogo/core-src/engine/src/core/graph.cpp:414:21: warning: possibly dangling reference to a temporary [-Wdangling-reference]
+  414 |         const auto& fxSpecs = effectParams(rt.effects[(size_t)a.effect]->name());
+      |                     ^~~~~~~
+/home/diogo/core-src/engine/src/core/graph.cpp:414:43: note: the temporary was destroyed at the end of the full expression ‘core::effectParams(std::__cxx11::basic_string<char>((& rt.core::Graph::TrackRt::effects.std::vector<std::unique_ptr<core::Effect> >::operator[](((size_t)a.core::Automation::effect)))->std::unique_ptr<core::Effect>::operator->()->core::Effect::name(), std::allocator<char>()))’
+  414 |         const auto& fxSpecs = effectParams(rt.effects[(size_t)a.effect]->name());
+      |                               ~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/diogo/core-src/engine/src/core/graph.cpp: In static member function ‘static bool core::Graph::resolveEffectParam(const std::string&, const std::vector<std::unique_ptr<core::Effect> >&, core::Automation&)’:
+/home/diogo/core-src/engine/src/core/graph.cpp:691:17: warning: possibly dangling reference to a temporary [-Wdangling-reference]
+  691 |     const auto& specs = effectParams(chain[i]->name());
+      |                 ^~~~~
+/home/diogo/core-src/engine/src/core/graph.cpp:691:37: note: the temporary was destroyed at the end of the full expression ‘core::effectParams(std::__cxx11::basic_string<char>((&(& chain)->std::vector<std::unique_ptr<core::Effect> >::operator[](i))->std::unique_ptr<core::Effect>::operator->()->core::Effect::name(), std::allocator<char>()))’
+  691 |     const auto& specs = effectParams(chain[i]->name());
+      |                         ~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~
+[17/23] Building CXX object tests/CMakeFiles/engine_tests.dir/engine_tests.cpp.o
+[18/23] Building CXX object engine/CMakeFiles/core_engine_lib.dir/src/core/project.cpp.o
+/home/diogo/core-src/engine/src/core/project.cpp: In function ‘core::Track core::trackFromJson(const json&)’:
+/home/diogo/core-src/engine/src/core/project.cpp:656:79: warning: possibly dangling reference to a temporary [-Wdangling-reference]
+  656 |             for (const auto& sp : effectParams(fx.value("name", std::string())))
+      |                                                                               ^
+/home/diogo/core-src/engine/src/core/project.cpp:656:47: note: the temporary was destroyed at the end of the full expression ‘core::effectParams(nlohmann::json_abi_v3_11_3::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::value(KeyType&&, ValueType&&) const [with ValueType = std::__cxx11::basic_string<char>; KeyType = const char (&)[5]; ReturnType = std::__cxx11::basic_string<char>; typename std::enable_if<((((nlohmann::json_abi_v3_11_3::detail::is_transparent<typename nlohmann::json_abi_v3_11_3::detail::actual_object_comparator<nlohmann::json_abi_v3_11_3::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass> >::type>::value && (! nlohmann::json_abi_v3_11_3::detail::is_specialization_of<nlohmann::json_abi_v3_11_3::json_pointer, typename std::remove_cv<typename std::remove_reference<_Ep>::type>::type>::value)) && nlohmann::json_abi_v3_11_3::detail::is_comparable<typename nlohmann::json_abi_v3_11_3::detail::actual_object_comparator<nlohmann::json_abi_v3_11_3::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass> >::type, const typename ObjectType<StringType, nlohmann::json_abi_v3_11_3::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>, std::less<void>, AllocatorType<std::pair<const StringType, nlohmann::json_abi_v3_11_3::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass> > > >::key_type&, KeyType, void>::value) && nlohmann::json_abi_v3_11_3::detail::is_getable<nlohmann::json_abi_v3_11_3::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>, ReturnType>::value) && (! std::is_same<nlohmann::json_abi_v3_11_3::detail::value_t, typename std::remove_cv<typename std::remove_reference<_Iter>::type>::type>::value)), int>::type <anonymous> = 0; ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_11_3::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]("name", std::__cxx11::basic_string<char>()))’
+  656 |             for (const auto& sp : effectParams(fx.value("name", std::string())))
+      |                                   ~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[19/23] Building C object engine/CMakeFiles/miniaudio_impl.dir/src/io/miniaudio_impl.c.o
+[20/23] Linking C static library engine/libminiaudio_impl.a
+[21/23] Building CXX object engine/CMakeFiles/core_engine_lib.dir/src/core/server.cpp.o
+/home/diogo/core-src/engine/src/core/server.cpp: In member function ‘core::json core::Server::render(const core::json&)’:
+/home/diogo/core-src/engine/src/core/server.cpp:728:48: warning: ‘std::filesystem::__cxx11::path std::filesystem::__cxx11::u8path(const _Source&) [with _Source = std::__cxx11::basic_string<char>; _Require = path; _CharT = char]’ is deprecated: use 'path((const char8_t*)&*source)' instead [-Wdeprecated-declarations]
+  728 |       const auto part = std::filesystem::u8path(output.path + ".part");
+      |                         ~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~
+In file included from /usr/include/c++/13/filesystem:49,
+                 from /home/diogo/core-src/engine/src/core/../../third_party/json.hpp:4651,
+                 from /home/diogo/core-src/engine/src/core/project.hpp:12,
+                 from /home/diogo/core-src/engine/src/core/plugins.hpp:8,
+                 from /home/diogo/core-src/engine/src/core/graph.hpp:16,
+                 from /home/diogo/core-src/engine/src/core/engine.hpp:12,
+                 from /home/diogo/core-src/engine/src/core/server.hpp:11,
+                 from /home/diogo/core-src/engine/src/core/server.cpp:1:
+/usr/include/c++/13/bits/fs_path.h:843:5: note: declared here
+  843 |     u8path(const _Source& __source)
+      |     ^~~~~~
+[22/23] Linking CXX static library engine/libcore_engine_lib.a
+[23/23] Linking CXX executable tests/engine_tests

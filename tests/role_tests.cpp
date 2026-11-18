@@ -260,7 +260,7 @@ TEST("pistas mudas: pistas de audio, bus e com plugin nao mudam") {
   for (const auto& t : d.tracks) CHECK(t.instrument.kind != "builtin");
 }
 
-// ---- As tools da AI (Diogo 2026-11-16): R-Core / D-Core pelo bus, F-Core por intencao, ROLL, o catalogo.
+// ---- The AI's tools (Diogo 2026-11-16): the shared reverb / delay bus, the effects by intent, ROLL, the catalogue.
 namespace {
 RoleMap aiMap() {
   RoleMap m = fullMap();
@@ -279,7 +279,7 @@ int busesNamed(const Document& d, const std::string& prefix) {
 }
 }  // namespace
 
-TEST("toolSharedBus: um so bus com o plugin do papel, sends sem duplicar, mais baixo nos drops") {
+TEST("toolSharedBus: one bus only with the role's plugin, sends without duplicating, quieter in the drops") {
   Document d = newTemplateDocument();
   if (d.sections.empty()) addSection(d, "Drop 1", 0, std::min<int64_t>(d.lengthTicks, 16 * kPpq));
   const auto tracks = patternTracks(d);
@@ -287,7 +287,7 @@ TEST("toolSharedBus: um so bus com o plugin do papel, sends sem duplicar, mais b
   const SharedBusResult a = toolSharedBus(d, tracks, m, "reverb", "hall");
   CHECK(a.newBus);
   CHECK_EQ(a.sends, (int)tracks.size());
-  CHECK_EQ(busesNamed(d, "R-Core"), 1);
+  CHECK_EQ(busesNamed(d, "Reverb"), 1);
   CHECK(findRoleEffect(d, a.busId, "reverb") >= 0);  // o Valhalla do papel no bus
   const SharedBusResult b = toolSharedBus(d, tracks, m, "reverb", "hall");  // outra vez: o mesmo bus, os mesmos sends
   CHECK(!b.newBus);
@@ -302,10 +302,10 @@ TEST("toolSharedBus: um so bus com o plugin do papel, sends sem duplicar, mais b
   const SharedBusResult c = toolSharedBus(d, tracks, m, "reverb", "plate");
   CHECK(c.busId != a.busId);
   CHECK(d.findTrack(a.busId) == nullptr);
-  CHECK_EQ(busesNamed(d, "R-Core"), 1);
+  CHECK_EQ(busesNamed(d, "Reverb"), 1);
 }
 
-TEST("toolSharedBus: sem plugin no papel, ou preset errado, recusa sem mudar a musica") {
+TEST("toolSharedBus: no plugin for the role, or a wrong preset, refuses without changing the song") {
   Document d = newTemplateDocument();
   const std::string before = toJson(d).dump();
   CHECK_THROWS(toolSharedBus(d, patternTracks(d), RoleMap{}, "reverb", "room"));
@@ -314,7 +314,7 @@ TEST("toolSharedBus: sem plugin no papel, ou preset errado, recusa sem mudar a m
   CHECK_THROWS(toolSharedBus(d, {}, aiMap(), "delay", ""));
   CHECK_EQ(toJson(d).dump(), before);
   const SharedBusResult r = toolSharedBus(d, patternTracks(d), aiMap(), "delay", "");  // "": dotted
-  CHECK_EQ(busesNamed(d, "D-Core"), 1);
+  CHECK_EQ(busesNamed(d, "Delay"), 1);
   CHECK(r.sentence.find("dotted") != std::string::npos);
 }
 

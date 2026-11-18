@@ -58,7 +58,67 @@ diff --git a/modules/juce_audio_processors_headless/format_types/juce_VST3Plugin
      }
  
      bool supportsDoublePrecisionProcessing() const override
-@@ -2808,7 +2819,10 @@
+@@ -2419,7 +2430,13 @@
+     {
+         jassert (! isUsingDoublePrecision());
+ 
+-        const SpinLock::ScopedLockType processLock (processMutex);
++        // [Core vendored patch - D crash-reset deadlock] crash-aware acquire (see enterProcessMutexForAudio):
++        // give up on a lock a crashed reset() left held instead of freezing the audio thread; healthy
++        // uncontended acquire is identical (one successful tryEnter).
++        const ScopedProcessLockUnlessCrashed processLock (*this);
++
++        if (! processLock.isHeld())
++            return;
+ 
+         if (isActive && processor != nullptr)
+             processAudio (buffer, midiMessages, Vst::kSample32, false);
+@@ -2429,7 +2446,13 @@
+     {
+         jassert (isUsingDoublePrecision());
+ 
+-        const SpinLock::ScopedLockType processLock (processMutex);
++        // [Core vendored patch - D crash-reset deadlock] crash-aware acquire (see enterProcessMutexForAudio):
++        // give up on a lock a crashed reset() left held instead of freezing the audio thread; healthy
++        // uncontended acquire is identical (one successful tryEnter).
++        const ScopedProcessLockUnlessCrashed processLock (*this);
++
++        if (! processLock.isHeld())
++            return;
+ 
+         if (isActive && processor != nullptr)
+             processAudio (buffer, midiMessages, Vst::kSample64, false);
+@@ -2439,7 +2462,13 @@
+     {
+         jassert (! isUsingDoublePrecision());
+ 
+-        const SpinLock::ScopedLockType processLock (processMutex);
++        // [Core vendored patch - D crash-reset deadlock] crash-aware acquire (see enterProcessMutexForAudio):
++        // give up on a lock a crashed reset() left held instead of freezing the audio thread; healthy
++        // uncontended acquire is identical (one successful tryEnter).
++        const ScopedProcessLockUnlessCrashed processLock (*this);
++
++        if (! processLock.isHeld())
++            return;
+ 
+         if (bypassParam != nullptr)
+         {
+@@ -2456,7 +2485,13 @@
+     {
+         jassert (isUsingDoublePrecision());
+ 
+-        const SpinLock::ScopedLockType processLock (processMutex);
++        // [Core vendored patch - D crash-reset deadlock] crash-aware acquire (see enterProcessMutexForAudio):
++        // give up on a lock a crashed reset() left held instead of freezing the audio thread; healthy
++        // uncontended acquire is identical (one successful tryEnter).
++        const ScopedProcessLockUnlessCrashed processLock (*this);
++
++        if (! processLock.isHeld())
++            return;
+ 
+         if (bypassParam != nullptr)
+         {
+@@ -2808,7 +2843,10 @@
      //==============================================================================
      void reset() override
      {
@@ -70,7 +130,7 @@ diff --git a/modules/juce_audio_processors_headless/format_types/juce_VST3Plugin
  
          if (holder->component != nullptr && processor != nullptr)
          {
-@@ -2818,6 +2832,8 @@
+@@ -2818,6 +2856,8 @@
              holder->component->setActive (true);
              processor->setProcessing (true);
          }
@@ -79,7 +139,7 @@ diff --git a/modules/juce_audio_processors_headless/format_types/juce_VST3Plugin
      }
  
      //==============================================================================
-@@ -3022,6 +3038,29 @@
+@@ -3022,6 +3062,75 @@
      */
      SpinLock processMutex;
  
@@ -106,10 +166,56 @@ diff --git a/modules/juce_audio_processors_headless/format_types/juce_VST3Plugin
 +        return true;
 +    }
 +
++    // [Core vendored patch - D crash-reset deadlock] Acquire processMutex on the audio path
++    // (processBlock / processBlockBypassed) without spinning forever on a lock that a crashed reset()
++    // left held. While stopped the audio thread still renders tails, so it can be waiting on this lock
++    // when reset() crashes under the host's SEH catch, which runs no C++ destructors (/EHsc) and leaves
++    // the lock held forever; the plain blocking enter then froze the audio thread, the engine never
++    // exited and the client terminated it. The fast path is SpinLock::enter()'s own: one successful
++    // tryEnter, no hostCrashed read — an uncontended (healthy) acquire costs exactly the same. Only
++    // when the lock is held does it consult hostCrashed, mirroring enter()'s bounded spin then yield,
++    // and gives up the moment the host marks the crash. Returns false only for a crashed instance.
++    bool enterProcessMutexForAudio() noexcept
++    {
++        if (processMutex.tryEnter())
++            return true;
++
++        for (int i = 20; --i >= 0;)
++        {
++            if (hostCrashed.load (std::memory_order_acquire))
++                return false;
++            if (processMutex.tryEnter())
++                return true;
++        }
++
++        while (! processMutex.tryEnter())
++        {
++            if (hostCrashed.load (std::memory_order_acquire))
++                return false;
++            Thread::yield();
++        }
++        return true;
++    }
++
++    // [Core vendored patch - D crash-reset deadlock] RAII acquire for the audio path: releases on normal
++    // return and on a C++ exception unwind exactly like SpinLock::ScopedLockType, and skips the release
++    // when the lock was not acquired (a crashed instance). Healthy: same lock, same scope, same release.
++    struct ScopedProcessLockUnlessCrashed
++    {
++        explicit ScopedProcessLockUnlessCrashed (VST3PluginInstanceHeadless& instance) noexcept
++            : owner (instance), held (instance.enterProcessMutexForAudio()) {}
++        ~ScopedProcessLockUnlessCrashed() noexcept { if (held) owner.processMutex.exit(); }
++        bool isHeld() const noexcept { return held; }
++        ScopedProcessLockUnlessCrashed (const ScopedProcessLockUnlessCrashed&) = delete;
++        ScopedProcessLockUnlessCrashed& operator= (const ScopedProcessLockUnlessCrashed&) = delete;
++        VST3PluginInstanceHeadless& owner;
++        const bool held;
++    };
++
      //==============================================================================
      template <typename Type>
      static void appendStateFrom (XmlElement& head, VSTComSmartPtr<Type>& object, const String& identifier)
-@@ -3533,6 +3572,15 @@
+@@ -3533,6 +3642,15 @@
          return;
      }
  
@@ -125,7 +231,7 @@ diff --git a/modules/juce_audio_processors_headless/format_types/juce_VST3Plugin
      if (hasFlag (flags, Vst::kReloadComponent))
          plugin->reset();
  
-@@ -3543,8 +3591,9 @@
+@@ -3543,8 +3661,9 @@
  
          // Have to deactivate here, otherwise prepareToPlay might not pick up the new bus layouts
          plugin->releaseResources();
@@ -137,7 +243,7 @@ diff --git a/modules/juce_audio_processors_headless/format_types/juce_VST3Plugin
      }
  
      if (hasFlag (flags, Vst::kLatencyChanged))
-@@ -3555,7 +3604,8 @@
+@@ -3555,7 +3674,8 @@
          plugin->updateMidiMappings();
  
      if (hasFlag (flags, Vst::kParamValuesChanged))

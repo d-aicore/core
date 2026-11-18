@@ -242,7 +242,9 @@ MidiFile songToMidi(const Document& doc, const MidiExportOptions& options) {
         const int64_t base = origin + k * p->lengthTicks;
         for (const auto& n : p->notes) {
           // As the engine plays it (graph.cpp): a roll's hits spread evenly, each 85% of its step.
-          const int count = std::max(1, n.roll.count);
+          // BUG-SWEEP-19: the roll counts only when hasRoll says there is one (the engine projection writes
+          // roll only then); a stale payload on a plain note must not expand the export.
+          const int count = n.hasRoll ? std::max(1, n.roll.count) : 1;
           for (int i = 0; i < count; ++i) {
             const int64_t on = n.tick + (int64_t)std::llround((double)n.length * i / count);
             const int64_t next = n.tick + (int64_t)std::llround((double)n.length * (i + 1) / count);

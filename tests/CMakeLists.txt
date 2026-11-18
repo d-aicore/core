@@ -17,16 +17,23 @@ add_test(NAME engine_tests COMMAND engine_tests)
 add_executable(domain_tests domain_tests.cpp)
 target_include_directories(domain_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(domain_tests PRIVATE core_domain core_engine_lib)
-target_compile_definitions(domain_tests PRIVATE CORE_TEMPLATES_DIR="${CMAKE_SOURCE_DIR}/templates")
 add_test(NAME domain_tests COMMAND domain_tests)
 
 # Characterization guards for the L1/L2 dead-code removal (2026-11-18): the live legacy behavior
-# (old songs, stored built-in data, the five visible templates, legacy engine renders) stays green.
+# (old songs, stored built-in data, legacy engine renders) stays green. The shipped templates were
+# removed (owner «remove templates com efeitos»); the template->engine path is guarded in domain_tests.
 add_executable(legacy_guard_tests legacy_guard_tests.cpp)
 target_include_directories(legacy_guard_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(legacy_guard_tests PRIVATE core_domain core_engine_lib)
-target_compile_definitions(legacy_guard_tests PRIVATE CORE_TEMPLATES_DIR="${CMAKE_SOURCE_DIR}/templates" CORE_PCORE_CATALOG="${CMAKE_SOURCE_DIR}/pcore/styles.json")
+target_compile_definitions(legacy_guard_tests PRIVATE CORE_PCORE_CATALOG="${CMAKE_SOURCE_DIR}/pcore/styles.json")
 add_test(NAME legacy_guard_tests COMMAND legacy_guard_tests)
+
+# The legacy module cleanup (2026-11-18, PROD-02/04/06): the Tools cards lose the W/D/F/R-Core titles, the old
+# ids and titles stay lookup aliases, legacy buses are reused, and the bridge's "open" takes the old ids.
+add_executable(modules_tests modules_tests.cpp)
+target_include_directories(modules_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(modules_tests PRIVATE core_control core_domain)
+add_test(NAME modules_tests COMMAND modules_tests)
 
 # The role map (Settings > Roles) and the tools that play through it (SUCK, PUM, build-up effects).
 add_executable(role_tests role_tests.cpp)
@@ -42,7 +49,7 @@ add_test(NAME midi_tests COMMAND midi_tests)
 
 # The medium and small bugs fixed from the reviewed sweep (2026-11-16): each failed before its fix.
 add_executable(bug_tests bug_tests.cpp)
-target_include_directories(bug_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(bug_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/app/desktop/src)
 target_link_libraries(bug_tests PRIVATE core_domain core_engine_lib)
 target_compile_definitions(bug_tests PRIVATE CORE_LANG_DIR="${CMAKE_SOURCE_DIR}/lang")
 add_test(NAME bug_tests COMMAND bug_tests)
@@ -69,7 +76,7 @@ add_test(NAME audit2_tests COMMAND audit2_tests)
 add_executable(hunt_tests hunt_tests.cpp)
 target_include_directories(hunt_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/engine/src ${CMAKE_SOURCE_DIR}/app/engine-client/src)
 target_link_libraries(hunt_tests PRIVATE core_domain core_engine_lib core_sampling)
-target_compile_definitions(hunt_tests PRIVATE CORE_TEMPLATES_DIR="${CMAKE_SOURCE_DIR}/templates" CORE_LANG_DIR="${CMAKE_SOURCE_DIR}/lang")
+target_compile_definitions(hunt_tests PRIVATE CORE_LANG_DIR="${CMAKE_SOURCE_DIR}/lang")
 add_test(NAME hunt_tests COMMAND hunt_tests)
 
 # Ronda 3 do audit (R3-A a R3-G).
@@ -111,7 +118,7 @@ if(TARGET core-package)
   set_tests_properties(cli_package_stale PROPERTIES LABELS merge TIMEOUT 300 RUN_SERIAL TRUE)
 endif()
 
-set_tests_properties(engine_tests domain_tests role_tests midi_tests bug_tests audit_tests audit2_tests hunt_tests round3_tests calls_tests bitwig_tests legacy_guard_tests menu_tests cli_version cli_demo_render cli_measure cli_unicode
+set_tests_properties(engine_tests domain_tests role_tests midi_tests bug_tests audit_tests audit2_tests hunt_tests round3_tests calls_tests bitwig_tests legacy_guard_tests menu_tests modules_tests cli_version cli_demo_render cli_measure cli_unicode
                      PROPERTIES LABELS merge TIMEOUT 300)
 
 # The engine process driven through the app's client (core-engine serve, null audio backend): messages larger than
@@ -119,7 +126,7 @@ set_tests_properties(engine_tests domain_tests role_tests midi_tests bug_tests a
 if(TARGET core_engine_client)
   add_executable(engine_process_tests engine_process_tests.cpp)
   target_include_directories(engine_process_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-  target_link_libraries(engine_process_tests PRIVATE core_engine_client)
+  target_link_libraries(engine_process_tests PRIVATE core_engine_client core_domain)
   target_compile_definitions(engine_process_tests PRIVATE CORE_ENGINE_EXE="$<TARGET_FILE:core-engine>")
   add_dependencies(engine_process_tests core-engine)
   add_test(NAME engine_process_tests COMMAND engine_process_tests)
@@ -149,6 +156,14 @@ if(TARGET CoreTestFault_VST3 AND TARGET CoreTestSynth_VST3 AND TARGET engine_pro
   set(CORE_TEST_FAULT_VST3 "$<GENEX_EVAL:$<TARGET_PROPERTY:CoreTestFault_VST3,JUCE_PLUGIN_ARTEFACT_FILE>>")
   target_compile_definitions(engine_process_tests PRIVATE CORE_TEST_FAULT_VST3="${CORE_TEST_FAULT_VST3}")
   add_dependencies(engine_process_tests CoreTestFault_VST3)
+endif()
+
+# The throwing effect (CORE_TEST_THROW): a plugin that fails while playing must be retryable into a new instance
+# that plays (BUG-SWEEP-05). Built with the app, as above.
+if(TARGET CoreTestThrow_VST3 AND TARGET CoreTestSynth_VST3 AND TARGET engine_process_tests)
+  set(CORE_TEST_THROW_VST3 "$<GENEX_EVAL:$<TARGET_PROPERTY:CoreTestThrow_VST3,JUCE_PLUGIN_ARTEFACT_FILE>>")
+  target_compile_definitions(engine_process_tests PRIVATE CORE_TEST_THROW_VST3="${CORE_TEST_THROW_VST3}")
+  add_dependencies(engine_process_tests CoreTestThrow_VST3)
 endif()
 
 # The crash-restart plugin (CORE_TEST_CRASH_RESTART, D restart deadlock): asks the host to restart the component and

@@ -21,8 +21,9 @@ public:
   // Stop: every live instance drops what still rings (its delay and reverb tails, its voices).
   void resetAll();
 
-  // {key: base64 state} of every loaded plugin: what the document saves.
-  json captureStates();
+  // {key: base64 state} of the loaded plugins named by keys (every loaded plugin when keys is empty):
+  // what the document saves. A batched ask captures only the keys the caller needs (STATE-PER-EDIT).
+  json captureStates(const std::vector<std::string>& keys = {});
   // Opens (or closes) the plugin's own editor in a window of this process.
   bool showEditor(const std::string& key, bool open, std::string* why);
   // True once after any plugin's parameter changed from its own editor (the document needs its state).

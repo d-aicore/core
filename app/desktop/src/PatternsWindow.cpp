@@ -24,11 +24,16 @@ std::string instrumentLabel(const doc::Track& t) {
   // 0.7.0: the sound comes from the track's VST3 plugin; a track without one is silent and says so.
   if (t.instrument.kind == "plugin") return t.instrument.plugin.value("name", std::string("Plugin"));
   if (t.instrument.kind == "none" || t.instrument.kind.empty()) return "No instrument: FX > Replace instrument";
+  // The user-sample host (BUG-SWEEP-10 positive): it plays the user's files, not a Core sound of its own.
+  if (t.instrument.kind == "sample") {
+    const std::string zone = t.instrument.samples.empty() ? std::string("user samples") : t.instrument.samples.front().name;
+    return "Sampler: " + zone + (t.instrument.samples.size() > 1 ? " (" + std::to_string(t.instrument.samples.size()) + " notes)" : std::string());
+  }
   // "builtin": an old Core sound kept in the song but no longer played.
   const std::string& n = t.instrument.name;
   const std::string old = " (old, silent: choose a plugin)";
   if (n == "kick") return "Core Kick" + old;
-  if (n == "wave") return "W-Core Synth" + old;
+  if (n == "wave") return "Core Synth" + old;
   if (n == "sampler") return "Core Sampler" + old;
   if (n == "hats") return "Core Hats" + old;
   if (n == "snare") return "Core Snare" + old;
@@ -99,8 +104,8 @@ public:
     fx_.setButtonText(t.effects.empty() ? juce::String("FX") : "FX " + juce::String((int)t.effects.size()));
     if (!level_.isMouseButtonDown()) level_.setValue(t.mix.gainDb, juce::dontSendNotification);
     level_.setTooltip(u8("Volume: ") + juce::String(t.mix.gainDb, 1) + u8(" dB (drag up or down; double-click: 0 dB)"));
-    setTooltip(steps_ ? u8("Click a step to add or remove a hit; drag to paint. Right-click the name: P-Core shapes.")
-                      : u8("Double-click: open in the piano roll. Right-click the name: P-Core shapes."));
+    setTooltip(steps_ ? u8("Click a step to add or remove a hit; drag to paint. Right-click the name: Pattern Maker shapes.")
+                      : u8("Double-click: open in the piano roll. Right-click the name: Pattern Maker shapes."));
     repaint();
   }
 
@@ -203,7 +208,7 @@ public:
       if (!p || p->notes.empty()) {
         g.setColour(kDim);
         g.setFont(juce::FontOptions(theme::kFontBody));
-        g.drawText(u8("Empty: click a 1/16 to add a note, right-click the name for a P-Core shape, or Piano"), area.reduced(10, 0), juce::Justification::centredLeft);
+        g.drawText(u8("Empty: click a 1/16 to add a note, right-click the name for a Pattern Maker shape, or Piano"), area.reduced(10, 0), juce::Justification::centredLeft);
         return;
       }
       int lo = 127, hi = 0;
@@ -485,7 +490,7 @@ PatternsPanel::PatternsPanel(Host host) : host_(std::move(host)) {
   filterAll_.setButtonText(u8("All"));
   filterBuiltin_.setButtonText(u8("Built-in"));
   filterMine_.setButtonText(u8("Mine"));
-  filterBuiltin_.setTooltip(u8("P-Core's styles: a groove written fresh on your tracks each time"));
+  filterBuiltin_.setTooltip(u8("Pattern Maker's styles: a groove written fresh on your tracks each time"));
   filterMine_.setTooltip(u8("The ones you saved with Save as template"));
   int f = 0;
   for (auto* b : {&filterAll_, &filterBuiltin_, &filterMine_}) {
@@ -851,7 +856,7 @@ void PatternsPanel::rowMenu(const std::string& trackId, juce::Component* target)
     shapes = doc::pcoreShapesFor(*c, part, style);
     juce::PopupMenu sm;
     for (size_t i = 0; i < shapes.size() && i < 200; ++i) sm.addItem(100 + (int)i, u8(shapes[i]->name));
-    m.addSubMenu(u8("P-Core shape"), sm);
+    m.addSubMenu(u8("Pattern Maker shape"), sm);
     const doc::PatternSlot* current = slot();
     juce::PopupMenu keys, scales;
     keys.addItem(300, u8("Auto (song's bass/key)"), true, !current || current->root.empty());
@@ -859,12 +864,12 @@ void PatternsPanel::rowMenu(const std::string& trackId, juce::Component* target)
     for (int i = 0; i < 12; ++i) keys.addItem(301 + i, roots[i], true, current && current->root == roots[i]);
     scales.addItem(400, u8("Style's scale"), true, !current || current->scale.empty());
     for (size_t i = 0; i < c->scales.size(); ++i) scales.addItem(401 + (int)i, u8(c->scales[i].name), true, current && current->scale == c->scales[i].id);
-    m.addSubMenu(u8("Key for P-Core"), keys);
-    m.addSubMenu(u8("Scale for P-Core"), scales);
-    m.addItem(2, u8("Another take (P-Core)"));
+    m.addSubMenu(u8("Key for Pattern Maker"), keys);
+    m.addSubMenu(u8("Scale for Pattern Maker"), scales);
+    m.addItem(2, u8("Another take (Pattern Maker)"));
   } else {
-    m.addItem(juce::PopupMenu::Item(c ? u8("P-Core: rename the track (Kick, Bass, Hats, Lead…) so it knows the part")
-                                      : u8("P-Core: pcore/styles.json is missing beside Core.exe")).setEnabled(false));
+    m.addItem(juce::PopupMenu::Item(c ? u8("Pattern Maker: rename the track (Kick, Bass, Hats, Lead…) so it knows the part")
+                                      : u8("Pattern Maker: pcore/styles.json is missing beside Core.exe")).setEnabled(false));
   }
   m.addSeparator();
   m.addItem(3, u8("Open Piano Roll"));
@@ -882,7 +887,7 @@ void PatternsPanel::rowMenu(const std::string& trackId, juce::Component* target)
     if (!cat) return;
     if ((r >= 300 && r <= 312) || (r >= 400 && r < 401 + (int)cat->scales.size())) {
       static const char* roots[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-      self->change(u8("P-Core key/scale"), [=](doc::Document& d) {
+      self->change(u8("Pattern Maker key/scale"), [=](doc::Document& d) {
         auto slots = doc::rackSlots(d);
         for (auto& slot : slots) if (slot.id == sid) {
           if (r >= 400) slot.scale = r == 400 ? std::string() : cat->scales[(size_t)(r - 401)].id;
@@ -890,7 +895,7 @@ void PatternsPanel::rowMenu(const std::string& trackId, juce::Component* target)
         }
         doc::setRackSlots(d, slots);
       });
-      self->say(u8("P-Core will use this key and scale for the next shape; existing notes stay."));
+      self->say(u8("Pattern Maker will use this key and scale for the next shape; existing notes stay."));
       return;
     }
     std::string shape;
@@ -900,12 +905,12 @@ void PatternsPanel::rowMenu(const std::string& trackId, juce::Component* target)
     else return;
     const uint64_t seed = self->seed_++;
     doc::PCoreResult res;
-    self->change(vary ? u8("P-Core: another take") : u8("P-Core shape"), [&](doc::Document& d) {
+    self->change(vary ? u8("Pattern Maker: another take") : u8("Pattern Maker shape"), [&](doc::Document& d) {
       res = doc::rackWriteShape(d, *cat, sid, trackId, part, shape, style, seed, vary);
     });
     if (res.notes > 0) {
       const doc::PCoreShape* sh = cat->shape(res.shape);
-      self->say(u8("P-Core: ") + (sh ? u8(sh->name) : u8(res.shape)) + u8(", ") + juce::String(res.notes) + u8(" notes"));
+      self->say(u8("Pattern Maker: ") + (sh ? u8(sh->name) : u8(res.shape)) + u8(", ") + juce::String(res.notes) + u8(" notes"));
     }
   });
 }
@@ -975,19 +980,24 @@ void PatternsPanel::saveTemplate() {
   auto* w = new juce::AlertWindow(lang::tr("Save as template"), lang::tr("This pattern, all its rows, goes into Templates > Mine."),
                                   juce::MessageBoxIconType::NoIcon, this);
   w->addTextEditor("name", u8(s->name), lang::tr("Name:"));
+  // BUG-SWEEP-26 (owner ratified 2026-11-18): «preservar swing ao guardar; unswing só em opção explícita de
+  // export.» The save keeps the slot's swing by default; straightening it is this explicit option, off by default.
+  auto* unswing = new juce::ToggleButton(lang::tr("Unswing (export straight 1/16s)"));
+  unswing->setToggleState(false, juce::dontSendNotification);
+  w->addCustomComponent(unswing);  // the window owns it; it lives as long as the safe pointer below
   w->addButton(lang::tr("Save"), 1, juce::KeyPress(juce::KeyPress::returnKey));
   w->addButton(lang::tr("Cancel"), 0, juce::KeyPress(juce::KeyPress::escapeKey));
   juce::Component::SafePointer<juce::AlertWindow> win(w);
   juce::Component::SafePointer<PatternsPanel> self(this);
   const std::string sid = slotId_;
-  w->enterModalState(true, juce::ModalCallbackFunction::create([win, self, sid](int ok) {
+  w->enterModalState(true, juce::ModalCallbackFunction::create([win, self, sid, unswing](int ok) {
     if (ok != 1 || !win || !self) return;
     const std::string name = str(win->getTextEditorContents("name").trim().substring(0, 60));
     if (name.empty()) return;
     try {
       doc::Document d = self->host_.document();
       doc::ensureRackSlots(d, self->openTick_);
-      doc::PatternTemplate t = doc::rackTemplateFromSlot(d, sid, name);
+      doc::PatternTemplate t = doc::rackTemplateFromSlot(d, sid, name, unswing->getToggleState());
       t.style = self->styleId();
       doc::saveRackTemplate(self->host_.templatesFolder.getFullPathName().toStdString(), t);
       self->filter_ = 2;

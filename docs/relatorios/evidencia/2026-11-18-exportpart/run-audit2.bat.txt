@@ -1,0 +1,8 @@
+@echo off
+REM Targeted BUG-SWEEP-02 run: configure, build audit2_tests only, run the new cases.
+set VSLANG=1033
+chcp 65001 >nul
+call "C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Auxiliary\Build\vcvars64.bat" > "D:\Core-build\flawless-exportpart-evidence\vcvars.log" 2>&1 || exit /b 1
+cmake -S "D:/CORE/CORE/.agents/worktrees/flawless-exportpart" -B "D:/Core-build/flawless-exportpart" -G Ninja -DCMAKE_BUILD_TYPE=Release -DCORE_BUILD_TESTS=ON "-DFETCHCONTENT_SOURCE_DIR_JUCE=D:/Core-deps/JUCE-9.0.5" || exit /b 1
+cmake --build "D:/Core-build/flawless-exportpart" --target audit2_tests --parallel 6 || exit /b 1
+"D:\Core-build\flawless-exportpart\tests\audit2_tests.exe" "BUG-SWEEP-02"

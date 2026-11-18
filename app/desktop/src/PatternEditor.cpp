@@ -25,6 +25,8 @@ const juce::Colour kGridDark = theme::kField, kGridLine = theme::kGrid.brighter(
     kNote = theme::kAccent, kSelected = theme::kAccentBright;
 constexpr int kKeys = 30;  // the keyboard at the grid's left edge (not for drums)
 constexpr int kHeader = 34, kRuler = 20, kLabels = 70, kVelocity = 56;
+constexpr int kRow2 = 26;  // the pitched tracks' second toolbar row: Keys±, Fit keys, the scale dropdowns
+constexpr int kKeysMin = 8, kKeysMax = 128;  // the visible key range (Fit keys shows all 128)
 // By menu id (1..7); the menu lists them finest first. 1/64 and 1/128 came later (ids 6, 7): saved choices keep their meaning.
 const int64_t kSnaps[] = {120, 240, 320, 480, 960, 60, 30};
 const char* kSnapNames[] = {"1/32", "1/16", "1/8 trip.", "1/8", "1/4", "1/64", "1/128"};
@@ -54,6 +56,10 @@ juce::String pitchName(int p) {
   static const char* names[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
   return juce::String(names[p % 12]) + juce::String(p / 12 - 1);
 }
+const char* pitchClassName(int pc) {
+  static const char* names[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+  return names[((pc % 12) + 12) % 12];
+}
 juce::String drumName(int p) {
   return p == 36 ? juce::String("Kick") : p == kClosed ? u8("Closed hat") : p == kOpen ? u8("Open hat") : p == kPedal ? u8("Pedal hat")
          : p == kRide ? u8("Ride") : p == kShaker ? u8("Shaker") : p == 38 || p == 40 ? u8("Snare") : p == 39 ? u8("Clap") : pitchName(p);
@@ -61,6 +67,34 @@ juce::String drumName(int p) {
 juce::String kickName(int p) {
   static const char* names[] = {"Kick", "Kick Long", "Kick Punchy", "Kick Deep", "Kick Tight", "Kick Round"};
   return p >= 36 && p <= 41 ? juce::String(names[p - 36]) : pitchName(p);
+}
+// The scale guide's catalogue: the 13 scales of the reference (Pulse's Scale dialog), as pitch classes from the root.
+// A guide only: it tints rows, it never traps the mouse (creating and moving ignore it).
+struct ScaleDef { const char* name; int steps[12]; int count; };
+const ScaleDef kScales[] = {
+    {"Chromatic", {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}, 12},
+    {"Major", {0, 2, 4, 5, 7, 9, 11}, 7},
+    {"Natural minor", {0, 2, 3, 5, 7, 8, 10}, 7},
+    {"Dorian", {0, 2, 3, 5, 7, 9, 10}, 7},
+    {"Phrygian", {0, 1, 3, 5, 7, 8, 10}, 7},
+    {"Lydian", {0, 2, 4, 6, 7, 9, 11}, 7},
+    {"Mixolydian", {0, 2, 4, 5, 7, 9, 10}, 7},
+    {"Locrian", {0, 1, 3, 5, 6, 8, 10}, 7},
+    {"Harmonic minor", {0, 2, 3, 5, 7, 8, 11}, 7},
+    {"Melodic minor", {0, 2, 3, 5, 7, 9, 11}, 7},
+    {"Major pentatonic", {0, 2, 4, 7, 9}, 5},
+    {"Minor pentatonic", {0, 3, 5, 7, 10}, 5},
+    {"Minor blues", {0, 3, 5, 6, 7, 10}, 6},
+};
+constexpr int kScaleCount = 13;
+bool scaleContains(int root, const std::string& name, int pitch) {
+  for (const auto& s : kScales)
+    if (name == s.name) {
+      const int pc = ((pitch - root) % 12 + 12) % 12;
+      for (int i = 0; i < s.count; ++i) if (s.steps[i] == pc) return true;
+      return false;
+    }
+  return false;
 }
 }  // namespace
 
@@ -99,7 +133,8 @@ PatternEditor::PatternEditor(Host& host) : host_(host) {
     host_.applyEdit([&](doc::Document& d) { doc::removePattern(doc::trackById(d, trackId), patternId); }, u8("Delete pattern"));
   };
   for (int id : kSnapOrder) snap_.addItem(kSnapNames[id - 1], id);
-  snap_.setTooltip(u8("Grid (snap) for new notes, moves and Quantize"));
+  snap_.addItem(u8("Off"), 8);  // no snap at all (Alt bypasses it per gesture without changing this choice)
+  snap_.setTooltip(u8("Grid (snap) for new notes, moves and Quantize. Off: free; Alt bypasses it per gesture."));
   snap_.setSelectedId(2, juce::dontSendNotification);  // 1/16
   snap_.onChange = [this] { overlay_ = {}; resized(); repaint(); };  // the ghost follows the grid; drums: pads and bars shown too
   for (int i = 0; i < kLengthCount; ++i) length_.addItem(lengthName(kLengths[i]), i + 1);
@@ -118,8 +153,9 @@ PatternEditor::PatternEditor(Host& host) : host_(host) {
   octaveDown_.setTooltip(u8("One octave down (wheel: one key; Alt+wheel: bigger or smaller keys)"));
   octaveUp_.onClick = [this] { lowPitch_ = std::min(128 - keysShown(), lowPitch_ + 12); repaint(); };
   octaveDown_.onClick = [this] { lowPitch_ = std::max(0, lowPitch_ - 12); repaint(); };
-  for (auto [b, icon, tip, t] : {std::tuple<juce::TextButton*, const char*, const char*, Tool>{&drawTool_, "cursor", "Draw: a click adds a note, a drag moves it; right-click deletes", Tool::Draw},
-                                 {&selectTool_, "select", "Select: drag a box around notes (Ctrl adds to the selection)", Tool::Select},
+  for (auto [b, icon, tip, t] : {std::tuple<juce::TextButton*, const char*, const char*, Tool>{&drawTool_, "cursor", "Draw: a click adds a note with the last length, the drag sizes it; drag a note to move (Shift: clone, Alt: off the grid); right-click deletes", Tool::Draw},
+                                 {&paintTool_, "paint", "Paint: drag seeds a note in every cell it crosses (Alt: off the grid)", Tool::Paint},
+                                 {&selectTool_, "select", "Select: drag a box around notes (Ctrl or Shift adds to the selection)", Tool::Select},
                                  {&eraseTool_, "erase", "Erase: click or drag over notes (with any tool: right-click)", Tool::Erase}}) {
     b->getProperties().set(theme::kIconProperty, icon);
     b->setTooltip(tip);
@@ -169,8 +205,34 @@ PatternEditor::PatternEditor(Host& host) : host_(host) {
   zoomOut_.setTooltip(u8("Zoom out (Ctrl+wheel)"));
   zoomIn_.onClick = [this] { zoom(0.5, shownStart() + shownLength() / 2); };
   zoomOut_.onClick = [this] { zoom(2.0, shownStart() + shownLength() / 2); };
+  // The key range (owner, 2026-11-18: «piano deve conseguir expandir», «no piano ctrl+scroll keys+ e keys»).
+  keysMinus_.setButtonText(u8("Keys −"));
+  keysMinus_.setTooltip(u8("Keys −: four fewer keys, taller rows (Ctrl+wheel down)"));
+  keysMinus_.onClick = [this] { keysLess(); };
+  keysPlus_.setButtonText(u8("Keys +"));
+  keysPlus_.setTooltip(u8("Keys +: four more keys, shorter rows (Ctrl+wheel up)"));
+  keysPlus_.onClick = [this] { keysMore(); };
+  fitKeys_.setButtonText(u8("Fit keys"));
+  fitKeys_.setTooltip(u8("Fit keys: show all 128 keys at once"));
+  fitKeys_.onClick = [this] { fitKeys(); };
+  // The scale guide as dropdowns (owner, 2026-11-18: «usem dropdowns em vez de muitos botoes para escolher»).
+  scaleBox_.addItem(u8("Scale: off"), 1);
+  for (int i = 0; i < kScaleCount; ++i) scaleBox_.addItem(u8(kScales[i].name), i + 2);
+  scaleBox_.setSelectedId(1, juce::dontSendNotification);
+  scaleBox_.setTooltip(u8("Scale guide: a faint tint on the scale's keys, a mark on the root. A guide only — it never traps the mouse."));
+  scaleBox_.onChange = [this] {
+    const int id = scaleBox_.getSelectedId();
+    setScaleGuide(rootBox_.getSelectedId() - 1, id >= 2 && id <= kScaleCount + 1 ? kScales[id - 2].name : std::string());
+  };
+  for (int pc = 0; pc < 12; ++pc) rootBox_.addItem(u8(pitchClassName(pc)), pc + 1);
+  rootBox_.setSelectedId(1, juce::dontSendNotification);
+  rootBox_.setTooltip(u8("The scale guide's root key"));
+  rootBox_.onChange = [this] { setScaleGuide(rootBox_.getSelectedId() - 1, scaleName_); };
+  noteTools_.setButtonText(u8("Note tools"));
+  noteTools_.setTooltip(u8("Note tools window: Quantize (grid, strength, swing), Humanize, Groove, and the kick/bass tools. Each choice is one Ctrl+Z."));
+  noteTools_.onClick = [this] { openNoteTools(); };
   for (auto* c : std::initializer_list<juce::Component*>{&zoomIn_, &zoomOut_, &patternBox_, &newPattern_, &clearPattern_, &removePattern_, &snap_, &length_, &octaveUp_, &octaveDown_, &title_, &hint_, &addSound_, &pagePrev_, &pageNext_,
-                                                                &drawTool_, &selectTool_, &eraseTool_, &edit_, &editInfo_}) {
+                                                                &drawTool_, &selectTool_, &eraseTool_, &paintTool_, &edit_, &editInfo_, &keysMinus_, &keysPlus_, &fitKeys_, &scaleBox_, &rootBox_, &noteTools_}) {
     c->setWantsKeyboardFocus(false);
     addAndMakeVisible(c);
   }
@@ -189,10 +251,12 @@ void PatternEditor::setTool(Tool tool) {
   if (!overlay_.area().isEmpty()) repaint(overlay_.area().expanded(2));
   overlay_ = {};  // the ghost is the draw tool's
   drawTool_.setToggleState(tool == Tool::Draw, juce::dontSendNotification);
+  paintTool_.setToggleState(tool == Tool::Paint, juce::dontSendNotification);
   selectTool_.setToggleState(tool == Tool::Select, juce::dontSendNotification);
   eraseTool_.setToggleState(tool == Tool::Erase, juce::dontSendNotification);
-  setMouseCursor(tool == Tool::Draw ? juce::MouseCursor::NormalCursor : tool == Tool::Select ? juce::MouseCursor::CrosshairCursor
-                                                                                            : juce::MouseCursor::PointingHandCursor);
+  setMouseCursor(tool == Tool::Draw ? juce::MouseCursor::NormalCursor
+                 : tool == Tool::Erase ? juce::MouseCursor::PointingHandCursor
+                                       : juce::MouseCursor::CrosshairCursor);
 }
 
 void PatternEditor::setDrawingHelp(bool ghost, bool guides) {
@@ -244,7 +308,7 @@ PatternEditor::Overlay PatternEditor::hoverOverlay(juce::Point<int> p) const {
   doc::Note n;
   n.tick = tickAtX(p.x, true);
   n.pitch = pitchAtY(p.y);
-  n.length = std::min<int64_t>(pattern()->lengthTicks, drums() ? std::min<int64_t>(snapTicks(), 240) : snapTicks());  // as clickCell
+  n.length = std::min<int64_t>(pattern()->lengthTicks, drums() ? std::min<int64_t>(snapTicks(), 240) : (lastLength_ ? lastLength_ : snapTicks()));  // as clickCell
   if (n.pitch < 0) return {};
   const auto b = noteBounds(n);
   Overlay o = guidesFor(b, n.tick, n.tick + n.length, n.pitch, {});
@@ -385,10 +449,11 @@ std::vector<int> PatternEditor::rows() const {
   return out;
 }
 
-// Keys shown: what Alt+wheel asked for, or as many as fit at 14 px each (at least an octave, at most five).
+// Keys shown: what Keys± / Ctrl+wheel / Alt+wheel asked for (up to all 128), or as many as fit at 14 px each
+// (at least an octave, at most five).
 int PatternEditor::keysShown() const {
-  if (rowsWanted_ > 0) return rowsWanted_;
-  const int h = getHeight() - 16 - 34 - 20 - 56 - 6;  // the grid's height (see grid())
+  if (rowsWanted_ > 0) return std::clamp(rowsWanted_, kKeysMin, kKeysMax);
+  const int h = getHeight() - 16 - headerHeight() - kRuler - kVelocity - 6;  // the grid's height (see grid())
   return std::clamp(h / 14, 13, 61);
 }
 
@@ -439,7 +504,11 @@ void PatternEditor::placeAddSound() {
   addSound_.setBounds(g.getX() - kLabels, g.getBottom() + 3, kLabels - 6, kAddRow - 4);
 }
 
-int64_t PatternEditor::snapTicks() const { return kSnaps[std::clamp(snap_.getSelectedId(), 1, 7) - 1]; }
+int64_t PatternEditor::snapTicks() const {
+  const int id = snap_.getSelectedId();
+  if (id == 8) return 1;  // Off: every tick is its own step
+  return kSnaps[std::clamp(id, 1, 7) - 1];
+}
 
 void PatternEditor::setTrack(const std::string& trackId, const std::string& patternId) {
   if (trackId == trackId_ && (patternId.empty() || patternId == patternId_)) return;
@@ -503,15 +572,17 @@ void PatternEditor::documentChanged() {
   length_.setEnabled(editable);
   octaveUp_.setVisible(editable && !drums());
   octaveDown_.setVisible(editable && !drums());
+  for (auto* b : {&keysMinus_, &keysPlus_, &fitKeys_, &noteTools_}) b->setVisible(editable && !drums());
+  scaleBox_.setVisible(editable && !drums());
+  rootBox_.setVisible(editable && !drums() && scaleGuideOn());
   setTooltip(!editable ? juce::String()
              : drums() ? u8("Click: step on/off · Drag: move, also to another sound (Shift: off the grid) · Wheel over a step or the velocity lane: how loud")
-                       : u8("Click: note · Drag: move (Shift: off the grid) · Right edge: length · Wheel or velocity lane: velocity · Del · Ctrl+D duplicate"));
-  for (auto* b : {&drawTool_, &selectTool_, &eraseTool_, &edit_}) b->setEnabled(editable);
+                       : u8("Click: note (last length), drag sizes it · Drag body: move (Alt: off the grid, Shift: clone) · Right edge: length · Ctrl+drag: select · Alt+wheel: velocity · Del · Ctrl+D duplicate"));
+  for (auto* b : {&drawTool_, &paintTool_, &selectTool_, &eraseTool_, &edit_}) b->setEnabled(editable);
   placeAddSound();
-  hint_.setText(!editable ? juce::String()
-                : drums() ? u8("Click: step on/off · Drag: move (Shift: off the grid) · Wheel over a note: velocity")
-                          : u8("Click: note · Drag: move (Shift: off the grid) · Right edge: length · Wheel: velocity · Del · Ctrl+D duplicate"),
-                juce::dontSendNotification);
+  if (editable && !drums()) updateKeysHint();
+  else hint_.setText(drums() ? u8("Click: step on/off · Drag: move (Shift: off the grid) · Wheel over a note: velocity") : juce::String(),
+                     juce::dontSendNotification);
   resized();  // the pattern menu fits its (new) name
   repaint();
 }
@@ -526,7 +597,8 @@ juce::String PatternEditor::trackLabel() const {
 
 void PatternEditor::resized() {
   dock_.setBounds(dock_.hasTool() ? getLocalBounds().reduced(8).removeFromRight(dockWidth() - 8) : juce::Rectangle<int>());
-  auto header = area().reduced(8, 4).removeFromTop(kHeader - 4);
+  auto headAll = area().reduced(8, 4);
+  auto header = headAll.removeFromTop(kHeader - 4);
   // Right side first (grid, length, octave), then the left from the start; the title takes what is left.
   zoomIn_.setBounds(header.removeFromRight(30).reduced(2));
   zoomOut_.setBounds(header.removeFromRight(30).reduced(2));
@@ -539,7 +611,7 @@ void PatternEditor::resized() {
   editInfo_.setBounds(header.removeFromRight(theme::InfoDot::kSlot).withSizeKeepingCentre(theme::InfoDot::kSlot, theme::InfoDot::kSlot));
   edit_.setBounds(header.removeFromRight(66).reduced(2));
   header.removeFromRight(8);
-  for (auto* b : {&eraseTool_, &selectTool_, &drawTool_}) b->setBounds(header.removeFromRight(30).reduced(2));
+  for (auto* b : {&eraseTool_, &selectTool_, &paintTool_, &drawTool_}) b->setBounds(header.removeFromRight(30).reduced(2));
   header.removeFromRight(8);
   removePattern_.setBounds(header.removeFromRight(56).reduced(2));
   clearPattern_.setBounds(header.removeFromRight(52).reduced(2));
@@ -554,10 +626,75 @@ void PatternEditor::resized() {
     const bool fits = juce::GlyphArrangement::getStringWidthInt(title_.getFont(), full) + 8 <= header.getWidth();
     title_.setText(fits ? full : u8(t->name), juce::dontSendNotification);
   }
-  hint_.setBounds({});
-  hint_.setVisible(false);  // the hint is the editor's tooltip
+  // The pitched tracks' second row: the key range and the scale guide; the hint takes what is left.
+  if (currentTrack() && !drums()) {
+    auto row2 = headAll.removeFromTop(kRow2);
+    keysMinus_.setBounds(row2.removeFromLeft(56).reduced(2));
+    keysPlus_.setBounds(row2.removeFromLeft(56).reduced(2));
+    fitKeys_.setBounds(row2.removeFromLeft(62).reduced(2));
+    row2.removeFromLeft(6);
+    scaleBox_.setBounds(row2.removeFromLeft(130).reduced(2));
+    if (rootBox_.isVisible()) rootBox_.setBounds(row2.removeFromLeft(52).reduced(2));
+    row2.removeFromLeft(6);
+    noteTools_.setBounds(row2.removeFromLeft(78).reduced(2));
+    hint_.setBounds(row2.reduced(4, 0));
+    hint_.setVisible(true);
+  } else {
+    hint_.setBounds({});
+    hint_.setVisible(false);  // drums: the hint is the editor's tooltip
+  }
   placeAddSound();
   placePaging();
+}
+
+// One toolbar row for drums, two for pitched tracks (the key range and the scale live on the second).
+int PatternEditor::headerHeight() const { return currentTrack() && !drums() ? kHeader + kRow2 : kHeader; }
+
+void PatternEditor::updateKeysHint() {
+  hint_.setText(juce::String(keysShown()) + u8(" keys · Ctrl+wheel: Keys± · Alt+wheel: velocity"), juce::dontSendNotification);
+}
+
+void PatternEditor::fitKeys() {
+  rowsWanted_ = kKeysMax;
+  lowPitch_ = 0;
+  updateKeysHint();
+  repaint();
+}
+
+void PatternEditor::keysMore() {
+  rowsWanted_ = std::clamp(keysShown() + 4, kKeysMin, kKeysMax);
+  lowPitch_ = std::clamp(lowPitch_, 0, 128 - keysShown());
+  updateKeysHint();
+  repaint();
+}
+
+void PatternEditor::keysLess() {
+  rowsWanted_ = std::clamp(keysShown() - 4, kKeysMin, kKeysMax);
+  lowPitch_ = std::clamp(lowPitch_, 0, 128 - keysShown());
+  updateKeysHint();
+  repaint();
+}
+
+// Ctrl+wheel: Keys+ / Keys- (the owner's «no piano ctrl+scroll keys+ e keys»). The range grows up from the lowest
+// key shown and shrinks from the top, so expanding never hides what you were looking at.
+void PatternEditor::keysWheel(float deltaY, int y) {
+  juce::ignoreUnused(y);
+  rowsWanted_ = std::clamp(keysShown() + (deltaY > 0 ? 4 : -4), kKeysMin, kKeysMax);
+  lowPitch_ = std::clamp(lowPitch_, 0, 128 - keysShown());
+  updateKeysHint();
+  repaint();
+}
+
+void PatternEditor::setScaleGuide(int root, const std::string& name) {
+  scaleRoot_ = std::clamp(root, 0, 11);
+  scaleName_ = name;
+  int id = 1;
+  for (int i = 0; i < kScaleCount; ++i) if (name == kScales[i].name) id = i + 2;
+  scaleBox_.setSelectedId(id, juce::dontSendNotification);
+  rootBox_.setSelectedId(scaleRoot_ + 1, juce::dontSendNotification);
+  rootBox_.setVisible(scaleGuideOn() && currentTrack() && !drums());
+  resized();
+  repaint();
 }
 
 juce::String PatternEditor::editorName() const { return drums() ? u8("STEPS") : u8("PIANO ROLL"); }
@@ -603,7 +740,7 @@ double PatternEditor::drumFitLength() const {
 // Drum tracks: the rows take what they need (up to 44 px each) from the top, "+ Sound" and the velocity lane
 // right under them, so the lanes are not lost in empty space. Pitched tracks: the grid fills, velocity at the bottom.
 juce::Rectangle<int> PatternEditor::grid() const {
-  const auto all = area().reduced(8).withTrimmedTop(kHeader + kRuler).withTrimmedLeft(kLabels);
+  const auto all = area().reduced(8).withTrimmedTop(headerHeight() + kRuler).withTrimmedLeft(kLabels);
   if (!drums()) return all.withTrimmedBottom(kVelocity + 6);
   // Pads about as tall as they are wide (28 to 64 px), as many rows as fit.
   const int room = all.getHeight() - kAddRow - kDrumVelocity - 6;
@@ -797,6 +934,21 @@ void PatternEditor::paint(juce::Graphics& g) {
       g.drawText(u8("✕"), removeMark(r[i]), juce::Justification::centred);
     }
   }
+  // The scale guide, over the rows and the keyboard (after them: with 128 keys in a short grid the rows are
+  // sub-pixel and a later row's fill would overwrite a mark drawn inside the loop). A guide, never a trap.
+  if (!drums() && scaleGuideOn()) {
+    for (size_t i = 0; i < r.size(); ++i) {
+      if (!scaleContains(scaleRoot_, scaleName_, r[i])) continue;
+      const int y = area.getY() + (int)std::round(i * rowH);
+      const bool root = r[i] % 12 == scaleRoot_;
+      g.setColour(kNote.withAlpha(root ? 0.10f : 0.045f));
+      g.fillRect(area.getX(), y, area.getWidth(), (int)std::ceil(rowH));
+      if (root) {  // 3 px of the highlight on the root key, every octave
+        g.setColour(kNote);
+        g.fillRect((float)(area.getX() - kKeys - 1), (float)y, 3.0f, std::max(1.0f, rowH));
+      }
+    }
+  }
   // Grid lines and notes stay inside the grid (zoomed in, the rest of the pattern is off to the sides).
   g.saveState();
   g.reduceClipRegion(area.expanded(1, 0));
@@ -927,7 +1079,7 @@ void PatternEditor::paint(juce::Graphics& g) {
 void PatternEditor::clickCell(int64_t tick, int pitch) {
   if (!currentTrack()) return;
   const std::string trackId = trackId_, patternId = patternId_;
-  const int64_t length = std::min<int64_t>(pattern()->lengthTicks, drums() ? std::min<int64_t>(snapTicks(), 240) : snapTicks());
+  const int64_t length = std::min<int64_t>(pattern()->lengthTicks, drums() ? std::min<int64_t>(snapTicks(), 240) : (lastLength_ ? lastLength_ : snapTicks()));
   bool added = false;
   std::string newId;
   host_.applyEdit([&](doc::Document& d) {
@@ -936,7 +1088,7 @@ void PatternEditor::clickCell(int64_t tick, int pitch) {
     added = doc::toggleStep(p, tick, pitch, length, 0.8);
   }, drums() ? u8("Step") : u8("Note"));
   selected_.clear();
-  if (added && !drums()) selected_.insert(newId);
+  if (added && !drums()) { selected_.insert(newId); lastLength_ = length; }
   revealSelection();
   repaint();
 }
@@ -1016,29 +1168,83 @@ void PatternEditor::mouseDown(const juce::MouseEvent& e) {
     eraseAt(e.getPosition());
     return;
   }
-  if (tool_ == Tool::Select && (!hit || drums())) {
-    if (hit) {  // drums: a click selects the step (the draw tool turns it off)
-      if (!e.mods.isCtrlDown()) selected_.clear();
-      selected_.insert(hit->id);
-      repaint();
+  if (drums()) {
+    if (tool_ == Tool::Select) {
+      if (hit) {  // drums: a click selects the step (the draw tool turns it off)
+        if (!e.mods.isCtrlDown()) selected_.clear();
+        selected_.insert(hit->id);
+        repaint();
+        return;
+      }
+      startMarquee(e);
       return;
     }
-    drag_ = Drag::Marquee;
-    marqueeStart_ = e.getPosition();
-    marqueeBase_ = e.mods.isCtrlDown() ? selected_ : std::set<std::string>();
-    selected_ = marqueeBase_;
-    marquee_ = {};
+    return stepMouseDown(e, hit);
+  }
+  // Pitched: Ctrl+drag in empty space lassos with ANY tool, Shift+drag adds to the selection; Select always lassos there.
+  if (!hit && (e.mods.isCtrlDown() || e.mods.isShiftDown() || tool_ == Tool::Select)) { startMarquee(e); return; }
+  if (tool_ == Tool::Paint) {
+    if (hit) return;  // paint seeds empty cells only
+    drag_ = Drag::Paint;
+    painted_.clear();
+    host_.startGesture(u8("Paint notes"));
+    seedPaint(e.getPosition(), e.mods.isAltDown());
     repaint();
     return;
   }
-  if (drums()) return stepMouseDown(e, hit);
   if (!hit) {
-    if (!e.mods.isCtrlDown()) selected_.clear();
-    clickCell(tickAtX(e.x, true), pitchAtY(e.y));
+    // A click creates a note with the last used length; holding and dragging sizes it, in one undo gesture.
+    drag_ = Drag::Create;
+    createTick_ = tickAtX(e.x, !e.mods.isAltDown());
+    const int pitch = pitchAtY(e.y);
+    const int64_t len = std::max<int64_t>(1, std::min(pattern()->lengthTicks - createTick_, lastLength_ ? lastLength_ : snapTicks()));
+    const std::string trackId = trackId_, patternId = patternId_;
+    const int64_t tick = createTick_;
+    std::string newId;
+    host_.startGesture(u8("Note"));
+    host_.applyEdit([&](doc::Document& d) {
+      doc::Pattern& p = doc::patternById(doc::trackById(d, trackId), patternId);
+      newId = doc::newNoteId(p);
+      doc::toggleStep(p, tick, pitch, len, 0.8);
+    }, u8("Note"));
+    createId_ = newId;
+    selected_ = {newId};
+    repaint();
     return;
   }
   if (e.mods.isCtrlDown()) {
     if (!selected_.erase(hit->id)) selected_.insert(hit->id);
+    repaint();
+    return;
+  }
+  if (e.mods.isShiftDown()) {
+    // Shift+drag clones the selection and drags the copies (Pulse); one undo step gives the original back.
+    if (!selected_.count(hit->id)) selected_ = {hit->id};
+    const std::vector<std::string> ids(selected_.begin(), selected_.end());
+    const std::string trackId = trackId_, patternId = patternId_, hitId = hit->id;
+    const int64_t hitTick = hit->tick;
+    const int hitPitch = hit->pitch;
+    std::vector<std::string> copies;
+    host_.startGesture(u8("Clone notes"));
+    host_.applyEdit([&](doc::Document& d) {
+      doc::Pattern& p = doc::patternById(doc::trackById(d, trackId), patternId);
+      const std::vector<doc::Note> source = p.notes;
+      for (const auto& n : source)
+        if (std::find(ids.begin(), ids.end(), n.id) != ids.end()) {
+          doc::Note c = n;
+          c.id = doc::newNoteId(p);
+          p.notes.push_back(c);
+          copies.push_back(c.id);
+          if (n.id == hitId) dragNote_ = c.id;
+        }
+    }, u8("Clone notes"));
+    selected_ = std::set<std::string>(copies.begin(), copies.end());
+    drag_ = Drag::Move;
+    dragStartTick_ = tickAtX(e.x, false);
+    dragOffsetTicks_ = dragStartTick_ - hitTick;
+    dragStartPitch_ = hitPitch;
+    dragOriginal_.clear();
+    for (const auto& n : pattern()->notes) if (selected_.count(n.id)) dragOriginal_.push_back(n);
     repaint();
     return;
   }
@@ -1078,9 +1284,24 @@ void PatternEditor::stepMouseDown(const juce::MouseEvent& e, const doc::Note* hi
 void PatternEditor::mouseDrag(const juce::MouseEvent& e) {
   const doc::Track* t = currentTrack();
   if (!t || drag_ == Drag::None) return;
+  updateCursor(e.getPosition(), e.mods);
   if (drag_ == Drag::Velocity) { setVelocityAt(e.x, e.y); return; }
   if (drag_ == Drag::Playhead) { movePlayheadTo(e.x); return; }
   if (drag_ == Drag::Erase) { eraseAt(e.getPosition()); return; }
+  if (drag_ == Drag::Create) {
+    // The drag sizes the note the click created; Alt sizes it off the grid. Still the click's one undo gesture.
+    const bool free = e.mods.isAltDown();
+    const int64_t s = free ? 1 : snapTicks(), len = pattern()->lengthTicks;
+    const int64_t end = std::max<int64_t>((tickAtX(e.x, false) + s / 2) / s * s, createTick_ + std::min<int64_t>(s, len - createTick_));
+    const std::string trackId = trackId_, patternId = patternId_, id = createId_;
+    const int64_t tick = createTick_;
+    host_.applyEdit([&](doc::Document& d) {
+      for (auto& n : doc::patternById(doc::trackById(d, trackId), patternId).notes)
+        if (n.id == id) n.length = std::clamp<int64_t>(end - tick, 1, len - tick);
+    }, u8("Note"));
+    return;
+  }
+  if (drag_ == Drag::Paint) { seedPaint(e.getPosition(), e.mods.isAltDown()); return; }
   if (drag_ == Drag::Marquee) {
     marquee_ = juce::Rectangle<int>(marqueeStart_, e.getPosition()).getIntersection(grid());
     selected_ = marqueeBase_;
@@ -1093,7 +1314,8 @@ void PatternEditor::mouseDrag(const juce::MouseEvent& e) {
     if (!gestureOpen_ && e.getDistanceFromDragStart() < 4) return;  // still a click
     if (!gestureOpen_) { host_.startGesture(u8("Move notes")); gestureOpen_ = true; }
   }
-  const bool free = drag_ == Drag::Move && e.mods.isShiftDown();  // Shift: moves off the grid (lengths stay on it)
+  // Alt bypasses the snap (Pulse); drums keep Shift as their off-grid modifier.
+  const bool free = (drag_ == Drag::Move || drag_ == Drag::Resize) && (e.mods.isAltDown() || (drums() && e.mods.isShiftDown()));
   const int64_t s = free ? 1 : snapTicks(), len = pattern()->lengthTicks;
   const std::string trackId = trackId_, patternId = patternId_;
   if (drag_ == Drag::Move) {
@@ -1122,7 +1344,10 @@ void PatternEditor::mouseDrag(const juce::MouseEvent& e) {
   }
 }
 
-void PatternEditor::mouseMove(const juce::MouseEvent& e) { updateHover(e.getPosition()); }
+void PatternEditor::mouseMove(const juce::MouseEvent& e) {
+  updateHover(e.getPosition());
+  updateCursor(e.getPosition(), e.mods);
+}
 
 void PatternEditor::mouseExit(const juce::MouseEvent&) { updateHover({-1, -1}); }
 
@@ -1133,9 +1358,21 @@ void PatternEditor::mouseUp(const juce::MouseEvent& e) {
   const Drag ended = drag_;
   drag_ = Drag::None;
   if (ended == Drag::Velocity || ended == Drag::Erase) { host_.finishGesture(); repaint(); return; }
+  if (ended == Drag::Create) {
+    host_.finishGesture();
+    for (const auto& n : pattern()->notes) if (n.id == createId_) lastLength_ = n.length;  // the next click uses it
+    createId_.clear();
+    repaint();
+    return;
+  }
+  if (ended == Drag::Paint) { host_.finishGesture(); painted_.clear(); repaint(); return; }
   if (ended == Drag::Marquee) { marquee_ = {}; repaint(); return; }
   if (ended == Drag::Playhead) return;
-  if (!drums()) { host_.finishGesture(); return; }
+  if (!drums()) {
+    host_.finishGesture();
+    if (ended == Drag::Resize) for (const auto& n : pattern()->notes) if (n.id == dragNote_) lastLength_ = n.length;
+    return;
+  }
   // Where the step ended: the same place counts as a click (it turns off); on another step, the moved
   // one replaces it (two steps never share a cell).
   const doc::Note* moved = nullptr;
@@ -1158,6 +1395,70 @@ void PatternEditor::mouseUp(const juce::MouseEvent& e) {
     selected_.clear();
     repaint();
   }
+}
+
+// The selection box: Ctrl or Shift keeps what was selected and adds the box to it (Pulse: Shift adds).
+void PatternEditor::startMarquee(const juce::MouseEvent& e) {
+  drag_ = Drag::Marquee;
+  marqueeStart_ = e.getPosition();
+  marqueeBase_ = (e.mods.isCtrlDown() || e.mods.isShiftDown()) ? selected_ : std::set<std::string>();
+  selected_ = marqueeBase_;
+  marquee_ = {};
+  repaint();
+}
+
+// Paint: one note per cell the drag crosses, at the last used length (Pulse seeds with the last length too).
+// A cell that already holds a note of that pitch is left alone; Alt paints off the grid, at the exact tick.
+void PatternEditor::seedPaint(juce::Point<int> p, bool free) {
+  if (!currentTrack() || !grid().contains(p)) return;
+  const int pitch = pitchAtY(p.y);
+  if (pitch < 0) return;
+  const int64_t s = snapTicks(), tick = tickAtX(p.x, !free), len = pattern()->lengthTicks;
+  if (tick >= len) return;
+  const auto cell = std::make_pair(tick, pitch);
+  if (painted_.count(cell)) return;
+  painted_.insert(cell);
+  for (const auto& n : pattern()->notes)
+    if (n.pitch == pitch && (free ? n.tick == tick : (n.tick >= tick && n.tick < tick + s))) return;
+  const int64_t length = std::max<int64_t>(1, std::min(len - tick, lastLength_ ? lastLength_ : s));
+  const std::string trackId = trackId_, patternId = patternId_;
+  host_.applyEdit([&](doc::Document& d) {
+    doc::Pattern& pat = doc::patternById(doc::trackById(d, trackId), patternId);
+    doc::Note n;
+    n.id = doc::newNoteId(pat);
+    n.tick = tick;
+    n.pitch = pitch;
+    n.length = length;
+    n.velocity = 0.8;
+    pat.notes.push_back(n);
+  }, u8("Paint notes"));
+  repaint();
+}
+
+// Cursors per tool and per place (Pulse): hand over a note's body, ↔ at its right edge, crosshair for the lasso
+// (Ctrl in any tool) and for Select/Paint; the erase hand while erasing or with the right button.
+void PatternEditor::updateCursor(juce::Point<int> p, const juce::ModifierKeys& mods) {
+  if (!currentTrack()) return;
+  if (drag_ == Drag::Move) { setMouseCursor(juce::MouseCursor::DraggingHandCursor); return; }
+  if (drag_ == Drag::Resize || drag_ == Drag::Create) { setMouseCursor(juce::MouseCursor::LeftRightResizeCursor); return; }
+  if (drag_ == Drag::Marquee) { setMouseCursor(juce::MouseCursor::CrosshairCursor); return; }
+  if (drag_ == Drag::Erase || mods.isPopupMenu()) { setMouseCursor(juce::MouseCursor::PointingHandCursor); return; }
+  if (!grid().contains(p)) {
+    setMouseCursor(tool_ == Tool::Draw ? juce::MouseCursor::NormalCursor
+                   : tool_ == Tool::Erase ? juce::MouseCursor::PointingHandCursor
+                                          : juce::MouseCursor::CrosshairCursor);
+    return;
+  }
+  if (mods.isCtrlDown() && !drums()) { setMouseCursor(juce::MouseCursor::CrosshairCursor); return; }
+  bool edge = false;
+  const doc::Note* hit = noteAt(p, &edge);
+  if (hit && !drums()) {
+    setMouseCursor(edge ? juce::MouseCursor::LeftRightResizeCursor : juce::MouseCursor::PointingHandCursor);
+    return;
+  }
+  setMouseCursor(tool_ == Tool::Draw ? juce::MouseCursor::NormalCursor
+                 : tool_ == Tool::Erase ? juce::MouseCursor::PointingHandCursor
+                                        : juce::MouseCursor::CrosshairCursor);
 }
 
 // The notes an Edit tool works on: those that start in the bars shown, only the selected ones when some are.
@@ -1237,9 +1538,9 @@ void PatternEditor::say(const juce::String& text) {
   });
 }
 
-void PatternEditor::quantize() {
+void PatternEditor::quantize(int64_t gridTicks) {
   if (!currentTrack()) return;
-  const int64_t grid = snapTicks();
+  const int64_t grid = gridTicks > 0 ? gridTicks : snapTicks();
   const double strength = quantizeStrength, sw = swing;
   // Nothing moves: say why, so it does not look broken (notes already on a fine grid such as 1/64, or 0 % strength).
   const std::set<std::string> ids = editIds();
@@ -1247,7 +1548,8 @@ void PatternEditor::quantize() {
     doc::Pattern trial = *pattern();
     if (doc::quantizeNotes(trial, ids, grid, strength, sw) == 0) {
       juce::String snapName;
-      for (int id : kSnapOrder) if (id == snap_.getSelectedId()) snapName = kSnapNames[id - 1];
+      for (int id : kSnapOrder) if (kSnaps[id - 1] == grid) snapName = kSnapNames[id - 1];
+      if (snapName.isEmpty()) snapName = lengthName(grid);
       say(strength <= 0 ? u8("Quantize: the strength is 0 %, so nothing moves. Raise Strength first.")
                         : u8("Quantize: the notes are already on the ") + snapName +
                               u8(" grid, so nothing moves. Choose a bigger grid (1/16 or 1/8) to pull them onto it. "
@@ -2080,18 +2382,43 @@ void PatternEditor::zoom(double factor, double at) {
 
 void PatternEditor::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) {
   struct After { PatternEditor& ed; juce::Point<int> p; ~After() { ed.updateHover(p); } } after{*this, e.getPosition()};  // keys or zoom moved under the mouse
-  // Ctrl+wheel: zoom in or out around the mouse (down to a beat across the grid). Shift+wheel (or a sideways
+  const bool ctrl = e.mods.isCtrlDown() || e.mods.isCommandDown();
+  // Ctrl+Alt+wheel: fine velocity (±1 %) on the note under the mouse, or the selection when it is selected.
+  if (currentTrack() && ctrl && e.mods.isAltDown()) {
+    const doc::Note* hit = noteAt(e.getPosition(), nullptr);
+    if (!hit && velocityLane().contains(e.getPosition()))
+      for (const auto& n : pattern()->notes)
+        if (const int x0 = xOfTick(n.tick); e.x >= x0 - 2 && e.x <= x0 + 10) { hit = &n; break; }
+    if (hit) wheelVelocityAt(e.x, wheel.deltaY > 0 ? 0.01 : -0.01);
+    return;
+  }
+  // Ctrl+Shift+wheel: zoom in or out around the mouse (down to a beat across the grid). Shift+wheel (or a sideways
   // swipe) while zoomed: move along the pattern.
-  if (currentTrack() && (e.mods.isCtrlDown() || e.mods.isCommandDown())) {
+  if (currentTrack() && ctrl && e.mods.isShiftDown()) {
     zoom(std::pow(2.0, -wheel.deltaY * 2.0), shownStart() + std::clamp((e.x - grid().getX()) / (double)std::max(1, grid().getWidth()), 0.0, 1.0) * shownLength());
     return;
   }
-  // Alt+wheel: bigger or smaller keys (fewer or more of them), the key under the mouse kept in place.
-  if (currentTrack() && !drums() && e.mods.isAltDown()) {
-    const int under = pitchAtY(e.y), before = keysShown();
-    rowsWanted_ = std::clamp(before + (wheel.deltaY > 0 ? -2 : 2), 8, 61);
-    if (under >= 0) lowPitch_ = std::clamp(under - (under - lowPitch_) * keysShown() / std::max(1, before), 0, 128 - keysShown());
-    repaint();
+  // Ctrl+wheel on the piano roll: Keys+ / Keys- (the owner's expand); drums keep the horizontal zoom.
+  if (currentTrack() && ctrl) {
+    if (!drums()) { keysWheel(wheel.deltaY, e.y); return; }
+    zoom(std::pow(2.0, -wheel.deltaY * 2.0), shownStart() + std::clamp((e.x - grid().getX()) / (double)std::max(1, grid().getWidth()), 0.0, 1.0) * shownLength());
+    return;
+  }
+  // Alt+wheel over a note or the velocity lane: its velocity ±5 % (the selection's when the note is selected);
+  // over empty space: bigger or smaller keys (fewer or more of them), the key under the mouse kept in place.
+  if (currentTrack() && e.mods.isAltDown()) {
+    const doc::Note* hit = noteAt(e.getPosition(), nullptr);
+    if (!hit && velocityLane().contains(e.getPosition()))
+      for (const auto& n : pattern()->notes)
+        if (const int x0 = xOfTick(n.tick); e.x >= x0 - 2 && e.x <= x0 + 10) { hit = &n; break; }
+    if (hit) { wheelVelocityAt(e.x, wheel.deltaY > 0 ? 0.05 : -0.05); return; }
+    if (!drums()) {
+      const int under = pitchAtY(e.y), before = keysShown();
+      rowsWanted_ = std::clamp(before + (wheel.deltaY > 0 ? -2 : 2), kKeysMin, kKeysMax);
+      if (under >= 0) lowPitch_ = std::clamp((int)std::lround(under - (under - lowPitch_) * (double)keysShown() / std::max(1, before)), 0, 128 - keysShown());
+      updateKeysHint();
+      repaint();
+    }
     return;
   }
   if (currentTrack() && shownLength() < (double)pattern()->lengthTicks && (e.mods.isShiftDown() || std::abs(wheel.deltaX) > std::abs(wheel.deltaY))) {
@@ -2109,12 +2436,38 @@ void PatternEditor::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseW
     if (!drums()) { lowPitch_ = std::clamp(lowPitch_ + (wheel.deltaY > 0 ? 1 : -1), 0, 128 - keysShown()); repaint(); }
     return;
   }
+  // Plain wheel over a drum step: its velocity (as before). Over a pitched note: scroll the keys — scrolling
+  // must not change a note's loudness by accident (velocity moved to Alt+wheel, as in the reference).
+  if (!drums()) {
+    lowPitch_ = std::clamp(lowPitch_ + (wheel.deltaY > 0 ? 1 : -1), 0, 128 - keysShown());
+    repaint();
+    return;
+  }
   const std::string trackId = trackId_, patternId = patternId_, id = hit->id;
   const double step = wheel.deltaY > 0 ? 0.05 : -0.05;
   host_.applyEdit([&](doc::Document& d) {
     for (auto& n : doc::patternById(doc::trackById(d, trackId), patternId).notes)
       if (n.id == id) doc::setNoteVelocity(n, std::clamp(std::round((n.velocity + step) * 100) / 100, 0.05, 1.0));
   }, "Velocity");
+}
+
+// Alt+wheel velocity: every note drawn at x, only the selected ones when the note under x is selected (the same
+// rule as the lane). One undo step per notch; the roll envelope moves with the base (BUG-SWEEP-30 setNoteVelocity).
+void PatternEditor::wheelVelocityAt(int x, double step) {
+  if (!currentTrack()) return;
+  std::set<std::string> ids;
+  bool anySelected = false;
+  for (const auto& n : pattern()->notes) {
+    const int x0 = xOfTick(n.tick), w = juce::jlimit(3, drums() ? 14 : 8, xOfTick(n.tick + n.length) - x0 - 2);
+    if (x >= x0 - 2 && x <= x0 + w + 2) { ids.insert(n.id); anySelected |= selected_.count(n.id) > 0; }
+  }
+  if (anySelected) for (auto it = ids.begin(); it != ids.end();) it = selected_.count(*it) ? std::next(it) : ids.erase(it);
+  if (ids.empty()) return;
+  const std::string trackId = trackId_, patternId = patternId_;
+  host_.applyEdit([&](doc::Document& d) {
+    for (auto& n : doc::patternById(doc::trackById(d, trackId), patternId).notes)
+      if (ids.count(n.id)) doc::setNoteVelocity(n, std::clamp(std::round((n.velocity + step) * 100) / 100, 0.05, 1.0));
+  }, u8("Velocity"));
 }
 
 bool PatternEditor::keyPressed(const juce::KeyPress& key) {
@@ -2124,5 +2477,153 @@ bool PatternEditor::keyPressed(const juce::KeyPress& key) {
   if (keys.matches("edit.selectAll", key)) { selectAll(); return true; }
   return false;  // the window handles the rest (Space, undo...)
 }
+
+// ---------------------------------------------------------------- Note tools window (the piano roll's button)
+
+// The small window the owner asked for (2026-11-18: «quero uma pequena janela com isto , ou sej um botao no piano
+// que me da estas opçoes, incluindo as do baixo kbbb que ja existem»): Quantize with its grid, position strength and
+// swing, Humanize, Groove (the variations), and Core's kick/bass tools (FOLLOW, transpose). Every button is one
+// undo step through the editor's own tools. The full preview/Apply-Cancel window (Euclidean, Arpeggiator, position
+// window, ends/filters) is the next slice; this one applies immediately, like Edit ▾ does today.
+class NoteToolsPanel final : public juce::Component {
+public:
+  explicit NoteToolsPanel(PatternEditor& ed) : ed_(ed) {
+    for (int id : kSnapOrder) grid_.addItem(kSnapNames[id - 1], id);
+    grid_.setSelectedId(2, juce::dontSendNotification);
+    grid_.setTooltip(u8("The grid Quantize pulls the notes onto"));
+    theme::useBar(strength_);
+    strength_.setRange(0.0, 1.0);
+    strength_.setNumDecimalPlacesToDisplay(2);
+    strength_.setTooltip(u8("How far the notes move towards the grid (0: nothing moves, 1: all the way)"));
+    theme::useBar(swing_);
+    swing_.setRange(0.0, 1.0);
+    swing_.setNumDecimalPlacesToDisplay(2);
+    swing_.setTooltip(u8("Swing applied with Quantize (about 0.33: a triplet feel)"));
+    quantize_.setButtonText(u8("Quantize"));
+    quantize_.onClick = [this] {
+      ed_.quantizeStrength = strength_.getValue();
+      ed_.swing = swing_.getValue();
+      ed_.quantize(gridTicks());
+    };
+    humanize_.setButtonText(u8("Humanize"));
+    humanize_.setTooltip(u8("Small random timing and velocity, one undo step"));
+    humanize_.onClick = [this] { ed_.humanize(); };
+    groove_.addItem(u8("Octave jumps (some notes)"), 1);
+    groove_.addItem(u8("Reverse"), 2);
+    groove_.addItem(u8("Thin out (about one in four)"), 3);
+    groove_.addItem(u8("Accents on the beat"), 4);
+    groove_.setSelectedId(1, juce::dontSendNotification);
+    grooveApply_.setButtonText(u8("Apply groove"));
+    grooveApply_.onClick = [this] {
+      static const char* kinds[] = {"octave", "reverse", "thin", "accent"};
+      ed_.vary(kinds[std::clamp(groove_.getSelectedId(), 1, 4) - 1]);
+    };
+    followZone_.setButtonText(u8("Kick + bass follow selection"));
+    followZone_.setTooltip(u8("FOLLOW: the kick and the bass follow the selected notes (a stutter zone)"));
+    followZone_.onClick = [this] { ed_.follow(0); };
+    followKick_.setButtonText(u8("Kick follows STUTTER"));
+    followKick_.setTooltip(u8("FOLLOW: the kick follows the STUTTER of the bars shown"));
+    followKick_.onClick = [this] { ed_.follow(1); };
+    followBass_.setButtonText(u8("Bass follows kick"));
+    followBass_.setTooltip(u8("FOLLOW: the bass fills the steps after each kick in the bars shown"));
+    followBass_.onClick = [this] { ed_.follow(2); };
+    octDown_.setButtonText(u8("−12"));
+    octDown_.setTooltip(u8("Transpose the notes an octave down"));
+    octDown_.onClick = [this] { ed_.noteTool("transpose", -12); };
+    octUp_.setButtonText(u8("+12"));
+    octUp_.setTooltip(u8("Transpose the notes an octave up"));
+    octUp_.onClick = [this] { ed_.noteTool("transpose", 12); };
+    for (auto* l : {&quantizeTitle_, &gridLabel_, &strengthLabel_, &swingLabel_, &grooveTitle_, &grooveLabel_, &bassTitle_}) {
+      l->setColour(juce::Label::textColourId, l == &quantizeTitle_ || l == &grooveTitle_ || l == &bassTitle_ ? theme::kTitle : theme::kMuted);
+      l->setFont(juce::FontOptions(l == &quantizeTitle_ || l == &grooveTitle_ || l == &bassTitle_ ? theme::kFontStrong : theme::kFontSmall,
+                                   l == &quantizeTitle_ || l == &grooveTitle_ || l == &bassTitle_ ? juce::Font::bold : juce::Font::plain));
+      addAndMakeVisible(l);
+    }
+    quantizeTitle_.setText(u8("QUANTIZE"), juce::dontSendNotification);
+    gridLabel_.setText(u8("Grid"), juce::dontSendNotification);
+    strengthLabel_.setText(u8("Position strength"), juce::dontSendNotification);
+    swingLabel_.setText(u8("Grid swing"), juce::dontSendNotification);
+    grooveTitle_.setText(u8("GROOVE"), juce::dontSendNotification);
+    grooveLabel_.setText(u8("Variation"), juce::dontSendNotification);
+    bassTitle_.setText(u8("BASS / KICK (CORE)"), juce::dontSendNotification);
+    for (auto* c : std::initializer_list<juce::Component*>{&grid_, &strength_, &swing_, &quantize_, &humanize_, &groove_, &grooveApply_,
+                                                          &followZone_, &followKick_, &followBass_, &octDown_, &octUp_}) {
+      c->setWantsKeyboardFocus(false);
+      addAndMakeVisible(c);
+    }
+    refresh();
+  }
+  void refresh() {
+    strength_.setValue(ed_.quantizeStrength, juce::dontSendNotification);
+    swing_.setValue(ed_.swing, juce::dontSendNotification);
+  }
+  void resized() override {
+    auto r = getLocalBounds().reduced(10);
+    auto row = [&](int h) { return r.removeFromTop(h).reduced(0, 2); };
+    quantizeTitle_.setBounds(row(20));
+    auto g = row(24);
+    gridLabel_.setBounds(g.removeFromLeft(70));
+    grid_.setBounds(g);
+    auto s = row(24);
+    strengthLabel_.setBounds(s.removeFromLeft(110));
+    strength_.setBounds(s);
+    auto w = row(24);
+    swingLabel_.setBounds(w.removeFromLeft(110));
+    swing_.setBounds(w);
+    auto b = row(28);
+    quantize_.setBounds(b.removeFromLeft(b.getWidth() / 2).reduced(2));
+    humanize_.setBounds(b.reduced(2));
+    r.removeFromTop(6);
+    grooveTitle_.setBounds(row(20));
+    auto v = row(24);
+    grooveLabel_.setBounds(v.removeFromLeft(70));
+    groove_.setBounds(v.removeFromLeft(v.getWidth() - 96));
+    grooveApply_.setBounds(v.reduced(2, 0));
+    r.removeFromTop(6);
+    bassTitle_.setBounds(row(20));
+    followZone_.setBounds(row(26).reduced(0, 2));
+    followKick_.setBounds(row(26).reduced(0, 2));
+    followBass_.setBounds(row(26).reduced(0, 2));
+    auto t = row(26);
+    octDown_.setBounds(t.removeFromLeft(t.getWidth() / 2).reduced(2));
+    octUp_.setBounds(t.reduced(2));
+  }
+
+private:
+  int64_t gridTicks() const {
+    const int id = grid_.getSelectedId();
+    return id >= 1 && id <= 7 ? kSnaps[id - 1] : 240;
+  }
+  PatternEditor& ed_;
+  juce::Label quantizeTitle_, gridLabel_, strengthLabel_, swingLabel_, grooveTitle_, grooveLabel_, bassTitle_;
+  juce::ComboBox grid_, groove_;
+  theme::BarSlider strength_, swing_;
+  juce::TextButton quantize_, humanize_, grooveApply_, followZone_, followKick_, followBass_, octDown_, octUp_;
+};
+
+// Close hides the window (its settings stay for the next open), as the Patterns window does.
+class NoteToolsWindow final : public juce::DocumentWindow {
+public:
+  NoteToolsWindow() : juce::DocumentWindow(u8("Piano roll - Note tools"), theme::kBackground, juce::DocumentWindow::allButtons) {
+    setUsingNativeTitleBar(true);
+    setResizable(true, true);
+    setResizeLimits(300, 400, 700, 900);
+  }
+  void closeButtonPressed() override { setVisible(false); }
+};
+
+void PatternEditor::openNoteTools() {
+  if (!noteToolsWin_) {
+    auto w = std::make_unique<NoteToolsWindow>();
+    w->setContentOwned(new NoteToolsPanel(*this), false);
+    w->centreWithSize(330, 440);
+    noteToolsWin_ = std::move(w);
+  }
+  if (auto* p = dynamic_cast<NoteToolsPanel*>(noteToolsWin_->getContentComponent())) p->refresh();
+  noteToolsWin_->setVisible(true);
+  noteToolsWin_->toFront(true);
+}
+
+bool PatternEditor::noteToolsVisible() const { return noteToolsWin_ && noteToolsWin_->isVisible(); }
 
 }  // namespace core::app

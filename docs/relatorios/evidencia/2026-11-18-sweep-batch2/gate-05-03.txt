@@ -1,0 +1,120 @@
+CMake Warning (author) at C:/Users/vk_do/AppData/Local/Microsoft/WinGet/Packages/Kitware.CMake_Microsoft.Winget.Source_8wekyb3d8bbwe/cmake-4.4.4-windows-x86_64/share/cmake-4.4/Modules/FetchContent.cmake:1386 (message):
+  The DOWNLOAD_EXTRACT_TIMESTAMP option was not given and policy CMP0135 is
+  not set.  The policy's OLD behavior will be used.  When using a URL
+  download, the timestamps of extracted files should preferably be that of
+  the time of extraction, otherwise code that depends on the extracted
+  contents might not be rebuilt if the URL changes.  The OLD behavior
+  preserves the timestamps from the archive instead, but this is usually not
+  what you want.  Update your project to the NEW behavior or specify the
+  DOWNLOAD_EXTRACT_TIMESTAMP option with a value of true to avoid this
+  robustness issue.
+Call Stack (most recent call first):
+  CMakeLists.txt:64 (FetchContent_Declare)
+This warning is for project developers.  Use -Wno-author to suppress it.
+
+-- Configuring juceaide
+-- Building juceaide
+-- Exporting juceaide
+-- Testing juceaide
+-- Finished setting up juceaide
+-- Configuring done (0.9s)
+-- Generating done (0.2s)
+-- Build files have been written to: D:/Core-build/flawless-batch2
+[0/2] Re-checking globbed directories...
+[1/19] Core version
+[2/19] Building VST3 manifest helper for CoreTestSynth
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/flawless-batch2/vst3_helpers/CoreTestSynth
+ninja: no work to do.
+[3/19] Building VST3 manifest helper for CoreTestThrow
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/flawless-batch2/vst3_helpers/CoreTestThrow
+ninja: no work to do.
+[4/19] Building VST3 manifest helper for CoreTestGain
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/flawless-batch2/vst3_helpers/CoreTestGain
+ninja: no work to do.
+[5/19] Building VST3 manifest helper for CoreTestCrash
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/flawless-batch2/vst3_helpers/CoreTestCrash
+ninja: no work to do.
+[6/19] Building VST3 manifest helper for CoreTestCrashRestart
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/flawless-batch2/vst3_helpers/CoreTestCrashRestart
+ninja: no work to do.
+[7/19] Building VST3 manifest helper for CoreTestFault
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/flawless-batch2/vst3_helpers/CoreTestFault
+ninja: no work to do.
+[8/19] Building CXX object engine\CMakeFiles\core-engine.dir\src\app\main.cpp.obj
+[9/19] Linking CXX executable engine\core-engine.exe
+[10/19] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\Diagnostics.cpp.obj
+[11/19] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\MainComponent.cpp.obj
+[12/19] Linking CXX executable app\desktop\CoreApp_artefacts\Release\Core.exe
+[13/19] Packing the Core package for the installer
+[14/19] Generating juce_binarydata_CoreSetupData/JuceLibraryCode/BinaryData1.cpp, juce_binarydata_CoreSetupData/JuceLibraryCode/CoreSetupData.h
+[15/19] Building CXX object app\installer\CMakeFiles\CoreSetup.dir\Setup.cpp.obj
+[16/19] Building CXX object app\installer\CMakeFiles\CoreSetupData.dir\juce_binarydata_CoreSetupData\JuceLibraryCode\BinaryData1.cpp.obj
+[17/19] Linking CXX static library app\installer\CoreSetupData.lib
+[18/19] Linking CXX executable "app\installer\CoreSetup_artefacts\Release\Core Setup.exe"
+Test project D:/Core-build/flawless-batch2
+      Start  1: engine_tests
+ 1/20 Test  #1: engine_tests .....................   Passed    0.33 sec
+      Start  2: domain_tests
+ 2/20 Test  #2: domain_tests .....................   Passed    4.17 sec
+      Start  3: legacy_guard_tests
+ 3/20 Test  #3: legacy_guard_tests ...............   Passed    0.72 sec
+      Start  4: role_tests
+ 4/20 Test  #4: role_tests .......................   Passed    0.07 sec
+      Start  5: midi_tests
+ 5/20 Test  #5: midi_tests .......................   Passed    0.10 sec
+      Start  6: bug_tests
+ 6/20 Test  #6: bug_tests ........................   Passed    0.20 sec
+      Start  7: bitwig_tests
+ 7/20 Test  #7: bitwig_tests .....................   Passed    0.04 sec
+      Start  8: audit_tests
+ 8/20 Test  #8: audit_tests ......................   Passed    0.14 sec
+      Start  9: audit2_tests
+ 9/20 Test  #9: audit2_tests .....................   Passed    0.08 sec
+      Start 10: hunt_tests
+10/20 Test #10: hunt_tests .......................   Passed    1.21 sec
+      Start 11: round3_tests
+11/20 Test #11: round3_tests .....................   Passed    0.01 sec
+      Start 12: calls_tests
+12/20 Test #12: calls_tests ......................   Passed    0.15 sec
+      Start 13: menu_tests
+13/20 Test #13: menu_tests .......................   Passed    0.03 sec
+      Start 14: cli_version
+14/20 Test #14: cli_version ......................   Passed    0.08 sec
+      Start 15: cli_demo_render
+15/20 Test #15: cli_demo_render ..................   Passed    0.08 sec
+      Start 16: cli_measure
+16/20 Test #16: cli_measure ......................   Passed    2.24 sec
+      Start 17: cli_unicode
+17/20 Test #17: cli_unicode ......................   Passed    0.05 sec
+      Start 18: cli_package_stale
+18/20 Test #18: cli_package_stale ................   Passed    1.70 sec
+      Start 19: engine_process_tests
+19/20 Test #19: engine_process_tests .............   Passed    9.06 sec
+      Start 20: cli_plugin_crash_render
+20/20 Test #20: cli_plugin_crash_render ..........   Passed    0.12 sec
+
+100% tests passed out of 20
+
+Label Time Summary:
+merge    =  20.61 sec*proc (20 tests)
+
+Total Test time (real) =  21.16 sec
+Gate do Core: VERDE
+Codigo: D:\CORE\CORE\.agents\worktrees\flawless-batch2 @ 9c457ab
+Build:  D:/Core-build/flawless-batch2
+Testes: merge
+Tempo:  49 s
+
+100% tests passed out of 20

@@ -1,0 +1,20 @@
+== midi_tests
+17 testes, 226 verificacoes, 0 falhas
+== domain_tests
+30 testes, 525 verificacoes, 0 falhas
+== bug_tests
+41 testes, 394 verificacoes, 0 falhas
+== legacy_guard_tests
+9 testes, 169 verificacoes, 0 falhas
+== role_tests
+21 testes, 216 verificacoes, 0 falhas
+== audit_tests
+7 testes, 65 verificacoes, 0 falhas
+== audit2_tests
+6 testes, 80 verificacoes, 0 falhas
+== hunt_tests
+13 testes, 647 verificacoes, 0 falhas
+== round3_tests
+7 testes, 82 verificacoes, 0 falhas
+== bitwig_tests
+2 testes, 25 verificacoes, 0 falhas

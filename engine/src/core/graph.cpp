@@ -1,6 +1,7 @@
 #include "graph.hpp"
 #include "../dsp/smooth.hpp"
 #include "../dsp/finite.hpp"
+#include "../dsp/sample_host.hpp"
 #include <cstdio>
 #include <algorithm>
 #include <atomic>
@@ -146,6 +147,7 @@ public:
     if (count_ < kMax) {
       notes_[count_++] = MidiNote{offset, on, pitch, (float)velocity};
       held_[pitch] = on;
+      if (on) heldVel_[pitch] = (float)velocity;  // the velocity a swap re-triggers the pitch with (adopt)
       return;
     }
     // Full: the note-off still reaches the plugin; a note-on cannot be played.
@@ -186,16 +188,26 @@ public:
     count_ = 0;
   }
   void adopt(const Instrument& previous) override {
-    // The same plugin instance plays on: the pitches it holds and the note-offs that did not fit in the
-    // last block's queue (audit 2026-11-17 item 13: only held_ came over, and what was waiting in the
-    // reserve was never sent — a pitch started twice in a dense block stayed sounding in the plugin
-    // until Stop or a seek silenced it).
-    if (auto* p = dynamic_cast<const PluginInstrument*>(&previous)) {
+    auto* p = dynamic_cast<const PluginInstrument*>(&previous);
+    if (!p) return;
+    if (p->processor_ == processor_) {
+      // The same plugin instance plays on: the pitches it holds and the note-offs that did not fit in the
+      // last block's queue (audit 2026-11-17 item 13: only held_ came over, and what was waiting in the
+      // reserve was never sent — a pitch started twice in a dense block stayed sounding in the plugin
+      // until Stop or a seek silenced it).
       std::copy(p->held_, p->held_ + 128, held_);
+      std::copy(p->heldVel_, p->heldVel_ + 128, heldVel_);
       std::copy(p->pendingOffs_, p->pendingOffs_ + 128, pendingOffs_);
       std::copy(p->pendingAt_, p->pendingAt_ + 128, pendingAt_);
       panic_ = p->panic_;
+      return;
     }
+    // A-004: a different instance (Retry, plugin change). Copying held_ would be phantom state — the fresh
+    // instance never got those note-ons, and reconcile() skips a track whose held pitches did not change,
+    // so the note stayed silent until the next note-on or seek. Re-trigger what the old wrapper held, at
+    // the start of this block, with the velocity it was held at; the fresh instance sounds from here on.
+    for (int pitch = 0; pitch < 128; ++pitch)
+      if (p->held_[pitch]) queueNote(0, true, pitch, p->heldVel_[pitch]);
   }
   // At most kCapacity events reach the plugin per block: the JUCE host prepares its MIDI buffer for
   // kMaxPluginEvents (plugins.hpp), so it never allocates on the audio thread.
@@ -217,6 +229,7 @@ private:
   int pendingAt_[128] = {};    // and the sample of the first of them
   bool panic_ = false;         // an All Notes Off that did not fit
   bool held_[128] = {};
+  float heldVel_[128] = {};    // the velocity of each held pitch (a swap re-triggers with it, see adopt)
 };
 
 // A plugin in an effect chain.
@@ -287,7 +300,6 @@ Graph::Graph(const Project& p, double sampleRate, AssetStore* assets, PluginProv
     else missingPlugins_.push_back({{"key", key}, {"plugin", pluginName(plugin)}, {"why", why}});
     return processor;
   };
-  std::vector<std::pair<Effect*, std::string>> sidechains;  // M7c: compressors and the track that keys each
   auto buildChain = [&](const json& list, std::vector<std::unique_ptr<Effect>>& chain, const std::string& owner) {
     bool any = false;
     for (const auto& fx : list) {
@@ -301,26 +313,8 @@ Graph::Graph(const Project& p, double sampleRate, AssetStore* assets, PluginProv
         chain.push_back(std::move(e));
         continue;
       }
-      if (fx.value("type", "") != "builtin" || fx.value("unsupported", false)) continue;
-      const std::string name = fx.value("name", "");
-      // A tempo-synced effect holds enough for the slowest tempo of the song, and starts at the first.
-      auto e = makeEffect(name, sampleRate, tempo_.slowestBpm(), fx.value("version", 1));
-      if (!e) continue;
-      e->setTempo(p.bpm);
-      const auto& specs = effectParams(name);
-      const json params = fx.value("params", json::object());
-      for (size_t i = 0; i < specs.size() && i < (size_t)kMaxEffectParams; ++i) {
-        e->params[i] = e->knob[i] = e->glide[i] = params.value(specs[i].name, specs[i].def);
-        const std::string_view knob = specs[i].name;
-        if (steppedKnob(knob)) e->stepped.set(i);  // switches jump
-      }
-      e->knobCount = (int)std::min(specs.size(), (size_t)kMaxEffectParams);
-      if (fx.contains("sidechain") && fx["sidechain"].is_string()) sidechains.push_back({e.get(), fx["sidechain"].get<std::string>()});
-      e->id = fx.value("id", "");
-      e->watchKey = fxWatchKey(owner, e->id);
-      e->bypass = fx.value("bypass", false);
-      any = any || !e->bypass;
-      chain.push_back(std::move(e));
+      // Built-in effects left the engine (Diogo 2026-11-16): fromJson keeps a legacy entry as data
+      // (unsupported, silent) and nothing is built for it here. Only plugin effects play.
     }
     return any;
   };
@@ -343,6 +337,30 @@ Graph::Graph(const Project& p, double sampleRate, AssetStore* assets, PluginProv
         rt.plugin = processor;
         rt.instrument = std::make_unique<PluginInstrument>(sampleRate, std::move(processor));
       }
+    if (t.instrument == "sample") {
+      // The user-sample host (BUG-SWEEP-10 positive): it plays the user's files. Their audio is loaded here
+      // on the control thread through the AssetStore (the audio clips' path) and shared; a file that cannot
+      // be read leaves its zone silent and is reported, the song plays on.
+      std::vector<SampleHostZone> zones;
+      for (const auto& z : t.samples) {
+        SampleHostZone sz;
+        sz.rootKey = z.rootKey;
+        sz.loKey = z.loKey;
+        sz.hiKey = z.hiKey;
+        std::string why;
+        sz.data = assets ? assets->get(z.file, sampleRate, &why) : nullptr;
+        if (!sz.data) { missingAssets_.push_back(assets ? why : z.file + ": no audio store"); }
+        else if (z.loopEnd > 0) {
+          const int64_t frames = sz.data->frames();
+          sz.loopStart = std::clamp<int64_t>((int64_t)std::llround(z.loopStart * sampleRate), 0, frames - 1);
+          sz.loopEnd = std::clamp<int64_t>((int64_t)std::llround(z.loopEnd * sampleRate), sz.loopStart + 1, frames);
+        }
+        zones.push_back(std::move(sz));
+      }
+      rt.instrument = std::make_unique<SampleHost>(sampleRate, std::move(zones));
+      rt.stepped.set(2);  // pitched: a switch, it jumps, never glides
+      rt.stepped.set(4);  // retrigger
+    }
     const auto& specs = instrumentParams(t.instrument);
     rt.paramCount = hasNoInstrumentParams(t.instrument) ? 0 : (int)specs.size();
     for (int i = 0; i < rt.paramCount; ++i) {
@@ -509,7 +527,6 @@ Graph::Graph(const Project& p, double sampleRate, AssetStore* assets, PluginProv
   {
     std::map<std::string, int> index;
     for (size_t i = 0; i < tracks_.size(); ++i) index[tracks_[i].id] = (int)i;
-    for (auto& [effect, from] : sidechains) effect->sidechain = index.at(from);  // validated by fromJson
     for (size_t i = 0; i < tracks_.size(); ++i) {
       TrackRt& rt = tracks_[i];
       const Track& t = p.tracks[i];

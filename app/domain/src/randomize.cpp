@@ -363,6 +363,9 @@ static const std::vector<SoundRange>& soundRanges(const std::string& style) {
   return style == "Dark psycore" ? dark : style == "Hi-tech" ? hitech : style == "Slambient" ? slam : none;
 }
 
+// The randomizer's role parts, in order: the tracks the groove axes lay, and the sound axis's (K) targets.
+const char* const kParts[] = {"kick", "bass", "hats", "open-hats", "perc", "accents", "lead", "riser"};
+
 static void retimeBass(Track& t, int64_t a, int64_t b, double ratio, std::vector<std::string>& did, double fromBpm, double toBpm) {
   const double newMs = 60000.0 / (toBpm * kPpq);
   std::map<std::string, std::string> copies;
@@ -431,6 +434,32 @@ const std::vector<std::string>& randomizeAxes() {
   return axes;
 }
 
+// BUG-SWEEP-11 (owner ratified 2026-11-18: «randomize sobre parâmetros dos plugins dos papéis (undoável);
+// escondido quando não há plugins.»): the sound axis (K) targets the ROLE PLUGINS' PARAMETERS. A legacy built-in
+// song's kick/bass/hats are still targets too (the old K contract, preserved for legacy load). The menu HIDES the
+// axis when this is false (styled is checked by the caller): a song with no plugins and no legacy built-in has
+// nothing for it to change (PROD :83: no apparently-active option that does nothing).
+bool soundAxisAvailable(const Document& doc) {
+  if (!soundAxisPluginTracks(doc).empty()) return true;  // role plugins: K randomizes their parameters
+  for (const SoundRange& r : soundRanges(songStyle(doc))) {
+    const Track* t = doc.findTrack(r.track);
+    if (t && t->instrument.kind == "builtin" && t->instrument.name == r.instrument && findInstrumentParam(*t, r.param))
+      return true;
+  }
+  return false;
+}
+
+// The role tracks played by a plugin, in the randomizer's part order: the sound axis's plugin targets. The UI
+// asks the engine for each one's parameters (plugin.params) and passes them in RandomizeOptions::pluginParams.
+std::vector<std::string> soundAxisPluginTracks(const Document& doc) {
+  std::vector<std::string> ids;
+  for (const char* id : kParts) {
+    const Track* t = doc.findTrack(id);
+    if (t && t->instrument.kind == "plugin") ids.push_back(id);
+  }
+  return ids;
+}
+
 std::vector<std::string> randomizeStyle(Document& doc, const RandomizeOptions& o) {
   const std::string style = songStyle(doc);
   const StyleCard* card = cardFor(style);
@@ -496,9 +525,8 @@ std::vector<std::string> randomizeStyle(Document& doc, const RandomizeOptions& o
   }
 
   // Clips end at section boundaries, so each section can be laid on its own.
-  static const char* parts[] = {"kick", "bass", "hats", "open-hats", "perc", "accents", "lead", "riser"};
   const bool grooveOn = o.axes.empty() || std::any_of(o.axes.begin(), o.axes.end(), [](const std::string& x) { return x != "tempo" && x != "sound"; });
-  for (const char* id : parts)
+  for (const char* id : kParts)
     if (Track* t = (grooveOn || tempoOn) ? findTrack(doc, id) : nullptr)
       for (const auto& s : doc.sections) splitAt(*t, s.startTick), splitAt(*t, s.startTick + s.lengthTicks);
 
@@ -756,9 +784,12 @@ std::vector<std::string> randomizeStyle(Document& doc, const RandomizeOptions& o
   if (grooveOn || tempoOn)
     for (const auto& slot : rackSlots(doc))
       for (const auto& [trackId, patternId] : slot.tracks) rackRefs[trackId].insert(patternId);
-  for (const char* id : parts)
+  for (const char* id : kParts)
     if (Track* t = (grooveOn || tempoOn) ? findTrack(doc, id) : nullptr) removeUnusedPatterns(*t, rackRefs[t->id]);
-  // K: the built-in kick, bass and hats get new values inside the style. Plugin tracks keep their patch.
+  // K: the sound of the song. A legacy built-in kick/bass/hats gets new values inside the style; the ROLE PLUGINS
+  // get new parameter values (BUG-SWEEP-11 positive, owner ratified 2026-11-18: «randomize sobre parâmetros dos
+  // plugins dos papéis (undoável); escondido quando não há plugins.»). One call is one document edit: the caller
+  // commits it as ONE undo step, and one Undo brings the whole song back.
   json sound = json::object();
   if (soundOn) {
     std::map<std::string, std::string> lines;
@@ -780,9 +811,49 @@ std::vector<std::string> randomizeStyle(Document& doc, const RandomizeOptions& o
       std::snprintf(text, sizeof text, whole ? "%s %.0f%s%s" : "%s %.2f%s%s", info->label, v, *info->unit ? " " : "", info->unit);
       line += (line.empty() ? "" : ", ") + std::string(text);
     }
+    // K on the role plugins: a new value for each automatable parameter the engine reported (plugin.params),
+    // within 0..1 on the parameter's own steps, written as a constant "vst:<id>" curve at tick 0 — the engine
+    // plays that curve over the plugin (graph.cpp: a vst: envelope drives the plugin's parameter). A curve the
+    // user drew is never touched (their work stays); a curve this axis wrote before (marked in its extra) is
+    // redrawn, so "try again" keeps working. No catalog (the engine gave no answer, or none is loaded): nothing
+    // known to change, a graceful no-op — the domain never talks to the engine itself.
+    const std::vector<std::string> pluginTracks = soundAxisPluginTracks(doc);
+    for (const PluginTrackParams& pt : o.pluginParams) {
+      if (std::find(pluginTracks.begin(), pluginTracks.end(), pt.trackId) == pluginTracks.end()) continue;  // role plugins only
+      Track* t = findTrack(doc, pt.trackId);
+      if (!t) continue;
+      for (const PluginParamInfo& pi : pt.params) {
+        const std::string param = "vst:" + pi.id;
+        if (pi.id.empty() || param.size() > 64) continue;  // the document's automation param limit
+        bool mine = false, users = false;
+        for (const auto& a : t->automation)
+          if (a.param == param) {
+            if (a.extra.is_object() && a.extra.value("randomizer", std::string()) == "sound") mine = true;
+            else users = true;
+            break;
+          }
+        if (users) continue;  // the user's automation: randomize never takes it back
+        Rng rng = streamFor(o.seed, "song", "sound:" + pt.trackId + ":" + param);
+        if (!rng.chance(p)) continue;
+        // Bounded by the parameter's own range: 0..1, on its discrete steps when it has them (N positions,
+        // the values k/(N-1)); a continuous parameter draws anywhere in 0..1.
+        double v = pi.steps > 1 ? (double)rng.below(pi.steps) / (pi.steps - 1) : rng.unit();
+        v = std::clamp(v, 0.0, 1.0);
+        setAutomationPoint(doc, pt.trackId, param, 0, v);
+        if (!mine)
+          for (auto& a : t->automation)
+            if (a.param == param) { a.extra["randomizer"] = "sound"; break; }
+        sound[pt.trackId][param] = v;
+        std::string& line = lines[t->name];
+        char text[96];
+        std::snprintf(text, sizeof text, "%s %.2f", pi.name.empty() ? pi.id.c_str() : pi.name.c_str(), v);
+        line += (line.empty() ? "" : ", ") + std::string(text);
+      }
+    }
     if (lines.empty() && o.axes.size() == 1)
-      throw DocumentError("sound", "this song's kick, bass and hats have no built-in sound to change (samples or audio): Randomize sound "
-                                   "works on Core's own instruments");
+      return {};  // BUG-SWEEP-11: the sound axis has no target in this song (no plugin catalog answered, no
+                  // legacy built-in): nothing to change, not an error. The menu hides the axis
+                  // (soundAxisAvailable), so this is only reached by an explicit request; a graceful no-op.
     for (const auto& [name, line] : lines) changes.insert(changes.begin(), "Sound, " + name + ": " + line);
   }
   json allAxes = json::array();

@@ -1,6 +1,7 @@
 #include "juce_host.hpp"
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <functional>
@@ -438,7 +439,29 @@ void JuceHost::resetAll() {
   runSync([&] {
     for (auto& [key, p] : slots) {
       if (p->failed()) continue;
-      if (!guarded([&] { p->instance().reset(); })) {
+      // BUG-STOP-HANG: a stalled plugin (missed its deadline, no crash) still holds JUCE's process lock
+      // inside processBlock, and the vendored crash-aware acquire only gives up once the host marks the
+      // instance crashed — a mere stall never does, so reset() spun here and Stop held the engine's
+      // answers hostage until the plugin returned. A watchdog gives each reset a budget: past it, the
+      // plugin is marked crashed (atomic stores only, no plugin code, no lock), the acquire gives up and
+      // reset() returns without touching it; the track is silenced (the stop fade already ran) and Retry
+      // loads it again. A healthy plugin acquires promptly and resets exactly as before, on this thread.
+      // The watchdog cannot interrupt plugin code already running inside reset (setActive): that is the
+      // plugin's own hang, not the lock wait this budget bounds.
+      std::atomic<bool> done{false};
+      std::thread watchdog([p, &done, key] {
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+        while (!done.load(std::memory_order_acquire) && std::chrono::steady_clock::now() < deadline)
+          std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        if (!done.load(std::memory_order_acquire)) {
+          trace("the plugin of " + key + " held its process lock past the reset budget (stalled): it is silenced (Retry loads it again)");
+          p->markCrashed();
+        }
+      });
+      const bool ok = guarded([&] { p->instance().reset(); });
+      done.store(true, std::memory_order_release);
+      watchdog.join();  // the watchdog exits within one poll (5 ms) of the store; bounded
+      if (!ok) {
         trace("the plugin of " + key + " crashed while it was reset: it is silenced (Retry loads it again)");
         p->markCrashed();
       }
@@ -446,12 +469,13 @@ void JuceHost::resetAll() {
   });
 }
 
-json JuceHost::captureStates() {
+json JuceHost::captureStates(const std::vector<std::string>& keys) {
   json out = json::object();
   std::map<std::string, std::shared_ptr<JuceProcessor>> slots;
   {
     std::lock_guard<std::mutex> g(impl_->mutex);
-    for (auto& [key, slot] : impl_->live) slots[key] = slot.processor;
+    for (auto& [key, slot] : impl_->live)
+      if (keys.empty() || std::find(keys.begin(), keys.end(), key) != keys.end()) slots[key] = slot.processor;
   }
   runSync([&] {
     for (auto& [key, p] : slots) {

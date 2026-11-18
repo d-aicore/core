@@ -204,7 +204,7 @@ bool rackStepRow(const Track& t) {
   const std::string part = pcoreGuessPart(t);
   if (part == "bass" || part == "lead" || part == "arp" || part == "pad") return false;
   if (part == "kick" || part == "hats" || part == "cymbals" || part == "perc" || part == "build") return true;
-  return t.instrument.kind == "builtin" && n == "sampler";  // a one-shot sound (fx, stabs...)
+  return (t.instrument.kind == "builtin" || t.instrument.kind == "sample") && n == "sampler";  // a one-shot sound (fx, stabs...)
 }
 
 int rackStepPitch(const Track& t, const Pattern* p) {
@@ -240,7 +240,7 @@ bool toggleRackStep(Pattern& p, int64_t start, int64_t length, int pitch, double
   n.tick = std::min(tick, p.lengthTicks - 1);
   n.length = std::clamp<int64_t>(length / 2, 1, p.lengthTicks - n.tick);
   n.pitch = std::clamp(pitch, 0, 127);
-  n.velocity = std::clamp(velocity, 0.0, 1.0);
+  setNoteVelocity(n, std::clamp(velocity, 0.0, 1.0));  // BUG-SWEEP-30 follow-up: the shared helper (a new step: no envelope)
   if (tick != start) { n.tick = start; n.length = std::clamp<int64_t>(length / 2, 1, p.lengthTicks - start); swingNote(n, p.lengthTicks, 0, swingTicks(swing)); }
   p.notes.push_back(n);
   std::sort(p.notes.begin(), p.notes.end(), [](const Note& a, const Note& b) { return a.tick != b.tick ? a.tick < b.tick : a.pitch < b.pitch; });
@@ -417,6 +417,9 @@ PatternTemplate rackTemplateFromJson(const json& j) {
   t.style = j.value("style", std::string());
   t.about = j.value("about", std::string());
   t.bpm = j.value("bpm", 0.0);
+  // BUG-SWEEP-26 (ratified): the swing is OPTIONAL (absent = straight/legacy), so templates written before
+  // swing preservation load exactly as they did.
+  t.swing = std::clamp(j.value("swing", 0.0), 0.0, kRackMaxSwing);
   t.bars = validBars(j.value("bars", 4));
   if (t.id.empty() || t.name.empty()) throw DocumentError("id", "a template has an id and a name");
   if (!j.contains("rows") || !j["rows"].is_array()) throw DocumentError("rows", "a list of rows");
@@ -432,6 +435,17 @@ PatternTemplate rackTemplateFromJson(const json& j) {
         x.length = std::max<int64_t>(1, n.value("length", (int64_t)kSixteenth));
         x.pitch = std::clamp(n.value("pitch", 60), 0, 127);
         x.velocity = std::clamp(n.value("velocity", 0.8), 0.0, 1.0);
+        // BUG-SWEEP-20: the roll is OPTIONAL (absent = no roll), so templates written before rolls load unchanged.
+        if (n.contains("roll") && n["roll"].is_object()) {
+          const json& roll = n["roll"];
+          x.hasRoll = true;
+          x.roll.count = std::clamp(roll.value("count", 0), 0, 64);
+          x.roll.velocityFrom = std::clamp(roll.value("velocityFrom", x.velocity), 0.0, 1.0);
+          x.roll.velocityTo = std::clamp(roll.value("velocityTo", x.velocity), 0.0, 1.0);
+        }
+        // BUG-SWEEP-26 (ratified): the swing base record travels with the note when there is one (the same
+        // optional shape as the document's extra); absent means the note carries no swing state.
+        if (n.contains("swingBase") && n["swingBase"].is_object()) x.extra[kSwingBase] = n["swingBase"];
         if (x.tick >= 0 && x.tick < row.lengthTicks) row.notes.push_back(x);
       }
     t.rows.push_back(row);
@@ -443,13 +457,23 @@ json rackTemplateToJson(const PatternTemplate& t) {
   json rows = json::array();
   for (const auto& r : t.rows) {
     json notes = json::array();
-    for (const auto& n : r.notes) notes.push_back({{"tick", n.tick}, {"length", n.length}, {"pitch", n.pitch}, {"velocity", n.velocity}});
+    for (const auto& n : r.notes) {
+      json note = {{"tick", n.tick}, {"length", n.length}, {"pitch", n.pitch}, {"velocity", n.velocity}};
+      // BUG-SWEEP-20: the roll goes with the note when there is one; a roll-less template stays byte-identical
+      // to the old form (the same optional shape the engine projection writes).
+      if (n.hasRoll) note["roll"] = {{"count", n.roll.count}, {"velocityFrom", n.roll.velocityFrom}, {"velocityTo", n.roll.velocityTo}};
+      // BUG-SWEEP-26 (ratified): the swing base record goes with the note when there is one; a swing-less
+      // template stays byte-identical to the old form.
+      if (n.extra.contains(kSwingBase) && n.extra[kSwingBase].is_object()) note["swingBase"] = n.extra[kSwingBase];
+      notes.push_back(note);
+    }
     rows.push_back({{"part", r.part}, {"name", r.name}, {"lengthTicks", r.lengthTicks}, {"notes", notes}});
   }
   json out = {{"format", "core-patterns"}, {"version", 1}, {"id", t.id}, {"name", t.name}, {"bars", t.bars}, {"rows", rows}};
   if (!t.style.empty()) out["style"] = t.style;
   if (!t.about.empty()) out["about"] = t.about;
   if (t.bpm > 0) out["bpm"] = t.bpm;
+  if (t.swing > 0) out["swing"] = t.swing;  // BUG-SWEEP-26 (ratified): the saved swing, absent when straight
   return out;
 }
 
@@ -474,7 +498,7 @@ std::vector<PatternTemplate> loadRackTemplates(const std::filesystem::path& fold
   return out;
 }
 
-PatternTemplate rackTemplateFromSlot(const Document& doc, const std::string& slotId, const std::string& name) {
+PatternTemplate rackTemplateFromSlot(const Document& doc, const std::string& slotId, const std::string& name, bool unswing) {
   const auto slots = rackSlots(doc);
   const PatternSlot* slot = findRackSlot(slots, slotId);
   if (!slot) throw DocumentError("patternSlots", "no pattern '" + slotId + "'");
@@ -484,14 +508,32 @@ PatternTemplate rackTemplateFromSlot(const Document& doc, const std::string& slo
   for (char ch : lower(name)) t.id += std::isalnum((unsigned char)ch) ? ch : '-';
   t.bpm = doc.bpm;
   t.bars = slot->bars;
+  t.swing = slot->swing;  // BUG-SWEEP-26 (ratified): the swing state goes with the template
   for (const auto& tr : doc.tracks) {
     const Pattern* p = rackPattern(doc, *slot, tr.id);
     if (!p || !playsPatterns(tr)) continue;
     PatternTemplateRow row{pcoreGuessPart(tr), tr.name, p->lengthTicks, p->notes};
-    for (auto& n : row.notes) { n.id.clear(); n.extra = json::object(); n.hasRoll = false; }
+    for (auto& n : row.notes) {
+      n.id.clear();
+      // BUG-SWEEP-26 (ratified): «preservar swing ao guardar» — the rendered (swung) ticks stay, AND the
+      // rackSwingBase record travels with them so load reconciles from the true base without double-swing.
+      // The rest of extra stays behind (it belongs to the song, not the reusable groove).
+      json extra = json::object();
+      if (n.extra.contains(kSwingBase) && n.extra[kSwingBase].is_object()) extra[kSwingBase] = n.extra[kSwingBase];
+      n.extra = std::move(extra);
+      // BUG-SWEEP-20: the roll stays with the note (the template schema carries it now); hasRoll/roll are kept.
+    }
     t.rows.push_back(row);
   }
   if (t.rows.empty()) throw DocumentError("rows", "the pattern has no tracks");
+  if (unswing) {
+    // The EXPLICIT export option (ratified: «unswing só em opção explícita de export»): render every note
+    // straight at its base (the records give the true base; the same move setRackSwing makes to 0).
+    const int64_t from = swingTicks(slot->swing);
+    for (auto& row : t.rows)
+      for (auto& n : row.notes) swingNote(n, row.lengthTicks, from, 0);
+    t.swing = 0;
+  }
   return t;
 }
 
@@ -558,6 +600,7 @@ int applyRackTemplate(Document& doc, const PCoreCatalog* c, const PatternTemplat
     const auto slots = rackSlots(doc);
     const PatternSlot* slot = findRackSlot(slots, slotId);
     const int64_t to = slot ? swingTicks(slot->swing) : 0;
+    const int64_t from = swingTicks(t.swing);  // BUG-SWEEP-26 (ratified): the swing the template was saved at
     const PCoreStyle* style = c ? c->style(t.style) : nullptr;
     const int64_t jitter = style ? (int64_t)std::lround(style->humanize * 24) : 0;
     for (const auto& [trackId, row] : rows) {
@@ -574,12 +617,15 @@ int applyRackTemplate(Document& doc, const PCoreCatalog* c, const PatternTemplat
       putNotes(p, notes);
       // The loaded notes play with the slot's swing, as rackWriteShape does after writing (BUG-SWEEP-26):
       // without this the slot says swung but the notes are straight, and the next setRackSwing is a no-op.
-      if (to > 0)
-        for (auto& n : p.notes) swingNote(n, p.lengthTicks, 0, to, jitter);
+      // Ratified adjust: reconcile FROM the template's saved swing (its rackSwingBase records give the true
+      // base), once — a round trip into the same swing is exact, never double-swung; a different swing moves
+      // the notes from the saved base to the slot's. Legacy templates (swing 0, no records) behave as before.
+      if (to > 0 || from > 0)
+        for (auto& n : p.notes) swingNote(n, p.lengthTicks, from, to, jitter);
     }
     return (int)rows.size();
   }
-  if (!c) throw DocumentError("template", "the P-Core catalogue is missing");
+  if (!c) throw DocumentError("template", "the Pattern Maker catalogue is missing");
   std::vector<PCoreTrackChoice> choices;
   std::map<std::string, std::string> patterns;
   for (const auto& tr : std::vector<Track>(doc.tracks)) {
@@ -590,7 +636,7 @@ int applyRackTemplate(Document& doc, const PCoreCatalog* c, const PatternTemplat
     patterns[tr.id] = p.id;
     choices.push_back({tr.id, part, ""});
   }
-  if (choices.empty()) throw DocumentError("template", "no track of the song has a part P-Core knows (kick, bass, hats...)");
+  if (choices.empty()) throw DocumentError("template", "no track of the song has a part Pattern Maker knows (kick, bass, hats...)");
   PCoreLayers l;
   l.style = t.style;
   l.align = "style";

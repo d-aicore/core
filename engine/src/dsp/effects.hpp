@@ -1,6 +1,5 @@
 // Insert effects: stereo, in place, per track and on the master. Plugins only since 2026-11-16 (graph.cpp PluginEffect).
 // Real-time safe like the instruments: buffers are allocated in the constructor, never in process().
-// Each effect has a version: a change that alters the sound gets a new number, old songs keep theirs.
 #pragma once
 #include <algorithm>
 #include <atomic>
@@ -64,20 +63,5 @@ protected:
   double sampleRate_;
   std::atomic<int> failure_{0};
 };
-
-// A parameter that is a switch or a choice (a mode, a type, on/off, a note value): it jumps to a new value,
-// never glides through the ones between.
-inline bool steppedKnob(std::string_view n) {
-  const auto ends = [&](std::string_view s) { return n.size() >= s.size() && n.substr(n.size() - s.size()) == s; };
-  if (n == "mode" || n == "pingPong" || n == "note" || n == "rate" || n == "pattern") return true;
-  if (n == "fxOnly" || n == "limiter" || n == "solo" || n == "delTime" || n == "modRate") return true;  // CORE FX
-  if (n == "autoGain") return true;                                                                       // CORE EQ
-  return n.size() > 3 && (ends("On") || ends("Type") || ends("Fit") || ends("Slope") || ends("Chan") || ends("Dyn"));
-}
-
-// bpm: the slowest tempo of the song (the delay sizes its buffer for it; its time is in beats, see setTempo).
-// version: the effect's version in the song (reverb 2 is level-matched; saturation 2 is oversampled;
-// limiter 2 holds the true peak).
-std::unique_ptr<Effect> makeEffect(const std::string& name, double sampleRate, double bpm, int version = 1);
 
 } // namespace core

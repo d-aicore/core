@@ -59,6 +59,12 @@ uint64_t Engine::publish(std::unique_ptr<Graph> graph) {
   graph->serial = serial;
   graph->publishedNs = nowNs();
   graph->setWatch(&fxWatch_);
+  // M5 re-arm: the fallback of a recovered stall is not for the Engine's whole life. Once the cooldown
+  // passed and the stall budget is not spent, the next graph plays on the live workers again.
+  if (pool_ && liveFallback_.load(std::memory_order_relaxed) &&
+      stats_.liveStalls.load(std::memory_order_relaxed) < kLiveRearmBudget &&
+      nowNs() - liveRecoveredNs_.load(std::memory_order_acquire) >= (uint64_t)(kLiveRearmCooldownS * 1e9))
+    liveFallback_.store(false, std::memory_order_relaxed);
   if (pool_ && !liveFallback_.load(std::memory_order_relaxed)) graph->useLiveWorkers(pool_.get(), kMaxLiveFrames);  // M5
   // If the audio thread has not taken the previous one yet, it never will: delete it here.
   delete pending_.exchange(graph.release());
@@ -189,11 +195,12 @@ void Engine::process(float* L, float* R, int frames) {
   stats_.frames.fetch_add(frames, std::memory_order_relaxed);
   const uint64_t startNs = nowNs();
   // M5: a worker that missed the deadline still holds a track. Until it is done nothing touches the graph
-  // (no swap, no notes, no render): silence. Then serial from here on.
+  // (no swap, no notes, no render): silence. Then serial until a publish re-arms the workers (see publish()).
   if (stalled_) {
     if (!pool_->idle()) { stats_.liveStallBlocks.fetch_add(1, std::memory_order_relaxed); return; }
     stalled_ = false;
     liveFallback_.store(true, std::memory_order_relaxed);
+    liveRecoveredNs_.store(nowNs(), std::memory_order_release);
     if (current_) current_->stopLiveWorkers();
   }
 

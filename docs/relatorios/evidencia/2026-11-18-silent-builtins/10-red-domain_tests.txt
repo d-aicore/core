@@ -1,0 +1,9 @@
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-builtins\tests\domain_tests.cpp:520: esperava excepcao: setTrackSample(d, id, index, s)
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-builtins\tests\domain_tests.cpp:521: d.findTrack(id)->instrument.kind == std::string("plugin"): medido builtin, esperado plugin
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-builtins\tests\domain_tests.cpp:522: d.findTrack(id)->instrument.plugin == pluginBefore
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-builtins\tests\domain_tests.cpp:523: d.findTrack(id)->instrument.samples.empty()
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-builtins\tests\domain_tests.cpp:546: d.findTrack(pid)->instrument.kind == std::string("plugin"): medido builtin, esperado plugin
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-builtins\tests\domain_tests.cpp:549: d.findTrack(nid)->instrument.kind == std::string("builtin"): medido none, esperado builtin
+FAIL BUG-SWEEP-10: assigning a sample never replaces a working plugin instrument with the removed sampler
+FAIL BUG-SWEEP-10: suggested samples keep a plugin role track's plugin (the bulk flow never replaces it)
+2 testes, 9 verificacoes, 6 falhas

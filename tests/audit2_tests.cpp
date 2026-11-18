@@ -1,7 +1,12 @@
 // Testes da segunda auditoria externa de 2026-11-16 (sweep por analise de codigo: IPC cliente-motor, sync do
 // documento, espaco em disco do export, autosave estragado). Cada teste repete o caso do relatorio.
+#include <algorithm>
+#include <atomic>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <mutex>
+#include <thread>
 #include "support/check.hpp"
 #include "autosave.hpp"
 #include "engine_protocol.hpp"
@@ -9,6 +14,7 @@
 #include "core/project.hpp"
 #include "core/render_job.hpp"
 #include "core/server.hpp"
+#include "io/wav.hpp"
 
 namespace fs = std::filesystem;
 using core::json;
@@ -205,6 +211,397 @@ TEST("dados D2: o autosave de um Core que morreu e oferecido mesmo que o id dele
   bool asked = false;
   CHECK(!autosaveWriterRunning(0, savedAt, own, [&](int64_t) { asked = true; return ProcessProbe{true, own, savedAt - 1}; }));
   CHECK(!asked);
+}
+
+// BUG-SWEEP-02 (export working-file ownership, sweep of 2026-11-18): the export wrote to a fixed
+// "<target>.part" opened with truncation, and its cleanup removed EVERY listed .part path. A successful
+// export consumed a preexisting partial export (a retained recovery file), and two engine processes
+// exporting the same target shared one working path. Each test below failed before the fix.
+namespace {
+fs::path exportPartDir(const std::string& name) {
+  const fs::path d = fs::temp_directory_path() / "core-audit2-exportpart" / name;
+  fs::remove_all(d);
+  fs::create_directories(d);
+  return d;
+}
+std::string readFileBytes(const fs::path& p) {
+  std::ifstream in(p, std::ios::binary);
+  return std::string(std::istreambuf_iterator<char>(in), {});
+}
+void seedPreciousPart(const std::string& target) {
+  std::ofstream(target + ".part", std::ios::binary) << "valuable previous partial export";
+}
+std::vector<std::string> partNamesIn(const fs::path& dir) {
+  std::vector<std::string> names;
+  for (const auto& e : fs::directory_iterator(dir))
+    if (e.is_regular_file() && e.path().extension() == ".part") names.push_back(e.path().filename().string());
+  std::sort(names.begin(), names.end());
+  return names;
+}
+core::json waitForJob(core::RenderJobs& jobs, uint64_t id) {
+  core::json status;
+  for (int i = 0; i < 10000; ++i) {
+    status = jobs.status(id);
+    const std::string s = status.value("state", "");
+    if (s == "succeeded" || s == "failed" || s == "cancelled") break;
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+  return status;
+}
+core::RenderJobRequest silentRequest(const std::string& target) {
+  core::RenderJobRequest r;
+  r.path = target;
+  r.project.lengthTicks = 960;
+  r.tailSeconds = 0;
+  return r;
+}
+}  // namespace
+
+TEST("BUG-SWEEP-02: a successful export never consumes a preexisting .part and cleans up only its own working file") {
+  const fs::path dir = exportPartDir("success");
+  const std::string target = (dir / "mix.wav").string();
+  seedPreciousPart(target);
+  core::RenderJobs jobs;
+  const uint64_t id = jobs.start(silentRequest(target))["jobId"].get<uint64_t>();
+  const core::json status = waitForJob(jobs, id);
+  CHECK_EQ(status.value("state", ""), std::string("succeeded"));
+  CHECK(fs::exists(target));
+  // The retained partial export survives byte-identical (before the fix it was truncated, then renamed away).
+  CHECK(fs::exists(target + ".part"));
+  CHECK_EQ(readFileBytes(target + ".part"), std::string("valuable previous partial export"));
+  // The published file is the export's own WAV, and only the preexisting .part remains in the folder.
+  CHECK_EQ(readFileBytes(target).substr(0, 4), std::string("RIFF"));
+  CHECK_EQ(partNamesIn(dir).size(), (size_t)1);
+}
+
+TEST("BUG-SWEEP-02: a failed or cancelled export keeps the preexisting .part and removes only its own working files") {
+  // A clip louder than 0 dBFS: the level check fails AFTER the working file was written and closed.
+  {
+    const fs::path dir = exportPartDir("failed-loud");
+    const std::string target = (dir / "mix.wav").string();
+    const std::vector<float> loud(24000, 2.0f);
+    core::writeWav((dir / "loud.wav").string(), loud, loud, 48000, 32);
+    seedPreciousPart(target);
+    core::RenderJobs jobs;
+    core::RenderJobRequest r = silentRequest(target);
+    core::Track t; t.id = "audio1"; t.instrument = "audio";
+    core::AudioClip c; c.path = (dir / "loud.wav").string(); c.durationSeconds = 0.5;
+    t.audioClips.push_back(c);
+    r.project.tracks.push_back(t);
+    r.assets = std::make_shared<core::AssetStore>();
+    const uint64_t id = jobs.start(r)["jobId"].get<uint64_t>();
+    const core::json status = waitForJob(jobs, id);
+    CHECK_EQ(status.value("state", ""), std::string("failed"));
+    CHECK(status.value("error", "").find("0 dBFS") != std::string::npos);
+    CHECK(!fs::exists(target));  // nothing published
+    CHECK(fs::exists(target + ".part"));
+    CHECK_EQ(readFileBytes(target + ".part"), std::string("valuable previous partial export"));
+    CHECK_EQ(partNamesIn(dir).size(), (size_t)1);  // the job's own working file was removed
+  }
+  // Audio that cannot be read: the job fails before any working file is reserved; the cleanup must still
+  // leave the retained .part alone (before the fix it removed every listed .part).
+  {
+    const fs::path dir = exportPartDir("failed-missing");
+    const std::string target = (dir / "mix.wav").string();
+    seedPreciousPart(target);
+    core::RenderJobs jobs;
+    core::RenderJobRequest r = silentRequest(target);
+    core::Track t; t.id = "audio1"; t.instrument = "audio";
+    core::AudioClip c; c.path = (dir / "gone.wav").string(); c.durationSeconds = 0.5;
+    t.audioClips.push_back(c);
+    r.project.tracks.push_back(t);
+    r.assets = std::make_shared<core::AssetStore>();
+    const uint64_t id = jobs.start(r)["jobId"].get<uint64_t>();
+    const core::json status = waitForJob(jobs, id);
+    CHECK_EQ(status.value("state", ""), std::string("failed"));
+    CHECK(status.value("error", "").find("Missing audio") != std::string::npos);
+    CHECK(!fs::exists(target));
+    CHECK(fs::exists(target + ".part"));
+    CHECK_EQ(readFileBytes(target + ".part"), std::string("valuable previous partial export"));
+    CHECK_EQ(partNamesIn(dir).size(), (size_t)1);
+  }
+  // Cancelled while the working files exist (the hook cancels at the publish decision point).
+  {
+    const fs::path dir = exportPartDir("cancelled");
+    const std::string target = (dir / "mix.wav").string();
+    seedPreciousPart(target);
+    core::RenderJobs jobs;
+    jobs.testHooks.beforePublish = [&](uint64_t jobId) { jobs.cancel(jobId); };
+    const uint64_t id = jobs.start(silentRequest(target))["jobId"].get<uint64_t>();
+    const core::json status = waitForJob(jobs, id);
+    CHECK_EQ(status.value("state", ""), std::string("cancelled"));
+    CHECK(!fs::exists(target));
+    CHECK(fs::exists(target + ".part"));
+    CHECK_EQ(readFileBytes(target + ".part"), std::string("valuable previous partial export"));
+    CHECK_EQ(partNamesIn(dir).size(), (size_t)1);
+  }
+}
+
+TEST("BUG-SWEEP-02: two concurrent exports of the same target never share a working path") {
+  const fs::path dir = exportPartDir("concurrent");
+  const std::string target = (dir / "mix.wav").string();
+  seedPreciousPart(target);
+  // Both workers meet inside beforePublish: each snapshots the folder while BOTH jobs hold their
+  // working files, so the census cannot miss them by timing.
+  std::atomic<int> arrived{0}, snapshotted{0};
+  std::vector<std::string> seenA, seenB;
+  const auto meet = [&] {
+    arrived.fetch_add(1);
+    for (int i = 0; i < 5000 && arrived.load() < 2; ++i) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  };
+  const auto leave = [&] {
+    snapshotted.fetch_add(1);
+    for (int i = 0; i < 5000 && snapshotted.load() < 2; ++i) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  };
+  core::RenderJobs jobsA, jobsB;
+  jobsA.testHooks.beforePublish = [&](uint64_t) { meet(); seenA = partNamesIn(dir); leave(); };
+  jobsB.testHooks.beforePublish = [&](uint64_t) { meet(); seenB = partNamesIn(dir); leave(); };
+  const uint64_t idA = jobsA.start(silentRequest(target))["jobId"].get<uint64_t>();
+  const uint64_t idB = jobsB.start(silentRequest(target))["jobId"].get<uint64_t>();
+  const core::json a = waitForJob(jobsA, idA), b = waitForJob(jobsB, idB);
+  // While both jobs held their working files, two DISTINCT names besides the retained .part existed.
+  const auto working = [](const std::vector<std::string>& seen) {
+    std::vector<std::string> w;
+    for (const auto& n : seen) if (n != "mix.wav.part") w.push_back(n);
+    return w;
+  };
+  CHECK(working(seenA).size() >= (size_t)2);
+  CHECK(working(seenB).size() >= (size_t)2);
+  // The retained partial export is untouched and the target was published (at least one job succeeded;
+  // two publishes of one target race by design, the last one in place wins).
+  CHECK(fs::exists(target + ".part"));
+  CHECK_EQ(readFileBytes(target + ".part"), std::string("valuable previous partial export"));
+  CHECK(fs::exists(target));
+  CHECK(a.value("state", "") == "succeeded" || b.value("state", "") == "succeeded");
+  CHECK_EQ(partNamesIn(dir).size(), (size_t)1);
+}
+
+TEST("BUG-SWEEP-02: working-file reservations are unique, exclusive and never truncate an existing candidate") {
+  const fs::path dir = exportPartDir("reserve");
+  const std::string target = (dir / "mix.wav").string();
+  const std::string a = core::reserveRenderWorkingFile(target);
+  const std::string b = core::reserveRenderWorkingFile(target);
+  CHECK(a != b);
+  CHECK(fs::exists(a));
+  CHECK(fs::exists(b));
+  CHECK(a != target + ".part");
+  CHECK(b != target + ".part");
+  CHECK_EQ(a.compare(0, target.size(), target), 0);
+  CHECK_EQ(a.substr(a.size() - 5), std::string(".part"));
+  // A candidate that already exists (a retained file) is never reused or truncated.
+  { std::ofstream(a, std::ios::binary) << "retained recovery bytes"; }
+  const std::string c = core::reserveRenderWorkingFile(target);
+  CHECK(c != a);
+  CHECK(c != b);
+  CHECK_EQ(readFileBytes(a), std::string("retained recovery bytes"));
+  // Many threads reserving for the SAME target in this process: no two share a path (the exclusive
+  // create plus the pid in the name give the same guarantee across processes).
+  std::mutex m;
+  std::vector<std::string> paths;
+  std::vector<std::thread> ts;
+  for (int t = 0; t < 8; ++t) ts.emplace_back([&] {
+    for (int i = 0; i < 25; ++i) {
+      const std::string p = core::reserveRenderWorkingFile(target);
+      std::lock_guard<std::mutex> g(m);
+      paths.push_back(p);
+    }
+  });
+  for (auto& th : ts) th.join();
+  CHECK_EQ(paths.size(), (size_t)200);
+  std::sort(paths.begin(), paths.end());
+  CHECK(std::adjacent_find(paths.begin(), paths.end()) == paths.end());
+  for (const auto& p : paths) CHECK(fs::exists(p));
+  // The reservations belong to the caller: removing them is the caller's cleanup, nothing else goes.
+  for (const auto& p : paths) fs::remove(p);
+  fs::remove(a);
+  fs::remove(b);
+  fs::remove(c);
+  CHECK_EQ(partNamesIn(dir).size(), (size_t)0);
+}
+
+// BUG-SWEEP-03 (2026-11-18): a failed export must keep every recoverable copy of the user's file and say so.
+// The old undo dropped the restore error: the original sat in a .previous backup nobody was told about, the
+// target was left missing, and the app still said "No existing file was changed." The injection: a directory
+// obstructs the target AFTER the original was moved aside, so both the placement and the restore fail.
+TEST("BUG-SWEEP-03: a failed publish keeps the previous file and names it in the error") {
+  const fs::path dir = fs::temp_directory_path() / "core-sweep03-publish";
+  fs::remove_all(dir);
+  fs::create_directories(dir);
+  const fs::path target = dir / "mix.wav";
+  { std::ofstream(target, std::ios::binary) << "THE USER'S OLD EXPORT"; }
+  { std::ofstream(target.string() + ".part", std::ios::binary) << "THE NEW EXPORT"; }
+  std::vector<core::RenderOutput> outputs{{target.string(), -1}};
+  int published = -1;
+  bool threw = false;
+  std::string message;
+  try {
+    core::publishRenderOutputs(outputs, published, [&] {
+      fs::remove(target);
+      fs::create_directory(target);  // the placement cannot rename over a folder, nor can the restore
+      throw std::runtime_error("synthetic placement failure");
+    });
+  } catch (const std::exception& e) { threw = true; message = e.what(); }
+  CHECK(threw);
+  CHECK_EQ(published, 0);            // no new file was left in place
+  CHECK(fs::is_directory(target));   // the obstruction stays: the restore could not put the file back
+  const fs::path backup = dir / "mix.wav.previous";
+  CHECK(fs::exists(backup));         // the original was kept, never deleted
+  {
+    std::ifstream in(backup, std::ios::binary);
+    const std::string bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    CHECK_EQ(bytes, std::string("THE USER'S OLD EXPORT"));
+  }
+  // The error must name the kept copy so the user can recover it (before the fix it said nothing about it).
+  CHECK(message.find("mix.wav.previous") != std::string::npos);
+  fs::remove_all(dir);
+}
+
+TEST("BUG-SWEEP-03: a failed export job reports the rollback and the kept backups") {
+  const fs::path dir = fs::temp_directory_path() / "core-sweep03-job";
+  fs::remove_all(dir);
+  fs::create_directories(dir);
+  const fs::path target = dir / "mix.wav";
+  { std::ofstream(target, std::ios::binary) << "THE USER'S OLD EXPORT"; }
+  core::RenderJobs jobs;
+  jobs.testHooks.beforePlace = [&](uint64_t) { fs::remove(target); fs::create_directory(target); };
+  core::RenderJobRequest req;
+  req.project.bpm = 120;
+  req.project.lengthTicks = 480;  // one beat of silence: a quick render
+  req.sampleRate = 48000;
+  req.bits = 24;
+  req.tailSeconds = 0;
+  req.path = target.string();
+  const json started = jobs.start(req);
+  const uint64_t id = started["jobId"].get<uint64_t>();
+  json st = started;
+  for (int i = 0; i < 300; ++i) {
+    st = jobs.status(id);
+    const std::string s = st.value("state", "");
+    if (s == "failed" || s == "succeeded" || s == "cancelled") break;
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+  }
+  CHECK_EQ(st.value("state", std::string()), std::string("failed"));
+  CHECK_EQ(st.value("published", 0), 0);
+  CHECK(fs::is_directory(target));
+  const fs::path backup = dir / "mix.wav.previous";
+  CHECK(fs::exists(backup));
+  {
+    std::ifstream in(backup, std::ios::binary);
+    const std::string bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    CHECK_EQ(bytes, std::string("THE USER'S OLD EXPORT"));
+  }
+  // The status must report the rollback outcome and the kept backup: the app conditions its message on them.
+  CHECK(st.value("rollbackAttempted", false));
+  CHECK(st.contains("backups") && st["backups"].is_array() && st["backups"].size() == 1);
+  if (st.contains("backups") && st["backups"].is_array() && st["backups"].size() == 1)
+    CHECK_EQ(st["backups"][0].get<std::string>(), target.string() + ".previous");
+  CHECK(st.contains("restored") && st["restored"].is_array() && st["restored"].empty());
+  CHECK(st.value("error", std::string()).find("mix.wav.previous") != std::string::npos);
+  fs::remove_all(dir);
+}
+
+TEST("BUG-SWEEP-03: a publish that can restore puts the old file back and reports it") {
+  const fs::path dir = fs::temp_directory_path() / "core-sweep03-restore";
+  fs::remove_all(dir);
+  fs::create_directories(dir);
+  const fs::path target = dir / "mix.wav";
+  { std::ofstream(target, std::ios::binary) << "THE USER'S OLD EXPORT"; }
+  core::RenderJobs jobs;
+  jobs.testHooks.beforePlace = [](uint64_t) { throw std::runtime_error("synthetic failure before placement"); };
+  core::RenderJobRequest req;
+  req.project.bpm = 120;
+  req.project.lengthTicks = 480;
+  req.sampleRate = 48000;
+  req.bits = 24;
+  req.tailSeconds = 0;
+  req.path = target.string();
+  const json started = jobs.start(req);
+  const uint64_t id = started["jobId"].get<uint64_t>();
+  json st = started;
+  for (int i = 0; i < 300; ++i) {
+    st = jobs.status(id);
+    const std::string s = st.value("state", "");
+    if (s == "failed" || s == "succeeded" || s == "cancelled") break;
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+  }
+  CHECK_EQ(st.value("state", std::string()), std::string("failed"));
+  CHECK_EQ(st.value("published", 0), 0);
+  CHECK(fs::is_regular_file(target));  // the original is back at its path, byte for byte
+  {
+    std::ifstream in(target, std::ios::binary);
+    const std::string bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    CHECK_EQ(bytes, std::string("THE USER'S OLD EXPORT"));
+  }
+  CHECK(!fs::exists(dir / "mix.wav.previous"));  // nothing stranded: the restore used the copy up
+  CHECK(st.value("rollbackAttempted", false));
+  CHECK(st.contains("backups") && st["backups"].is_array() && st["backups"].empty());
+  CHECK(st.contains("restored") && st["restored"].is_array() && st["restored"].size() == 1);
+  if (st.contains("restored") && st["restored"].is_array() && st["restored"].size() == 1)
+    CHECK_EQ(st["restored"][0].get<std::string>(), target.string());
+  // Nothing was kept aside, so the error must not invent a kept copy.
+  CHECK(st.value("error", std::string()).find(".previous") == std::string::npos);
+  fs::remove_all(dir);
+}
+
+TEST("BUG-SWEEP-03: the rollback report names what was restored and what was kept") {
+  const fs::path dir = fs::temp_directory_path() / "core-sweep03-mixed";
+  fs::remove_all(dir);
+  fs::create_directories(dir);
+  const fs::path mix = dir / "mix.wav", stem = dir / "stem.wav";
+  { std::ofstream(mix, std::ios::binary) << "OLD MIX"; }
+  { std::ofstream(stem, std::ios::binary) << "OLD STEM"; }
+  { std::ofstream(mix.string() + ".part", std::ios::binary) << "NEW MIX"; }
+  { std::ofstream(stem.string() + ".part", std::ios::binary) << "NEW STEM"; }
+  const std::vector<core::RenderOutput> outputs{{mix.string(), -1}, {stem.string(), 0}};
+  core::PublishRollback rb;
+  int published = -1;
+  bool threw = false;
+  try {
+    core::publishRenderOutputs(outputs, published, [&] { fs::create_directory(stem); }, {}, &rb);
+  } catch (const std::exception&) { threw = true; }
+  CHECK(threw);
+  CHECK_EQ(published, 0);
+  CHECK(rb.attempted);
+  // The first file went back to its path; the second's old copy stayed aside, named for recovery.
+  CHECK_EQ(rb.restored.size(), (size_t)1);
+  if (rb.restored.size() == 1) CHECK_EQ(rb.restored[0], mix.string());
+  CHECK_EQ(rb.backups.size(), (size_t)1);
+  if (rb.backups.size() == 1) CHECK_EQ(rb.backups[0], stem.string() + ".previous");
+  {
+    std::ifstream in(mix, std::ios::binary);
+    const std::string bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    CHECK_EQ(bytes, std::string("OLD MIX"));
+  }
+  {
+    std::ifstream in(stem.string() + ".previous", std::ios::binary);
+    const std::string bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    CHECK_EQ(bytes, std::string("OLD STEM"));
+  }
+  fs::remove_all(dir);
+}
+
+TEST("BUG-SWEEP-03: a successful publish reports no rollback and takes the new files") {
+  const fs::path dir = fs::temp_directory_path() / "core-sweep03-success";
+  fs::remove_all(dir);
+  fs::create_directories(dir);
+  const fs::path target = dir / "mix.wav";
+  { std::ofstream(target, std::ios::binary) << "OLD MIX"; }
+  { std::ofstream(target.string() + ".part", std::ios::binary) << "NEW MIX"; }
+  const std::vector<core::RenderOutput> outputs{{target.string(), -1}};
+  core::PublishRollback rb;
+  int published = -1;
+  core::publishRenderOutputs(outputs, published, {}, {}, &rb);
+  CHECK_EQ(published, 1);
+  CHECK(!rb.attempted);
+  CHECK(rb.restored.empty());
+  CHECK(rb.backups.empty());
+  CHECK(!fs::exists(target.string() + ".previous"));  // success: the old copy is used up, not stranded
+  {
+    std::ifstream in(target, std::ios::binary);
+    const std::string bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    CHECK_EQ(bytes, std::string("NEW MIX"));
+  }
+  fs::remove_all(dir);
 }
 
 CORE_TEST_MAIN

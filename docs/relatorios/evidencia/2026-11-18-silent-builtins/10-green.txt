@@ -1,0 +1,8 @@
+=== domain_tests BUG-SWEEP-10 (green) ===
+ok   BUG-SWEEP-10: assigning a sample never replaces a working plugin instrument with the removed sampler
+ok   BUG-SWEEP-10: suggested samples keep a plugin role track's plugin (the bulk flow never replaces it)
+2 testes, 9 verificacoes, 0 falhas
+=== domain_tests full ===
+33 testes, 575 verificacoes, 0 falhas
+=== merge suite ===
+100% tests passed out of 20

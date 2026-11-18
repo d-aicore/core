@@ -14,14 +14,13 @@
 // A proposal: {"id": "...", "summary": "...", "calls": [{"fn": "rack:buildup/roll", "on": "Acid lead"},
 //   {"fn": "sample", "on": "Kick", "sample": "s:1a2b3c4d5e"}]}
 //
-// The functions today: Core's built-in effects ("fx:<name>", their real ranges, and "preset": one of their presets),
-// the Style FX ("rack:<id>": Core's own devices with their presets), "sample" (a library sample
-// on a track), "set" (the knobs or a preset of an effect already on a track or the master: settings and mastering),
-// "mix" (a track's volume and pan, the master's volume) and "open" (opens a track's effects, its instrument, or one
-// effect's window, after Apply), and Core's own plugins: "wcore" (W-Core · Synth: preset, mood, knobs), "fcore"
-// (F-Core · FX: intent, style, mode, knobs, preset) and "rcore"/"dcore" (a shared reverb or echo place by preset). Each
-// changes the one already on the track when there is one. P-Core · Patterns and S-Core · Stages join the same list
-// through the same signature: nothing per plugin. Core has no VST (2026-11-08).
+// The functions today (Core's own sound left on 2026-11-16, the legacy module titles on 2026-11-18): STUTTER and
+// VOICE STUTTER (the track's notes / audio clips become repeats, by recipe), "mix" (a track's volume and pan, the
+// master's volume) and "open" (after Apply, opens a window: the track's instrument, the Patterns window, the mixer,
+// the score, or an effect's window). The old module ids stay as lookup aliases of "open": "pcore"/"stutter" open
+// the Patterns window (Pattern Maker), "wcore" the track's instrument window, "stage" the score. The tool-only ids
+// ("fcore", "rcore", "dcore") have no window of their own: they are the Tools panel's menus, and "open" refuses
+// them with the reason. The song's legacy data (a "fcore" tag, an old bus name) still loads; it is not a function.
 #pragma once
 #include <functional>
 #include <map>
@@ -55,13 +54,13 @@ struct CoreFunction {
   std::vector<std::string> tags;
   std::vector<FunctionArg> args;
   bool instrument = false;  // replaces the track's instrument (a bass Style FX)
-  bool rises = false;       // rises over a section (F-Core): "section" makes the rise
+  bool rises = false;       // rises over a section (the old intent FX): "section" makes the rise
   bool native = false;      // a Style FX: Core's own devices with their presets (no macros)
   bool available = true;
   std::string unavailable;  // why not
   std::vector<std::string> presets;  // an effect's presets by name ("preset" in a call); "set" takes any effect's
   std::map<std::string, std::vector<std::string>> options;  // text choices ("intent", "style", "mode", "mood"): the allowed values
-  json extra = json::object();       // written as is into the function's state (preset details, F-Core's presets by intent)
+  json extra = json::object();       // written as is into the function's state (preset details, the old intent-FX presets)
 
   const FunctionArg* findArg(const std::string& id) const;
 };
