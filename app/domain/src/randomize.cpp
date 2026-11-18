@@ -4,6 +4,7 @@
 #include <map>
 #include <set>
 #include "edit.hpp"
+#include "pattern_rack.hpp"
 #include "samples.hpp"
 
 namespace core::doc {
@@ -749,8 +750,14 @@ std::vector<std::string> randomizeStyle(Document& doc, const RandomizeOptions& o
       changes.push_back(line);
     }
   }
+  // The Patterns window's slots reference the tracks' own patterns; an unarranged idea is work even with no clip
+  // on the timeline (BUG-SWEEP-29). Every rack reference survives the cleanup, on every axis that prunes.
+  std::map<std::string, std::set<std::string>> rackRefs;
+  if (grooveOn || tempoOn)
+    for (const auto& slot : rackSlots(doc))
+      for (const auto& [trackId, patternId] : slot.tracks) rackRefs[trackId].insert(patternId);
   for (const char* id : parts)
-    if (Track* t = (grooveOn || tempoOn) ? findTrack(doc, id) : nullptr) removeUnusedPatterns(*t);
+    if (Track* t = (grooveOn || tempoOn) ? findTrack(doc, id) : nullptr) removeUnusedPatterns(*t, rackRefs[t->id]);
   // K: the built-in kick, bass and hats get new values inside the style. Plugin tracks keep their patch.
   json sound = json::object();
   if (soundOn) {
