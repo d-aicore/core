@@ -8,6 +8,7 @@
 #include "assets.hpp"
 #include "edit.hpp"
 #include "follow.hpp"
+#include "pattern_rack.hpp"
 #include "pattern_tools.hpp"
 #include "pcore.hpp"
 #include "samples.hpp"
@@ -539,6 +540,128 @@ TEST("duplicar uma seccao copia tambem as mudancas de tempo que ha dentro dela")
   for (const auto& s : d.sections) if (s.id == dup) moved = &s;
   CHECK(moved != nullptr);
   if (moved) CHECK_EQ(moved->startTick, 4 * kBar);
+}
+
+// ---------------------------------------------------------------- BUG-SWEEP-26 (2026-11-18)
+// applyRackTemplate wrote the template's notes without the slot's swing: a slot at swing 0.5 played the loaded
+// template straight, and the next setRackSwing was a no-op (its stale "from" put the notes off the 1/16 grid,
+// which swingNote refuses). rackWriteShape already re-applies the slot swing after writing; Load Template must too.
+
+TEST("sweep-26: a template loaded into a swung slot plays swung and the next swing change works") {
+  Document d = newEmptyDocument();
+  const std::string bass = addTrack(d, "bass");
+  setRackSwing(d, "s1", 0.5);  // the default slot, saved with swing 0.5
+  PatternTemplate t;
+  t.id = "tpl";
+  t.name = "Tpl";
+  t.bars = 4;
+  PatternTemplateRow row;
+  row.part = "bass";
+  row.name = "Bass line";
+  row.lengthTicks = 4 * kBar;
+  Note n;
+  n.tick = 240;  // an odd 1/16: at swing 0.5 it plays at 240 + 60
+  n.length = 120;
+  n.pitch = 36;
+  n.velocity = 0.8;
+  row.notes.push_back(n);
+  t.rows.push_back(row);
+  CHECK_EQ(applyRackTemplate(d, nullptr, t, "s1"), 1);
+  const auto slots = rackSlots(d);
+  const PatternSlot* slot = findRackSlot(slots, "s1");
+  CHECK(slot != nullptr);
+  if (!slot) return;
+  const Pattern* p = rackPattern(d, *slot, bass);
+  CHECK(p != nullptr);
+  if (!p) return;
+  CHECK_EQ(p->notes.size(), (size_t)1);
+  if (p->notes.empty()) return;
+  CHECK_EQ(p->notes[0].tick, (int64_t)300);  // before: 240, the slot's swing was not applied to the loaded notes
+  CHECK(p->notes[0].extra.contains("rackSwingBase"));
+  setRackSwing(d, "s1", 0.75);
+  const auto after = rackSlots(d);
+  const PatternSlot* slot2 = findRackSlot(after, "s1");
+  CHECK(slot2 != nullptr);
+  if (!slot2) return;
+  const Pattern* q = rackPattern(d, *slot2, bass);
+  CHECK(q != nullptr);
+  if (!q || q->notes.empty()) return;
+  CHECK_EQ(q->notes[0].tick, (int64_t)330);  // before: 240, the stale from=60 made swingNote skip the note
+}
+
+TEST("sweep-26 control: swing back to zero then 0.75 lands at 330") {
+  Document d = newEmptyDocument();
+  const std::string bass = addTrack(d, "bass");
+  setRackSwing(d, "s1", 0.5);
+  PatternTemplate t;
+  t.id = "tpl";
+  t.name = "Tpl";
+  t.bars = 4;
+  PatternTemplateRow row;
+  row.part = "bass";
+  row.name = "Bass line";
+  row.lengthTicks = 4 * kBar;
+  Note n;
+  n.tick = 240;
+  n.length = 120;
+  n.pitch = 36;
+  row.notes.push_back(n);
+  t.rows.push_back(row);
+  CHECK_EQ(applyRackTemplate(d, nullptr, t, "s1"), 1);
+  setRackSwing(d, "s1", 0.0);
+  const auto zeroed = rackSlots(d);
+  const PatternSlot* slot = findRackSlot(zeroed, "s1");
+  CHECK(slot != nullptr);
+  if (!slot) return;
+  const Pattern* p = rackPattern(d, *slot, bass);
+  CHECK(p != nullptr);
+  if (!p || p->notes.empty()) return;
+  CHECK_EQ(p->notes[0].tick, (int64_t)240);  // the unswung position, the swing record gone
+  CHECK(!p->notes[0].extra.contains("rackSwingBase"));
+  setRackSwing(d, "s1", 0.75);
+  const auto swung = rackSlots(d);
+  const PatternSlot* slot2 = findRackSlot(swung, "s1");
+  CHECK(slot2 != nullptr);
+  if (!slot2) return;
+  const Pattern* q = rackPattern(d, *slot2, bass);
+  CHECK(q != nullptr);
+  if (!q || q->notes.empty()) return;
+  CHECK_EQ(q->notes[0].tick, (int64_t)330);  // 240 + swingTicks(0.75) = 240 + 90
+}
+
+TEST("sweep-26 builtin: a P-Core style loaded into a swung slot keeps the swing") {
+  const fs::path catalogue = fs::path(__FILE__).parent_path().parent_path() / "pcore" / "styles.json";
+  const PCoreCatalog c = loadPCoreCatalog(catalogue);
+  const PCoreStyle* style = c.style("fullon");
+  CHECK(style != nullptr);
+  if (!style) return;
+  const int64_t jitter = (int64_t)std::lround(style->humanize * 24);  // the style's humanize, as rackWriteShape uses
+  Document d = newEmptyDocument();
+  const std::string bass = addTrack(d, "bass");
+  setRackSwing(d, "s1", 0.5);
+  PatternTemplate t;
+  t.id = "style-fullon";
+  t.name = "Full-on";
+  t.style = "fullon";
+  t.bars = 4;
+  t.builtin = true;
+  CHECK_EQ(applyRackTemplate(d, &c, t, "s1", 7), 1);
+  const auto slots = rackSlots(d);
+  const PatternSlot* slot = findRackSlot(slots, "s1");
+  CHECK(slot != nullptr);
+  if (!slot) return;
+  const Pattern* p = rackPattern(d, *slot, bass);
+  CHECK(p != nullptr);
+  if (!p) return;
+  CHECK(!p->notes.empty());
+  bool swung = false;
+  for (const auto& note : p->notes) {
+    const int64_t base = note.tick - 60;  // swingTicks(0.5)
+    const int64_t grid = (base + 120) / 240 * 240;
+    const int64_t diff = base > grid ? base - grid : grid - base;
+    if (grid > 0 && (grid / 240) % 2 == 1 && diff <= jitter && note.extra.contains("rackSwingBase")) swung = true;
+  }
+  CHECK(swung);  // before: the style wrote straight notes, none delayed by the slot's swing
 }
 
 CORE_TEST_MAIN
