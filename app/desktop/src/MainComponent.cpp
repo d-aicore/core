@@ -8132,22 +8132,29 @@ void MainComponent::selfTestStep() {
         const auto fine = juce::ModifierKeys(juce::ModifierKeys::altModifier | juce::ModifierKeys::ctrlModifier);
         ed.mouseWheelMove(mouse(ed.cellGrabPoint(notes()[0].tick, notes()[0].pitch), ed.cellGrabPoint(notes()[0].tick, notes()[0].pitch), fine), up);
         if (std::abs(notes()[0].velocity - (v0 + 0.06)) > 1e-9) return finish(false, "ctrl alt fine velocity");
-        // 7. Shift+wheel expands the key range (Keys+): a key far above the view comes into it. Ctrl+wheel is the
-        // time zoom now, so it must leave the key count alone; that notch is zoomed straight back out so the steps
-        // that follow keep the same view.
+        // 7. Shift+wheel expands the key range (Keys+): a key far above the view comes into it, up to all 128.
+        // Ctrl+wheel is the time zoom now, so it must leave the key count alone; that notch is zoomed straight back
+        // out so the steps that follow keep the same view.
         if (ed.cellGrabPoint(0, 100).y != 0) return finish(false, "keys view precondition");
         const int keysBeforeCtrl = ed.keysShown();
-        auto zoomBack = up;
-        zoomBack.deltaY = -up.deltaY;
+        auto wheelDown = up;
+        wheelDown.deltaY = -up.deltaY;
         ed.mouseWheelMove(mouse(a, a, ctrl), up);
         if (ed.keysShown() != keysBeforeCtrl) return finish(false, "ctrl wheel changed the key range");
-        ed.mouseWheelMove(mouse(a, a, ctrl), zoomBack);
-        for (int i = 0; i < 20; ++i) ed.mouseWheelMove(mouse(a, a, shift), up);
-        if (ed.cellGrabPoint(0, 100).y <= 0) {
+        ed.mouseWheelMove(mouse(a, a, ctrl), wheelDown);
+        // Enough notches for the narrowest view: 4 keys each, from the fitted range up to all 128.
+        for (int i = 0; i < 40; ++i) ed.mouseWheelMove(mouse(a, a, shift), up);
+        if (ed.cellGrabPoint(0, 100).y <= 0 || ed.keysShown() != 128) {
           juce::String ys;
           for (int p : {0, 23, 50, 90, 95, 99, 100, 105, 115, 127}) ys += juce::String(p) + ":" + juce::String(ed.cellGrabPoint(0, p).y) + " ";
           return finish(false, "shift wheel keys+ keys=" + juce::String(ed.keysShown()) + " " + ys);
         }
+        // Both ways: Shift+wheel down shrinks the range again (taller rows), and back up to the full view, so the
+        // steps that follow start from the same 128-key view the check above proved.
+        for (int i = 0; i < 3; ++i) ed.mouseWheelMove(mouse(a, a, shift), wheelDown);
+        if (ed.keysShown() >= 128) return finish(false, "shift wheel keys- did not shrink the range: " + juce::String(ed.keysShown()));
+        for (int i = 0; i < 3; ++i) ed.mouseWheelMove(mouse(a, a, shift), up);
+        if (ed.keysShown() != 128) return finish(false, "shift wheel keys+ did not return to 128: " + juce::String(ed.keysShown()));
         ed.deleteSelection();
         next("piano gestures");
       }
