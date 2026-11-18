@@ -27,6 +27,8 @@ uses the old built-in instruments is silent by construction, not by a bug.
 | Data: a half-failed ReplaceFileW … (D4) | A partial replace no longer loses the new version |
 | Data: an unreadable sample index … (D5) | The sample index is set aside, manual corrections are salvaged |
 | Gate: Ninja records header dependencies again | Incremental gates were false-green after header changes |
+| Engine: a plugin that crashed in processBlock no longer hangs the engine | A crashed instance is leaked on purpose and never called again; the song keeps playing |
+| Protocol: plugin states above 8 MB no longer end the engine | Limit raised to 256 MB; an oversized answer fails that command only |
 
 Not verified in the running app: none of the D1–D5 dialogs or flows were exercised in the GUI; they are proven by
 domain tests only. The desktop self-test (`ci\gate.ps1 -Desktop`) was not run.
@@ -42,15 +44,18 @@ which stay verbatim. Line numbers refer to e7968c8 and have drifted since.
 
 ## Next work, in the owner's order (data > real time > performance > compatibility)
 
-1. **Engine hangs forever after a plugin crash** (both engine maps, mechanism measured). `juce_host.cpp:64-67`
-   catches the crash with SEH; under `/EHsc` JUCE's process lock stays held, and destroying the instance
-   (`juce_host.cpp:101-106`) spins the message thread forever. Minimal fix: when the processor failed by a crash,
-   leak it (no `releaseResources`, no `delete`); guard `showEditor`/`parameters`/`setParameter`; offer Restart after
-   repeated timeouts. Red test: a `CORE_TEST_CRASH` variant in `app/selftest-plugins` (access violation in
-   `process`), then `core-engine render` must end and `plugins.states` must answer.
-2. **8 MB message limit vs plugin states** (`server.hpp:60`, `document.cpp:757`): measured, 27 Vital tracks exceed
-   it and Save/Export kills the engine. Fix at the root: do not resend state the live instance already has; ask for
-   states per key.
+1. **Plugin crash, follow-ups** (the hang itself is fixed and tested: `tests/engine_process_tests.cpp`,
+   `tests/cli_plugin_crash_render.cmake`, test plugin `CORE_TEST_CRASH`). Still open: the app offers no Restart
+   after repeated engine timeouts (`MainComponent.cpp:6298` shows it only when stopped or without a device); only
+   `createEditorIfNeeded` is guarded when a plugin window opens, the rest of the window's life is not; a crash
+   outside `processBlock` (state, reset, editor) uses the same leak path but has no test; a crashed plugin with an
+   open editor that asks for `restartComponent` may still reach JUCE's process lock on the message thread.
+2. **Plugin state travels with every edit** (`document.cpp:757`): the 8 MB limit that killed the engine is now
+   256 MB, but the root is still there — measured 157 ms per edit with 32 tracks. Fix at the root: the projection
+   sends `stateId` only, `project.load` answers which keys need state, `plugins.states` takes a list of keys, the
+   export reads state from the live instance (`server.cpp`, `juce_host.cpp`, `EngineSession.cpp`,
+   `render_job.cpp`; review `history.cpp` at the same time). Not verified: Save and Export in the app with real
+   plugins above 8 MB.
 3. **Plugin state is lost** — data-loss map items 2, 3, 7, 8: the autosave applies fetched states to a copy only
    (`MainComponent.cpp:6384-6387`); remove/replace/duplicate track and sample-on-track do not fetch state first;
    non-parameter changes do not mark the song dirty (`juce_host.cpp:85`, `:195` ignore `audioProcessorChanged`);
