@@ -2,6 +2,7 @@
 #include <atomic>
 #include <fstream>
 #include <sstream>
+#include "sha256.hpp"
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
@@ -136,5 +137,24 @@ void saveFile(const Document& document, const fs::path& path) {
 }
 
 std::string readTextFile(const fs::path& path) { return readAll(path); }
+
+FileStamp fileStamp(const fs::path& path) {
+  FileStamp stamp;
+  std::error_code e;
+  if (path.empty() || !fs::exists(path, e) || e) return stamp;
+  stamp.exists = true;
+  stamp.size = fs::file_size(path, e);
+  if (e) stamp.size = 0;
+  try { stamp.sha256 = sha256File(path); } catch (const std::exception&) { stamp.sha256.clear(); }
+  return stamp;
+}
+
+DiskChange diskChange(const FileStamp& known, const fs::path& path) {
+  const FileStamp now = fileStamp(path);
+  if (!now.exists) return DiskChange::Gone;
+  if (!known.exists) return DiskChange::Changed;  // somebody made a file where this window knew none
+  if (known.sha256.empty() || now.sha256.empty()) return DiskChange::Changed;  // not read: not known to be the same
+  return now.size == known.size && now.sha256 == known.sha256 ? DiskChange::Same : DiskChange::Changed;
+}
 
 } // namespace core::doc

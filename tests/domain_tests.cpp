@@ -1,4 +1,5 @@
 // Testes do dominio (core_domain): o documento da app, guardar/reabrir, undo/redo, templates e a projeccao para o motor.
+#include <chrono>
 #include <filesystem>
 #include "support/check.hpp"
 #include "core/project.hpp"
@@ -57,6 +58,70 @@ TEST("guardar/reabrir: ficheiro estragado da erro e nao apaga nada") {
   { std::FILE* f = std::fopen(file.string().c_str(), "wb"); std::fputs("{ isto nao e json", f); std::fclose(f); }
   CHECK_THROWS(openFile(file));
   CHECK(fs::exists(file));
+}
+
+// Perda de dados (2026-11-18), D3: o Core deixa abrir varias janelas e o Save gravava por cima do ficheiro sem ver
+// se outra janela (ou outro programa) o tinha escrito entretanto; com uma so geracao de .bak, a segunda gravacao
+// apagava de vez o trabalho da outra. A janela guarda o carimbo do ficheiro quando o abre e depois de cada gravacao
+// (fileStamp) e o Save pergunta a diskChange() antes de escrever.
+TEST("dados D3: o Save ve que o ficheiro mudou em disco desde que esta janela o abriu ou gravou") {
+  const fs::path file = tempDir() / ("d3-outra-janela" + std::string(kFileExtension));
+  fs::remove(file);
+  fs::remove(backupPath(file));
+  Document d = newTemplateDocument();
+  d.name = "Janela 1";
+  saveFile(d, file);
+  const FileStamp mine = fileStamp(file);  // o que esta janela guarda depois de gravar (ou de abrir)
+  CHECK(mine.exists);
+  CHECK_EQ(mine.size, fs::file_size(file));
+  CHECK_EQ(mine.sha256.size(), (size_t)64);
+
+  // Ninguem lhe mexeu: igual, o Save grava sem perguntar.
+  CHECK(diskChange(mine, file) == DiskChange::Same);
+
+  // Outra janela gravou outra versao (outro conteudo, outro tamanho): mudou, o Save tem de perguntar.
+  Document other = d;
+  other.name = "Janela 2, com mais trabalho";
+  other.bpm = 190;
+  saveFile(other, file);
+  CHECK(fs::file_size(file) != mine.size);
+  CHECK(diskChange(mine, file) == DiskChange::Changed);
+
+  // O mesmo tamanho, outro conteudo, e a data de modificacao reposta: e o conteudo que decide.
+  saveFile(d, file);
+  CHECK(diskChange(mine, file) == DiskChange::Same);  // (o mesmo conteudo outra vez: nada a perder, nao pergunta)
+  const auto time = fs::last_write_time(file);
+  std::string text = readTextFile(file);
+  const size_t at = text.find("Janela 1");
+  CHECK(at != std::string::npos);
+  if (at != std::string::npos) text[at + 7] = '9';
+  { std::FILE* f = std::fopen(file.string().c_str(), "wb"); std::fwrite(text.data(), 1, text.size(), f); std::fclose(f); }
+  fs::last_write_time(file, time);
+  CHECK_EQ(fs::file_size(file), mine.size);
+  CHECK(diskChange(mine, file) == DiskChange::Changed);
+
+  // So a data mudou (uma copia, um antivirus, uma sincronizacao que lhe tocou): igual.
+  saveFile(d, file);
+  fs::last_write_time(file, time + std::chrono::hours(1));
+  CHECK(diskChange(mine, file) == DiskChange::Same);
+
+  // Apagado por fora: nao ha nada para gravar por cima. O mais seguro e o Save voltar a cria-lo sem perguntar (a
+  // cancao desta janela passa a ser a unica copia); por isso "Gone" e um estado a parte, nao "Changed".
+  fs::remove(file);
+  CHECK(diskChange(mine, file) == DiskChange::Gone);
+  saveFile(d, file);
+  CHECK(canon(openFile(file).document) == canon(d));
+  CHECK(diskChange(fileStamp(file), file) == DiskChange::Same);
+
+  // Um ficheiro que aparece onde esta janela nao conhecia nenhum (p.ex. uma cancao recuperada de um autosave cujo
+  // ficheiro nao existia): e de outro, pergunta-se.
+  const fs::path fresh = tempDir() / ("d3-nao-existia" + std::string(kFileExtension));
+  fs::remove(fresh);
+  const FileStamp none = fileStamp(fresh);
+  CHECK(!none.exists);
+  CHECK(diskChange(none, fresh) == DiskChange::Gone);
+  saveFile(other, fresh);
+  CHECK(diskChange(none, fresh) == DiskChange::Changed);
 }
 
 TEST("undo/redo: adicionar e remover pistas volta exactamente atras") {

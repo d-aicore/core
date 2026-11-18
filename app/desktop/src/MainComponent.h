@@ -32,6 +32,7 @@
 #include "samples.hpp"
 #include "Autosave.h"
 #include "autosave.hpp"
+#include "storage.hpp"
 
 #include "bridge.hpp"
 #include "calls.hpp"
@@ -373,6 +374,9 @@ private:
   SessionSnapshot snap_;
   juce::String loadProblem_, notice_;
   juce::File file_;
+  // What file_ was on disk when this window opened it or last saved it: Save asks before writing over a file that
+  // another window of Core (or another program) wrote meanwhile (doc::diskChange).
+  doc::FileStamp fileStamp_;
   bool imported_ = true;  // the demo: "Save" asks for a name
   std::unique_ptr<juce::FileChooser> chooser_;
 

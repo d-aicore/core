@@ -3850,6 +3850,7 @@ MainComponent::SaveResult MainComponent::writeTo(const juce::File& target) {
     return SaveResult::Failed;
   }
   file_ = target;
+  fileStamp_ = doc::fileStamp(pathOf(target));  // what this window wrote: the next Save compares the disk with it
   imported_ = false;
   history_.markSaved();
   // Without the plugins' answer the file has their settings from the last save: what they hold now is still
@@ -3869,6 +3870,22 @@ MainComponent::SaveResult MainComponent::writeTo(const juce::File& target) {
 
 void MainComponent::save(bool chooseName, std::function<void(SaveResult)> then) {
   if (!chooseName && !imported_ && file_ != juce::File()) {
+    // Core may run in several windows, and only one .bak is kept: a file that another window (or another program)
+    // wrote since this one opened or saved it is never replaced without asking (2026-11-18, D3). A file that is
+    // gone is simply written again.
+    if (doc::diskChange(fileStamp_, pathOf(file_)) == doc::DiskChange::Changed) {
+      ChoiceDialog::show(*this, u8("The file changed on disk"),
+          lang::tr("\"{}\" was written by another window of Core or another program since this window opened or saved it.\n\n"
+                   "Overwrite replaces it with this window's song (the version on disk stays as the .bak backup). "
+                   "Save as… keeps both.").replace("{}", file_.getFileName()),
+          {{u8("Cancel"), 0}, {u8("Overwrite"), 2}, {u8("Save as…"), 1, true}}, 0,
+          [this, then](int result) {
+            if (result == 1) return save(true, then);
+            const SaveResult r = result == 2 ? writeTo(file_) : SaveResult::Failed;  // Cancel: nothing was written
+            if (then) then(r);
+          });
+      return;
+    }
     const SaveResult r = writeTo(file_);
     if (then) then(r);
     return;
@@ -3894,6 +3911,8 @@ void MainComponent::open() {
       const juce::File f = fc.getResult();
       if (f == juce::File()) return;
       try {
+        // Taken before the file is read: a write in between then shows as a change at the next Save, never as "the same".
+        const doc::FileStamp stamp = doc::fileStamp(pathOf(f));
         doc::OpenResult r = doc::openFile(pathOf(f));
         logLine((r.imported ? "Imported " : "Opened ") + f.getFullPathName());
         // Samples whose library file moved are found again by content: the song then has unsaved changes.
@@ -3904,6 +3923,7 @@ void MainComponent::open() {
         selectedTrack_.clear();
         selectedClip_.clear();
         file_ = r.imported ? juce::File() : f;
+        fileStamp_ = r.imported ? doc::FileStamp() : stamp;
         imported_ = r.imported;
         loadProblem_.clear();
         viewStart_ = viewLength_ = 0;
@@ -3936,6 +3956,7 @@ void MainComponent::newFromDocument(doc::Document fresh, std::function<void()> t
     selectedTrack_.clear();
     selectedClip_.clear();
     file_ = juce::File();
+    fileStamp_ = {};
     imported_ = true;  // never saved: Save asks for a name
     loadProblem_.clear();
     viewStart_ = viewLength_ = 0;
@@ -6498,6 +6519,8 @@ void MainComponent::recoverAutosave(const doc::AutosaveInfo& a, const doc::Docum
   selectedClip_.clear();
   const juce::File song = a.songPath.empty() ? juce::File() : juce::File(u8(a.songPath));
   file_ = song;
+  // The song's file as it is now (the autosave is of a session that is gone): Save asks only if it changes from here on.
+  fileStamp_ = song == juce::File() ? doc::FileStamp() : doc::fileStamp(pathOf(song));
   imported_ = song == juce::File();  // never saved: Save asks for a name
   loadProblem_.clear();
   viewStart_ = viewLength_ = 0;

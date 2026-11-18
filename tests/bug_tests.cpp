@@ -194,6 +194,17 @@ TEST("dados D1: o texto da pergunta do Remove unused tem traducao") {
   }
 }
 
+// D3 (o teste da decisao esta em domain_tests.cpp): a pergunta do Save quando o ficheiro mudou em disco.
+TEST("dados D3: a pergunta 'o ficheiro mudou em disco' tem traducao") {
+  const Translation pt = loadTranslation(CORE_LANG_DIR "/pt-PT.json");
+  for (const char* key : {"The file changed on disk", "Overwrite", "Cancel", "Save as\xE2\x80\xA6"}) CHECK(pt.has(key));
+  const std::string asked = pt.translate(
+      "\"Song.core\" was written by another window of Core or another program since this window opened or saved it.\n\n"
+      "Overwrite replaces it with this window's song (the version on disk stays as the .bak backup). Save as\xE2\x80\xA6 keeps both.");
+  CHECK(asked.rfind("\"Song.core\" foi escrito por outra janela do Core", 0) == 0);
+  CHECK(asked.find("Substituir") != std::string::npos);
+}
+
 TEST("sweep: addPattern recusa um padrao de comprimento 0 (dividia por zero na projeccao)") {
   Document d = newEmptyDocument();
   const std::string id = addTrack(d, "", "X");
