@@ -151,12 +151,11 @@ void InspectorPanel::editNotes(const juce::String& label, const std::function<vo
 }
 
 namespace {
-// What a track plays, in a few words: the sampler's sample, or the built-in instrument.
+// What a track plays, in a few words: its plugin, or its role.
 juce::String soundOf(const doc::Track& t) {
   const doc::Instrument& i = t.instrument;
   if (i.kind == "audio") return "audio clips";
-  if (i.name == "sampler" && !i.samples.empty())
-    return "sampler: " + u8(i.samples.front().name) + (i.samples.size() > 1 ? " (" + juce::String((int)i.samples.size()) + " notes)" : juce::String());
+  if (i.kind == "plugin") return u8(i.plugin.value("name", i.name));
   return u8(i.name);
 }
 
@@ -169,10 +168,7 @@ juce::StringArray effectsOf(const doc::Track& t, juce::StringArray* off = nullpt
     if (!fx.is_object()) continue;
     if (fx.contains("attach")) continue;
     const std::string id = doc::effectName(fx);
-    const doc::EffectInfo* info = doc::findEffect(id);
-    const juce::String name = fx.value("type", std::string()) == "plugin" && fx.contains("plugin")
-                                  ? u8(fx["plugin"].value("name", std::string("Plugin")))
-                                  : info ? u8(info->label) : u8(id);
+    const juce::String name = fx.contains("plugin") ? u8(fx["plugin"].value("name", std::string("Plugin"))) : u8(id);
     if (doc::effectBypassed(fx)) { if (off) off->add(name); }
     else on.add(name);
   }
@@ -192,65 +188,12 @@ void addList(std::vector<InspectorLine>& facts, const juce::String& label, const
   for (int i = 0; i < items.size(); ++i) fact(facts, i == 0 ? label : juce::String(), items[i]);
 }
 
-// A value as the knob shows it: a choice by its name, kHz above 1000 Hz, 0..1 knobs in %.
-juce::String valueText(double v, const char* unit, double max, double step, const std::vector<const char*>* choices = nullptr) {
-  const juce::String u = unit ? juce::String(unit) : juce::String();
-  if (choices && step >= 1 && !choices->empty()) {
-    const int k = juce::jlimit(0, (int)choices->size() - 1, (int)std::lround(v));
-    return u8((*choices)[(size_t)k]);
-  }
-  auto num = [](double x, int decimals) { return juce::String(x, decimals).trimCharactersAtEnd("0").trimCharactersAtEnd("."); };
-  if (u == "Hz" && std::abs(v) >= 1000) return num(v / 1000.0, 2) + " kHz";
-  if (u == "ms" && std::abs(v) >= 1000) return num(v / 1000.0, 2) + " s";
-  if (u.isEmpty() && step == 0 && max <= 1.5) return juce::String(std::lround(v * 100)) + " %";
-  const juce::String n = num(v, std::abs(v) >= 100 ? 0 : std::abs(v) >= 10 ? 1 : 2);
-  return u.isEmpty() ? n : n + " " + u;
-}
-
 juce::String soundDescription(const doc::Track& t) {
   const doc::Instrument& i = t.instrument;
   if (i.kind == "audio") return "Plays audio files as they are, placed on the timeline.";
   if (i.kind == "bus") return "A bus: other tracks send their sound here, so one set of effects plays on all of them.";
   if (i.kind == "plugin") return "Played by a plugin: double-click the track's name to open its window.";
-  if (i.name == "kick") return "Core's own kick: a sine that falls fast from Start pitch to End pitch. The fall is the punch, the low end is the body, "
-                               "Click adds the attack and Decay sets how long it sounds.";
-  if (i.name == "hats") return "Core's own hats: bright filtered noise. Closed hats are short, open hats ring longer; Tone sets how bright.";
-  if (i.name == "snare") return "Core's own snare and clap: a short tone with noise for the snare, quick bursts of noise for the clap.";
-  if (i.name == "drums") return "Kick and hats on one track: kick on C1 (36), closed hats on F#1 (42), open hats on A#1 (46).";
-  if (i.name == "sampler") return "Plays your samples: each zone is one file over a range of keys, tuned from its root key.";
-  return {};
-}
-
-juce::String effectDescription(const std::string& id) {
-  if (id == "eq") return "EQ: turns the lows, mids and highs up or down.";
-  if (id == "filter") return "Filter: cuts the highs (low-pass) or the lows (high-pass) above or below the cutoff.";
-  if (id == "compressor") return "Compressor: brings loud parts down so the sound is more even and sits forward.";
-  if (id == "saturation") return "Saturation: drives the sound into soft distortion: warmer, louder, more harmonics.";
-  if (id == "delay") return "Delay: repeats the sound after a time, each repeat softer.";
-  if (id == "reverb") return "Reverb: the sound in a room; size and decay say how big.";
-  if (id == "limiter") return "Limiter: never lets the sound go over its ceiling.";
-  if (id == "utility") return "Utility: volume, width and pan, without colouring the sound.";
-  return {};
-}
-
-// The sound's settings and the effects' settings, with what each thing is: the part of the Inspector to learn from.
-void describeSound(std::vector<InspectorLine>& lines, const doc::Track& t) {
-  note(lines, soundDescription(t));
-  if (t.instrument.kind != "builtin") return;
-  const doc::InstrumentInfo* info = doc::findInstrumentInfo(t.instrument.name);
-  if (!info || info->params.empty()) return;
-  // Short catalogues (the kick, the hats): every knob, the changed ones in the accent. Long ones (W-Core):
-  // only what moved from the default, else the list would hide everything under it.
-  const bool all = info->params.size() <= 10;
-  int same = 0;
-  heading(lines, "SOUND SETTINGS");
-  for (const auto& p : info->params) {
-    const double v = doc::instrumentParamValue(t, p);
-    const bool changed = std::abs(v - p.def) > 1e-9;
-    if (!all && !changed) { ++same; continue; }
-    fact(lines, u8(p.label), valueText(v, p.unit, p.max, p.step), changed);
-  }
-  if (same > 0) note(lines, juce::String(same) + " more at their default (the knobs in the instrument's window).");
+  return "No plugin yet: add one from the track's menu to make it play.";
 }
 
 void describeEffects(std::vector<InspectorLine>& lines, const doc::Track& t) {
@@ -261,19 +204,11 @@ void describeEffects(std::vector<InspectorLine>& lines, const doc::Track& t) {
     any = true;
     const bool off = doc::effectBypassed(fx);
     const std::string id = doc::effectName(fx);
-    const doc::EffectInfo* info = doc::findEffect(id);
-    fact(lines, off ? "Off" : "On", info ? u8(info->label) : u8(id));
-    note(lines, effectDescription(id));
-    if (!info) continue;
-    int same = 0;
-    for (const auto& p : info->params) {
-      const double v = doc::effectParam(fx, p.name, p.def);
-      if (std::abs(v - p.def) <= 1e-9) { ++same; continue; }
-      fact(lines, "   " + u8(p.label), valueText(v, p.unit, p.max, p.step, &p.choices), true);
-    }
-    if (same == (int)info->params.size()) note(lines, "Every knob at its default.");
+    const juce::String name = fx.contains("plugin") ? u8(fx["plugin"].value("name", std::string("Plugin"))) : u8(id);
+    fact(lines, off ? "Off" : "On", name);
   }
-  if (!any) note(lines, "No effects: the sound goes to the mixer as the instrument makes it.");
+  if (!any) note(lines, "No effects: the track's sound goes to the mixer as its plugin makes it.");
+  else note(lines, "Each effect's knobs are in its own plugin window.");
 }
 }  // namespace
 
@@ -285,11 +220,9 @@ void InspectorPanel::update(const std::string& selectedTrack, const std::string&
   for (const auto& n : notes) sig << "|" << u8(n.id) << ":" << n.pitch << ":" << (int)n.length << ":" << (int)std::round(n.velocity * 127) << ":" << (n.hasRoll ? n.roll.count : 0) << ":" << (int)std::round(n.roll.velocityFrom * 100) << ":" << (int)std::round(n.roll.velocityTo * 100);
   if (const doc::Track* t = d.findTrack(selectedTrack)) {
     sig << "|" << u8(t->name) << ":" << t->mix.gainDb << ":" << t->mix.pan << ":" << (int)t->mix.mute << (int)t->mix.solo;
-    sig << "|" << soundOf(*t) << ":" << t->instrument.version << ":" << (int)t->effects.size();
+    sig << "|" << soundOf(*t) << ":" << (int)t->effects.size();
     juce::StringArray off;
-    sig << "|" << effectsOf(*t, &off).joinIntoString(",") << "/" << off.joinIntoString(",");  // a new sound (a sample, a preset) shows at once
-    for (const auto& z : t->instrument.samples) sig << "|" << u8(z.name) << ":" << z.rootKey << ":" << z.loKey << ":" << z.hiKey;
-    for (const auto& [k, v] : t->instrument.params) sig << "|" << u8(k) << "=" << v;  // a knob turned shows at once
+    sig << "|" << effectsOf(*t, &off).joinIntoString(",") << "/" << off.joinIntoString(",");  // a new plugin shows at once
     for (const auto& fx : t->effects) sig << "|" << u8(fx.dump());
     for (const auto& c : t->clips)
       if (c.id == selectedClip) {
@@ -331,8 +264,6 @@ void InspectorPanel::update(const std::string& selectedTrack, const std::string&
       if (c.id == selectedClip) {
         const doc::Pattern* p = t->findPattern(c.patternId);
         fact(facts_, "Track", u8(t->name));
-        // What the clip sounds with: Samples > Use the best samples / Shuffle change it, and it shows here at once
-        // (Diogo 2026-11-07: with a clip selected, the swap was not visible anywhere).
         fact(facts_, "Sound", soundOf(*t));
         note(facts_, soundDescription(*t));
         fact(facts_, "Pattern", (p ? u8(p->name) : juce::String("?")));
@@ -351,21 +282,10 @@ void InspectorPanel::update(const std::string& selectedTrack, const std::string&
   } else if (mode_ == Mode::Track) {
     fact(facts_, "Name", u8(t->name));
     fact(facts_, "Sound", soundOf(*t));
-    // The sampler's zones: which file plays which keys (the first zone holding a key plays it).
-    const auto& zones = t->instrument.samples;
-    if (t->instrument.kind == "builtin" && !zones.empty()) {
-      const size_t shown = zones.size() <= 4 ? zones.size() : 3;
-      for (size_t i = 0; i < shown; ++i) {
-        const auto& z = zones[i];
-        const juce::String keys = z.loKey == 0 && z.hiKey == 127 ? u8("all keys") : z.loKey == z.hiKey ? pitchName(z.loKey) : pitchName(z.loKey) + u8(" to ") + pitchName(z.hiKey);
-        fact(facts_, i == 0 ? juce::String("Zones") : juce::String(), u8(z.name) + "  " + keys);
-      }
-      if (shown < zones.size()) fact(facts_, {}, "+" + juce::String((int)(zones.size() - shown)) + " more zones");
-    }
     fact(facts_, "Volume", juce::String(t->mix.gainDb, 1) + " dB");
     fact(facts_, "Pan", (std::abs(t->mix.pan) < 0.005 ? juce::String("C") : juce::String(std::abs(t->mix.pan) * 100, 0) + (t->mix.pan < 0 ? " L" : " R")));
     if (t->mix.mute || t->mix.solo) fact(facts_, "State", juce::String(t->mix.mute ? "muted" : "") + (t->mix.mute && t->mix.solo ? ", " : "") + (t->mix.solo ? "solo" : ""));
-    describeSound(facts_, *t);
+    note(facts_, soundDescription(*t));
     describeEffects(facts_, *t);
   }
   show();

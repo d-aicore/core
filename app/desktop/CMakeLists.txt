@@ -23,7 +23,7 @@ target_compile_definitions(CoreApp PRIVATE
   JUCE_APPLICATION_NAME_STRING="$<TARGET_PROPERTY:CoreApp,JUCE_PRODUCT_NAME>"
   JUCE_APPLICATION_VERSION_STRING="$<TARGET_PROPERTY:CoreApp,JUCE_VERSION>")
 target_link_libraries(CoreApp
-  PRIVATE juce::juce_gui_basics juce::juce_audio_devices juce::juce_audio_formats core_engine_client core_domain core_engine_lib core_version core_control core_sampling
+  PRIVATE juce::juce_gui_basics juce::juce_audio_devices juce::juce_audio_formats core_engine_client core_domain core_engine_lib core_version core_control
           $<$<PLATFORM_ID:Windows>:dbghelp>
   PUBLIC juce::juce_recommended_config_flags)
 
@@ -37,7 +37,7 @@ if(TARGET CoreTestSynth_VST3)
     CORE_TEST_GAIN_VST3="$<GENEX_EVAL:$<TARGET_PROPERTY:CoreTestGain_VST3,JUCE_PLUGIN_ARTEFACT_FILE>>")
 endif()
 
-# A runnable folder: Core.exe, core-engine.exe, the demo and the style templates side by side. The demo is the psy demo
+# A runnable folder: Core.exe, core-engine.exe and the demo side by side (no built-in templates ship). The demo is the psy demo
 # without its kick roll (8 kicks in one beat sound like clicks at fast tempos).
 add_dependencies(CoreApp core-engine)
 add_custom_command(TARGET CoreApp POST_BUILD

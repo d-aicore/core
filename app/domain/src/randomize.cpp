@@ -340,29 +340,6 @@ static bool revertTempoCopy(Track& t, Clip& c, double fromBpm, double toBpm) {
 // The bass notes of [a, b) at a new tempo: the same length in ms (ratio = new BPM / old BPM), never reaching
 // the next note. Shared patterns get a copy for the section. An exact inverse movement restores the original
 // pattern instead (revertTempoCopy); each copy remembers its source so a later inverse can restore it too.
-// K: the sound of the built-in instruments, per style (the study's §8.5: the generator's values per style and
-// variant, with room around them). One value per song: the instrument's fixed parameter.
-struct SoundRange { const char* track; const char* instrument; const char* param; double lo, hi; };
-static const std::vector<SoundRange>& soundRanges(const std::string& style) {
-  static const std::vector<SoundRange> dark = {
-      {"kick", "kick", "pitchStart", 250, 300}, {"kick", "kick", "pitchEnd", 44, 50}, {"kick", "kick", "pitchDecay", 16, 24},
-      {"kick", "kick", "ampDecay", 110, 150}, {"kick", "kick", "click", 0.45, 0.65}, {"kick", "kick", "drive", 0.3, 0.45},
-      {"hats", "hats", "tone", 9500, 11500}, {"hats", "hats", "closedDecay", 12, 20},
-      {"open-hats", "hats", "tone", 9500, 11500}, {"open-hats", "hats", "openDecay", 150, 220}};
-  static const std::vector<SoundRange> hitech = {
-      {"kick", "kick", "pitchStart", 320, 370}, {"kick", "kick", "pitchEnd", 52, 58}, {"kick", "kick", "pitchDecay", 11, 16},
-      {"kick", "kick", "ampDecay", 80, 110}, {"kick", "kick", "click", 0.65, 0.8}, {"kick", "kick", "drive", 0.28, 0.38},
-      {"hats", "hats", "tone", 12000, 14000}, {"hats", "hats", "closedDecay", 10, 14},
-      {"open-hats", "hats", "tone", 12000, 14000}, {"open-hats", "hats", "openDecay", 80, 120}};
-  static const std::vector<SoundRange> slam = {
-      {"kick", "kick", "pitchStart", 110, 150}, {"kick", "kick", "pitchEnd", 34, 40}, {"kick", "kick", "pitchDecay", 18, 32},
-      {"kick", "kick", "ampDecay", 65, 115}, {"kick", "kick", "click", 0.02, 0.08}, {"kick", "kick", "drive", 0.05, 0.12},
-      {"hats", "hats", "tone", 5500, 7000}, {"hats", "hats", "closedDecay", 16, 24},
-      {"open-hats", "hats", "tone", 5500, 7000}, {"open-hats", "hats", "openDecay", 250, 350}};
-  static const std::vector<SoundRange> none;
-  return style == "Dark psycore" ? dark : style == "Hi-tech" ? hitech : style == "Slambient" ? slam : none;
-}
-
 static void retimeBass(Track& t, int64_t a, int64_t b, double ratio, std::vector<std::string>& did, double fromBpm, double toBpm) {
   const double newMs = 60000.0 / (toBpm * kPpq);
   std::map<std::string, std::string> copies;
@@ -427,7 +404,7 @@ static void retimeBass(Track& t, int64_t a, int64_t b, double ratio, std::vector
 }
 
 const std::vector<std::string>& randomizeAxes() {
-  static const std::vector<std::string> axes = {"bass", "gate", "hats", "kick", "roles", "fills", "tempo", "sound"};
+  static const std::vector<std::string> axes = {"bass", "gate", "hats", "kick", "roles", "fills", "tempo"};
   return axes;
 }
 
@@ -441,7 +418,6 @@ std::vector<std::string> randomizeStyle(Document& doc, const RandomizeOptions& o
   auto named = [&](const char* axis) { return std::find(o.axes.begin(), o.axes.end(), axis) != o.axes.end(); };
   auto on = [&](const char* axis) { return o.axes.empty() || named(axis); };
   const bool tempoOn = named("tempo");  // J only when asked for: it changes the song's length in time
-  const bool soundOn = named("sound");  // K only when asked for: it changes the instruments, not the music
   const double p = o.strength == 1 ? 0.35 : o.strength == 2 ? 0.65 : 0.9;  // a section leaves the template's choice
   if (doc.sections.empty() || doc.bpm <= 0) return {};
   const std::vector<int> energy = energies(doc);
@@ -497,7 +473,7 @@ std::vector<std::string> randomizeStyle(Document& doc, const RandomizeOptions& o
 
   // Clips end at section boundaries, so each section can be laid on its own.
   static const char* parts[] = {"kick", "bass", "hats", "open-hats", "perc", "accents", "lead", "riser"};
-  const bool grooveOn = o.axes.empty() || std::any_of(o.axes.begin(), o.axes.end(), [](const std::string& x) { return x != "tempo" && x != "sound"; });
+  const bool grooveOn = o.axes.empty() || std::any_of(o.axes.begin(), o.axes.end(), [](const std::string& x) { return x != "tempo"; });
   for (const char* id : parts)
     if (Track* t = (grooveOn || tempoOn) ? findTrack(doc, id) : nullptr)
       for (const auto& s : doc.sections) splitAt(*t, s.startTick), splitAt(*t, s.startTick + s.lengthTicks);
@@ -758,37 +734,9 @@ std::vector<std::string> randomizeStyle(Document& doc, const RandomizeOptions& o
       for (const auto& [trackId, patternId] : slot.tracks) rackRefs[trackId].insert(patternId);
   for (const char* id : parts)
     if (Track* t = (grooveOn || tempoOn) ? findTrack(doc, id) : nullptr) removeUnusedPatterns(*t, rackRefs[t->id]);
-  // K: the built-in kick, bass and hats get new values inside the style. Plugin tracks keep their patch.
-  json sound = json::object();
-  if (soundOn) {
-    std::map<std::string, std::string> lines;
-    for (const SoundRange& r : soundRanges(style)) {
-      Track* t = findTrack(doc, r.track);
-      if (!t || t->instrument.kind != "builtin" || t->instrument.name != r.instrument) continue;
-      const InstrumentParamInfo* info = findInstrumentParam(*t, r.param);
-      if (!info) continue;
-      Rng rng = streamFor(o.seed, "song", std::string("sound:") + r.track + ":" + r.param);
-      if (!rng.chance(p)) continue;
-      double v = r.lo + rng.unit() * (r.hi - r.lo);
-      const bool whole = *info->unit != 0 && std::string(info->unit) != "oct";  // Hz and ms in whole numbers
-      v = whole ? std::round(v) : std::round(v * 100) / 100;
-      v = std::clamp(v, info->min, info->max);
-      setInstrumentParam(doc, r.track, r.param, v);
-      sound[r.track][r.param] = v;
-      std::string& line = lines[t->name];
-      char text[64];
-      std::snprintf(text, sizeof text, whole ? "%s %.0f%s%s" : "%s %.2f%s%s", info->label, v, *info->unit ? " " : "", info->unit);
-      line += (line.empty() ? "" : ", ") + std::string(text);
-    }
-    if (lines.empty() && o.axes.size() == 1)
-      throw DocumentError("sound", "this song's kick, bass and hats have no built-in sound to change (samples or audio): Randomize sound "
-                                   "works on Core's own instruments");
-    for (const auto& [name, line] : lines) changes.insert(changes.begin(), "Sound, " + name + ": " + line);
-  }
   json allAxes = json::array();
-  for (const auto& x : randomizeAxes()) if (x != "tempo" && x != "sound") allAxes.push_back(x);
+  for (const auto& x : randomizeAxes()) if (x != "tempo") allAxes.push_back(x);
   json recipe = {{"seed", o.seed}, {"strength", o.strength}, {"style", style}, {"axes", o.axes.empty() ? allAxes : json(o.axes)}};
-  if (soundOn) recipe["sound"] = sound;
   if (tempoOn) {
     json map = json::array();
     for (const auto& t : doc.tempoMap) map.push_back(tempoPointJson(t));

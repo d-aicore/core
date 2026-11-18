@@ -19,7 +19,7 @@
 #include "TrackColour.h"
 #include "randomize.hpp"
 #include "sample_analysis.hpp"
-#include "sampling.hpp"
+#include "AudioClipAnalysis.h"
 #include <limits>
 #include "assets.hpp"
 #include "bounce.hpp"
@@ -193,9 +193,9 @@ public:
     return inLane(x) ? laneTick(x, kBeat) / kBeat * kBeat : -1;
   }
 
-  // A Library sound: onto a sampler or drum track (its sound), or an audio track (a clip where it is dropped).
+  // A Library sound: onto an audio track (a clip where it is dropped).
   bool isInterestedInDragSource(const SourceDetails& d) override {
-    return d.description.toString().startsWith(LibraryPanel::kSampleDrag) && (track_.instrument.kind == "audio" || takesSamples(track_));
+    return d.description.toString().startsWith(LibraryPanel::kSampleDrag) && track_.instrument.kind == "audio";
   }
   void itemDragEnter(const SourceDetails&) override { owner_.setDropRow(id_); }
   void itemDragExit(const SourceDetails&) override { if (owner_.dropRow_ == id_) owner_.setDropRow({}); }
@@ -886,11 +886,11 @@ private:
       owner_.showError(u8("Cut silence"), u8("Not enough memory for this clip."));
       return;
     }
-    if (core::sampling::hasBrokenSamples(channels)) {  // deep hunt P08: not "silent"
+    if (core::audio::hasBrokenSamples(channels)) {  // deep hunt P08: not "silent"
       owner_.showError(u8("Cut silence"), u8("The clip has broken samples (NaN or Inf): the file is damaged."));
       return;
     }
-    const auto r = core::sampling::audibleRange(channels, reader->sampleRate, -60, 1, 20);
+    const auto r = core::audio::audibleRange(channels, reader->sampleRate, -60, 1, 20);
     if (r.to <= r.from) { owner_.showError(u8("Cut silence"), u8("The clip is silent.")); return; }
     if (r.from == 0 && r.to == (int64_t)frames) { owner_.notice_ = u8("No silence to cut at the start or end."); return; }
     const double newStart = c->offsetSeconds + r.from / reader->sampleRate;
@@ -1403,8 +1403,8 @@ public:
   }
 
   // Diogo 2026-11-07: one long list was hard to read. Volume and pan come first; then each effect (and the
-  // instrument, and each plugin) is one entry whose submenu lists only its own settings. "METAL · Ring" is
-  // grouped under METAL; two effects of the same kind are told apart by their place in the chain (METAL 2).
+  // instrument, and each plugin) is one entry whose submenu lists only its own settings. "Pro-Q 3 · Band 1" is
+  // grouped under Pro-Q 3; two effects of the same kind are told apart by their place in the chain (Pro-Q 3 2).
   struct ParamGroup { std::string key, name; std::vector<size_t> items; };
   static std::vector<ParamGroup> groupParams(const std::vector<doc::AutomatableParam>& list, std::vector<size_t>& loose) {
     std::vector<ParamGroup> groups;
@@ -1419,7 +1419,7 @@ public:
       if (g == groups.end()) { groups.push_back({key, label.substr(0, dot), {}}); g = groups.end() - 1; }
       g->items.push_back(i);
     }
-    std::map<std::string, int> seen;  // the same name twice: METAL, METAL 2
+    std::map<std::string, int> seen;  // the same name twice: Pro-Q 3, Pro-Q 3 2
     for (auto& g : groups) if (const int n = ++seen[g.name]; n > 1) g.name += " " + std::to_string(n);
     return groups;
   }
@@ -2000,7 +2000,6 @@ MainComponent::MainComponent(EngineSession::Options options, doc::Document docum
   editor_.onMessage = [this](const juce::String& text) { notice_ = text; logLine(text); repaint(); };
   // The Sound card's «Open», or a right-click on one of its bars: the sound and its modulation on one page.
   editor_.onSavePattern = [this](int64_t start, int64_t end) { savePatternFromEditor(start, end); };
-  editor_.onBuildupTrack = [this](int bars, bool roll, bool gap) { buildupTrack(bars, roll, gap); };
   editor_.bpm = [this] { return doc::bpmAt(history_.current(), (int64_t)shownPosition()); };
   editor_.patternLibrary = [this] { return loadPatterns(); };
   editor_.pcoreCatalog = [this]() -> const doc::PCoreCatalog* {
@@ -3230,30 +3229,11 @@ void MainComponent::importFiles(std::vector<juce::File> wavs, const std::string&
   }
 }
 
-bool MainComponent::takesSamples(const doc::Track& t) {
-  return t.instrument.kind != "audio" && (t.instrument.name == "sampler" || !doc::trackSampleRole(t).empty());
-}
-
 void MainComponent::dropLibrarySample(const std::string& trackId, const std::string& sha256, int64_t at) {
   const doc::LibrarySample* s = hasSampleIndex_ ? sampleIndex_.findHash(sha256) : nullptr;
   const doc::Track* t = history_.current().findTrack(trackId);
-  if (!s || !t) return;
-  if (t->instrument.kind == "audio") { importFiles({juce::File(u8(s->file))}, trackId, at); return; }
-  selectTrack(trackId);
-  putSampleOnTrack(trackId, *s);
-}
-
-void MainComponent::useSampleFile(const std::string& trackId, const juce::File& f) {
-  const std::filesystem::path p = pathOf(f);
-  const auto u = p.u8string();
-  if (const doc::LibrarySample* s = hasSampleIndex_ ? sampleIndex_.findFile(std::string(u.begin(), u.end())) : nullptr)
-    return putSampleOnTrack(trackId, *s);
-  try {
-    const doc::LibrarySample s = doc::describeSample(p, pathOf(sampleLibraryFolder()));
-    putSampleOnTrack(trackId, s);
-  } catch (const std::exception& e) {
-    showError(u8("Sample not used"), f.getFileName() + ": " + u8(e.what()));
-  }
+  if (!s || !t || t->instrument.kind != "audio") return;
+  importFiles({juce::File(u8(s->file))}, trackId, at);
 }
 
 MainComponent::TrackRow* MainComponent::rowAtScreen(juce::Point<int> screen) const {
@@ -3290,12 +3270,6 @@ void MainComponent::filesDropped(const juce::StringArray& files, int x, int y) {
   const juce::Point<int> screen = localPointToGlobal(juce::Point<int>(x, y));
   TrackRow* row = rowAtScreen(screen);
   const doc::Track* t = row ? history_.current().findTrack(row->id()) : nullptr;
-  if (t && takesSamples(*t)) {  // a sound for the track
-    if (wavs.size() != 1) { notice_ = u8("One sound per track: drop a single WAV on a sampler or drum track."); return; }
-    selectTrack(t->id);
-    useSampleFile(t->id, wavs.front());
-    return;
-  }
   // On an audio track: there; on an instrument track: a new audio track (importAudioFile makes one).
   importFiles(wavs, t ? t->id : std::string(), row ? row->dropTick(screen) : -1);
 }
@@ -3971,11 +3945,7 @@ void MainComponent::open() {
         const doc::FileStamp stamp = doc::fileStamp(pathOf(f));
         doc::OpenResult r = doc::openFile(pathOf(f));
         logLine((r.imported ? "Imported " : "Opened ") + f.getFullPathName());
-        // Samples whose library file moved are found again by content: the song then has unsaved changes.
-        doc::Document moved = r.document;
-        const int relinked = hasSampleIndex_ ? doc::relinkMovedSamples(moved, sampleIndex_) : 0;
         history_.reset(std::move(r.document));
-        if (relinked) history_.amend(moved);
         selectedTrack_.clear();
         selectedClip_.clear();
         file_ = r.imported ? juce::File() : f;
@@ -3991,7 +3961,6 @@ void MainComponent::open() {
         documentChanged(true);
         notice_ = r.imported ? u8("Imported from ") + f.getFileName() + u8(": save it under a new name (the original is not changed).")
                              : juce::String();
-        if (relinked) notice_ = juce::String(relinked) + u8(" sample(s) found in their new place in the library: save to keep it.");
         checkMissingAssets();
       } catch (const doc::FutureVersionError&) {
         showError(u8("Newer version"), f.getFileName() + u8(" was saved by a newer version of Core. It was not opened or changed."));
@@ -4056,14 +4025,9 @@ void MainComponent::newFromTemplate(const std::string& templateId) {
   reloadTemplates();  // the file may have changed since the menu was shown
   const doc::TemplateEntry* entry = templates_.find(templateId);
   if (!entry) return showError("Template not found", u8(templateId) + " is no longer in the templates folders.");
-  // The template's own sounds first (the song as made), then the library's samples as one undo step:
-  // Undo gives the template's sounds back.
-  // Its samples found in the library where it is now (a template written when the library was D:\Samples).
+  // The template's own sounds (the song as made): plugins load when the document is set on the session.
   doc::Document song = doc::documentFromTemplate(entry->tmpl);
-  if (hasSampleIndex_) doc::relinkMovedSamples(song, sampleIndex_);
-  newFromDocument(std::move(song), [this] {
-    if (hasSampleIndex_ && settings_.getUserSettings()->getBoolValue("suggestSamples", true)) useSuggestedSamples(true, true);
-  });
+  newFromDocument(std::move(song));
 }
 
 // ---------------------------------------------------------------- sample library
@@ -4349,7 +4313,7 @@ void MainComponent::randomizeSong(int strength, const std::string& axis) {
   doc::RandomizeOptions o;
   o.seed = (uint64_t)(juce::Random::getSystemRandom().nextInt64() & 0x1FFFFFFFFFFFFFLL) | 1;  // fits a JSON number exactly
   o.strength = strength;
-  if (!axis.empty()) o.axes = {axis};  // tempo (J) or sound (K) alone: the groove stays
+  if (!axis.empty()) o.axes = {axis};  // tempo (J) alone: the groove stays
   std::vector<std::string> changes;
   try {
     changes = doc::randomizeStyle(next, o);
@@ -4367,80 +4331,6 @@ void MainComponent::randomizeSong(int strength, const std::string& axis) {
   notice_ = u8("Randomized (Undo to go back): ") + list.joinIntoString("; ");
   logLine(notice_);
   repaint();
-}
-
-// A sample of the library for every track that suits one, as ONE undo step: the best ones, or (shuffle,
-// and every new song from a template) a varied good pick, so two songs from one template differ. Tracks
-// with no good match keep their sound; nothing is replaced in silence (the notice lists every change).
-void MainComponent::useSuggestedSamples(bool fromTemplate, bool shuffle) {
-  if (!hasSampleIndex_) {
-    if (!fromTemplate) showError(u8("Sample library"), u8("There is no sample library yet: Samples > Choose sample library folder…"));
-    return;
-  }
-  auto apply = [this, fromTemplate, shuffle] {
-    doc::Document next = history_.current();
-    std::vector<std::string> changed;
-    try {
-      const uint64_t seed = shuffle ? ((uint64_t)juce::Random::getSystemRandom().nextInt64() | 1) : 0;
-      changed = doc::applySuggestedSamples(next, sampleIndex_, doc::songStyle(next), seed);
-    } catch (const std::exception& e) {
-      return showError(u8("Samples"), u8(e.what()));
-    }
-    if (changed.empty()) {
-      notice_ = u8("No sample in the library suits these tracks: they keep their sounds.");
-      repaint();
-      return;
-    }
-    edit([&](doc::Document& d) { d = next; }, shuffle && !fromTemplate ? u8("Shuffle samples") : u8("Suggested samples"));
-    juce::StringArray list;
-    for (const auto& c : changed) list.add(u8(c));
-    notice_ = u8("Samples from your library (Undo for the template's sounds): ") + list.joinIntoString(", ");
-    logLine(notice_);
-    repaint();
-  };
-  apply();
-}
-
-void MainComponent::putSampleOnTrack(const std::string& trackId, const doc::LibrarySample& sample) {
-  const doc::Track* t = history_.current().findTrack(trackId);
-  if (!t) return;
-  // Trying sounds one after another on the same track is one undo step, not one per sound: the last step,
-  // when it was the previous try on this track, is replaced.
-  const juce::String label = u8("Sample: ") + u8(doc::shownName(sample)) + u8(" on ") + u8(t->name);
-  if (trackId == lastSampleTrack_ && history_.canUndo() && !history_.canRedo() && u8(history_.undoLabel()) == lastSampleLabel_) {
-    bool fits = true;
-    try { doc::Document trial = history_.current(); doc::setTrackSample(trial, trackId, sampleIndex_, sample); } catch (const std::exception&) { fits = false; }
-    if (fits) moveInHistory(true);  // (when the new sound cannot go there, the error shows and the last try stays)
-  }
-  edit([&](doc::Document& d) { doc::setTrackSample(d, trackId, sampleIndex_, sample); }, label);
-  lastSampleTrack_ = trackId;
-  lastSampleLabel_ = label;
-  auditionTrack(trackId);
-}
-
-// Any WAV: one of the library is taken from the index (its siblings make a bass note by note); another
-// one is read now.
-void MainComponent::chooseSampleFile(const std::string& trackId) {
-  const juce::File start = sampleLibraryFolder();
-  chooser_ = std::make_unique<juce::FileChooser>(u8("Sample (WAV)"), start, "*.wav");
-  chooser_->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles, [this, trackId](const juce::FileChooser& fc) {
-    const juce::File f = fc.getResult();
-    if (f != juce::File()) useSampleFile(trackId, f);
-  });
-}
-
-// Plays the track's first note once (after the engine has the new sound), so a swap is heard at once.
-void MainComponent::auditionTrack(const std::string& trackId) {
-  const doc::Track* t = history_.current().findTrack(trackId);
-  if (!t) return;
-  int pitch = 36;
-  for (const auto& p : t->patterns) if (!p.notes.empty()) { pitch = p.notes.front().pitch; break; }
-  juce::Component::SafePointer<MainComponent> safe(this);
-  juce::Timer::callAfterDelay(200, [safe, trackId, pitch] {
-    if (safe == nullptr) return;
-    safe->session_->liveNote(trackId, pitch, 0.9, true);
-    juce::Timer::callAfterDelay(400, [safe, trackId, pitch] { if (safe != nullptr) safe->session_->liveNote(trackId, pitch, 0, false); });
-  });
 }
 
 // The song as it is now, or a passage of it (the loop or one section), becomes a template in the user's folder.
@@ -4601,35 +4491,16 @@ void MainComponent::showAddTrackMenu() {
     if (instruments.empty()) menu.addItem(juce::PopupMenu::Item(u8("None found yet: Plugins menu > Scan plugins")).setID(menuids::kNoPlugins).setEnabled(false));
   }
   menu.addSeparator();
-  const std::vector<doc::InstrumentChoice>& native = doc::builtinInstruments();
-  menu.addSectionHeader(u8("Core's own instruments"));
-  for (size_t i = 0; i < native.size(); ++i)
-    if (native[i].name != std::string("sampler")) menu.addItem(menuids::kBuiltinAddFirst + (int)i, u8(native[i].label));
-  menu.addItem(menuids::kSamplerTrack, u8("Sampler track (empty)"));
-  menu.addSeparator();
   menu.addItem(menuids::kAudioTrack, u8("Audio track (empty)"));
   menu.addItem(menuids::kImportAudio, u8("Import audio (WAV)…"));
   menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&addTrack_), [this, instruments](int chosen) {
-    const menuids::AddTrackChoice choice = menuids::decodeAddTrackMenu(chosen, (int)instruments.size(), (int)doc::builtinInstruments().size());
+    const menuids::AddTrackChoice choice = menuids::decodeAddTrackMenu(chosen, (int)instruments.size());
     switch (choice.action) {
       case menuids::AddTrackAction::addPluginInstrument: {
         const nlohmann::json plugin = instruments[(size_t)choice.index];
         std::string id;
         edit([&](doc::Document& d) { id = doc::addPluginTrack(d, plugin); }, u8("Add ") + u8(plugin.value("name", std::string("plugin"))));
         if (!id.empty()) { selectTrack(id); session_->openPluginEditor(doc::pluginKey(id)); }
-        return;
-      }
-      case menuids::AddTrackAction::addBuiltinInstrument: {
-        const doc::InstrumentChoice builtin = doc::builtinInstruments()[(size_t)choice.index];
-        std::string id;
-        edit([&](doc::Document& d) { id = doc::addTrack(d, builtin.name); }, u8("Add ") + u8(builtin.label));
-        if (!id.empty()) selectTrack(id);
-        return;
-      }
-      case menuids::AddTrackAction::samplerTrack: {
-        std::string id;
-        edit([&](doc::Document& d) { id = doc::addTrack(d, "sampler"); }, u8("Sampler track"));
-        if (!id.empty()) selectTrack(id);
         return;
       }
       case menuids::AddTrackAction::audioTrack:
@@ -4645,17 +4516,12 @@ void MainComponent::showAddTrackMenu() {
 }
 
 void MainComponent::showTrackMenu(const std::string& trackId) {
-  // Library samples offered in the Sample submenu: kOfferedSampleId + their place. The band is never populated
-  // today (offered stays empty; the Tools submenu uses setAction lambdas, no numeric ids). If it is ever revived,
-  // allocate it through MenuIds.h: the plugin bands are uncapped and grow past 5000 (BUG-SWEEP-32).
-  static constexpr int kOfferedSampleId = 5000;
   juce::PopupMenu menu;
   menu.addItem(menuids::kRename, u8("Rename…"));
   menu.addItem(menuids::kDuplicate, "Duplicate");
   menu.addItem(menuids::kAutomation, u8("Automation (volume, pan, effects)…"));
   // Another instrument for this track (its notes, effects, volume and automation stay).
   const doc::Track* current = history_.current().findTrack(trackId);
-  // Core's own instruments (ids kBuiltinReplaceFirst + place in builtinInstruments()).
   juce::PopupMenu replace;
   const std::vector<nlohmann::json> instruments = plugins_->instruments(), pluginFx = plugins_->effects();
   const menuids::TrackMenuIds ids = menuids::trackMenuIds((int)instruments.size(), (int)pluginFx.size());
@@ -4700,23 +4566,16 @@ void MainComponent::showTrackMenu(const std::string& trackId) {
       return current->instrument.kind == "plugin" && current->instrument.plugin.value("id", std::string()) == p.value("id", std::string()) &&
              current->instrument.plugin.value("file", std::string()) == p.value("file", std::string());
     }));
-    replace.addSeparator();
-    const std::vector<doc::InstrumentChoice>& native = doc::builtinInstruments();
-    for (size_t i = 0; i < native.size(); ++i)
-      replace.addItem(juce::PopupMenu::Item(u8(native[i].label)).setID(menuids::kBuiltinReplaceFirst + (int)i)
-                          .setTicked(current->instrument.kind == "builtin" && current->instrument.name == native[i].name));
     menu.addSubMenu(u8("Replace instrument"), replace);
   }
-  std::vector<std::string> offered;
   if (current && doc::playsPatterns(*current)) menu.addSubMenu(u8("Tools"), coreToolsMenu(trackId));
   menu.addSeparator();
   menu.addItem(menuids::kRemoveTrack, "Remove");
-  menu.showMenuAsync(juce::PopupMenu::Options(), [this, trackId, offered, instruments, pluginFx](int chosen) {
+  menu.showMenuAsync(juce::PopupMenu::Options(), [this, trackId, instruments, pluginFx](int chosen) {
     const doc::Track* t = history_.current().findTrack(trackId);
     if (!t) return;
     const juce::String name = u8(t->name);
-    const menuids::TrackChoice choice = menuids::decodeTrackMenu(chosen, (int)instruments.size(), (int)pluginFx.size(),
-                                                                 (int)doc::builtinInstruments().size(), (int)t->effects.size());
+    const menuids::TrackChoice choice = menuids::decodeTrackMenu(chosen, (int)instruments.size(), (int)pluginFx.size(), (int)t->effects.size());
     switch (choice.action) {
       case menuids::TrackAction::replaceWithPlugin: {
         const nlohmann::json plugin = instruments[(size_t)choice.index];
@@ -4747,11 +4606,6 @@ void MainComponent::showTrackMenu(const std::string& trackId) {
       case menuids::TrackAction::openInstrument:
         session_->openPluginEditor(doc::pluginKey(trackId));
         return;
-      case menuids::TrackAction::replaceWithBuiltin: {
-        const doc::InstrumentChoice builtin = doc::builtinInstruments()[(size_t)choice.index];
-        edit([&](doc::Document& d) { doc::replaceInstrument(d, trackId, builtin.name); }, u8("Replace instrument: ") + u8(builtin.label));
-        return;
-      }
       case menuids::TrackAction::rename:
         askTrackName(trackId);
         return;
@@ -4981,13 +4835,9 @@ void MainComponent::setupLibrary() {
     const doc::Track* t = history_.current().findTrack(selectedTrack_.empty() ? editor_.track() : selectedTrack_);
     return t ? u8(t->name) : juce::String();
   };
-  library_.trackTakesSamples = [this] {
-    const doc::Track* t = history_.current().findTrack(selectedTrack_.empty() ? editor_.track() : selectedTrack_);
-    return t && takesSamples(*t);
-  };
   library_.fitContext = [this]() -> std::pair<std::string, double> {
     const doc::Track* t = history_.current().findTrack(selectedTrack_.empty() ? editor_.track() : selectedTrack_);
-    if (!t || !takesSamples(*t)) return {};
+    if (!t || t->instrument.kind == "audio" || t->instrument.kind == "bus") return {};
     return {doc::trackSampleRole(*t), doc::fastestTempo(history_.current())};
   };
   library_.presets = [this] {
@@ -5010,11 +4860,6 @@ void MainComponent::setupLibrary() {
     for (const auto& sha : favourites) list.add(u8(sha));
     settings_.getUserSettings()->setValue("libraryFavourites", list.joinIntoString(";"));
   };
-  library_.onUseSample = [this](const doc::LibrarySample& s) {
-    const std::string track = selectedTrack_.empty() ? editor_.track() : selectedTrack_;
-    if (!track.empty()) putSampleOnTrack(track, s);
-  };
-  library_.onPreviewSample = [this](const doc::LibrarySample& s, const std::string& role) { return previewLibrarySample(s, role); };
   // Templates live in the Library (Diogo, 2026-11-05: out of File > New, browsed like the samples, by style).
   library_.onOpenPreset = [this](const std::string& id) {
     if (id == LibraryPanel::kBasicTemplate) newProject(true);
@@ -5179,72 +5024,6 @@ void MainComponent::savePatternFromEditor(int64_t start, int64_t end) {
   }), true);
 }
 
-// "Build-up on a new track": a sampler track ("Build-up") with the library's best snare or clap for the song's
-// style, its notes rising into the next section after the playhead (the drop); one undo step.
-void MainComponent::buildupTrack(int bars, bool roll, bool gap) {
-  const doc::Document& d0 = history_.current();
-  const int64_t bar = 4 * doc::kPpq, length = (int64_t)std::clamp(bars, 1, 16) * bar;
-  const int64_t now = (int64_t)shownPosition();
-  int64_t drop = -1;
-  for (const auto& sec : d0.sections) if (sec.startTick > now && sec.startTick >= length) { drop = sec.startTick; break; }
-  if (drop < 0) drop = std::max<int64_t>(length, ((now + length) / (8 * bar) + 1) * 8 * bar);
-  drop = std::min(drop, d0.lengthTicks);
-  const int64_t start = std::max<int64_t>(0, drop - length);
-  const doc::LibrarySample* snare = nullptr;
-  if (hasSampleIndex_) {
-    const auto found = doc::suggestSamples(sampleIndex_, "accent", doc::songStyle(d0), 8);
-    for (const auto& f : found) if (f.sample && f.sample->info.role == "snare") { snare = f.sample; break; }
-    if (!snare && !found.empty()) snare = found.front().sample;
-  }
-  std::string id;
-  edit([&](doc::Document& d) {
-    id = doc::addTrack(d, "sampler", "Build-up");
-    if (snare) doc::setTrackSample(d, id, sampleIndex_, *snare);
-    doc::Track& t = doc::trackById(d, id);
-    doc::Pattern& p = t.patterns.front();
-    p.notes.clear();
-    p.lengthTicks = drop - start;
-    doc::BuildupOptions o;
-    o.start = 0;
-    o.length = drop - start;
-    o.roll = roll;
-    o.gapTicks = gap ? doc::kPpq : 0;
-    o.pitch = t.instrument.samples.empty() ? 60 : t.instrument.samples.front().rootKey;
-    doc::makeBuildup(p, o);
-    t.clips.clear();
-    t.clips.push_back({"c1", p.id, start, drop - start, 0, doc::json::object()});
-  }, u8("Build-up track"));
-  if (id.empty() || !history_.current().findTrack(id)) return;  // refused: edit() said why
-  selectTrack(id);
-  notice_ = u8("Build-up: ") + juce::String(bars) + u8(" bars into bar ") + juce::String(drop / bar + 1) +
-            (snare ? u8(" with ") + u8(doc::shownName(*snare)) : u8(" (no snare in the library: choose a sound for the track)")) + u8(". Ctrl+Z undoes.");
-  repaint();
-}
-
-bool MainComponent::previewLibrarySample(const doc::LibrarySample& sample, const std::string& role) {
-  if (!hasSampleIndex_ || session_ == nullptr) return false;
-  std::string trackId;
-  int pitch = 60;
-  if (!samplePreviewTrack_.empty()) session_->liveNote(samplePreviewTrack_, samplePreviewPitch_, 0, false);  // the older one stops
-  try {
-    session_->setDocument(doc::withPreviewTrack(history_.current(), sampleIndex_, sample, role, trackId, pitch));
-  } catch (const std::exception&) {
-    return false;
-  }
-  // The note starts once the engine has the track (commands reach it in order), lasts the sample's length (at most
-  // 6 s), then the engine gets the song back without the hidden track. A newer preview takes over: the older one's
-  // note-off and restore are skipped so they never cut it.
-  const int ms = std::clamp((int)std::round(sample.seconds * 1000.0), 150, 6000);
-  samplePreviewTrack_ = trackId;
-  samplePreviewPitch_ = pitch;
-  const uint64_t gen = ++samplePreviewGen_;
-  juce::Component::SafePointer<MainComponent> safe(this);
-  juce::Timer::callAfterDelay(120, [safe, trackId, pitch, gen] { if (safe != nullptr && safe->samplePreviewGen_ == gen) safe->session_->liveNote(trackId, pitch, 0.9, true); });
-  juce::Timer::callAfterDelay(120 + ms, [safe, trackId, pitch, gen] { if (safe != nullptr && safe->samplePreviewGen_ == gen) safe->session_->liveNote(trackId, pitch, 0, false); });
-  juce::Timer::callAfterDelay(120 + ms + 400, [safe, gen] { if (safe != nullptr && safe->samplePreviewGen_ == gen) { safe->samplePreviewTrack_.clear(); safe->session_->setDocument(safe->engineDocument()); } });
-  return true;
-}
-
 // ---------------------------------------------------------------- menus
 
 namespace { enum MenuId { kMidiNone = 200, kMidiDevice = 201, kNewEmpty = 50, kOpen = 1, kSave, kSaveAs, kExport24, kExport32, kQuit, kUndo, kRedo, kImportAudio, kRelocate, kDevice = 100,
@@ -5252,8 +5031,8 @@ namespace { enum MenuId { kMidiNone = 200, kMidiDevice = 201, kNewEmpty = 50, kO
                        kPluginPatterns = 440, kPluginSilent = 442,
                        kPluginScan = 460, kPluginFolder, kPluginRetry, kMasterFx = 2400 /* + 60 */, kMasterFxAdd = 2500 /* + 400 */,
                        kOpenLogs = 580, kAbout = 581, kExportMono = 590, kImportMidi = 595, kExportMidi = 596, kExportBitwig = 597,
-                       kSampleFolder = 1600, kSampleRescan, kSampleApply, kSampleAuto, kSampleShuffle, kSampleCatalogUndo,
-                                              kRandomize = 1700 /* + strength 1..3; + 4: tempo per section; + 5: sound */, kViewLibrary = 1800, kViewInspector, kViewMixer, kViewScale = 1810 /* + 0 auto, + 1..5: 100..200 % */,
+                       kSampleFolder = 1600, kSampleRescan, kSampleCatalogUndo,
+                                              kRandomize = 1700 /* + strength 1..3; + 4: tempo per section */, kViewLibrary = 1800, kViewInspector, kViewMixer, kViewScale = 1810 /* + 0 auto, + 1..5: 100..200 % */,
                        kViewSectionShades = 1820,
                        kRenderMixToSample = 1900, kRenderTrackToSample, kSettings, kShortcuts, kResampleLoop, kBounceTrack,
                        kTrainingClips = 1950,
@@ -5263,11 +5042,11 @@ namespace { enum MenuId { kMidiNone = 200, kMidiDevice = 201, kNewEmpty = 50, kO
 juce::String MainComponent::MenuBar::getTooltip() {
   static const char* const help[] = {
       "Songs: new, open, save, import audio, export WAV (templates are in the Library)",
-      "Undo and redo, and Randomize a song made from a style template (pattern, tempo, sound)",
+      "Undo and redo, and Randomize a song made from a style template (pattern, tempo)",
       "Show or hide the Library and Inspector; open the Mixer; the UI size",
       "Cut or render samples, the audio output and the MIDI input",
       "Patterns (the channel rack) and Core's tools; the VST3 plugins: scan, folders, the master's effects",
-      "Your sample library: its folder, rescan, the best samples for this song",
+      "Your sample library: its folder and rescan",
       "AICORE, Core's add-on: open its chat, its proposals, its folder",
       "Logs (problems, crash dumps) and the version",
   };
@@ -5339,7 +5118,7 @@ juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&) {
       if (p.id != "pcore") menu.addSubMenu(u8(p.shortName) + u8(": ") + u8(p.about), coreToolMenu(p.id, ""));
     {  // A song from before 0.7.0: its old Core sounds are kept but silent (Diogo 2026-11-16, "não sai som").
       int silent = 0;
-      for (const auto& t : history_.current().tracks) silent += t.instrument.kind == "builtin" || t.instrument.kind == "none";
+      for (const auto& t : history_.current().tracks) silent += t.instrument.kind == "none";
       menu.addItem(juce::PopupMenu::Item(u8("Give the silent tracks their role's plugin (") + juce::String(silent) + u8(" silent)"))
                        .setID(kPluginSilent).setEnabled(silent > 0));
     }
@@ -5405,12 +5184,6 @@ juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&) {
     if (!sampleIndex_.sidecarProblems.empty())
       menu.addItem(juce::PopupMenu::Item(juce::String((int)sampleIndex_.sidecarProblems.size()) + u8(" problem(s) in ") + doc::kSampleMetadataFile + u8(" (see the log)"))
                        .setEnabled(false));
-    menu.addSeparator();
-    menu.addSeparator();
-    menu.addItem(juce::PopupMenu::Item(u8("Use the best samples in this song")).setID(kSampleApply).setEnabled(hasSampleIndex_));
-    menu.addItem(juce::PopupMenu::Item(u8("Shuffle samples (another good pick)")).setID(kSampleShuffle).setEnabled(hasSampleIndex_));
-    menu.addItem(juce::PopupMenu::Item(u8("Suggest samples for new songs from style templates")).setID(kSampleAuto)
-                     .setTicked(settings_.getUserSettings()->getBoolValue("suggestSamples", true)));
   } else if (index == 5) {  // AICORE: the same items as the AICORE button's right-click
     addAicoreItems(menu, aiAllowed_, realOutput_, aiAllowed_ ? (int)inbox_.size() : 0, aicoreState(aicore_, aiAllowed_));
   } else if (index == 6) {
@@ -5440,7 +5213,6 @@ juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&) {
     menu.addItem(juce::PopupMenu::Item(u8("Randomize (medium)")).setID(kRandomize + 2).setEnabled(styled));
     menu.addItem(juce::PopupMenu::Item(u8("Randomize (bold)")).setID(kRandomize + 3).setEnabled(styled));
     menu.addItem(juce::PopupMenu::Item(u8("Randomize tempo per section")).setID(kRandomize + 4).setEnabled(styled));
-    menu.addItem(juce::PopupMenu::Item(u8("Randomize sound (built-in instruments)")).setID(kRandomize + 5).setEnabled(styled));
   }
   // Shortcut hints on the right, as in other Windows programs.
   juce::PopupMenu::MenuItemIterator it(menu);
@@ -5482,11 +5254,8 @@ void MainComponent::menuItemSelected(int id, int) {
         notice_ = u8("Undone in the sample catalogue: ") + u8(label);
       }
       break;
-    case kSampleApply: useSuggestedSamples(false, false); break;
-    case kSampleShuffle: useSuggestedSamples(false, true); break;
     case kRandomize + 1: case kRandomize + 2: case kRandomize + 3: randomizeSong(id - kRandomize); break;
     case kRandomize + 4: randomizeSong(2, "tempo"); break;
-    case kRandomize + 5: randomizeSong(2, "sound"); break;
     case kViewMixer: setMixerOpen(!mixerOpen_); break;
     case kViewSectionShades:
       sectionShades_ = !sectionShades_;
@@ -5501,10 +5270,6 @@ void MainComponent::menuItemSelected(int id, int) {
     case kViewLibrary:
     case kViewInspector:
       toggleSidePanel(id == kViewLibrary);
-      break;
-    case kSampleAuto:
-      settings_.getUserSettings()->setValue("suggestSamples", !settings_.getUserSettings()->getBoolValue("suggestSamples", true));
-      settings_.saveIfNeeded();
       break;
     case kExport24: exportWav(24); break;
     case kExport32: exportWav(32); break;
@@ -6643,11 +6408,7 @@ void MainComponent::offerRecovery() {
 
 void MainComponent::recoverAutosave(const doc::AutosaveInfo& a, const doc::Document& recoveredDoc) {
   doc::Document recovered = recoveredDoc;
-  // Like File > Open: samples whose library file moved are found again by content.
-  doc::Document moved = recovered;
-  const int relinked = hasSampleIndex_ ? doc::relinkMovedSamples(moved, sampleIndex_) : 0;
   history_.reset(recovered);
-  if (relinked) history_.amend(moved);
   selectedTrack_.clear();
   selectedClip_.clear();
   const juce::File song = a.songPath.empty() ? juce::File() : juce::File(u8(a.songPath));

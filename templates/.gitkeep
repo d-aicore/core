@@ -1,0 +1,2 @@
+# Keeps templates/ in the tree: no built-in templates ship (owner decision, 18/11);
+# the folder stays for user templates and for the resource-copy steps in CMake.

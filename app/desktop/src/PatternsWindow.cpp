@@ -23,17 +23,9 @@ constexpr int kButtonsW = 152;  // a row's head, right side: Piano, FX, volume, 
 std::string instrumentLabel(const doc::Track& t) {
   // 0.7.0: the sound comes from the track's VST3 plugin; a track without one is silent and says so.
   if (t.instrument.kind == "plugin") return t.instrument.plugin.value("name", std::string("Plugin"));
-  if (t.instrument.kind == "none" || t.instrument.kind.empty()) return "No instrument: FX > Replace instrument";
-  // "builtin": an old Core sound kept in the song but no longer played.
-  const std::string& n = t.instrument.name;
-  const std::string old = " (old, silent: choose a plugin)";
-  if (n == "kick") return "Core Kick" + old;
-  if (n == "wave") return "W-Core Synth" + old;
-  if (n == "sampler") return "Core Sampler" + old;
-  if (n == "hats") return "Core Hats" + old;
-  if (n == "snare") return "Core Snare" + old;
-  if (n == "drums") return "Core Drums" + old;
-  return "Core" + old;
+  if (t.instrument.kind == "audio") return "Audio clips";
+  if (t.instrument.kind == "bus") return "Bus";
+  return "No instrument: FX > Replace instrument";
 }
 
 void flat(juce::TextButton& b, bool on = false) {

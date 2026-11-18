@@ -182,9 +182,9 @@ json envelopesJson(const std::vector<Automation>& list) {
 // Effect ids the engine would rename (deep hunt P03): ':' (it splits "fx:<track>:<id>"), longer than 40 bytes, empty or
 // used twice in a chain. The engine renamed them on its side only, so the app's plugin keys and curves pointed at
 // nothing and the plugin's state was lost. They are renamed here as the engine does (the first of a pair keeps the id
-// and the curves; ':' becomes '_'; a number is added), with the curves and modulators that name them, so the engine
+// and the curves that name them, so the engine
 // gets ids it keeps as they are.
-void cleanEffectIds(json& chain, std::vector<Automation>& curves, json* modulators) {
+void cleanEffectIds(json& chain, std::vector<Automation>& curves) {
   auto clean = [](const std::string& id) { return !id.empty() && id.size() <= 40 && id.find(':') == std::string::npos; };
   std::vector<std::string> ids;
   std::vector<bool> keep;
@@ -219,10 +219,6 @@ void cleanEffectIds(json& chain, std::vector<Automation>& curves, json* modulato
         if (std::none_of(curves.begin(), curves.end(), [&](const Automation& o) { return o.param == renamed; }) && renamed.size() <= 64)
           a.param = renamed;
       }
-    if (modulators)
-      for (auto& m : *modulators)
-        if (m.is_object() && m.contains("param") && m["param"].is_string() && m["param"].get<std::string>().rfind(from, 0) == 0)
-          m["param"] = to + m["param"].get<std::string>().substr(from.size());
   }
 }
 
@@ -237,45 +233,8 @@ Track parseTrack(const json& v, const std::string& path, const std::set<std::str
   if (!t.color.empty() && !std::regex_match(t.color, color)) throw DocumentError(r.at("color"), "must look like #rrggbb");
 
   Reader ir(r.object("instrument"), r.at("instrument"));
-  t.instrument.kind = ir.string("kind", "builtin", 16);
-  if (t.instrument.kind == "builtin") {
-    t.instrument.name = ir.string("name", "", 40);
-    if (t.instrument.name.empty()) throw DocumentError(ir.at("name"), "is required");
-    t.instrument.version = (int)ir.integer("version", 1, 1, 1000000);
-    json params = ir.object("params");
-    for (auto it = params.begin(); it != params.end(); ++it) {
-      const std::string where = join(ir.at("params"), it.key());
-      if (!it.value().is_number() || !std::isfinite(it.value().get<double>())) throw DocumentError(where, "must be a number");
-      t.instrument.params[it.key()] = it.value().get<double>();
-    }
-    // Core's own instruments left Core (2026-11-16: the sound comes from plugins). A song made with them still opens:
-    // the instrument is kept as it was saved (name, knobs, samples, synth), not played, until a plugin replaces it.
-    const json samples = ir.array("samples", 128);
-    for (size_t si = 0; si < samples.size(); ++si) {
-      Reader sr(samples[si], item(ir.at("samples"), si));
-      SampleRef z;
-      z.file = sr.string("file", "", 1000);
-      if (z.file.empty()) throw DocumentError(sr.at("file"), "is required");
-      // A full path: a relative one would be read from the engine's working folder, not the song's (audit D8).
-      static const std::regex full(R"(^([A-Za-z]:[\\/]|[\\/]))");
-      if (!std::regex_search(z.file, full)) throw DocumentError(sr.at("file"), "must be a full path (e.g. D:\\Samples\\kick.wav)");
-      z.sha256 = sr.string("sha256", "", 64);
-      static const std::regex hex("^([0-9a-f]{64})?$");
-      if (!std::regex_match(z.sha256, hex)) throw DocumentError(sr.at("sha256"), "must be 64 lowercase hex digits");
-      z.name = sr.string("name", "", 200);
-      z.rootKey = (int)sr.integer("rootKey", 60, 0, 127);
-      z.loKey = (int)sr.integer("loKey", 0, 0, 127);
-      z.hiKey = (int)sr.integer("hiKey", 127, 0, 127);
-      if (z.loKey > z.hiKey) throw DocumentError(sr.at("hiKey"), "must not be below loKey");
-      z.loopStart = sr.number("loopStart", 0, 0, 3600);
-      z.loopEnd = sr.number("loopEnd", 0, 0, 3600);
-      if (z.loopEnd > 0 && z.loopEnd < z.loopStart + kMinSampleLoopSeconds) throw DocumentError(sr.at("loopEnd"), "must be at least 2 ms after loopStart");
-      if (z.loopEnd == 0 && z.loopStart > 0) throw DocumentError(sr.at("loopEnd"), "is needed with loopStart (0: no loop)");
-      z.extra = sr.rest();
-      t.instrument.samples.push_back(std::move(z));
-    }
-    t.instrument.synth = ir.take("synth");
-  } else if (t.instrument.kind == "plugin") {
+  t.instrument.kind = ir.string("kind", "none", 16);
+  if (t.instrument.kind == "plugin") {
     // A plugin plays the track (Diogo 2026-11-16: Core's sound comes from plugins): {format, id, name, vendor, file, state}.
     t.instrument.plugin = ir.object("plugin");
     const json& p = t.instrument.plugin;
@@ -285,8 +244,9 @@ Track parseTrack(const json& v, const std::string& path, const std::set<std::str
     if (!p.contains("file") || !p["file"].is_string() || p["file"].get<std::string>().empty()) throw DocumentError(join(ir.at("plugin"), "file"), "is required");
     t.instrument.plugin.erase("missing");
   } else if (t.instrument.kind != "audio" && t.instrument.kind != "bus" && t.instrument.kind != "none") {
-    throw DocumentError(ir.at("kind"), "must be plugin, none, audio, bus or builtin");
+    throw DocumentError(ir.at("kind"), "must be plugin, none, audio or bus");
   }
+  t.instrument.name = ir.string("name", "", 40);
   t.instrument.extra = ir.rest();
 
   Reader mr(r.object("mix"), r.at("mix"));
@@ -377,17 +337,7 @@ Track parseTrack(const json& v, const std::string& path, const std::set<std::str
   t.effects = r.array("effects", kMaxEffects);
   for (size_t i = 0; i < t.effects.size(); ++i)
     if (!t.effects[i].is_object()) throw DocumentError(item(r.at("effects"), i), "must be an object");
-  t.modulators = r.array("modulators", kMaxModulators);
-  std::set<std::string> modIds;
-  for (size_t i = 0; i < t.modulators.size(); ++i) {
-    const json& m = t.modulators[i];
-    const std::string where = item(r.at("modulators"), i);
-    if (!m.is_object()) throw DocumentError(where, "must be an object");
-    if (!m.contains("id") || !m["id"].is_string() || !validId(m["id"].get<std::string>())) throw DocumentError(where + ".id", "must be 1-40 letters, digits, '_' or '-'");
-    if (!modIds.insert(m["id"].get<std::string>()).second) throw DocumentError(where + ".id", "is used twice in this track");
-    if (!m.contains("param") || !m["param"].is_string()) throw DocumentError(where + ".param", "is required");
-  }
-  cleanEffectIds(t.effects, t.automation, &t.modulators);
+  cleanEffectIds(t.effects, t.automation);
   t.extra = r.rest();
   return t;
 }
@@ -412,18 +362,7 @@ json mixJson(const Mix& m) {
 json trackJson(const Track& t) {
   json instrument = {{"kind", t.instrument.kind}};
   if (t.instrument.kind == "plugin") instrument["plugin"] = t.instrument.plugin;
-  else if (t.instrument.kind == "builtin") { instrument["name"] = t.instrument.name; instrument["version"] = t.instrument.version; instrument["params"] = t.instrument.params; }
-  if (!t.instrument.synth.is_null()) instrument["synth"] = t.instrument.synth;
-  if (!t.instrument.samples.empty()) {
-    json samples = json::array();
-    for (const auto& z : t.instrument.samples)
-    {
-      json zone = {{"file", z.file}, {"sha256", z.sha256}, {"name", z.name}, {"rootKey", z.rootKey}, {"loKey", z.loKey}, {"hiKey", z.hiKey}};
-      if (z.loops()) { zone["loopStart"] = z.loopStart; zone["loopEnd"] = z.loopEnd; }  // saved only when set
-      samples.push_back(withExtra(zone, z.extra));
-    }
-    instrument["samples"] = samples;
-  }
+  if (!t.instrument.name.empty()) instrument["name"] = t.instrument.name;
   json patterns = json::array();
   for (const auto& p : t.patterns) {
     json notes = json::array();
@@ -452,7 +391,6 @@ json trackJson(const Track& t) {
               {"patterns", patterns}, {"clips", clips}, {"automation", automation}, {"effects", t.effects}};
   if (!t.color.empty()) out["color"] = t.color;
   if (t.instrument.kind == "audio") out["audioClips"] = audioClips;
-  if (!t.modulators.empty()) out["modulators"] = t.modulators;  // older documents stay byte-identical
   return withExtra(out, t.extra);
 }
 
@@ -592,7 +530,7 @@ Document parseDocument(const json& input, int* migratedFrom) {
   d.masterAutomation = readAutomation(mr, true);
   for (size_t i = 0; i < d.masterEffects.size(); ++i)
     if (!d.masterEffects[i].is_object()) throw DocumentError(item(mr.at("effects"), i), "must be an object");
-  cleanEffectIds(d.masterEffects, d.masterAutomation, nullptr);
+  cleanEffectIds(d.masterEffects, d.masterAutomation);
   d.masterExtra = mr.rest();
   // Assets first: audio clips refer to them.
   const json assets = r.array("assets", 4096);
@@ -922,19 +860,14 @@ Document importProjectV2(const json& project, ImportReport* report) {
     } else if (instrument == "bus") {
       t["instrument"] = {{"kind", "bus"}};
     } else {
-      t["instrument"] = {{"kind", "builtin"}, {"name", instrument}, {"version", (int64_t)num(src, "instrumentVersion", 1)}, {"params", tr.object("params")}};
+      // Core makes no sound of its own: an old built-in instrument (or no instrument) is a track whose notes
+      // wait for a plugin. The name is kept only as a role hint for pattern/alignment detection.
+      t["instrument"] = {{"kind", "none"}};
+      if (!instrument.empty() && instrument != "none") t["instrument"]["name"] = instrument;
       tr.take("instrumentVersion");
-      if (const json synth = tr.take("synth"); !synth.is_null()) t["instrument"]["synth"] = synth;  // W-Core's links
-      // The projection puts a sampler's zones on the track, with "path"; the document keeps them on the
-      // instrument, with "file". Other fields of a zone come along as they are.
-      if (instrument == "sampler" || instrument == "wave" || instrument == "samplepath") {
-        json zones = json::array();
-        for (json z : tr.array("samples", 128)) {
-          if (z.is_object() && z.contains("path") && !z.contains("file")) { z["file"] = z["path"]; z.erase("path"); }
-          zones.push_back(std::move(z));
-        }
-        if (!zones.empty()) t["instrument"]["samples"] = zones;
-      }
+      tr.take("params");
+      tr.take("synth");
+      tr.take("samples");
     }
     t["mix"] = {{"gainDb", clamp(num(src, "gainDb", 0), -60, 12, where + ".gainDb")},
                 {"pan", clamp(num(src, "pan", 0), -1, 1, where + ".pan")},
@@ -987,7 +920,7 @@ Document importProjectV2(const json& project, ImportReport* report) {
     tr.take("lengthTicks");
     t["automation"] = importEnvelopes(tr.array("envelopes", 256), where, rep);
     t["effects"] = tr.array("effects", kMaxEffects);
-    if (const json mods = tr.take("modulators"); mods.is_array() && !mods.empty()) t["modulators"] = mods;
+    tr.take("modulators");
     json rest = tr.rest();
     if (!rest.empty()) rep.kept.push_back(where + ": unknown fields kept, not played");
     tracks.push_back(withExtra(t, rest));

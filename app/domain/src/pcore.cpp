@@ -1280,31 +1280,6 @@ void clearBassUnderKick(Document& doc, const std::vector<PCoreTarget>& made, int
   }
 }
 
-// An empty sampler track (Diogo's samples) plays only its keys: a written note outside every sample's loKey..hiKey
-// is silent. It moves by octaves to the nearest key the sampler plays, else to the first sample's root.
-int fitToSampler(Document& doc, const std::vector<PCoreTarget>& targets, int64_t start, int64_t end) {
-  int moved = 0;
-  for (const auto& tg : targets) {
-    const Track* t = findTrackPtr(doc, tg.trackId);
-    if (!t || t->instrument.kind != "builtin" || t->instrument.name != "sampler" || t->instrument.samples.empty()) continue;
-    auto plays = [&](int key) {
-      for (const auto& s : t->instrument.samples) if (key >= s.loKey && key <= s.hiKey) return true;
-      return false;
-    };
-    for (auto& n : tg.pattern->notes) {
-      if (n.tick < start || n.tick >= end || plays(n.pitch)) continue;
-      int best = -1;
-      for (int o = 1; o <= 10 && best < 0; ++o) {
-        if (n.pitch - 12 * o >= 0 && plays(n.pitch - 12 * o)) best = n.pitch - 12 * o;
-        else if (n.pitch + 12 * o <= 127 && plays(n.pitch + 12 * o)) best = n.pitch + 12 * o;
-      }
-      n.pitch = best >= 0 ? best : std::clamp(t->instrument.samples.front().rootKey, 0, 127);
-      ++moved;
-    }
-  }
-  return moved;
-}
-
 PCoreAlignStats alignSong(Document& doc, const PCoreAlign& a, std::vector<PCoreTarget>& targets, int64_t songTick, int64_t start,
                           int64_t end) {
   PCoreAlignStats st;
@@ -1376,13 +1351,9 @@ std::vector<PCoreResult> pcoreApplyToSong(Document& doc, const PCoreCatalog& c, 
     if (aligned) *aligned = stats;
     return out;
   }
-  // A drum track whose notes are all one sound keeps that sound; an empty pattern takes the part's, except on a
-  // sampler, which keeps its sample's root key (another key may be silent there).
+  // A drum track whose notes are all one sound keeps that sound; an empty pattern takes the part's pitch.
   for (auto& tg : targets)
-    if (tg.pitch >= 0 && tg.pattern->notes.empty()) {
-      const Track* t = findTrackPtr(doc, tg.trackId);
-      if (!t || t->instrument.name != "sampler") tg.pitch = -1;
-    }
+    if (tg.pitch >= 0 && tg.pattern->notes.empty()) tg.pitch = -1;
   // With "create": the tracks are written with their shape ("" = the style's first for the part); those whose
   // shape is "keep" keep their notes and are only changed. Both
   // groups are checked before either is written.
@@ -1415,7 +1386,6 @@ std::vector<PCoreResult> pcoreApplyToSong(Document& doc, const PCoreCatalog& c, 
     const PCoreAlignStats stats = alignSong(doc, *align, targets, songTick, start, end);
     if (aligned) *aligned = stats;
   }
-  fitToSampler(doc, targets, start, end);
   return out;
 }
 

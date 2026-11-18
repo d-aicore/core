@@ -483,8 +483,6 @@ int bassFollowZones(Document& doc, const std::string& bassTrackId, const std::st
 
 std::string findKickTrack(const Document& doc) {
   for (const auto& t : doc.tracks)
-    if (t.instrument.kind == "builtin" && t.instrument.name == "kick") return t.id;
-  for (const auto& t : doc.tracks)
     if (playsPatterns(t) && lower(t.name).find("kick") != std::string::npos) return t.id;
   return {};
 }

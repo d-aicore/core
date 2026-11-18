@@ -205,26 +205,21 @@ TEST("build-up: o filtro abre, o reverb e o delay crescem ate ao drop; papeis em
 
 CORE_TEST_MAIN
 
-// "Não sai som" (Diogo 2026-11-16): uma musica de antes do 0.7.0 tem os sons antigos do Core (builtin) ou nenhum,
-// e o 0.7.0 nao toca nenhum dos dois. giveSilentTracksRolePlugins da a cada pista muda o plugin do seu papel.
-TEST("pistas mudas: o papel adivinha-se pelo nome e pelo som antigo") {
+// "Não sai som" (Diogo 2026-11-16): Core makes no sound of its own; a track without a plugin is silent ("none").
+// giveSilentTracksRolePlugins gives each silent track the plugin of its guessed role.
+TEST("pistas mudas: o papel adivinha-se pelo nome") {
   Track t;
-  t.name = "Kick"; t.instrument.kind = "builtin"; t.instrument.name = "kick";
-  CHECK_EQ(guessInstrumentRole(t), std::string("drums"));
+  t.instrument.kind = "none";
+  t.name = "Kick"; CHECK_EQ(guessInstrumentRole(t), std::string("drums"));
   t.name = "Hats 2"; CHECK_EQ(guessInstrumentRole(t), std::string("drums"));
-  t.name = "Sub Bass"; t.instrument.name = "wave"; CHECK_EQ(guessInstrumentRole(t), std::string("bass"));
+  t.name = "Sub Bass"; CHECK_EQ(guessInstrumentRole(t), std::string("bass"));
   t.name = "Big Pad"; CHECK_EQ(guessInstrumentRole(t), std::string("pad"));
   t.name = "Arp"; CHECK_EQ(guessInstrumentRole(t), std::string("pluck"));
-  t.name = "Track 7"; CHECK_EQ(guessInstrumentRole(t), std::string("lead"));  // W-Core sem nome: lead
-  t.instrument.kind = "none"; t.instrument.name.clear();
-  CHECK_EQ(guessInstrumentRole(t), std::string(""));  // sem nome nem som antigo: nao se adivinha
+  t.name = "Track 7"; CHECK_EQ(guessInstrumentRole(t), std::string(""));  // um nome que nao diz o papel: nao se adivinha
 }
 
-TEST("pistas mudas: as builtin e none com papel no mapa passam a tocar o plugin; as outras ficam e sao listadas") {
+TEST("pistas mudas: as none com papel no mapa passam a tocar o plugin; as outras ficam e sao listadas") {
   Document d = newTemplateDocument();
-  // Como uma musica antiga: todas as pistas com o som antigo do Core.
-  for (auto& t : d.tracks)
-    if (playsPatterns(t)) { t.instrument = Instrument{}; t.instrument.kind = "builtin"; t.instrument.name = "kick"; }
   const std::string bass = trackNamed(d, "ass");
   const size_t notesBefore = trackById(d, bass).patterns.empty() ? 0 : trackById(d, bass).patterns[0].notes.size();
   RoleMap m = fullMap();  // so "bass" tem plugin
@@ -254,10 +249,11 @@ TEST("pistas mudas: pistas de audio, bus e com plugin nao mudam") {
   RoleMap m = fullMap();
   m.roles["drums"] = {fakePlugin("sfizz"), {}, {}};
   bool anySilent = false;
-  for (const auto& t : d.tracks) anySilent = anySilent || t.instrument.kind == "builtin" || t.instrument.kind == "none";
+  for (const auto& t : d.tracks) anySilent = anySilent || t.instrument.kind == "none";
   const int changed = giveSilentTracksRolePlugins(d, m);
   if (!anySilent) { CHECK_EQ(changed, 0); CHECK_EQ(toJson(d).dump(), before); }
-  for (const auto& t : d.tracks) CHECK(t.instrument.kind != "builtin");
+  for (const auto& t : d.tracks)
+    CHECK(t.instrument.kind == "plugin" || t.instrument.kind == "none" || t.instrument.kind == "audio" || t.instrument.kind == "bus");
 }
 
 // ---- As tools da AI (Diogo 2026-11-16): R-Core / D-Core pelo bus, F-Core por intencao, ROLL, o catalogo.
@@ -424,7 +420,7 @@ TEST("SUCK: uma cadeia de efeitos cheia recusa-se antes de escrever seja o que f
   Document d = newTemplateDocument();
   const std::string bass = trackNamed(d, "ass");
   addPluginEffect(d, bass, fakePlugin("ValhallaRoom"));  // o reverb ja la esta, sem papel marcado
-  for (int i = 0; i < 15; ++i) addEffect(d, bass, "eq");
+  for (int i = 0; i < 15; ++i) addPluginEffect(d, bass, fakePlugin("Eq"));
   CHECK_EQ(effectChain(d, bass).size(), (size_t)16);
   const std::string before = toJson(d).dump();
   CHECK_THROWS(toolSuck(d, bass, fullMap(), 8 * 4 * kPpq, 2 * 4 * kPpq));  // o filtro nao cabe
@@ -438,7 +434,7 @@ TEST("SUCK: uma cadeia de efeitos cheia recusa-se antes de escrever seja o que f
   const std::string kick = trackNamed(e, "ick");
   addPluginEffect(e, kick, fakePlugin("ValhallaRoom"));
   addPluginEffect(e, kick, fakePlugin("Filter"));
-  for (int i = 0; i < 14; ++i) addEffect(e, kick, "eq");
+  for (int i = 0; i < 14; ++i) addPluginEffect(e, kick, fakePlugin("Eq"));
   CHECK_EQ(effectChain(e, kick).size(), (size_t)16);
   const RoleToolResult r = toolSuck(e, kick, fullMap(), 8 * 4 * kPpq, 2 * 4 * kPpq);
   CHECK_EQ(r.roles.size(), (size_t)2);
@@ -460,7 +456,7 @@ TEST("build-up e fx por intencao: cadeia cheia nao deixa metade escrita") {
   Document d = newTemplateDocument();
   const std::string bass = trackNamed(d, "ass");
   addPluginEffect(d, bass, fakePlugin("ValhallaRoom"));
-  for (int i = 0; i < 15; ++i) addEffect(d, bass, "eq");
+  for (int i = 0; i < 15; ++i) addPluginEffect(d, bass, fakePlugin("Eq"));
   const std::string before = toJson(d).dump();
   BuildupFx fx;
   fx.filter = false;
@@ -471,7 +467,7 @@ TEST("build-up e fx por intencao: cadeia cheia nao deixa metade escrita") {
   Document e = newTemplateDocument();
   const std::string kick = trackNamed(e, "ick");
   addPluginEffect(e, kick, fakePlugin("Filter"));
-  for (int i = 0; i < 15; ++i) addEffect(e, kick, "eq");
+  for (int i = 0; i < 15; ++i) addPluginEffect(e, kick, fakePlugin("Eq"));
   const std::string was = toJson(e).dump();
   CHECK_THROWS(toolIntentFx(e, kick, fullMap(), "intro", 0, 4 * 4 * kPpq, 0.7));  // falta o reverb
   CHECK_EQ(toJson(e).dump(), was);

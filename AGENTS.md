@@ -11,7 +11,8 @@
 - Arquitectura e desenho final de novas superfícies exigem decisão explícita numerada. Não voltar a pedir decisões de produto já expressas; concretizar apenas os detalhes ainda abertos.
 - Não reintroduzir instrumentos/designers próprios ou AI no Core. Não mover código entre Core/AICORE sem decisão.
 - Master vertical/selecção, refinamento visual, janela DSP e maqueta de interface estão **fora da árvore** por ordem do dono (D83); re-land só por decisão numerada. Não os reescrever por iniciativa.
-- Preservar catálogo de padrões, alinhamento kick/baixo/pratos, projectos e áudio do utilizador.
+- Preserve the user's projects and audio, the pattern catalogue, and the kick/bass/cymbal alignment (it decides notes, not sound).
+- Core makes no sound of its own: anything that generates or processes sound belongs to a plugin, not the DAW. The built-in sampler, synths/instruments, effects, filters, oscillators, modulators, ducking, A/B sound and preview are removed, together with their callers and their tests; so are the built-in templates that use them (the old "five visible templates stay" pin no longer applies). Tracks are generic plugin hosts — any track can hold a sampler, synth or effect plugin — not typed instruments. What makes no sound stays: plugin hosting, MIDI, timeline/tempo/sections, routing, undo, file format, and the D:\Samples browser.
 
 ## Language
 
@@ -44,9 +45,9 @@
 - Identificar branch/SHA e alterações existentes antes de editar; preservar trabalho alheio.
 - Auditoria/documentação não autoriza implementação. Implementação autorizada deve ter âmbito explícito.
 - Não portar PRs antigos integralmente: comparar com a baseline e trazer apenas o que falta e serve a direcção actual.
-- Não apagar código, dados, testes ou história apenas por parecerem antigos; mapear dependências. Limpeza de samples distribuídos não é limpeza dos ficheiros do utilizador.
+- Do not delete code, data, tests or history merely for looking old; map dependencies. This protection does NOT cover the built-in sound features (sampler, synths/instruments, effects, filters, oscillators, modulators, ducking, A/B sound, preview) or the built-in templates: those are removed by owner decision, together with their callers and their tests. Removing distributed samples is not removing the user's files.
 - Correcção de bug: regressão significativa e vermelho medido no estado anterior quando executável, depois verde. Se não executável, declarar a limitação.
-- Contagens de testes por suite/âmbito; não reduzir cobertura ou relaxar critérios para obter verde. Flaky é defeito a investigar.
+- Report test counts per suite/scope. The count drops when a feature is removed (authorized; not a regression). Do not relax criteria or weaken the remaining tests to obtain green. Flaky is a defect to investigate.
 - Cada milestone de implementação mantém Core compilável, a abrir, tocar, guardar/reabrir e exportar; não declarar estes gates sem execução.
 - Usar testes/gates registados no checkout. Linux não prova runtime Windows. Sem tokens novos para agentes ou activação de CI nesta organização documental.
 - Não enviar mensagens, fechar PRs nem arquivar outro repo por inferência de um plano.

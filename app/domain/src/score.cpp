@@ -94,12 +94,6 @@ std::string scorePartOf(const Track& track) {
   if (has(n, "pad") || has(n, "drone") || has(n, "atmo") || has(n, "texture") || has(n, "bed") || has(n, "ambient")) return "pad";
   if (has(n, "lead") || has(n, "arp") || has(n, "synth") || has(n, "acid") || has(n, "melod") || has(n, "pluck") || has(n, "vox"))
     return "lead";
-  if (track.instrument.kind == "builtin") {
-    if (track.instrument.name == "kick") return "kick";
-    if (track.instrument.name == "hats") return "hats";
-    if (track.instrument.name == "snare") return "perc";
-    if (track.instrument.name == "wave") return "lead";
-  }
   return "";
 }
 

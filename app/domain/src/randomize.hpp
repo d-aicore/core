@@ -35,7 +35,7 @@ std::vector<std::string> randomizeStyle(Document& doc, const RandomizeOptions& o
 
 // Changes the song's tempo (its start BPM and its tempo map) and keeps the bass gates in ms (audit
 // 48c9c38 E8/D4, Diogo 2026-11-04: the domain rewrites the notes). In every stretch whose BPM changes, the
-// clips of the bass track (id "bass" or the built-in bass) that start there get a copy of their pattern
+// clips of the bass track (id "bass" or a track named Bass) that start there get a copy of their pattern
 // with the note lengths scaled by new/old BPM, as Randomize J does; a longer note stays inside 80 % of
 // the gap to the next one. Drums, hats and the rest keep their ticks (their notes are hits, not gates).
 // A tempo movement that goes exactly back (A -> B -> A, in separate edits or one drag) restores the

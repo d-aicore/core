@@ -450,9 +450,9 @@ TEST("plugins: droppedPluginKeys names the plugins a change takes away, and noth
   Document same = before;
   replaceInstrumentWithPlugin(same, b, synth);
   CHECK(droppedPluginKeys(before, same).empty());
-  // A sample on a plugin track (setTrackSample): the track's instrument is no longer the plugin.
+  // The track's instrument is no longer the plugin (it waits for another): the plugin is let go.
   Document sampled = before;
-  sampled.tracks[1].instrument.kind = "sampler";
+  sampled.tracks[1].instrument.kind = "none";
   sampled.tracks[1].instrument.plugin = json();
   CHECK(droppedPluginKeys(before, sampled) == Keys{pluginKey(b)});
   // An effect removed, on a track and on the master.
@@ -525,28 +525,6 @@ TEST("plugins: keepLivePluginStates never takes back the state of a plugin that 
   Document kept = to;
   CHECK_EQ(keepLivePluginStates(bare, kept), 1);  // (the effect only)
   CHECK_EQ(stateOf(kept, a), std::string("QQ=="));
-}
-
-// Todos os templates que vao com a app abrem, viram projecto do motor, e o motor aceita-os e renderiza sem NaN.
-TEST("templates: todos abrem e o motor toca-os sem erro") {
-  TemplateLibrary lib = loadTemplates(CORE_TEMPLATES_DIR, tempDir() / "user-templates-vazia", true);
-  for (const auto& p : lib.problems) coretest::fail(p.file.string().c_str(), 0, p.message);
-  CHECK(lib.templates.size() >= 1);
-  for (const auto& e : lib.templates) {
-    Document d = documentFromTemplate(e.tmpl);
-    core::Project p;
-    try {
-      p = core::fromJson(toProjection(d));
-    } catch (const std::exception& ex) {
-      coretest::fail(e.file.string().c_str(), 0, std::string("o motor recusou: ") + ex.what());
-      continue;
-    }
-    p.lengthTicks = std::min<int64_t>(p.lengthTicks, 4 * 4 * core::kPpq);  // 4 compassos chegam
-    core::RenderResult r = core::renderProject(p, 48000, 512, false, 0.1, nullptr, nullptr, nullptr, 0);
-    bool finite = true;
-    for (float s : r.L) finite = finite && std::isfinite(s);
-    CHECK(finite);
-  }
 }
 
 TEST("plugins por fabricante: todos entram num grupo, sem fabricante vai para Other, ordem alfabetica") {

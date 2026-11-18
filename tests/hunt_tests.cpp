@@ -21,7 +21,6 @@
 #include "core/server.hpp"
 #include "io/audio_file.hpp"
 #include "engine_protocol.hpp"
-#include "sampling.hpp"
 #include <fstream>
 #include "io/wav.hpp"
 
@@ -169,35 +168,6 @@ TEST("caca P03: ids de efeito repetidos ou com ':' sao limpos ao abrir, e o moto
   CHECK_EQ(core::doc::toJson(core::doc::parseDocument(core::doc::toJson(clean))).dump(), core::doc::toJson(clean).dump());
 }
 
-// P04: o codigo esta certo (Diogo 2026-11-16, PR #2: o som vem so de plugins). Os efeitos proprios e os moduladores
-// dos templates ficam guardados na musica e calados; o plano dizia-o de forma ambigua e foi corrigido.
-TEST("caca P04: efeitos proprios e moduladores ficam no .core e fora do motor; os plugins e as suas curvas tocam") {
-  core::doc::TemplateLibrary lib = core::doc::loadTemplates(CORE_TEMPLATES_DIR, freshDir("p04-user"), true);
-  size_t builtin = 0, modulators = 0;
-  for (const auto& e : lib.templates) {
-    const Document d = core::doc::documentFromTemplate(e.tmpl);
-    const json saved = core::doc::toJson(d), projection = core::doc::toProjection(d);
-    for (size_t i = 0; i < d.tracks.size(); ++i) {
-      for (const auto& fx : d.tracks[i].effects) builtin += fx.value("type", std::string()) == "builtin";
-      modulators += d.tracks[i].modulators.size();
-      CHECK_EQ(saved["tracks"][i].value("effects", json::array()).size(), d.tracks[i].effects.size());  // guardados
-      for (const auto& fx : projection["tracks"][i].value("effects", json::array()))
-        CHECK_EQ(fx.value("type", std::string()), std::string("plugin"));                              // calados
-      CHECK(!projection["tracks"][i].contains("modulators"));
-    }
-  }
-  CHECK(builtin > 0);  // os templates tem-nos (1108 no relatorio): o teste ve-os mesmo
-  CHECK(modulators > 0);
-
-  Document d = core::doc::newEmptyDocument();
-  const std::string track = core::doc::addAudioTrack(d, "t");
-  core::doc::addPluginEffect(d, track, pluginEffect("p", "QQ==")["plugin"]);
-  const std::string pid = d.tracks[0].effects[0]["id"].get<std::string>();
-  d.tracks[0].automation.push_back({"fx:" + pid + ":vst:7", {{0, 0.5, json::object()}}, json::object()});
-  const json projection = core::doc::toProjection(d);
-  CHECK_EQ(projection["tracks"][0]["effects"].size(), (size_t)1);
-  CHECK_EQ(projection["tracks"][0]["envelopes"].size(), (size_t)1);
-}
 
 TEST("caca P06: apagar a pista mostrada nao mete na selecao uma pista que ninguem escolheu") {
   Document d = core::doc::newEmptyDocument();
@@ -269,18 +239,6 @@ TEST("caca 2, U-8: os tres textos que faltavam tem traducao") {
     CHECK(lang["strings"].contains(key));
 }
 
-TEST("caca 2, P08: um clip so de NaN e um ficheiro estragado, nao silencio") {
-  const float nan = std::numeric_limits<float>::quiet_NaN();
-  core::sampling::Channels broken = {std::vector<float>(4800, nan), std::vector<float>(4800, nan)};
-  CHECK(core::sampling::hasBrokenSamples(broken));
-  CHECK_EQ(core::sampling::normalizePeak(broken), 0.0);  // nada muda
-  core::sampling::Channels one = {coretest::sine(440, 48000, 4800, 0.5f)};
-  CHECK(!core::sampling::hasBrokenSamples(one));
-  one[0][100] = std::numeric_limits<float>::infinity();
-  CHECK(core::sampling::hasBrokenSamples(one));
-  core::sampling::Channels silent = {std::vector<float>(4800, 0.0f)};
-  CHECK(!core::sampling::hasBrokenSamples(silent));  // o silencio continua silencio
-}
 
 TEST("caca 2, seccao 4: um ppq que nao e 960 tem uma mensagem que se entende") {
   json j = core::doc::toJson(core::doc::newEmptyDocument());

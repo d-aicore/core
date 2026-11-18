@@ -158,13 +158,6 @@ LibraryPanel::LibraryPanel() {
   list_.setColour(juce::ListBox::outlineColourId, juce::Colours::transparentBlack);
   addAndMakeVisible(list_);
 
-  play_.getProperties().set(kIconProperty, "play");
-  play_.setWantsKeyboardFocus(false);
-  play_.onClick = [this] { preview(); };
-  addAndMakeVisible(play_);
-  use_.setWantsKeyboardFocus(false);
-  use_.onClick = [this] { if (const auto* s = current(); s && onUseSample) onUseSample(*s); };
-  addAndMakeVisible(use_);
   star_.getProperties().set(kIconProperty, "star");
   star_.setWantsKeyboardFocus(false);
   star_.setTooltip("Favourite");
@@ -224,8 +217,6 @@ void LibraryPanel::setTab(Tab tab) {
   for (auto& b : soundChips_) b->setVisible(sounds);
   fit_.setVisible(sounds);
   search_.setVisible(tab != Tab::Project);
-  play_.setVisible(sounds);
-  use_.setVisible(sounds);
   star_.setVisible(sounds);
   edit_.setVisible(sounds);
   for (auto& b : bars_) b.setVisible(tab == Tab::Grooves);
@@ -483,14 +474,6 @@ void LibraryPanel::rebuild() {
 void LibraryPanel::refresh() {
   const auto* s = current();
   const juce::String track = trackName ? trackName() : juce::String();
-  const bool fits = s && track.isNotEmpty() && trackTakesSamples && trackTakesSamples();
-  play_.setEnabled(s != nullptr && onPreviewSample != nullptr);
-  play_.setTooltip(s ? juce::String("Hear it (the song does not change)") : juce::String("Choose a sound"));
-  use_.setEnabled(fits);
-  use_.setTooltip(!s ? juce::String("Choose a sound")
-                  : track.isEmpty() ? juce::String("Select a track first: the sound goes on it")
-                  : !fits ? "\"" + track + "\" plays a synth: choose a drum, bass or FX track for samples"
-                          : "Put on \"" + track + "\" and play it (Ctrl+Z puts the old sound back)");
   const auto [fitRole, fitBpm] = fitNow();
   fit_.setEnabled(!fitRole.empty());
   fit_.setTooltip(fitRole.empty() ? juce::String("Select a drum, bass or FX track: then only the sounds that suit it at the song's tempo show")
@@ -650,16 +633,6 @@ void LibraryPanel::listBoxItemDoubleClicked(int row, const juce::MouseEvent&) {
     playPattern_.triggerClick();
     return;
   }
-  if (row < 0 || row >= (int)rows_.size() || rows_[(size_t)row].sample < 0) return;
-  preview();  // double-click = hear it; putting it on the track is the "Use" button
-}
-
-// Any sound can be heard, whatever track is selected: as the selected track's role when it takes samples,
-// otherwise as the sound's own role. Putting it on a track is the "Use" button.
-void LibraryPanel::preview() {
-  const auto* s = current();
-  if (!s || !onPreviewSample) return;
-  onPreviewSample(*s, fitNow().first);
 }
 
 void LibraryPanel::selectedRowsChanged(int row) {
@@ -726,9 +699,6 @@ void LibraryPanel::resized() {
     auto head = preview.removeFromTop(22);
     star_.setBounds(head.removeFromRight(24));
     edit_.setBounds(head.removeFromRight(24));
-    auto foot = preview.removeFromBottom(26);
-    play_.setBounds(foot.removeFromLeft(34).reduced(0, 1));
-    use_.setBounds(foot.removeFromRight(48).reduced(0, 1));
   }
   if (tab_ == Tab::Templates) {
     r.removeFromBottom(kPreview + 8);
@@ -781,7 +751,7 @@ void LibraryPanel::editMetadata() {
       if (info.contains(id) && info[id].is_string()) said.add(juce::String(label) + ": " + u8(info[id].get<std::string>()));
     if (!said.isEmpty()) message << "\n" << said.joinIntoString("    ");
   }
-  if (s->embedded.is_object() && s->embedded.contains("loop")) message << "\nThe file has its own loop: the sampler loops it while a note is held.";
+  if (s->embedded.is_object() && s->embedded.contains("loop")) message << "\nThe file has its own loop points.";
   if (now["locations"].size() > 1) message << "\n" << juce::String((int)now["locations"].size()) << " copies of this file in the library.";
   message << "\nThe WAV file is not changed.";
   auto* w = new juce::AlertWindow(lang::tr("Sound: " + u8(s->displayName.empty() ? s->name : s->displayName)), lang::tr(message), juce::MessageBoxIconType::NoIcon, this);
@@ -998,7 +968,7 @@ void LibraryPanel::paint(juce::Graphics& g) {
     g.setFont(juce::FontOptions(theme::kFontSmall));
     const juce::String info = u8(s->name) + "   " + (std::fmod(s->sampleRate, 1000.0) == 0 ? juce::String((int)(s->sampleRate / 1000)) : juce::String(s->sampleRate / 1000.0, 1)) + " kHz   " +
                               (s->channels == 1 ? "mono" : "stereo") + "   " + juce::String(s->seconds, s->seconds < 10 ? 2 : 1) + " s";
-    g.drawText(info, foot.withTrimmedLeft(44).withTrimmedRight(tab_ == Tab::Sounds ? 54 : 0), juce::Justification::centredLeft, true);
+    g.drawText(info, foot, juce::Justification::centredLeft, true);
   }
 }
 

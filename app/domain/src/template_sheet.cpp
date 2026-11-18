@@ -30,75 +30,32 @@ std::string length(int64_t ticks) { return num((double)ticks / kBarTicks) + " co
 const char* kNoteNames[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 std::string noteName(int pitch) { return std::string(kNoteNames[((pitch % 12) + 12) % 12]) + std::to_string(pitch / 12 - 1); }
 
-std::string withUnit(double v, const char* unit) { return num(v) + (unit && *unit ? std::string(" ") + unit : std::string()); }
-
-// A W-Core layer 2-4 parameter ("l3_...") of a layer that is off is left out (it sounds nowhere).
-bool layerOff(const Track& t, const std::string& name) {
-  if (name.size() < 4 || name[0] != 'l' || name[2] != '_' || name[1] < '2' || name[1] > '4') return false;
-  const std::string onKey = name.substr(0, 3) + "on";
-  if (name == onKey) return false;
-  auto it = t.instrument.params.find(onKey);
-  return it == t.instrument.params.end() || it->second < 0.5;
-}
-
+// The track's instrument: a plugin (its name, vendor and id), or no instrument yet. Core makes no sound of its
+// own (Diogo 2026-11-18): the built-in instruments, their parameters, the sampler and the W-Core modulation are gone.
 void instrumentPart(std::ostringstream& o, const Track& t) {
   const Instrument& ins = t.instrument;
-  const InstrumentInfo* info = ins.kind == "builtin" ? findInstrumentInfo(ins.name) : nullptr;
-  o << "- Instrumento: " << (info ? info->label : ins.name.empty() ? ins.kind : ins.name) << " (`" << ins.kind;
-  if (!ins.name.empty()) o << ":" << ins.name;
-  o << "`, versão " << ins.version << ")\n";
-  if (!ins.samples.empty()) {
-    o << "- Samples:\n";
-    for (const auto& s : ins.samples) {
-      o << "  - " << (s.name.empty() ? s.file : s.name) << ": `" << s.file << "`, raiz " << noteName(s.rootKey) << ", teclas "
-        << noteName(s.loKey) << "–" << noteName(s.hiKey);
-      if (s.loops()) o << ", loop " << num(s.loopStart) << "–" << num(s.loopEnd) << " s";
-      if (!s.sha256.empty()) o << ", sha256 " << s.sha256;
-      o << "\n";
-    }
+  if (ins.kind == "plugin" && ins.plugin.is_object()) {
+    o << "- Instrumento: " << ins.plugin.value("name", std::string("Plugin"));
+    const std::string vendor = ins.plugin.value("vendor", std::string());
+    if (!vendor.empty()) o << " (" << vendor << ")";
+    o << " (`plugin:" << ins.plugin.value("id", std::string()) << "`)\n";
+    return;
   }
-  if (info) {
-    o << "\n| Parâmetro | Valor | Padrão | Faixa |\n|---|---|---|---|\n";
-    for (const auto& p : info->params) {
-      if (layerOff(t, p.name)) continue;
-      const double v = instrumentParamValue(t, p);
-      const bool set = ins.params.count(p.name) && std::fabs(v - p.def) > 1e-9;
-      o << "| " << p.label << " (`" << p.name << "`) | " << (set ? "**" : "") << withUnit(v, p.unit) << (set ? "**" : "") << " | "
-        << withUnit(p.def, p.unit) << " | " << num(p.min) << "–" << num(p.max) << " |\n";
-    }
-    // Values the catalogue does not know (newer app, a hand edit): listed as they are.
-    for (const auto& [k, v] : ins.params)
-      if (!findInstrumentParam(t, k)) o << "| `" << k << "` | " << num(v) << " | | |\n";
-  } else if (!ins.params.empty()) {
-    o << "\n| Parâmetro | Valor |\n|---|---|\n";
-    for (const auto& [k, v] : ins.params) o << "| `" << k << "` | " << num(v) << " |\n";
-  }
-  if (!ins.synth.is_null() && !(ins.synth.is_object() && ins.synth.empty()))
-    o << "\nModulação (W-Core):\n\n```json\n" << ins.synth.dump() << "\n```\n";
+  o << "- Instrumento: " << (ins.name.empty() ? ins.kind : ins.name) << " (`" << ins.kind << "`)\n";
 }
 
+// The chain as it is: each effect's name, id and bypass, and its stored parameters as they are (a plugin's state
+// belongs to the plugin; there is no built-in parameter catalogue any more).
 void effectsPart(std::ostringstream& o, const json& effects) {
   if (!effects.is_array() || effects.empty()) return;
   o << "\nEfeitos (pela ordem da cadeia):\n";
   for (const auto& fx : effects) {
-    const std::string name = effectName(fx);
-    const EffectInfo* info = findEffect(name);
-    o << "\n- **" << (info ? info->label : name.c_str()) << "** (`" << name << "`, id `" << fx.value("id", std::string()) << "`)"
+    if (!fx.is_object()) continue;
+    const bool plugin = fx.value("type", std::string()) == "plugin" && fx.contains("plugin");
+    const std::string name = plugin ? fx["plugin"].value("name", std::string("Plugin")) : effectName(fx);
+    o << "\n- **" << (name.empty() ? std::string("Efeito") : name) << "** (id `" << fx.value("id", std::string()) << "`)"
       << (effectBypassed(fx) ? " DESLIGADO" : "") << "\n";
-    if (info) {
-      o << "\n  | Parâmetro | Valor | Padrão |\n  |---|---|---|\n";
-      for (const auto& p : info->params) {
-        const double v = effectParam(fx, p.name, p.def);
-        std::string shown = withUnit(v, p.unit);
-        if (p.step == 1 && !p.choices.empty()) {
-          const long i = std::lround(v - p.min);
-          if (i >= 0 && i < (long)p.choices.size()) shown += " (" + std::string(p.choices[(size_t)i]) + ")";
-        }
-        const bool set = std::fabs(v - p.def) > 1e-9;
-        o << "  | " << p.label << " (`" << p.name << "`) | " << (set ? "**" : "") << shown << (set ? "**" : "") << " | "
-          << withUnit(p.def, p.unit) << " |\n";
-      }
-    } else if (fx.contains("params") && fx["params"].is_object()) {
+    if (fx.contains("params") && fx["params"].is_object() && !fx["params"].empty()) {
       o << "\n  | Parâmetro | Valor |\n  |---|---|\n";
       for (const auto& [k, v] : fx["params"].items()) o << "  | `" << k << "` | " << v.dump() << " |\n";
     }
@@ -174,12 +131,6 @@ std::string templateSheet(const SongTemplate& t) {
       o << "- Envio para `" << s.to << "`: " << num(s.gainDb) << " dB" << (s.pre ? " (antes do fader)" : "") << "\n";
     notesPart(o, tr);
     effectsPart(o, tr.effects);
-    if (tr.modulators.is_array() && !tr.modulators.empty()) {
-      o << "\nLFOs da pista:\n\n| Parâmetro | Forma | Batidas | Profundidade | Fase |\n|---|---|---|---|---|\n";
-      for (const auto& m : tr.modulators)
-        o << "| `" << m.value("param", std::string()) << "` | " << m.value("shape", std::string()) << " | " << num(m.value("rateBeats", 0.0))
-          << " | " << num(m.value("depth", 0.0)) << " | " << num(m.value("phase", 0.0)) << " |\n";
-    }
     automationPart(o, tr.automation);
   }
   return o.str();

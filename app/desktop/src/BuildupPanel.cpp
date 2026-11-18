@@ -125,7 +125,7 @@ BuildupPanel::BuildupPanel(const Start& start) : start_(start) {
   gap_.setSelectedId(1, juce::dontSendNotification);
   for (int st : {0, 3, 5, 7, 12}) rise_.addItem(st == 0 ? u8("None") : "+" + juce::String(st) + " st", st + 1);
   rise_.setSelectedId(1, juce::dontSendNotification);
-  rise_.setTooltip(u8("The roll's notes climb this far by the drop (a 909 snare roll). On a sampler or synth track; the built-in drums keep their sound"));
+  rise_.setTooltip(u8("The roll's notes climb this far by the drop (a 909 snare roll)"));
   for (int b : {1, 2, 4, 8}) dropBars_.addItem(juce::String(b) + (b == 1 ? " bar" : " bars"), b);
   dropBars_.setSelectedId(2, juce::dontSendNotification);
   tempoOn_.setButtonText(u8("Glide to"));

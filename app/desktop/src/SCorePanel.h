@@ -28,7 +28,7 @@ public:
   void arrange();
   void toggle(const std::string& trackId, const std::string& sectionId);
   std::function<void()> onClose;
-  std::function<void(const std::string& trackId)> onOpenTrack;  // the track's own plugin (W-Core), else its notes
+  std::function<void(const std::string& trackId)> onOpenTrack;  // the track's own plugin, else its notes
   std::function<void(const juce::String&)> onSay;               // the status line
 
 private:

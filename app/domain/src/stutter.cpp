@@ -114,8 +114,6 @@ int stutterTrack(Document& doc, const std::string& trackId, int64_t from, int64_
   Track& t = trackById(doc, trackId);
   if (!playsPatterns(t)) throw DocumentError("stutter", t.name + " plays no notes");
   const bool whole = to <= from;
-  const bool pitched = !(t.instrument.kind == "builtin" &&
-                         (t.instrument.name == "kick" || t.instrument.name == "hats" || t.instrument.name == "snare" || t.instrument.name == "drums"));
   std::vector<std::string> clips;
   for (const auto& c : t.clips)
     if (whole || (c.startTick < to && c.startTick + c.lengthTicks > from)) clips.push_back(c.id);
@@ -141,7 +139,7 @@ int stutterTrack(Document& doc, const std::string& trackId, int64_t from, int64_
         if (at < c.startTick) continue;
         if (whole || (at >= from && at < to)) { ids.insert(n.id); break; }
       }
-    if (!ids.empty()) written += stutterNotes(p, ids, preset.recipe, preset.id, pitched);
+    if (!ids.empty()) written += stutterNotes(p, ids, preset.recipe, preset.id);
   }
   return written;
 }

@@ -492,38 +492,6 @@ TEST("sweep: FOLLOW grava o corte da nota que atravessa o inicio da zona") {
   CHECK(cut);
 }
 
-TEST("reset: o menu da chain oferece TODOS os efeitos (os proprios incluidos) e o Remove leva o FX proprio e as curvas dele") {
-  Document d = newEmptyDocument();
-  const std::string id = addTrack(d, "", "X");
-  const int atUtility = addEffect(d, id, "utility");  // Core's own, as a template or an old song carries them
-  json verb = {{"id", "fx9"}, {"type", "plugin"},
-               {"plugin", json{{"id", "v1"}, {"name", "FakeVerb"}, {"format", "vst3"}, {"file", "C:/plugins/FakeVerb.vst3"}}},
-               {"bypass", false}};
-  trackById(d, id).effects.push_back(verb);
-  addEffect(d, id, "eq");  // another own one, after the plugin
-  const std::vector<EffectMenuEntry> entries = effectMenuEntries(trackById(d, id).effects);
-  CHECK_EQ((int)entries.size(), 3);  // the old menus offered only the plugin: the own ones had no Remove anywhere
-  if (entries.size() == 3) {  // the detail checks only read what the size check above guarantees
-    CHECK_EQ(entries[0].index, atUtility);
-    CHECK_EQ(entries[0].label, std::string("Utility"));
-    CHECK(!entries[0].plugin);
-    CHECK(!entries[0].window);
-    CHECK_EQ(entries[1].index, 1);
-    CHECK_EQ(entries[1].label, std::string("FakeVerb"));
-    CHECK(entries[1].plugin && entries[1].window);
-    CHECK_EQ(entries[2].index, 2);
-    CHECK_EQ(entries[2].label, std::string("Core EQ"));
-  }
-  // And the Remove the menu offers works on an own effect: the chain and its curves go together.
-  setAutomationPoint(d, id, effectParamKey("fx1", "gain"), 0, -3);
-  CHECK(!trackById(d, id).automation.empty());
-  removeEffect(d, id, entries[0].index);
-  CHECK_EQ((int)trackById(d, id).effects.size(), 2);
-  CHECK_EQ(trackById(d, id).effects[0].value("id", std::string()), std::string("fx9"));
-  const bool curvesGone = std::none_of(trackById(d, id).automation.begin(), trackById(d, id).automation.end(),
-                                       [](const Automation& a) { return a.param == "fx:fx1:gain"; });
-  CHECK(curvesGone);
-}
 
 // Audit 2026-11-17, item 4: duplicateSection pushed the tempo changes after the section but did not copy
 // the ones inside it, so the duplicated section lost the tempo (and the ramp) randomize axis J writes.

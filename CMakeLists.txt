@@ -71,7 +71,6 @@ add_subdirectory(engine)
 add_subdirectory(app/domain)
 add_subdirectory(app/engine-client)
 add_subdirectory(app/control)  # Core's functions and the bridge to AICORE (no JUCE)
-add_subdirectory(app/sampling) # making samples from audio (no JUCE)
 if(CORE_BUILD_APP AND WIN32)
   add_subdirectory(app/selftest-plugins)  # a test synth and gain VST3 for Core.exe --self-test (never shipped)
   add_subdirectory(app/desktop)
@@ -91,7 +90,7 @@ endif()
 if(CORE_SANITIZE)
   set(CORE_SANITIZED_TARGETS
     core_engine_lib core-engine core_plugin_host
-    core_domain core_control core_engine_client core_sampling
+    core_domain core_control core_engine_client
     CoreApp CoreTestSynth CoreTestGain CoreSetup
     engine_tests domain_tests role_tests midi_tests bug_tests bitwig_tests
     audit_tests audit2_tests hunt_tests round3_tests calls_tests engine_process_tests

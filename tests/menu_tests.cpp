@@ -1,6 +1,6 @@
 // BUG-SWEEP-32 (2026-11-18): the plugin catalog menu ids overlapped the fixed action ids, so with a large
-// catalog an action (native instrument / Open / Remove / On effect) could REPLACE the track instrument.
-// Boundary sizes from the audit's menu-ranges.log: 500/501/600/601/620/621/640/641/1000/1001.
+// catalog an action could REPLACE the track instrument. Core offers plugins only now (no built-in instruments
+// or sampler), so the menus list the plugin catalogs and the fixed actions.
 // The routing under test is app/desktop/src/MenuIds.h, extracted from MainComponent.cpp's two menu lambdas.
 #include "support/check.hpp"
 #include "MenuIds.h"
@@ -10,10 +10,8 @@
 namespace {
 namespace menu = core::app::menu;
 
-// The menus list doc::builtinInstruments() (8 entries today) and a chain capped at 16 (edit.hpp).
-constexpr int kBuiltinCount = 8;
 constexpr int kChainCount = 16;
-constexpr int kFxCount = 300;  // the effect catalog is uncapped too; any size exercises the second band
+constexpr int kFxCount = 300;  // the effect catalog is uncapped; any size exercises the band
 const std::vector<int> kBoundarySizes = {500, 501, 600, 601, 620, 621, 640, 641, 1000, 1001, 5000};
 
 const char* trackActionName(menu::TrackAction a) {
@@ -29,7 +27,6 @@ const char* trackActionName(menu::TrackAction a) {
     case menu::TrackAction::openEffect: return "openEffect";
     case menu::TrackAction::removeEffect: return "removeEffect";
     case menu::TrackAction::toggleEffect: return "toggleEffect";
-    case menu::TrackAction::replaceWithBuiltin: return "replaceWithBuiltin";
   }
   return "?";
 }
@@ -37,8 +34,6 @@ const char* addTrackActionName(menu::AddTrackAction a) {
   switch (a) {
     case menu::AddTrackAction::none: return "none";
     case menu::AddTrackAction::addPluginInstrument: return "addPluginInstrument";
-    case menu::AddTrackAction::addBuiltinInstrument: return "addBuiltinInstrument";
-    case menu::AddTrackAction::samplerTrack: return "samplerTrack";
     case menu::AddTrackAction::audioTrack: return "audioTrack";
     case menu::AddTrackAction::importAudio: return "importAudio";
   }
@@ -47,7 +42,7 @@ const char* addTrackActionName(menu::AddTrackAction a) {
 
 void expectTrack(int catalog, int chosen, menu::TrackAction action, int index) {
   ++coretest::checks();
-  const menu::TrackChoice got = menu::decodeTrackMenu(chosen, catalog, kFxCount, kBuiltinCount, kChainCount);
+  const menu::TrackChoice got = menu::decodeTrackMenu(chosen, catalog, kFxCount, kChainCount);
   if (got.action != action || got.index != index)
     coretest::fail(__FILE__, __LINE__,
                    "track menu catalog=" + std::to_string(catalog) + " chosen=" + std::to_string(chosen) +
@@ -56,7 +51,7 @@ void expectTrack(int catalog, int chosen, menu::TrackAction action, int index) {
 }
 void expectAddTrack(int catalog, int chosen, menu::AddTrackAction action, int index) {
   ++coretest::checks();
-  const menu::AddTrackChoice got = menu::decodeAddTrackMenu(chosen, catalog, kBuiltinCount);
+  const menu::AddTrackChoice got = menu::decodeAddTrackMenu(chosen, catalog);
   if (got.action != action || got.index != index)
     coretest::fail(__FILE__, __LINE__,
                    "add track menu catalog=" + std::to_string(catalog) + " chosen=" + std::to_string(chosen) +
@@ -80,29 +75,22 @@ void expectNoCollision(int catalog, int bandFirst, int bandCount, const std::vec
                        " (index " + std::to_string(hit - bandFirst) + ") is also a fixed action id");
 }
 
-// Every fixed action id of the track menu: the small ones, the 8 builtin-replace ids, the whole 900..959
-// chain block, and the disabled placeholder.
+// Every fixed action id of the track menu: the small ones and the whole 900..959 chain block.
 std::vector<int> trackActionIds() {
   std::vector<int> ids = {menu::kRename, menu::kDuplicate, menu::kRemoveTrack, menu::kAutomation, menu::kOpenInstrument, menu::kNoPlugins};
-  for (int i = 0; i < kBuiltinCount; ++i) ids.push_back(menu::kBuiltinReplaceFirst + i);
   for (int id = menu::kEffectOpenFirst; id < menu::kEffectIdEnd; ++id) ids.push_back(id);
   return ids;
 }
 std::vector<int> addTrackActionIds() {
-  std::vector<int> ids = {menu::kAudioTrack, menu::kImportAudio, menu::kSamplerTrack, menu::kNoPlugins};
-  for (int i = 0; i < kBuiltinCount; ++i) ids.push_back(menu::kBuiltinAddFirst + i);
-  return ids;
+  return {menu::kAudioTrack, menu::kImportAudio, menu::kNoPlugins};
 }
 }  // namespace
 
 TEST("track menu: action ids route to their action at every boundary catalog size") {
   for (const int n : kBoundarySizes) {
-    expectTrack(n, 800, menu::TrackAction::replaceWithBuiltin, 0);  // native instrument, NOT replaceWithPlugin
-    expectTrack(n, 807, menu::TrackAction::replaceWithBuiltin, 7);
     expectTrack(n, 900, menu::TrackAction::openEffect, 0);
     expectTrack(n, 920, menu::TrackAction::removeEffect, 0);
     expectTrack(n, 940, menu::TrackAction::toggleEffect, 0);
-    expectTrack(n, 4000, menu::TrackAction::addPluginEffect, 0);
     expectTrack(n, 6, menu::TrackAction::openInstrument, -1);
     expectTrack(n, 1, menu::TrackAction::rename, -1);
     expectTrack(n, 2, menu::TrackAction::duplicate, -1);
@@ -150,11 +138,8 @@ TEST("track menu: unknown ids do nothing") {
 
 TEST("add track menu: action ids route to their action at every boundary catalog size") {
   for (const int n : kBoundarySizes) {
-    expectAddTrack(n, 3000, menu::AddTrackAction::addBuiltinInstrument, 0);  // native instrument, NOT addPluginInstrument
-    expectAddTrack(n, 3007, menu::AddTrackAction::addBuiltinInstrument, 7);
     expectAddTrack(n, 1000, menu::AddTrackAction::audioTrack, -1);
     expectAddTrack(n, 1001, menu::AddTrackAction::importAudio, -1);
-    expectAddTrack(n, 1002, menu::AddTrackAction::samplerTrack, -1);
   }
 }
 
@@ -169,7 +154,7 @@ TEST("add track menu: plugin item ids never share an action id, at any boundary 
 }
 
 TEST("add track menu: unknown ids do nothing") {
-  for (const int id : {0, 999, 1003, 99999}) expectAddTrack(10, id, menu::AddTrackAction::none, -1);
+  for (const int id : {0, 999, 1002, 1003, 99999}) expectAddTrack(10, id, menu::AddTrackAction::none, -1);
 }
 
 CORE_TEST_MAIN

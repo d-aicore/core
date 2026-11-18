@@ -1,6 +1,6 @@
 // File > Settings (Ctrl+,): the program's own settings, kept in Core.settings (juce::ApplicationProperties).
 //
-// Folders: where songs are saved and opened, where exports go, the sample library. Samplers: each sampler's
+// Folders: where songs are saved and opened, where exports go, the sample library. Samplers: each sample role's
 // folders of the library. Keyboard shortcuts (the second tab): every action of the keymap (Keymap.h) with its keys; click a key to press a new
 // one, + adds another, x clears, Default puts it back. Nothing here changes the song: every value applies from the
 // next save, export or key press.
@@ -266,9 +266,9 @@ class ShortcutsPage final : public juce::Component {
   bool adding_ = false;
 };
 
-// Settings > Samplers: the folders of each sampler role (kick, bass, hats...). A role with folders takes its sample
-// suggestions (the track's sample menu, a template's samples, the AI) only from them, and every sample in them counts
-// as that role. Kept as "samplerFolders" (role -> absolute folders); only folders inside the sample library work.
+// Settings > Samplers: the folders of each sample role (kick, bass, hats...). The samples inside a role's folders
+// count as that role (the count shown on this page). Kept as "samplerFolders" (role -> absolute folders); only
+// folders inside the sample library work.
 class SamplersPage final : public juce::Component {
  public:
   struct Host {
@@ -284,9 +284,8 @@ class SamplersPage final : public juce::Component {
     help_.setFont(juce::FontOptions(theme::kFontBody));
     help_.setColour(juce::Label::textColourId, kMuted);
     help_.setJustificationType(juce::Justification::topLeft);
-    help_.setText("Link each sampler to its folders of the sample library. A sampler with folders takes its samples only from them "
-                  "(the track's sample menu, the templates' samples and the AI), and every sample in them counts as its kind. "
-                  "Without folders it uses the whole library, by what Core knows of each sample.",
+    help_.setText("Link each sample role to its folders of the sample library. The samples inside a role's folders count as its kind "
+                  "(the count shown here). Without folders, a role is what Core knows of each sample.",
                   juce::dontSendNotification);
     notice_.setFont(juce::FontOptions(theme::kFontBody));
     notice_.setColour(juce::Label::textColourId, kAccentBright);
@@ -301,7 +300,7 @@ class SamplersPage final : public juce::Component {
       row.name.setColour(juce::Label::textColourId, kText);
       row.add.setButtonText(juce::String::fromUTF8("Add folder\xe2\x80\xa6"));
       row.clear.setButtonText("Whole library");
-      row.clear.setTooltip("No folders: the sampler uses the whole library");
+      row.clear.setTooltip("No folders: the role uses the whole library");
       Row* r = &row;
       row.add.onClick = [this, r] { choose(*r); };
       row.clear.onClick = [this, r] { setFolders(r->role, {}); notice_.setText({}, juce::dontSendNotification); };
