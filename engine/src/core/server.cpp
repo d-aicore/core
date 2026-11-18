@@ -357,6 +357,9 @@ json Server::execute(const std::string& cmd, const json& args) {
       const double actual = outputInfo_.value("sampleRate", sampleRate_);
       if (actual != sampleRate_) {  // the device chose another rate: rebuild for it
         output_->stop();
+        // This start replaces the engine too: it is kept until the device answers (FL-3: it was destroyed here,
+        // so a second start that failed left an engine at the new rate under a server at the old one).
+        if (!keptEngine) keptEngine = std::move(engine_);
         sampleRate_ = actual;
         engine_ = std::make_unique<Engine>(sampleRate_, live);
         engine_->setEarGuard(true);
@@ -366,6 +369,10 @@ json Server::execute(const std::string& cmd, const json& args) {
         outputArgs_ = again;
         outputInfo_ = output_->start(*engine_, again);
       }
+      // A device that answers without a block size opened nothing (it only named another rate, again): that is
+      // a failed start, never "ok" with no device running (FL-3).
+      if (!outputInfo_.is_object() || !outputInfo_.contains("blockSize"))
+        throw std::runtime_error("The audio device did not start: it keeps changing its sample rate.");
       keptEngine.reset();  // the new device answered: the engine it replaced no longer plays
       json started = outputInfo_;
       started["latency"] = latencyJson();  // the device's latencyMs, plus what the song's graph adds
@@ -373,11 +380,17 @@ json Server::execute(const std::string& cmd, const json& args) {
     } catch (...) {
       output_.reset();  // the one that did not come up
       sampleRate_ = keptRate;
-      if (keptEngine) engine_ = std::move(keptEngine);  // its own engine, with the transport where it was
+      if (keptEngine) {
+        engine_ = std::move(keptEngine);  // its own engine, with the transport where it was
+        // The song's plugins were loaded again for the rate that did not come up: a graph for this engine's rate
+        // makes the host, the server and what plays agree again. If it cannot be built the engine keeps its own.
+        try { rebuild(); } catch (...) {}
+      }
       if (kept) {
         output_ = std::move(kept);
         try {
           outputInfo_ = output_->start(*engine_, keptArgs);  // as it was started before this command
+          if (!outputInfo_.is_object() || !outputInfo_.contains("blockSize")) throw std::runtime_error("The audio device did not start.");
           outputArgs_ = keptArgs;                            // and the next failed try puts it back the same way
         } catch (...) {  // the device is gone as well: nothing to put back, but the command still says why
           output_->stop();

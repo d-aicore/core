@@ -480,6 +480,62 @@ TEST("engine.start: uma saída que falha não deixa a app sem som (audit 14)") {
   CHECK_EQ(host.logs[0]->stops, 3);
 }
 
+// --- FL-3: engine.start after a failed device switch ------------------------------------------------------------
+
+namespace {
+// Devices as engine/src/io/device.cpp opens them: each has its own rate; a start on an engine built for another
+// rate opens nothing and answers only {sampleRate} (the caller rebuilds the engine and starts again).
+struct RateWorld {
+  int running = 0;         // devices that are really playing
+  double runningRate = 0;  // the rate of the engine the last one was started on
+  int startsOfB = 0;
+  bool secondStartOfBThrows = true;  // false: B answers with yet another rate, and opens nothing again
+};
+struct RateOutput final : AudioOutput {
+  RateWorld* world;
+  bool playing = false;
+  explicit RateOutput(RateWorld* w) : world(w) {}
+  json start(Engine& engine, const json& args) override {
+    const bool b = args.value("device", std::string("A")) == "B";
+    double rate = b ? 44100.0 : 48000.0;
+    if (b && ++world->startsOfB >= 2) {
+      if (world->secondStartOfBThrows) throw std::runtime_error("fake: the device is busy");
+      rate = 96000.0;
+    }
+    if (rate != engine.sampleRate()) return {{"sampleRate", rate}};
+    playing = true;
+    ++world->running;
+    world->runningRate = engine.sampleRate();
+    return {{"sampleRate", rate}, {"blockSize", 512}, {"backend", "fake"}, {"device", b ? "B" : "A"}};
+  }
+  void stop() override { if (playing) { playing = false; --world->running; } }
+  json devices(const json&) override { return json::array(); }
+};
+}  // namespace
+
+TEST("engine.start: a device switch that fails after a rate change puts the engine, the rate and the output back (FL-3)") {
+  for (const bool throws : {true, false}) {
+    RateWorld world;
+    world.secondStartOfBThrows = throws;
+    Server server([&world] { return std::make_unique<RateOutput>(&world); }, kSr);
+    const json first = server.execute("engine.start", {{"device", "A"}});
+    CHECK(first.contains("blockSize"));
+    CHECK_EQ(world.running, 1);
+    // Device B runs at 44100: the first start only says so, the engine is rebuilt, and the second start fails
+    // (busy) or opens nothing again. Either way the command is an error, never "ok" with no device.
+    CHECK_THROWS(server.execute("engine.start", {{"device", "B"}}));
+    CHECK_EQ(server.engine().sampleRate(), kSr);  // before the fix: 44100, with the server still at 48000
+    CHECK_EQ(world.running, 1);                    // before the fix: 0, device A answered only {sampleRate}
+    CHECK_EQ(world.runningRate, kSr);
+    CHECK(server.execute("engine.stats", json::object())["device"].contains("blockSize"));
+    // The next start either really starts or is an error.
+    const json next = server.execute("engine.start", {{"device", "A"}});
+    CHECK(next.contains("blockSize"));  // before the fix: ok with only {sampleRate: 48000}
+    CHECK_EQ(world.running, 1);
+    CHECK_EQ(server.engine().sampleRate(), next.value("sampleRate", 0.0));
+  }
+}
+
 // --- FL-1: M5 (live threads) OFF por omissão, contra a D51 ------------------------------------------------------
 
 TEST("engine.start: M5 fica 0 (serial) por omissão, sem CORE_LIVE_THREADS nem liveThreads (FL-1, D51)") {
