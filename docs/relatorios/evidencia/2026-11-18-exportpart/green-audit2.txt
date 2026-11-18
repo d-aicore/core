@@ -1,0 +1,56 @@
+[0/2] Re-checking globbed directories...
+[1/12] Building CXX object app\sampling\CMakeFiles\core_sampling.dir\src\sampling.cpp.obj
+[2/12] Linking CXX static library app\sampling\core_sampling.lib
+[3/12] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\render_job.cpp.obj
+[4/12] Building CXX object tests\CMakeFiles\audit_tests.dir\audit_tests.cpp.obj
+[5/12] Building CXX object tests\CMakeFiles\audit2_tests.dir\audit2_tests.cpp.obj
+[6/12] Building CXX object tests\CMakeFiles\hunt_tests.dir\hunt_tests.cpp.obj
+[7/12] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\server.cpp.obj
+D:\CORE\CORE\.agents\worktrees\flawless-exportpart\engine\src\core\server.cpp(728): warning C4996: 'std::filesystem::u8path': warning STL4021: The std::filesystem::u8path() overloads are deprecated in C++20. The constructors of std::filesystem::path provide equivalent functionality via construction from u8string, u8string_view, or iterators with value_type char8_t. You can define _SILENCE_CXX20_U8PATH_DEPRECATION_WARNING or _SILENCE_ALL_CXX20_DEPRECATION_WARNINGS to suppress this warning.
+[8/12] Linking CXX static library engine\core_engine_lib.lib
+[9/12] Linking CXX executable tests\audit2_tests.exe
+[10/12] Linking CXX executable tests\audit_tests.exe
+[11/12] Linking CXX executable tests\hunt_tests.exe
+=== FILTERED BUG-SWEEP-02 ===
+ok   BUG-SWEEP-02: a successful export never consumes a preexisting .part and cleans up only its own working file
+ok   BUG-SWEEP-02: a failed or cancelled export keeps the preexisting .part and removes only its own working files
+ok   BUG-SWEEP-02: two concurrent exports of the same target never share a working path
+ok   BUG-SWEEP-02: working-file reservations are unique, exclusive and never truncate an existing candidate
+4 testes, 243 verificacoes, 0 falhas
+=== FULL audit2_tests ===
+ok   auditoria 2, bug 1: uma linha do motor com tipos errados nunca lanca no cliente
+ok   auditoria 2, ponto 4: uma resposta sem id valido termina a sessao logo, com o motivo
+ok   auditoria 2, bug 2: um project.load sem resposta volta a ser enviado sozinho, com uma revisao nova
+ok   auditoria 2, bug 3: o espaco do export conta os mono como mono e cada volume por si
+ok   auditoria 2, observacao: um autosave estragado diz que esta estragado, sem excecao do JSON
+ok   dados D2: o autosave de um Core que morreu e oferecido mesmo que o id dele ja seja de outro processo
+ok   BUG-SWEEP-02: a successful export never consumes a preexisting .part and cleans up only its own working file
+ok   BUG-SWEEP-02: a failed or cancelled export keeps the preexisting .part and removes only its own working files
+ok   BUG-SWEEP-02: two concurrent exports of the same target never share a working path
+ok   BUG-SWEEP-02: working-file reservations are unique, exclusive and never truncate an existing candidate
+10 testes, 323 verificacoes, 0 falhas
+=== FULL hunt_tests ===
+ok   caca P01: o bounce de uma pista com nome comprido (72+ bytes, com acentos) guarda e faz autosave
+ok   caca P02: render e render.start tem a mesma cauda por omissao
+ok   caca P03: ids de efeito repetidos ou com ':' sao limpos ao abrir, e o motor ja nao renomeia nada
+ok   caca P04: efeitos proprios e moduladores ficam no .core e fora do motor; os plugins e as suas curvas tocam
+ok   caca P06: apagar a pista mostrada nao mete na selecao uma pista que ninguem escolheu
+ok   caca 2, P05: converter 44,1 kHz para 48 kHz da o numero certo de frames
+ok   caca 2, IPC: uma resposta com um campo event continua a ser a resposta
+ok   caca 2, U-8: os tres textos que faltavam tem traducao
+ok   caca 2, P08: um clip so de NaN e um ficheiro estragado, nao silencio
+ok   caca 2, seccao 4: um ppq que nao e 960 tem uma mensagem que se entende
+ok   caca audit 2026-11-17 #1: os nomes que o randomizador da aos padroes entram no leitor e guardam-se
+ok   caca audit #1 (irmao): os nomes que o rack da aos padroes entram no leitor
+ok   caca audit #1 (irmao): duplicar com o nome todo cheio da um nome diferente
+13 testes, 647 verificacoes, 0 falhas
+=== FULL audit_tests ===
+ok   auditoria B01: importar take..1.wav deixa guardar e fazer autosave; um '..' a sair da pasta continua recusado
+ok   auditoria B02: uma pista chamada master nao partilha os estados de plugin do master
+ok   auditoria B03: recortar um template a meio de uma rampa de tempo guarda a rampa
+ok   auditoria B04: exportar em mono mede o que o ficheiro mono leva, nao o pico estereo
+ok   auditoria B06: render com endTick 0 e uma regiao vazia e e recusado, como no render.start
+ok   amostras: um wav trocado por dentro, com os mesmos bytes e a mesma data, le de novo
+ok   motor: um wav trocado por dentro, com os mesmos bytes e a mesma data, sai do cache
+7 testes, 65 verificacoes, 0 falhas
+RCS=0,0,0,0
