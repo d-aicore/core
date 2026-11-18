@@ -4,6 +4,8 @@
 - Base: `f6b86dc` (origin/main)
 - Integration branch: `integration/flawless-round2`
 - Integrated tip (gated): **`bfcd2119b94f89b486b505ce05afe1458ee0386f`** (`bfcd211`)
+- Delivered tip: the report commit (docs-only on top of `bfcd211`) is the final HEAD; it was re-gated VERDE in both
+  modes with version == its own sha and no `.modified` (the code is identical to `bfcd211`; only this report + index row added).
 - Worktree: `D:/CORE/CORE/.agents/worktrees/integration2` (the main checkout working tree was never edited)
 - Build: `D:/Core-build/integration2` · Evidence: `D:/Core-build/integration2-evidence/`
 - Scope: consolidate + gate only. Nothing pushed, no merge to main/origin, no `git stash`. The PM verifies and pushes.
