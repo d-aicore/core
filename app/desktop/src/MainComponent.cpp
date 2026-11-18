@@ -6463,7 +6463,7 @@ void MainComponent::offerRecovery() {
   if (test_) return;
   std::vector<doc::AutosaveInfo> left;
   for (auto& a : doc::findAutosaves(pathOf(autosaveFolder()), autosaveSession_))
-    if (!processRunning(a.process)) left.push_back(std::move(a));
+    if (!sessionRunning(a.process, a.savedAtMs)) left.push_back(std::move(a));
   if (left.empty()) return;
   const doc::AutosaveInfo a = left.front();
   const juce::String name = a.name.empty() ? (a.songPath.empty() ? juce::String("Untitled") : juce::File(u8(a.songPath)).getFileNameWithoutExtension())
@@ -6998,7 +6998,9 @@ void MainComponent::selfTestStep() {
         doc::writeAutosave(pathOf(folder), "selftest", 0, copy, file_ != juce::File() ? file_.getFullPathName().toStdString() : std::string(),
                            juce::Time::currentTimeMillis());
         const auto found = doc::findAutosaves(pathOf(folder), autosaveSession_);
-        if (found.size() != 1 || processRunning(found[0].process) || !processRunning(currentProcessId()))
+        // (and this session itself counts as running: its own process is Core, started before now)
+        if (found.size() != 1 || sessionRunning(found[0].process, found[0].savedAtMs) ||
+            !sessionRunning(currentProcessId(), juce::Time::currentTimeMillis()))
           return finish(false, "autosave: not found as left by a crash");
         recoverAutosave(found[0], doc::readAutosave(found[0].file));
         const bool gone = !folder.getChildFile("selftest.core-autosave").exists();

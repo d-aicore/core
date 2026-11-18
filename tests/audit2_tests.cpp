@@ -169,4 +169,42 @@ TEST("auditoria 2, observacao: um autosave estragado diz que esta estragado, sem
   CHECK(core::doc::findAutosaves(dir, "").empty());
 }
 
+// Perda de dados (2026-11-18), D2: depois de um crash o Windows pode dar o id do Core que morreu a outro programa.
+// A regra antiga ("ha um processo vivo com este id") tomava-o pela sessao ainda a correr e a recuperacao nao era
+// oferecida. Agora: so se esse processo for o proprio Core E ja existia quando o autosave foi escrito.
+TEST("dados D2: o autosave de um Core que morreu e oferecido mesmo que o id dele ja seja de outro processo") {
+  using core::doc::autosaveWriterRunning;
+  using core::doc::ProcessProbe;
+  const int64_t savedAt = 1'700'000'000'000;  // quando o autosave foi escrito
+  const std::string own = "C:\\Program Files\\Core\\Core.exe";
+  struct Alive { std::string image; int64_t createdAtMs; };
+  const auto with = [](const Alive& a) { return [a](int64_t) { return ProcessProbe{true, a.image, a.createdAtMs}; }; };
+  const auto nobody = [](int64_t) { return ProcessProbe{}; };
+
+  // O id e de um processo vivo que NAO e o Core: a sessao que escreveu morreu -> oferecer.
+  CHECK(!autosaveWriterRunning(4242, savedAt, own, with({"C:\\Windows\\explorer.exe", savedAt - 60'000})));
+  // E do Core, e ja corria quando o autosave foi escrito: e outra janela a trabalhar -> nao oferecer.
+  CHECK(autosaveWriterRunning(4242, savedAt, own, with({"C:\\Program Files\\Core\\Core.exe", savedAt - 60'000})));
+  // E do Core mas nasceu DEPOIS do autosave: nao foi ele que o escreveu (id reutilizado por um Core novo) -> oferecer.
+  CHECK(!autosaveWriterRunning(4242, savedAt, own, with({"C:\\Program Files\\Core\\Core.exe", savedAt + 5'000})));
+  // Nao ha processo com esse id -> oferecer (ja era assim).
+  CHECK(!autosaveWriterRunning(4242, savedAt, own, nobody));
+
+  // O nome compara-se pelo executavel, sem olhar a pasta nem a maiusculas; outro nome que acabe igual nao e o Core.
+  CHECK(autosaveWriterRunning(4242, savedAt, own, with({"d:/outra pasta/CORE.EXE", savedAt - 1})));
+  CHECK(autosaveWriterRunning(4242, savedAt, "core.exe", with({"Core.exe", savedAt})));  // criado no mesmo ms: ja existia
+  CHECK(!autosaveWriterRunning(4242, savedAt, own, with({"C:\\Program Files\\Core\\NotCore.exe", savedAt - 60'000})));
+  CHECK(!autosaveWriterRunning(4242, savedAt, own, with({"C:\\Program Files\\Core\\core-engine.exe", savedAt - 60'000})));
+  // Na duvida oferece-se (um autosave oferecido a mais nao perde nada; um que nao se oferece perde o trabalho):
+  // sem nome, sem instante de criacao, sem saber o nome do proprio Core, ou um autosave sem data.
+  CHECK(!autosaveWriterRunning(4242, savedAt, own, with({"", savedAt - 60'000})));
+  CHECK(!autosaveWriterRunning(4242, savedAt, own, with({"C:\\Program Files\\Core\\Core.exe", 0})));
+  CHECK(!autosaveWriterRunning(4242, savedAt, "", with({"", savedAt - 60'000})));
+  CHECK(!autosaveWriterRunning(4242, 0, own, with({"C:\\Program Files\\Core\\Core.exe", savedAt - 60'000})));
+  // Um id que nao e de processo nenhum (0: o self-test escreve assim) nem chega a perguntar.
+  bool asked = false;
+  CHECK(!autosaveWriterRunning(0, savedAt, own, [&](int64_t) { asked = true; return ProcessProbe{true, own, savedAt - 1}; }));
+  CHECK(!asked);
+}
+
 CORE_TEST_MAIN

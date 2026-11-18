@@ -4,6 +4,7 @@
 #pragma once
 #include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <string>
 #include <vector>
 #include "document.hpp"
@@ -32,6 +33,17 @@ Document readAutosave(const std::filesystem::path& file);
 // Removes the autosave (and its .bak); nothing happens if there is none.
 void removeAutosave(const std::filesystem::path& file);
 std::filesystem::path autosavePath(const std::filesystem::path& folder, const std::string& session);
+
+// What is known of the process that has a given id now: {exists: false} when there is none (or it cannot be asked).
+struct ProcessProbe {
+  bool exists = false;
+  std::string image;        // UTF-8; its executable ("C:\...\Core.exe" or just "Core.exe"), "" when not known
+  int64_t createdAtMs = 0;  // when it started (ms since 1970), 0 when not known
+};
+// Is the session that wrote an autosave (its process id, at savedAtMs) still running? Then the autosave is not from
+// a crash and is not offered back.
+bool autosaveWriterRunning(int64_t process, int64_t savedAtMs, const std::string& ownImage,
+                           const std::function<ProcessProbe(int64_t)>& probe);
 
 // When the next autosave is due. A copy counts as written only after its write succeeded: a failed one
 // (full disk, locked folder) stays due and is tried again at the next check, even if the song did not

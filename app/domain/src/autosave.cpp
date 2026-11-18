@@ -1,5 +1,6 @@
 #include "autosave.hpp"
 #include <algorithm>
+#include <cctype>
 #include "storage.hpp"
 
 namespace core::doc {
@@ -65,6 +66,30 @@ void removeAutosave(const fs::path& file) {
   std::error_code e;
   fs::remove(file, e);
   fs::remove(backupPath(file), e);
+}
+
+namespace {
+// "C:\Program Files\Core\Core.exe" -> "core.exe" (either separator; ASCII case, as Windows names compare).
+std::string imageName(const std::string& image) {
+  const size_t slash = image.find_last_of("/\\");
+  std::string name = slash == std::string::npos ? image : image.substr(slash + 1);
+  for (auto& c : name) c = (char)std::tolower((unsigned char)c);
+  return name;
+}
+}  // namespace
+
+// A live process with that id is not enough: Windows gives the id of a Core that crashed to the next program that
+// starts, and its autosave was then never offered (2026-11-18, D2). The writer is still running only when that
+// process is Core itself and was already there when the autosave was written. In doubt (no name, no start time, no
+// date in the autosave) it counts as gone: an autosave offered once too often loses nothing.
+bool autosaveWriterRunning(int64_t process, int64_t savedAtMs, const std::string& ownImage,
+                           const std::function<ProcessProbe(int64_t)>& probe) {
+  if (process <= 0 || !probe) return false;
+  const ProcessProbe p = probe(process);
+  if (!p.exists) return false;
+  const std::string own = imageName(ownImage);
+  if (own.empty() || imageName(p.image) != own) return false;
+  return p.createdAtMs > 0 && p.createdAtMs <= savedAtMs;
 }
 
 bool AutosaveTracker::finished(bool ok, const std::string& error) {
