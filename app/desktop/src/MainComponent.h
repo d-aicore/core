@@ -68,7 +68,7 @@ public:
   // Before closing: offers to save unsaved changes, then calls `close` (or not, if cancelled).
   void confirmClose(std::function<void()> close);
 
-  // WAV files from the Explorer: on a sampler or drum track, its sound; elsewhere, imported as audio clips
+  // WAV files from the Explorer: imported as audio clips
   // (on an audio track at the drop point, or on a new audio track).
   bool isInterestedInFileDrag(const juce::StringArray& files) override;
   void fileDragMove(const juce::StringArray& files, int x, int y) override;
@@ -195,11 +195,9 @@ private:
   // At the playhead's bar on the selected audio track (or a new one), or on `onTrack` at `at`; `end` gets the clip's end.
   bool importAudioFile(const juce::File& wav, juce::String* problem = nullptr, const std::string& onTrack = {}, int64_t at = -1, int64_t* end = nullptr);
   void importFiles(std::vector<juce::File> wavs, const std::string& onTrack, int64_t at);  // dropped files, one undo step each
-  // Drag and drop onto the tracks: a Library sound (by sha256), a clip from another track. The row under the
-  // mouse is lit while something can go there.
-  static bool takesSamples(const doc::Track& t);
+  // Drag and drop onto the tracks: a Library sound (by sha256) as an audio clip, a clip from another track. The
+  // row under the mouse is lit while something can go there.
   void dropLibrarySample(const std::string& trackId, const std::string& sha256, int64_t at);
-  void useSampleFile(const std::string& trackId, const juce::File& wav);
   TrackRow* rowAtScreen(juce::Point<int> screen) const;
   void setDropRow(const std::string& trackId);
   std::string dropRow_;
@@ -258,12 +256,10 @@ private:
   void restoreBuiltinTemplates();
   void showTemplates();  // the Library opens on its Templates tab
   void reloadTemplates();
-  juce::File builtinTemplatesFolder() const;
   juce::File userTemplatesFolder() const;
   doc::TemplateLibrary templates_;
   // Sample library (D:\Samples by default): what is in it, scanned on a thread of its own at start and on
-  // request; style templates get its best samples per track (one undo step), and each track can swap its
-  // sample from the track menu.
+  // request; browsed in the Library, and its sounds import as audio clips.
   juce::File sampleLibraryFolder() const;
   juce::File sampleIndexFile() const;
   void loadSampleIndex();       // the index saved by the last scan
@@ -273,11 +269,7 @@ private:
   void saveSampleIndex();       // atomically (a temporary file, then replaced)
   void sampleCatalogChanged();  // a catalogue edit or undo: saved, and the Library shows it
   void chooseSampleLibrary();
-  void useSuggestedSamples(bool fromTemplate, bool shuffle);
-  void randomizeSong(int strength, const std::string& axis = {});  // axis: "tempo" (J) or "sound" (K) alone
-  void putSampleOnTrack(const std::string& trackId, const doc::LibrarySample& sample);
-  void chooseSampleFile(const std::string& trackId);
-  void auditionTrack(const std::string& trackId);
+  void randomizeSong(int strength, const std::string& axis = {});  // axis: "tempo" (J) alone
   doc::SampleIndex sampleIndex_;
   bool hasSampleIndex_ = false;
   // The index file could not be read and could not be renamed either: nothing is written over it (saveSampleIndex
@@ -310,7 +302,7 @@ private:
   void showAddTrackMenu();
   // The Patterns window (Pattern Maker's channel rack), a window of its own beside this one (Diogo, 2026-11-08). While it
   // plays a pattern, the engine gets that pattern alone, looped (doc::rackPlayDocument); stopping gives the song back.
-  void giveSilentTracksPlugins();  // Plugins menu: old (builtin) and empty tracks get their role's plugin
+  void giveSilentTracksPlugins();  // Plugins menu: empty tracks get their role's plugin
   // Core's tools (doc::corePlugins: the Tools panel, the Plugins menu, a track's right-click "Tools"): the same
   // functions the AI calls (role_tools.hpp). coreToolMenu: one tool's menu (where it works, then it writes) for the
   // track (""= the selected one); coreToolsMenu: every tool.
@@ -359,8 +351,6 @@ private:
   enum class SaveResult { Failed, Saved, SavedWithoutPlugins };
   void save(bool chooseName, std::function<void(SaveResult)> then = nullptr);
   SaveResult writeTo(const juce::File& target);  // shows the error itself
-  std::string lastSampleTrack_;  // the library's last try on a track (the next try there replaces its undo step)
-  juce::String lastSampleLabel_;
   void confirmUnsaved(std::function<void()> next);
   // After Save in "Unsaved changes": goes on only when the file was written.
   void continueAfterSave(SaveResult result, std::function<void()> next);
@@ -384,12 +374,6 @@ private:
   void showProjectMenu();
   // Plays notes of a track one after the other, spaced as in the pattern (the Inspector's preview).
   void previewNotes(const std::string& trackId, const std::vector<doc::Note>& notes);
-  // Plays a library sample once on a hidden track (doc::withPreviewTrack) that only the engine gets: the song and
-  // its undo do not change. The AI's preview_sample. False when it cannot (no library, the track was refused).
-  bool previewLibrarySample(const doc::LibrarySample& sample, const std::string& role);
-  uint64_t samplePreviewGen_ = 0;  // the newest library preview: older ones leave it alone
-  std::string samplePreviewTrack_;  // its hidden track while it plays ("" = none)
-  int samplePreviewPitch_ = 60;
   // The pattern library (Library > Patterns, piano roll Tools): Core's beside Core.exe, Diogo's in %APPDATA%\Core\Patterns.
   std::vector<doc::PatternPreset> loadPatterns() const;
   // Plays a pattern's notes on a track, as far apart as at the song's tempo (up to 16 bars); the song does not change.
@@ -400,7 +384,6 @@ private:
   std::string patternPreviewTrack_;
   std::set<int> patternPreviewPitches_;
   void savePatternFromEditor(int64_t start, int64_t end);
-  void buildupTrack(int bars, bool roll, bool gap);  // a sampler track with a snare of the library, ending at the next section
   juce::Rectangle<int> timelineArea() const;
   juce::Rectangle<int> tracksArea() const;
   int masterRow() const { return mixerOpen_ ? 30 : 64; }
@@ -632,14 +615,14 @@ private:
   bool aiAllowed_ = true;                           // AICORE > Allow AICORE proposals: gates the bridge and Apply
 
   doc::Document engineDocument() const;  // what the engine plays: the song
-  // File > Settings (Settings.cpp): the default folders, the samplers' folders, the keyboard shortcuts.
+  // File > Settings (Settings.cpp): the default folders, the sample roles' folders, the keyboard shortcuts.
   class SettingsPanel;
   juce::Component::SafePointer<juce::DialogWindow> settingsWindow_;
   juce::File trainingClipsFolder() const;  // Settings > Training clips (kept for AICORE), else Documents\Core training clips
   void openSettings(bool shortcuts = false);  // shortcuts: the Keyboard shortcuts tab
   void applyDrawingHelp();  // Settings > Piano roll (ghost note, alignment guides) into the editor
   // Settings > Samplers: each sampler role's own folders ("samplerFolders": role -> absolute folders) into the
-  // sample index (those inside the library), so its suggestions come only from them.
+  // sample index (those inside the library), so the Library's role folders come only from them.
   void applySamplerFolders();
   juce::File folderSetting(const char* key) const;  // a chosen folder ("" -> juce::File())
   juce::File songsFolder() const;          // Save / Open: the chosen one, else Documents

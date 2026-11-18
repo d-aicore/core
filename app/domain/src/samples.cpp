@@ -218,21 +218,6 @@ void measureLoudness(const fs::path& file, double& peakDb, double& loudDb) {
   loudDb = loud > 1e-20 ? 10 * std::log10(loud) : -200.0;
 }
 
-double roleLoudnessTarget(const std::string& role) {
-  static const std::map<std::string, double> targets = {
-      {"kick", -9}, {"bass", -11}, {"hat", -19}, {"openhat", -19}, {"perc", -17}, {"accent", -15},
-      {"impact", -13}, {"riser", -17}, {"atmos", -20}};
-  auto t = targets.find(role);
-  return t == targets.end() ? -16 : t->second;
-}
-
-double levelFor(const LibrarySample& sample, const std::string& role) {
-  if (sample.loudDb <= kNotMeasured + 1 || sample.loudDb < -150) return 0;
-  double level = roleLoudnessTarget(role) - sample.loudDb;
-  if (sample.peakDb > kNotMeasured + 1) level = std::min(level, -0.3 - sample.peakDb + 6);  // never more than 6 dB over full scale before the mixer
-  return std::round(std::clamp(level, -24.0, 24.0) * 10) / 10;
-}
-
 namespace {
 // The hash of the first 64 KiB of a file: one short read that says whether the bytes are still the ones a
 // previous scan measured (audit 2026-11-17, #3a: the same length and the same date are not the same file).
@@ -983,30 +968,7 @@ double roleFit(const std::string& want, const std::string& is) {
   return i == w->second.end() ? 0 : i->second;
 }
 
-// Siblings of a bass recorded note by note: same folder, same name once the note is taken out.
-std::string noteStem(const LibrarySample& s) {
-  static const std::regex note(R"(([A-G])(#|b)?\s?(\d)(?=$|[\s_\-\)\.]))");
-  std::string stem = std::regex_replace(s.name, note, "#");
-  stem = std::regex_replace(stem, std::regex(R"(^\s*\d+\s*[\.\-]*\s*-?\s*)"), "");
-  const size_t slash = s.path.rfind('/');
-  return (slash == std::string::npos ? "" : s.path.substr(0, slash)) + "|" + stem;
-}
 
-std::vector<const LibrarySample*> multiSampleSet(const SampleIndex& index, const LibrarySample& s) {
-  std::vector<const LibrarySample*> set;
-  if (s.info.rootKey < 0 || s.info.rootKey > 127 || s.info.loop) return set;
-  const std::string stem = noteStem(s);
-  std::set<int> keys;
-  for (const auto& o : index.samples)
-    if (o.info.rootKey >= 0 && o.info.rootKey <= 127 && !o.info.loop && noteStem(o) == stem && keys.insert(o.info.rootKey).second) set.push_back(&o);
-  std::sort(set.begin(), set.end(), [](const LibrarySample* a, const LibrarySample* b) { return a->info.rootKey < b->info.rootKey; });
-  // An instrument recorded note by note: at least 5 notes, close together (a few one-shots in other
-  // octaves that happen to share a name are not one).
-  bool close = set.size() >= 5;
-  for (size_t i = 1; i < set.size() && close; ++i) close = set[i]->info.rootKey - set[i - 1]->info.rootKey <= 3;
-  if (!close) set.clear();
-  return set;
-}
 
 std::string fmtSeconds(double s) {
   char b[32];
@@ -1055,71 +1017,6 @@ SampleFit sampleFit(const LibrarySample& s, const std::string& trackRole, double
   return f;
 }
 
-std::vector<SampleSuggestion> suggestSamples(const SampleIndex& index, const std::string& role, const std::string& style, int limit,
-                                             const std::string& pack) {
-  std::vector<SampleSuggestion> out;
-  if (role.empty() || limit <= 0) return out;
-  const auto styleWords = words(style);
-  const bool dark = has(styleWords, {"dark", "psycore", "darkpsycore"});
-  const bool hitech = has(styleWords, {"hitech", "hi", "tech"});
-  const bool slam = has(styleWords, {"slambient"});
-  const auto folders = index.roleFolders.find(role);
-  const bool ownFolders = folders != index.roleFolders.end() && !folders->second.empty();
-  for (const auto& s : index.samples) {
-    // The role's own folders (Settings > Samplers): only their samples, and each of them is of this role.
-    const bool inFolders = ownFolders && inRoleFolders(index, s, role);
-    if (ownFolders && !inFolders) continue;
-    double fit = inFolders ? 100 : roleFit(role, s.info.role);
-    if (fit <= 0) continue;
-    const auto fileWords = words(s.name);
-    // Stated: by the file's own name, the metadata file, the user or a folder the user gave the role.
-    const bool byName = inFolders || roleOf(fileWords) == s.info.role || metadataOrigin(index, s, "role") == "user" ||
-                        metadataOrigin(index, s, "role") == "metadata file";
-    double score = byName ? fit : fit * 0.7;  // only the folder says so
-    std::string why = s.info.loop ? "loop" : "one-shot";
-    const bool hitRole = role != "impact" && role != "riser" && role != "fx" && role != "vox" && role != "pad" && role != "synth";
-    // A pattern plays hits: a loop on every note would smear. On a kick, bass or hat track a loop is never offered
-    // (Diogo 2026-11-06, "many don't even sound like kicks": 7 of the 13 kick suggestions were 5..26 s loops).
-    if (s.info.loop && (role == "kick" || role == "bass" || role == "hat" || role == "openhat" || role == "accent")) continue;
-    if (s.info.loop && hitRole) score -= 70;
-    const double t = s.seconds;
-    if (role == "kick") score += t >= 0.1 && t <= 1.0 ? 10 : t > 1.5 ? -30 : 0;
-    else if (role == "bass") score += t <= 1.0 ? 10 : t > 2.0 ? -30 : 0;
-    else if (role == "hat") score += t <= 0.35 ? 10 : t > 1.0 ? -30 : 0;
-    else if (role == "openhat") score += t >= 0.15 && t <= 1.5 ? 5 : t > 3 ? -30 : 0;
-    else if (role == "perc" || role == "accent") score += t <= 0.8 ? 5 : t > 2.0 ? -30 : 0;
-    else if (role == "impact") score += t >= 0.5 ? 5 : 0;
-    else if (role == "riser") score += t > 40 ? -30 : t >= 1.5 ? 10 : t < 0.5 ? -30 : 0;
-    if (role == "bass") {
-      const auto set = multiSampleSet(index, s);
-      if (!set.empty()) {
-        if (set.front() != &s) continue;  // the set is suggested once, as its lowest note
-        score += 25;
-        why = "bass played note by note (" + std::to_string(set.size()) + " notes)";
-      } else if (s.info.rootKey >= 0 || s.info.keyClass >= 0) {
-        score += 5;
-      }
-    }
-    // The style, from the pack and folder names.
-    auto pathWords = words(s.path);
-    for (const auto& st : s.info.styles) for (const auto& w : words(st)) pathWords.push_back(w);  // the catalogue's styles count too
-    if (has(pathWords, {"psy", "psytrance", "psycore", "darkpsy", "psychedelic", "forest", "hitech"})) score += 5;
-    if ((dark && has(pathWords, {"dark", "darkpsy", "psycore", "forest"})) || (hitech && has(pathWords, {"hitech"})) ||
-        (slam && has(pathWords, {"slambient", "ambient"})))
-      score += 10;
-    const bool samePack = !pack.empty() && s.pack == pack && role != "bass";
-    if (samePack) score += kSamePackBonus;
-    if (why == "one-shot" || why == "loop") why += ", " + fmtSeconds(t);
-    if (samePack) why += ", same pack as the bass";
-    if (!s.pack.empty()) why += ", " + s.pack;
-    out.push_back({&s, score, why});
-  }
-  std::stable_sort(out.begin(), out.end(), [](const SampleSuggestion& a, const SampleSuggestion& b) {
-    return a.score != b.score ? a.score > b.score : a.sample->path < b.sample->path;
-  });
-  if ((int)out.size() > limit) out.resize((size_t)limit);
-  return out;
-}
 
 const std::vector<std::string>& samplerRoles() {
   static const std::vector<std::string> roles = {"kick", "bass", "hat", "openhat", "accent", "perc", "impact", "riser"};
@@ -1152,148 +1049,11 @@ std::string libraryRelativeFolder(const SampleIndex& index, const std::string& f
 
 std::string shownName(const LibrarySample& s) { return s.displayName.empty() ? s.name : s.displayName; }
 
-std::string shownName(const SampleIndex& index, const SampleRef& zone) {
-  const LibrarySample* s = nullptr;
-  if (!zone.sha256.empty())
-    for (const auto& x : index.samples)
-      if (x.sha256 == zone.sha256) { s = &x; break; }
-  if (!s && !zone.file.empty()) s = index.findFile(zone.file);
-  return s ? shownName(*s) : zone.name;
-}
 
-SampleRef sampleRef(const LibrarySample& s) {
-  SampleRef z;
-  z.file = s.file;
-  z.sha256 = s.sha256;
-  z.name = shownName(s);  // the catalogue's name, as the library shows it
-  if (s.embedded.is_object() && s.embedded.contains("loop")) {  // the file's own loop (smpl): the sampler loops it while held
-    const json& l = s.embedded["loop"];
-    if (l.is_array() && l.size() == 2 && l[0].is_number() && l[1].is_number()) {
-      const double a = l[0].get<double>(), b = std::min(l[1].get<double>(), s.seconds > 0 ? s.seconds : l[1].get<double>());
-      if (a >= 0 && b - a >= kMinSampleLoopSeconds) { z.loopStart = a; z.loopEnd = b; }
-    }
-  }
-  return z;
-}
 
-namespace {
-// Its measurements, when they are of this content.
-bool measuredNow(const LibrarySample& s, SampleAnalysis& a) { return analysisFromJson(s.analysis, a) && a.sha256 == s.sha256 && !a.silent; }
-// The sampler's Level that plays the loudest of these samples at kSamplePeakDb (the library's files are left
-// as they are: their peaks go from -1 to -13 dBFS). Unmeasured: Level stays at its default.
-void levelToPeak(Instrument& in, const std::vector<const LibrarySample*>& samples) {
-  double peak = -1000;
-  for (const auto* x : samples) {
-    SampleAnalysis m;
-    if (!measuredNow(*x, m) || m.peakDb <= -120) return;
-    peak = std::max(peak, m.peakDb);
-  }
-  if (peak <= -1000) return;
-  in.params["level"] = std::round(std::clamp(kSamplePeakDb - peak, -24.0, kSampleMaxBoostDb) * 10) / 10;
-}
-// A hit or a bass note that starts after silence plays late on every note (8 bass one-shots in D:\Samples wait
-// 31..115 ms). The sampler starts 2 ms before the sound instead (its 0.1 ms fade-in keeps it click-free).
-void skipLeadingSilence(Instrument& in, const LibrarySample& s, const std::string& role) {
-  static const std::set<std::string> hits = {"kick", "snare", "clap", "hat", "openhat", "perc", "tom", "bass", "kickbass"};
-  SampleAnalysis a;
-  if (!hits.count(role) || !measuredNow(s, a) || a.leadingSilenceMs < kLateStartMs) return;
-  in.params["start"] = a.leadingSilenceMs - 2;
-}
-}  // namespace
 
-Instrument samplerInstrument(const SampleIndex& index, const LibrarySample& sample, const std::string& role) {
-  Instrument in;
-  // The user-sample host (BUG-SWEEP-10 positive, owner ratified 2026-11-18: «sampler = host de samples do
-  // utilizador, sem fontes de som próprias.»): kind "sample" PLAYS the user's audio files through the engine's
-  // audio path (dsp/sample_host.hpp). It has no sound source of its own — no oscillator, no filter; the zones
-  // below are the user's files, and the params are playback controls (level, start, pitch, loop, fades).
-  in.kind = "sample";
-  in.name = "sampler";
-  in.version = kSamplerVersion;
-  if (role == "bass") {
-    in.params["pitched"] = 1;
-    in.params["release"] = 20;  // KBBB: short notes, short tails
-    auto set = multiSampleSet(index, sample);
-    // A note of the set whose audio plays another note than its name says is left out (the notes around it
-    // cover its keys): Psiger "16 - D#2" plays a B5, twice as long as its neighbours.
-    set.erase(std::remove_if(set.begin(), set.end(), [](const LibrarySample* x) {
-                SampleAnalysis m;
-                const int note = measuredNow(*x, m) ? pitchToMidi(m.pitchHz) : -1;
-                return note >= 0 && std::abs(note - x->info.rootKey) > 1;
-              }), set.end());
-    if (set.size() == 1) set.clear();  // one note left: played as a single sample below
-    if (!set.empty()) {
-      for (size_t i = 0; i < set.size(); ++i) {
-        SampleRef z = sampleRef(*set[i]);
-        z.rootKey = set[i]->info.rootKey;
-        z.loKey = i == 0 ? 0 : (set[i - 1]->info.rootKey + z.rootKey) / 2 + 1;
-        z.hiKey = i + 1 == set.size() ? 127 : (z.rootKey + set[i + 1]->info.rootKey) / 2;
-        in.samples.push_back(z);
-      }
-      levelToPeak(in, set);
-      return in;
-    }
-    SampleRef z = sampleRef(sample);
-    // The note its audio plays, when measured: names are often wrong ("BASS Cm" plays an F, "A#1" plays A#2),
-    // and a bass a few semitones off the kick and the rest of the song is what makes it sound wrong.
-    // Otherwise a bass note in a psy register (octave 1) unless the name says a low octave; E1 when unknown.
-    SampleAnalysis a;
-    // Only a bass's register (25..300 Hz): higher is a harmonic taken for the note.
-    const int measured = analysisFromJson(sample.analysis, a) && a.sha256 == sample.sha256 && a.pitchHz <= 300 ? pitchToMidi(a.pitchHz) : -1;
-    z.rootKey = measured >= 0 ? measured
-                : sample.info.rootKey >= 0 && sample.info.rootKey <= 47 ? sample.info.rootKey
-                : sample.info.keyClass >= 0 ? 24 + sample.info.keyClass : 28;
-    in.samples.push_back(z);
-    // A long held bass note (most one-shots in the library sound 0.4..2.7 s) cut every 1/16 sounds flat, like
-    // an organ: each note gets a psy pluck instead, falling to -60 dB in 400 ms (about -15 dB by the next 1/16).
-    if (analysisFromJson(sample.analysis, a) && a.sha256 == sample.sha256 && a.activeMs > kLongBassMs) in.params["decay"] = kBassPluckMs;
-    skipLeadingSilence(in, sample, role);
-    levelToPeak(in, {&sample});
-    return in;
-  }
-  in.samples.push_back(sampleRef(sample));  // a one-shot: every key plays it as it is
-  if (role == "riser") in.params["retrigger"] = 0;  // a roll of notes plays the riser once
-  if (!sample.info.loop) skipLeadingSilence(in, sample, role);
-  levelToPeak(in, {&sample});
-  return in;
-}
 
-namespace {
-// Where a riser sample starts so it ends on the drop: the sample's length minus its clip's (the longest
-// clip, at the song tempo). A riser shorter than the clip starts with it and ends before the drop.
-double riserStartMs(const Document& doc, const Track& t, const LibrarySample& s) {
-  int64_t ticks = 0;
-  for (const auto& c : t.clips) ticks = std::max(ticks, c.lengthTicks);
-  if (ticks <= 0 || doc.bpm <= 0 || s.seconds <= 0) return 0;
-  const double clipSeconds = (double)ticks / kPpq * 60.0 / doc.bpm;
-  return std::round(std::clamp((s.seconds - clipSeconds) * 1000.0, 0.0, 60000.0));
-}
-}  // namespace
 
-void setTrackSample(Document& doc, const std::string& trackId, const SampleIndex& index, const LibrarySample& sample) {
-  Track& t = trackById(doc, trackId);
-  if (!playsPatterns(t)) throw DocumentError("instrument", "an audio track or a bus does not play samples");
-  // BUG-SWEEP-10: a track played by a plugin keeps its plugin. Assigning a sample here would replace a working
-  // plugin and erase its instrument automation (PROD :113: a missing plugin is explicit, never silently replaced).
-  // Refuse, as an audio track or a bus is refused above; the working plugin is never destroyed.
-  if (t.instrument.kind == "plugin")
-    throw DocumentError("instrument", "this track is played by a plugin: a sample would replace it. "
-                                      "Keep the plugin, or replace the instrument first.");
-  std::string role = trackSampleRole(t);
-  if (role.empty()) role = sample.info.role == "bass" ? "bass" : sample.info.role;
-  // A new sample starts from its own sound: the host's defaults plus what suits this sample (how keys play,
-  // whether a note restarts it, where it starts, its level). Nothing of the previous sample's knobs or of its
-  // automation carries over, so changing samples again and again never stacks anything; Undo brings the old one back.
-  // The host (kind "sample") PLAYS the user's file — no synthesis (owner ratified 2026-11-18).
-  Instrument next = samplerInstrument(index, sample, role);
-  // The level brings it to its role's loudness, so the template's mix stays in balance.
-  next.params["level"] = levelFor(sample, role);
-  if (role == "riser") next.params["start"] = riserStartMs(doc, t, sample);
-  t.instrument = next;
-  t.automation.erase(std::remove_if(t.automation.begin(), t.automation.end(), [](const Automation& a) {
-                       return a.param != "gainDb" && a.param != "pan" && a.param.rfind("fx:", 0) != 0;
-                     }), t.automation.end());
-}
 
 std::string songStyle(const Document& doc) {
   const auto t = doc.extra.find("template");
@@ -1302,129 +1062,9 @@ std::string songStyle(const Document& doc) {
   return st != t->end() && st->is_string() ? st->get<std::string>() : "";
 }
 
-std::string anchorPack(const Document& doc, const SampleIndex& index) {
-  for (const auto& t : doc.tracks) {
-    if (trackSampleRole(t) != "bass" || t.instrument.samples.empty()) continue;
-    const SampleRef& z = t.instrument.samples.front();
-    const LibrarySample* s = index.findFile(z.file);
-    if (!s) s = index.findHash(z.sha256);
-    if (s) return s->pack;
-  }
-  return "";
-}
 
-namespace {
-uint64_t mix64(uint64_t x) {  // splitmix64: the same picks for the same seed on every platform
-  x += 0x9e3779b97f4a7c15ULL;
-  x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9ULL;
-  x = (x ^ (x >> 27)) * 0x94d049bb133111ebULL;
-  return x ^ (x >> 31);
-}
-uint64_t hashText(const std::string& s) {
-  uint64_t h = 1469598103934665603ULL;
-  for (unsigned char c : s) h = (h ^ c) * 1099511628211ULL;
-  return h;
-}
-}  // namespace
 
-std::vector<std::string> applySuggestedSamples(Document& doc, const SampleIndex& index, const std::string& style, uint64_t seed) {
-  std::vector<std::string> changed;
-  // The bass first: the other tracks then prefer its pack (kick and bass made to sit together).
-  std::vector<Track*> order;
-  for (auto& t : doc.tracks) if (trackSampleRole(t) == "bass") order.push_back(&t);
-  for (auto& t : doc.tracks) if (trackSampleRole(t) != "bass") order.push_back(&t);
-  // A sample plays on one track only: the ones on tracks this does not change are taken already.
-  std::set<std::string> used;
-  for (const auto& t : doc.tracks)
-    if (trackSampleRole(t).empty()) for (const auto& z : t.instrument.samples) used.insert(z.sha256.empty() ? z.file : z.sha256);
-  auto key = [](const LibrarySample& s) { return s.sha256.empty() ? s.file : s.sha256; };
-  for (Track* t : order) {
-    if (!playsPatterns(*t)) continue;
-    if (t->instrument.kind == "plugin") continue;  // BUG-SWEEP-10: a plugin role track keeps its plugin (setTrackSample refuses it); the bulk flow skips it, never throws
-    const std::string role = trackSampleRole(*t);
-    if (role.empty()) continue;
-    std::vector<SampleSuggestion> pool;
-    for (const auto& c : suggestSamples(index, role, style, 40, anchorPack(doc, index)))
-      if (c.score >= kGoodSuggestion && !used.count(key(*c.sample))) pool.push_back(c);
-    if (pool.empty()) continue;
-    const SampleSuggestion* pick = &pool.front();
-    if (seed != 0) {
-      // Any good sample close to the best can come out, the better ones more often.
-      const double floor = pool.front().score - kVarietyRange;
-      double total = 0;
-      for (const auto& c : pool) if (c.score >= floor) total += c.score - floor + 1;
-      double r = (double)(mix64(seed ^ hashText(t->id)) >> 11) / 9007199254740992.0 * total;
-      for (const auto& c : pool) {
-        if (c.score < floor) break;
-        pick = &c;
-        r -= c.score - floor + 1;
-        if (r < 0) break;
-      }
-    }
-    setTrackSample(doc, t->id, index, *pick->sample);
-    for (const LibrarySample* s : multiSampleSet(index, *pick->sample)) used.insert(key(*s));
-    used.insert(key(*pick->sample));
-    changed.push_back(t->name + ": " + shownName(*pick->sample));
-  }
-  return changed;
-}
 
-int relinkMovedSamples(Document& doc, const SampleIndex& index) {
-  int moved = 0;
-  for (auto& t : doc.tracks)
-    for (auto& z : t.instrument.samples) {
-      std::error_code e;
-      if (fs::exists(fromUtf8(z.file), e)) continue;
-      if (!z.sha256.empty()) {
-        if (const LibrarySample* s = index.findHash(z.sha256)) { z.file = s->file; ++moved; }
-        continue;  // known content not in the library: stays missing, never another sound
-      }
-      // No sha256 (an older template or song): the same place inside the library, e.g. D:\Samples\Bass\x.wav after
-      // the library moved into Core's own folder is <install>\Samples\Bass\x.wav. The longest tail of the old
-      // path that is a path of the library (folder and file at least), so a file of the same name elsewhere is
-      // never taken.
-      std::vector<std::string> parts;
-      std::string part;
-      for (char c : z.file) {
-        if (c == '/' || c == '\\') { if (!part.empty()) parts.push_back(part); part.clear(); }
-        else part += c;
-      }
-      if (!part.empty()) parts.push_back(part);
-      for (size_t from = 1; from + 2 <= parts.size(); ++from) {
-        std::string tail;
-        for (size_t k = from; k < parts.size(); ++k) tail += (tail.empty() ? "" : "/") + parts[k];
-        if (const LibrarySample* s = index.find(tail); s && !s->file.empty()) {
-          z.file = s->file;
-          z.sha256 = s->sha256;
-          ++moved;
-          break;
-        }
-      }
-    }
-  return moved;
-}
 
-Document withPreviewTrack(const Document& doc, const SampleIndex& index, const LibrarySample& sample, const std::string& role,
-                          std::string& trackId, int& pitch) {
-  Document d = doc;
-  if (d.tracks.size() >= 128) d.tracks.pop_back();  // the engine's limit: a preview is never refused for it
-  const std::string r = role.empty() ? (sample.info.role == "bass" ? "bass" : sample.info.role) : role;
-  Track t;
-  t.id = "sample-preview";
-  for (int n = 2; d.findTrack(t.id); ++n) t.id = "sample-preview-" + std::to_string(n);
-  t.name = "Sample preview";
-  t.instrument = samplerInstrument(index, sample, r);
-  t.instrument.params["level"] = levelFor(sample, r);
-  if (r == "riser") t.instrument.params["start"] = 0;
-  Pattern p;
-  p.id = "p1";
-  p.name = "1";
-  p.lengthTicks = 4 * kPpq;
-  t.patterns.push_back(p);
-  pitch = !t.instrument.samples.empty() && t.instrument.samples.front().rootKey >= 0 ? t.instrument.samples.front().rootKey : 60;
-  trackId = t.id;
-  d.tracks.push_back(std::move(t));
-  return d;
-}
 
 } // namespace core::doc

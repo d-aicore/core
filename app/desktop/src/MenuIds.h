@@ -19,7 +19,6 @@ inline constexpr int kDuplicate = 2;
 inline constexpr int kRemoveTrack = 3;
 inline constexpr int kAutomation = 4;
 inline constexpr int kOpenInstrument = 6;          // the track instrument's own window
-inline constexpr int kBuiltinReplaceFirst = 800;   // + place in doc::builtinInstruments()
 inline constexpr int kEffectOpenFirst = 900;       // + place in the track's effect chain
 inline constexpr int kEffectRemoveFirst = 920;     // + place in the chain
 inline constexpr int kEffectOnFirst = 940;         // + place in the chain
@@ -32,8 +31,6 @@ inline constexpr int kNoPlugins = -1;              // the disabled "None found y
 // Fixed action ids of the Add Track menu (showAddTrackMenu).
 inline constexpr int kAudioTrack = 1000;
 inline constexpr int kImportAudio = 1001;
-inline constexpr int kSamplerTrack = 1002;
-inline constexpr int kBuiltinAddFirst = 3000;      // + place in doc::builtinInstruments()
 
 // Where the uncapped plugin bands start. Every fixed action id above is below this (or negative), so a plugin
 // item id can never equal an action id, whatever the catalog sizes. 4000 keeps the Add-effect band's historical base.
@@ -41,9 +38,9 @@ inline constexpr int kPluginBandFirst = 4000;
 
 enum class TrackAction {
   none, rename, duplicate, removeTrack, automation, openInstrument,
-  replaceWithPlugin, addPluginEffect, openEffect, removeEffect, toggleEffect, replaceWithBuiltin
+  replaceWithPlugin, addPluginEffect, openEffect, removeEffect, toggleEffect
 };
-enum class AddTrackAction { none, addPluginInstrument, addBuiltinInstrument, samplerTrack, audioTrack, importAudio };
+enum class AddTrackAction { none, addPluginInstrument, audioTrack, importAudio };
 
 struct TrackChoice { TrackAction action = TrackAction::none; int index = -1; };
 struct AddTrackChoice { AddTrackAction action = AddTrackAction::none; int index = -1; };
@@ -60,7 +57,7 @@ inline int addTrackPluginFirst() { return kPluginBandFirst; }
 
 // The track menu's dispatch decision, in the callback's order (plugin branch first).
 // chainCount is the track's effect chain size; an effect id past the chain does nothing, as in the callback.
-inline TrackChoice decodeTrackMenu(int chosen, int instrumentCount, int effectCount, int builtinCount, int chainCount) {
+inline TrackChoice decodeTrackMenu(int chosen, int instrumentCount, int effectCount, int chainCount) {
   const TrackMenuIds ids = trackMenuIds(instrumentCount, effectCount);
   if (chosen >= ids.replacePluginFirst && chosen - ids.replacePluginFirst < instrumentCount)
     return {TrackAction::replaceWithPlugin, chosen - ids.replacePluginFirst};
@@ -74,8 +71,6 @@ inline TrackChoice decodeTrackMenu(int chosen, int instrumentCount, int effectCo
     return {TrackAction::toggleEffect, i};
   }
   if (chosen == kOpenInstrument) return {TrackAction::openInstrument, -1};
-  if (chosen >= kBuiltinReplaceFirst && chosen - kBuiltinReplaceFirst < builtinCount)
-    return {TrackAction::replaceWithBuiltin, chosen - kBuiltinReplaceFirst};
   if (chosen == kRename) return {TrackAction::rename, -1};
   if (chosen == kDuplicate) return {TrackAction::duplicate, -1};
   if (chosen == kRemoveTrack) return {TrackAction::removeTrack, -1};
@@ -84,13 +79,10 @@ inline TrackChoice decodeTrackMenu(int chosen, int instrumentCount, int effectCo
 }
 
 // The Add Track menu's dispatch decision, in the callback's order (plugin branch first).
-inline AddTrackChoice decodeAddTrackMenu(int chosen, int instrumentCount, int builtinCount) {
+inline AddTrackChoice decodeAddTrackMenu(int chosen, int instrumentCount) {
   const int first = addTrackPluginFirst();
   if (chosen >= first && chosen - first < instrumentCount)
     return {AddTrackAction::addPluginInstrument, chosen - first};
-  if (chosen >= kBuiltinAddFirst && chosen - kBuiltinAddFirst < builtinCount)
-    return {AddTrackAction::addBuiltinInstrument, chosen - kBuiltinAddFirst};
-  if (chosen == kSamplerTrack) return {AddTrackAction::samplerTrack, -1};
   if (chosen == kAudioTrack) return {AddTrackAction::audioTrack, -1};
   if (chosen == kImportAudio) return {AddTrackAction::importAudio, -1};
   return {};

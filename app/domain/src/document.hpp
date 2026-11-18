@@ -80,36 +80,12 @@ struct Automation {
   json extra = json::object();
 };
 
-// A file of the user's sample library played by the Core Sampler on loKey..hiKey (rootKey: the note it
-// was recorded at). The file stays in the library: `file` is its absolute
-// path and `sha256` identifies it, so a moved library is found again by content, never replaced by
-// another sound.
-struct SampleRef {
-  std::string file;        // absolute, UTF-8
-  std::string sha256;      // of the file's bytes (64 hex), "" if not known
-  std::string name;        // shown to the user (the file name)
-  int rootKey = 60, loKey = 0, hiKey = 127;
-  // A sustain loop in the file's seconds (the engine plays it while the note is held); loopEnd 0 = none.
-  double loopStart = 0, loopEnd = 0;
-  bool loops() const { return loopEnd > 0; }
-  json extra = json::object();
-};
-constexpr double kMinSampleLoopSeconds = 0.002;
-
-// The built-in sampler's sound version (engine sampler.hpp): Hermite reading, tune followed while a note plays,
-// band-limited when played above its rate (version 4).
-constexpr int kSamplerVersion = 4;
+// A track's instrument: a plugin, or no instrument yet (notes wait for a plugin). Core makes no sound of its
+// own (Diogo 2026-11-18): sampler, synths, effects, filters, oscillators are plugins, not built-in.
 struct Instrument {
-  std::string kind = "none";           // "plugin" | "none" (notes, no instrument yet) | "sample" (user-sample host) | "audio" | "bus" | "builtin" (an old Core instrument, kept, not played)
-  std::string name;                    // builtin: kick | wave (W-Core) | hats | drums | sampler; sample: "sampler" (the host)
-  int version = 1;                     // builtin sound version
-  std::map<std::string, double> params;  // only the values set; the engine fills the defaults
-  std::vector<SampleRef> samples;      // "sampler" (builtin kept, or the sample host): its zones (the first one holding the key plays)
-  // builtin "wave" (W-Core, version 2): its modulation, {"layers": [{"lfos": [...], "links": [...]}]}
-  // (engine/src/dsp/wave_mod.hpp). null = none.
-  json synth;
-  // kind "plugin": a VST3 played by the engine, {format: "vst3", id, name, vendor, version, file, state}.
-  // Only a reference to A/B Core's own sounds against (Serum 2); Core's templates never use one.
+  std::string kind = "none";           // "plugin" | "none" (notes, no instrument yet) | "audio" | "bus"
+  std::string name;                    // a role hint for pattern/alignment detection; empty for a plugin track
+  // kind "plugin": a VST3/VST2 played by the engine, {format, id, name, vendor, version, file, state}.
   json plugin;
   json extra = json::object();
 };
@@ -117,8 +93,6 @@ struct Instrument {
 // M7a: a copy of the track's signal into a bus (post-fader unless pre).
 struct Send { std::string id; std::string to; double gainDb = 0; bool pre = false; json extra = json::object(); };
 constexpr int kMaxSends = 8;
-constexpr int kMaxModulators = 16;  // the engine's limit (FCore intents use several)
-constexpr int kMaxModSteps = 16;     // the engine's limit of a "steps" modulator
 // output: "" = the master, or a bus track's id (instrument kind "bus"). Saved only when set.
 struct Mix {
   double gainDb = 0, pan = 0; bool mute = false, solo = false;
@@ -212,9 +186,6 @@ struct Track {
   std::vector<AudioClip> audioClips;  // instrument.kind == "audio"
   std::vector<Automation> automation;
   json effects = json::array();
-  // M8a: LFOs on the track's parameters [{id, param, shape, rateBeats, depth, phase}] (the engine checks
-  // the parameter and the ranges). Saved only when there is one.
-  json modulators = json::array();
   json extra = json::object();
 
   const Pattern* findPattern(const std::string& id) const;

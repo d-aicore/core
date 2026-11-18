@@ -21,12 +21,7 @@
       "effects": [],
       "id": "kick",
       "instrument": {
-        "kind": "builtin",
-        "name": "kick",
-        "params": {
-          "ampDecay": 170
-        },
-        "version": 1
+        "kind": "none"
       },
       "mix": {
         "gainDb": 0,
@@ -170,15 +165,7 @@
       "effects": [],
       "id": "bass",
       "instrument": {
-        "kind": "builtin",
-        "name": "bass",
-        "params": {
-          "cutoff": 480,
-          "decay": 70,
-          "release": 12,
-          "sustain": 0.1
-        },
-        "version": 1
+        "kind": "none"
       },
       "mix": {
         "gainDb": 0,
@@ -294,10 +281,7 @@
       "effects": [],
       "id": "hats",
       "instrument": {
-        "kind": "builtin",
-        "name": "hats",
-        "params": {},
-        "version": 1
+        "kind": "none"
       },
       "mix": {
         "gainDb": -4,

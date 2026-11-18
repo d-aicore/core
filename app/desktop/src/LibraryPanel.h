@@ -1,8 +1,8 @@
 // The Library, on the left of the window: the sample library (search, roles, favourites, a tree of sounds and a
 // preview card) and the song templates (a tree by style, a card to start a song, save the song as one or delete one;
-// since 2026-11-05 they live only here, not in File > New). It only reads the index; what a click does (a sample on the
-// selected track, a new song from a template, a correction of what a sample is) is the window's, through the
-// callbacks: a song change is one undo step of the song, a correction one step of the sample catalogue.
+// since 2026-11-05 they live only here, not in File > New). It only reads the index; what a click does (a new song
+// from a template, a correction of what a sample is) is the window's, through the callbacks: a song change is one
+// undo step of the song, a correction one step of the sample catalogue.
 #pragma once
 #include <functional>
 #include <memory>
@@ -28,11 +28,10 @@ public:
   LibraryPanel();
   ~LibraryPanel() override;
 
-  // What the window gives: the index (null while there is none), the selected track and whether it plays
-  // samples, the templates, waveforms, favourites (sha256) kept in the user settings.
+  // What the window gives: the index (null while there is none), the selected track, the templates, waveforms,
+  // favourites (sha256) kept in the user settings.
   std::function<const doc::SampleIndex*()> index;
   std::function<juce::String()> trackName;           // "" = no track selected
-  std::function<bool()> trackTakesSamples;
   // The selected track's sample role (doc::trackSampleRole; "" when it takes no samples) and the song's fastest
   // tempo: the "fits" filter shows only the sounds that suit it (doc::sampleFit).
   std::function<std::pair<std::string, double>()> fitContext;
@@ -41,15 +40,13 @@ public:
   std::function<std::set<std::string>()> loadFavourites;
   std::function<void(const std::set<std::string>&)> saveFavourites;
   // What it asks for.
-  // A sound dragged out of the list: this text, then the sample's sha256 (the window finds it in the index).
+  // A sound dragged out of the list: this text, then the sample's sha256 (the window finds it in the index and
+  // imports it as an audio clip on an audio track).
   static constexpr const char* kSampleDrag = "core-sample:";
   std::function<void()> onMinimise;  // ‹ in its header: the Library steps aside (the rail brings it back)
   // The window control (UX detachable-windows slice): ⧉ pops the Browser out into an OS window / docks it back.
   std::function<void()> onDetach;
   std::function<bool()> isDetached;
-  std::function<void(const doc::LibrarySample&)> onUseSample;  // on the selected track (one undo step), then heard
-  // Heard once, whatever track is selected (the song does not change); role "" = the sample's own role.
-  std::function<bool(const doc::LibrarySample&, const std::string& role)> onPreviewSample;
   // Templates tab: a new song from one; the song as it is now saved as one (the window asks the name); one deleted
   // (the window asks first); the hidden built-in ones back; the user's templates folder opened.
   std::function<void(const std::string& templateId)> onOpenPreset;
@@ -133,8 +130,7 @@ private:
   std::pair<std::string, double> fitNow() const { return fitContext ? fitContext() : std::pair<std::string, double>{}; }
   juce::ListBox list_{"Library", this};
   void editMetadata();
-  juce::TextButton play_, use_{"Use"}, star_, edit_;
-  void preview();
+  juce::TextButton star_, edit_;
   std::vector<Row> rows_;
   std::vector<Preset> presetList_;
   std::vector<doc::PatternPreset> patternList_;

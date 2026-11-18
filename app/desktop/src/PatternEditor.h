@@ -98,8 +98,6 @@ public:
   void applyPreset(const doc::PatternPreset& preset, int bars, bool add);
   std::function<void(const juce::String&)> onMessage;          // what a tool did ("+10 notes: 38 -> 48")
   std::function<void(int64_t start, int64_t end)> onSavePattern;  // "Save shown bars as a pattern..."
-  // "Build-up on a new track": the window makes a sampler track with a snare/clap of the library and places it.
-  std::function<void(int bars, bool roll, bool gap)> onBuildupTrack;
   std::function<double()> bpm;                                 // the tempo where the song is (seconds -> bars)
   std::function<std::vector<doc::PatternPreset>()> patternLibrary;  // the library (PCore's templates)
   // Build-up → roll → drop (one-time use): the window over the bars shown. A take is one undo step; "again" puts back what the

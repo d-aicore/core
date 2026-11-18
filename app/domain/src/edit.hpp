@@ -14,36 +14,6 @@ Document newEmptyDocument();
 // Kick on every beat, rolling bass on the off-sixteenths, hats on the off-beats: 145 BPM, 16 bars.
 Document newTemplateDocument();
 
-// Built-in instruments the editors can add, with their display names.
-struct InstrumentChoice { const char* name; const char* label; };
-const std::vector<InstrumentChoice>& builtinInstruments();
-
-// The built-in instruments' own parameters: the engine's catalogue (core::instrumentParams), same names,
-// order, defaults and ranges (a test checks it), with what the window and the AI tools need on top.
-struct InstrumentParamInfo {
-  const char* name;
-  const char* label;
-  double def, min, max;
-  const char* unit;
-  double step;        // 0 = continuous; 1 = whole steps (octave, a switch)
-  bool logScale;      // frequencies and times: the slider is logarithmic
-  bool automatable;   // false: a jump would click or mean nothing mid-note (octave, a switch)
-};
-struct InstrumentInfo {
-  const char* name;   // kick | bass | hats | drums | sampler
-  const char* label;
-  std::vector<InstrumentParamInfo> params;  // in the engine's order
-};
-const std::vector<InstrumentInfo>& instrumentCatalogue();
-const InstrumentInfo* findInstrumentInfo(const std::string& name);
-// The parameter of a built-in instrument, or null (audio, an unknown name).
-const InstrumentParamInfo* findInstrumentParam(const Track& track, const std::string& param);
-// What the instrument plays with now: the value set on the track, or the default.
-double instrumentParamValue(const Track& track, const InstrumentParamInfo& param);
-// Sets one parameter of a built-in instrument (the fixed value; automation, when there is some, plays over it).
-// Throws DocumentError for an audio track, an unknown name, a value out of range, a choice not whole.
-void setInstrumentParam(Document& doc, const std::string& trackId, const std::string& param, double value);
-
 // A free id from a base ("bass" -> "bass", "bass-2", ...), valid for the id rules.
 std::string uniqueTrackId(const Document& doc, const std::string& base);
 
@@ -90,76 +60,27 @@ std::string splitClip(Track& track, const std::string& clipId, int64_t atTick);
 // the user's ideas even without a timeline clip, so they count as used (BUG-SWEEP-29).
 void removeUnusedPatterns(Track& track, const std::set<std::string>& rackRefs = {});
 
-// ---- effects (M4): built-in inserts on a track or on the master (trackId "")
-struct EffectParamInfo {
-  const char* name;
-  const char* label;  // Portuguese, for the window
-  double def, min, max;
-  const char* unit;
-  double step;        // 0 = continuous; 1 = whole steps (a choice)
-  bool logScale;      // frequencies and times: the slider is logarithmic
-  std::vector<const char*> choices;  // labels of the whole steps, when step is 1
-  bool automatable = true;           // false: a jump would click (delay time, pre-delay)
-  const char* hint = nullptr;        // in plain words, what it changes in the sound (the knob's tip)
-};
-struct EffectInfo {
-  const char* name;
-  const char* label;
-  std::vector<EffectParamInfo> params;  // in the engine's order (core::effectParams)
-  int version = 1;                      // written into new effects (core::currentEffectVersion)
-};
+// ---- effects (M4): plugin inserts on a track or on the master (trackId "")
 constexpr int kMaxEffectsPerChain = 16;
-const std::vector<EffectInfo>& builtinEffects();
 // Reading an effect of a document that may have come from elsewhere: never throws on odd values.
 std::string effectName(const json& fx);
 bool effectBypassed(const json& fx);
 double effectParam(const json& fx, const std::string& param, double fallback);
-const EffectInfo* findEffect(const std::string& name);
 // One entry per chain effect for the menus that list a chain (the track's right-click, Plugins > Master
-// effects). Every effect in the chain is offered, Core's own ones included: an old song or a template
-// carries them, and the menus listed the plugins only, so an own effect could never be removed from the
-// app (bug 2026-11-17). index: its place in the chain (removeEffect and setEffectBypass take the same);
+// effects). index: its place in the chain (removeEffect and setEffectBypass take the same);
 // window: a plugin effect with a window to open; label: the name shown.
 struct EffectMenuEntry { int index = 0; bool plugin = false; bool window = false; std::string label; };
 std::vector<EffectMenuEntry> effectMenuEntries(const json& chain);
-// Starting points of a Core Device for one style (GLITCH, PULSE): a name, a line on what it does, its values.
-// Every preset can be chosen in any style; the style only orders the menu. Unlisted knobs keep their default.
-struct EffectPreset {
-  const char* effect;
-  const char* style;  // the Style FX ids: darkpsycore, hitech, slambient, psytrance
-  const char* name;
-  const char* tip;
-  std::vector<std::pair<const char*, double>> values;
-  const char* from = nullptr;  // a Core FX preset: the old effect it was made for ("space", "echo"...)
-};
-const std::vector<EffectPreset>& effectPresets();
 json& effectChain(Document& doc, const std::string& trackId);
 const json& effectChain(const Document& doc, const std::string& trackId);
-// At the end, with an id of its own (the engine keeps an effect's tail across edits by that id); returns its place.
-int addEffect(Document& doc, const std::string& trackId, const std::string& name);
 // The key of the song as a note name number 0..11 (0 = C), from the bass tracks (the notes they hold longest),
 // or from every melodic track when there is no bass; -1 when the song has no notes.
 int songRoot(const Document& doc);
 // The note nearest to `note` (within 6 semitones) that is the song's root; `note` when there is no root.
 int followSongKey(const Document& doc, int note);
-// The same, with a preset's values (clamped to each knob's range). A METAL preset's note follows songRoot.
-int addEffect(Document& doc, const std::string& trackId, const EffectPreset& preset);
-// A preset's values on the effect already at `index` (the help window's "Try it"): knobs it does not list go back
-// to their default (a preset never stacks on the previous one); the same clamping and METAL key rule as addEffect. Refused (DocumentError) when the effect there is not
-// the preset's.
-void applyEffectPreset(Document& doc, const std::string& trackId, int index, const EffectPreset& preset);
-// The preset of that effect with that name, or null.
-const EffectPreset* findEffectPreset(const std::string& effect, const std::string& name);
 void removeEffect(Document& doc, const std::string& trackId, int index);
 void moveEffect(Document& doc, const std::string& trackId, int from, int to);
-void setEffectParam(Document& doc, const std::string& trackId, int index, const std::string& param, double value);
 void setEffectBypass(Document& doc, const std::string& trackId, int index, bool bypass);
-
-// ---- instruments
-// Another built-in instrument for a track that plays notes. The notes, patterns, clips, effects, mixer and
-// their automation stay; the old instrument's own settings and their automation go (they would not mean
-// anything to the new one).
-void replaceInstrument(Document& doc, const std::string& trackId, const std::string& builtin);
 
 // ---- plugins (VST3, VST2): `plugin` is what the scan found {format, id, name, vendor, version, file, ...}
 std::string addPluginTrack(Document& doc, const json& plugin);  // a track played by the plugin; returns its id
@@ -191,9 +112,6 @@ std::vector<std::string> droppedPluginKeys(const Document& before, const Documen
 // A plugin the step brings back, or another plugin under the key, keeps the state of `to`. A plugin with no
 // state in `from` takes nothing away from `to`. Returns how many plugins changed.
 int keepLivePluginStates(const Document& from, Document& to);
-// Takes away what an instrument's mood put on the track (the W-Core mood effects, their curves, and the
-// record of the knobs a mood moved), for when the track changes instrument. The user's own effects stay.
-void dropInstrumentMoods(Document& doc, const std::string& trackId);
 
 // ---- automation (M4): a parameter that changes along the song, on a track or on the master (trackId "")
 struct AutomatableParam {
@@ -204,8 +122,8 @@ struct AutomatableParam {
   std::string unit;
   bool logScale;
 };
-// What can be automated there: volume, pan (tracks), the built-in instrument's parameters and every parameter
-// of the built-in effects.
+// What can be automated there: volume, pan (tracks) and the plugin parameters (a plugin's own curves are
+// offered by the engine/window).
 std::vector<AutomatableParam> automatableParams(const Document& doc, const std::string& trackId);
 std::string effectParamKey(const std::string& effectId, const std::string& param);  // "fx:<id>:<param>"
 const Automation* findAutomation(const Document& doc, const std::string& trackId, const std::string& param);

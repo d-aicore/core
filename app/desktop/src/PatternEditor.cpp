@@ -41,11 +41,11 @@ juce::String lengthName(int64_t ticks) {
   if (ticks % (doc::kPpq / 4) == 0) return plural(ticks / (doc::kPpq / 4), "step", "steps");
   return juce::String(ticks / (double)doc::kPpq, 2) + " beats";
 }
-// The hat sounds of the built-in hats synth (engine Hats), in the order they are offered.
+// The hat rows of the drum grid (GM-style pitches plugins and pattern presets share), in the order they are offered.
 constexpr int kClosed = 42, kOpen = 46, kPedal = 44, kRide = 51, kShaker = 70;
 // Open above closed, as before (other tools take the hats track's last row as its main sound when nothing was added).
 const std::vector<int> kHatOrder = {kOpen, kClosed, kPedal, kRide, kShaker};
-// The kick track's sounds (engine Kick, 2026-11-08): one per key, each a copy of one of Diogo's kicks; C2 = the knobs.
+// The kick track's rows: one per key, as in the pattern catalogue (2026-11-08); C2 = the main kick.
 const std::vector<int> kKickOrder = {41, 40, 39, 38, 37, 36};
 
 constexpr int kAddRow = 24, kDrumVelocity = 40;
@@ -413,9 +413,9 @@ void PatternEditor::setPattern(const std::string& patternId) {
 }
 
 namespace {
-// What kind of drum track it is: "kick", "hats", "snare", "drums", or "" (not a drum track). The old Core instrument's
-// name when the song has one; else the track's id or name (Core's sound comes from plugins since 2026-11-16, so a
-// plugin kick is a kick by its name: "kick", "kick-2", "Kick layer").
+// What kind of drum track it is: "kick", "hats", "snare", "drums", or "" (not a drum track). The track's role hint
+// (instrument.name) when it has one; else the track's id or name (Core's sound comes from plugins since 2026-11-16,
+// so a plugin kick is a kick by its name: "kick", "kick-2", "Kick layer").
 std::string drumRole(const doc::Track& t) {
   for (const char* r : {"kick", "hats", "snare", "drums"})
     if (t.instrument.name == r) return r;
@@ -457,7 +457,7 @@ juce::String PatternEditor::soundName(int pitch) const {
 std::vector<int> PatternEditor::rows() const {
   const doc::Track* t = currentTrack();
   if (!t) return {};
-  if (t->instrument.name == "snare") return {38, 39};  // Core's own snare and clap
+  if (t->instrument.name == "snare") return {38, 39};  // the snare and clap rows
   if (hatSounds()) {
     std::set<int> used;
     for (const auto& n : pattern()->notes) used.insert(n.pitch);
@@ -1747,8 +1747,6 @@ void PatternEditor::normalize(const doc::NormalizeOptions& options, const juce::
 std::string PatternEditor::followKickTrack() const {
   if (!followKickChoice_.empty())
     if (const doc::Track* c = host_.currentDocument().findTrack(followKickChoice_); c && doc::playsPatterns(*c)) return c->id;
-  const doc::Track* t = currentTrack();
-  if (t && t->instrument.kind == "builtin" && t->instrument.name == "kick") return t->id;
   return doc::findKickTrack(host_.currentDocument());
 }
 
@@ -1928,7 +1926,7 @@ void PatternEditor::showTools() {
                              (selected_.empty() ? juce::String() : u8(" · selected notes only"));
   m.addSectionHeader(where);
   enum { kNormEqual = 1, kNormAccent, kNormLength, kNormAlign, kNormAll, kMore = 100, kFewer = 200, kPerBeat = 300, kHow = 400,
-         kBuild = 500, kBuildSec = 520, kBuildTrack = 560, kBuildRoll = 590, kBuildGap, kVary = 600, kSave = 700, kCustom = 710,
+         kBuild = 500, kBuildSec = 520, kBuildRoll = 590, kBuildGap, kVary = 600, kSave = 700, kCustom = 710,
          kPCore = 900, kBuildupWindow = 901, kQuantize = 800, kHumanize = 801, kSwing = 1000, kTranspose = 1100, kChord = 1200,
          kLength = 1300, kLouder = 1400, kSofter, kShuffle = 1500, kRandomPitch, kHumanizeMore, kStutter = 1600, kAttach = 1700, kAttachPlan = 1701,
          kStrength = 1800, kPreview = 1950, kFollowZone = 2000, kFollowKick, kFollowBass, kFollowOn, kFollowOffset = 2100, kFollowLoose = 2200, kFollowKickPick = 2300, kFollowBassPick = 2500,
@@ -2090,10 +2088,6 @@ void PatternEditor::showTools() {
   build.addItem(juce::PopupMenu::Item(u8("Roll (1/32) in the last quarter")).setID(kBuildRoll).setTicked(buildRoll_));
   build.addItem(juce::PopupMenu::Item(u8("One beat of silence before the drop")).setID(kBuildGap).setTicked(buildGap_));
   build.addSeparator();
-  juce::PopupMenu onTrack;
-  for (int b : {2, 4, 8}) onTrack.addItem(kBuildTrack + b, juce::String(b) + u8(" bars, ending at the next section (the drop)"));
-  build.addSubMenu(u8("On a new track (snare from the library)"), onTrack, onBuildupTrack != nullptr);
-  build.addSeparator();
   build.addItem(kBuildupWindow, u8("Build-up → roll → drop…"));
   m.addSubMenu("Build-up", build);
 
@@ -2210,7 +2204,6 @@ void PatternEditor::showTools() {
       self.buildGap_ = !self.buildGap_;
       self.say(self.buildGap_ ? u8("Build-up: one beat of silence before the drop.") : u8("Build-up: no silence before the drop."));
     }
-    else if (r > kBuildTrack && r <= kBuildTrack + 8) { if (self.onBuildupTrack) self.onBuildupTrack(r - kBuildTrack, self.buildRoll_, self.buildGap_); }
     else if (r > kVary && r <= kVary + 4) { static const char* k[] = {"octave", "reverse", "thin", "accent"}; self.vary(k[r - kVary - 1]); }
     else if (r == kSave) { if (self.onSavePattern) self.onSavePattern(from, to); }
     else if (r == kCustom) {

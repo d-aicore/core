@@ -441,7 +441,6 @@ int trackRoot(const Track& t, const Pattern* pattern) {
     for (const auto& [pitch, k] : uses) if (k > most) { best = pitch; most = k; }
     return best;
   }
-  if (t.instrument.kind == "builtin" && t.instrument.name == "sampler" && !t.instrument.samples.empty()) return t.instrument.samples.front().rootKey;
   return -1;
 }
 

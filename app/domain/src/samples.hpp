@@ -20,15 +20,6 @@ constexpr const char* kSampleMetadataFormat = "core-sample-metadata";
 constexpr const char* kSampleMetadataFile = "core-sample-metadata.json";  // in the library folder, optional
 
 constexpr double kNotMeasured = -999;
-// A bass one-shot that sounds longer than this (measured) is a held note: the sampler gives it a pluck that
-// falls to -60 dB in kBassPluckMs (samplerInstrument), so a 1/16 line does not sound like an organ.
-constexpr double kLongBassMs = 300;
-constexpr double kBassPluckMs = 400;
-// A drum hit or a bass one-shot with this much silence (measured) before its sound starts that late in the sampler.
-constexpr double kLateStartMs = 10;
-// Every library sample plays at this peak (the sampler's Level is set from the measured peak when the sample is
-// picked): the files themselves are not changed. At most +18 dB for a very quiet file.
-constexpr double kSamplePeakDb = -3, kSampleMaxBoostDb = 18;
 
 // What a sample is for: read from its name and folders, then corrected by the metadata file and by the user.
 //   kick bass hat openhat snare clap perc tom crash impact riser fx vox pad synth orchestral fill kickbass other
@@ -61,7 +52,7 @@ struct LibrarySample {
   int duplicates = 0;      // other files with the same content (one entry: the first path)
   std::vector<std::string> otherPaths;  // where those are (relative, sorted)
   // How loud it is (the first minute): its peak, and the loudest 100 ms (RMS of both sides), in dBFS.
-  // kNotMeasured until a scan reads the audio. The sampler's level is set from loudDb (levelFor).
+  // kNotMeasured until a scan reads the audio.
   double peakDb = kNotMeasured, loudDb = kNotMeasured;
   SampleInfo inferred;     // what the name and folders say (classifySample)
   SampleInfo info;         // what Core uses: inferred, then the metadata file, then the user (resolveCatalog)
@@ -210,19 +201,7 @@ double fastestTempo(const Document& doc);
 SampleFit sampleFit(const LibrarySample& sample, const std::string& trackRole, double bpm);
 constexpr double kFitTempoTolerance = 0.02;
 
-struct SampleSuggestion {
-  const LibrarySample* sample = nullptr;
-  double score = 0;        // higher is better; under kGoodSuggestion it is not used by itself
-  std::string why;         // short, English (shown in the window)
-};
-constexpr double kGoodSuggestion = 50;
-// The best samples of the index for a track role, best first. style: the template's style ("Dark
-// psycore", "Hi-tech", "Slambient", "Psytrance"), or "". Deterministic: same index, same answer.
-// pack: the pack the song's bass comes from (anchorPack), or "": its samples get a small bonus, so kick
-// and bass come from the same pack when both fit (KBBB: they are made to sit together).
-std::vector<SampleSuggestion> suggestSamples(const SampleIndex& index, const std::string& role, const std::string& style,
-                                             int limit = 5, const std::string& pack = "");
-// The track roles a sampler plays (trackSampleRole), in the order the settings show them.
+// The track roles the library's fits filter and role folders use (trackSampleRole), in the order the settings show them.
 const std::vector<std::string>& samplerRoles();
 // Whether a sample is in one of the folders the user gave this role (a folder of its own path or of a duplicate's).
 // false when the role has none.
@@ -230,58 +209,13 @@ bool inRoleFolders(const SampleIndex& index, const LibrarySample& sample, const 
 // A folder (absolute, UTF-8) as the index's roleFolders keep it: relative to the library, '/' separated; "" when it is
 // not inside the library (or is the library itself).
 std::string libraryRelativeFolder(const SampleIndex& index, const std::string& folder);
-constexpr double kSamePackBonus = 8;
-// The pack of the library sample the song's bass track plays ("" when the bass is not a library sample).
-std::string anchorPack(const Document& doc, const SampleIndex& index);
-
-// ---- hearing a sample without putting it on a track
-
-// The document with one more track, "sample-preview", that plays this sample (Core Sampler, its role's level)
-// and has no clips: it sounds only from live notes. pitch: the key to play it at (its root for a pitched bass).
-// For the engine only; never committed.
-Document withPreviewTrack(const Document& doc, const SampleIndex& index, const LibrarySample& sample, const std::string& role,
-                          std::string& trackId, int& pitch);
 
 // Peak and loudest 100 ms of a WAV file (dBFS, the first minute). Throws DocumentError.
 void measureLoudness(const std::filesystem::path& file, double& peakDb, double& loudDb);
-// The loudest 100 ms a track of that role aims at (dBFS), so swapping samples keeps the balance of the
-// template: a kick hits harder than the hats, an atmosphere sits under everything.
-double roleLoudnessTarget(const std::string& role);
-// The sampler level (dB, -24..+24) that brings this sample to its role's target; 0 when not measured.
-double levelFor(const LibrarySample& sample, const std::string& role);
-
-// The user-sample host that plays this sample on a track of that role (kind "sample", name "sampler"): a
-// one-shot on every key, or for a bass recorded note by note (same folder, names that differ only in the
-// note) every note as a zone. It PLAYS the user's files — no sound source of its own, no synthesis (owner
-// ratified 2026-11-18: «sampler = host de samples do utilizador, sem fontes de som próprias.»).
-Instrument samplerInstrument(const SampleIndex& index, const LibrarySample& sample, const std::string& role);
 // The name Core shows for a sample of the library (its catalogue name), else its file name.
 std::string shownName(const LibrarySample& sample);
-// The same for a sound a track plays: the library's name for its content (or its file), else the name kept with it.
-std::string shownName(const SampleIndex& index, const SampleRef& zone);
-SampleRef sampleRef(const LibrarySample& sample);
-
-// Gives a note track the user-sample host for this sample (one undo step for the caller). The host (kind
-// "sample") PLAYS the user's file through the engine's audio path — no synthesis. The track's notes, mixer,
-// effects and their automation stay; the old instrument's knobs and its own automation go (a new sample
-// starts from its own sound, the same however many samples were tried before).
-// Throws DocumentError for an audio track or a bus (they do not play samples) and for a track played by a plugin
-// (BUG-SWEEP-10: a working plugin is never silently replaced; the guard stays).
-void setTrackSample(Document& doc, const std::string& trackId, const SampleIndex& index, const LibrarySample& sample);
 
 // The style of a song made from a style template ("" otherwise).
 std::string songStyle(const Document& doc);
-
-// A sample for every track that wants one (score >= kGoodSuggestion), applied to doc; no sample goes
-// on two tracks. seed 0: the best one. Another seed: any good one within kVarietyRange of the best, the
-// better ones more often (same seed, same picks), so every new song sounds different. Tracks with no
-// good match keep their instrument. Returns "<track name>: <sample name>" per change.
-constexpr double kVarietyRange = 25;
-std::vector<std::string> applySuggestedSamples(Document& doc, const SampleIndex& index, const std::string& style, uint64_t seed = 0);
-
-// Samples of the document whose file is gone: found again by content in the index when it moved
-// (returns how many were repointed); the others stay as they are (reported as missing by the engine).
-// One with no sha256 is found by its place inside the library (D:\Samples\Bass\x.wav -> <library>\Bass\x.wav).
-int relinkMovedSamples(Document& doc, const SampleIndex& index);
 
 } // namespace core::doc

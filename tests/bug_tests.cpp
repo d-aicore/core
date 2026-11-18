@@ -496,38 +496,6 @@ TEST("sweep: FOLLOW grava o corte da nota que atravessa o inicio da zona") {
   CHECK(cut);
 }
 
-TEST("reset: o menu da chain oferece TODOS os efeitos (os proprios incluidos) e o Remove leva o FX proprio e as curvas dele") {
-  Document d = newEmptyDocument();
-  const std::string id = addTrack(d, "", "X");
-  const int atUtility = addEffect(d, id, "utility");  // Core's own, as a template or an old song carries them
-  json verb = {{"id", "fx9"}, {"type", "plugin"},
-               {"plugin", json{{"id", "v1"}, {"name", "FakeVerb"}, {"format", "vst3"}, {"file", "C:/plugins/FakeVerb.vst3"}}},
-               {"bypass", false}};
-  trackById(d, id).effects.push_back(verb);
-  addEffect(d, id, "eq");  // another own one, after the plugin
-  const std::vector<EffectMenuEntry> entries = effectMenuEntries(trackById(d, id).effects);
-  CHECK_EQ((int)entries.size(), 3);  // the old menus offered only the plugin: the own ones had no Remove anywhere
-  if (entries.size() == 3) {  // the detail checks only read what the size check above guarantees
-    CHECK_EQ(entries[0].index, atUtility);
-    CHECK_EQ(entries[0].label, std::string("Utility"));
-    CHECK(!entries[0].plugin);
-    CHECK(!entries[0].window);
-    CHECK_EQ(entries[1].index, 1);
-    CHECK_EQ(entries[1].label, std::string("FakeVerb"));
-    CHECK(entries[1].plugin && entries[1].window);
-    CHECK_EQ(entries[2].index, 2);
-    CHECK_EQ(entries[2].label, std::string("Core EQ"));
-  }
-  // And the Remove the menu offers works on an own effect: the chain and its curves go together.
-  setAutomationPoint(d, id, effectParamKey("fx1", "gain"), 0, -3);
-  CHECK(!trackById(d, id).automation.empty());
-  removeEffect(d, id, entries[0].index);
-  CHECK_EQ((int)trackById(d, id).effects.size(), 2);
-  CHECK_EQ(trackById(d, id).effects[0].value("id", std::string()), std::string("fx9"));
-  const bool curvesGone = std::none_of(trackById(d, id).automation.begin(), trackById(d, id).automation.end(),
-                                       [](const Automation& a) { return a.param == "fx:fx1:gain"; });
-  CHECK(curvesGone);
-}
 
 // Audit 2026-11-17, item 4: duplicateSection pushed the tempo changes after the section but did not copy
 // the ones inside it, so the duplicated section lost the tempo (and the ramp) randomize axis J writes.
@@ -1710,27 +1678,19 @@ TEST("swing save BUG-SWEEP-26: the explicit unswing export option strips the swi
   CHECK(slotTicks(a, "s1", atid) == gridTicks(0.0, 4));
 }
 // BUG-SWEEP-09 (2026-11-18): the Add Track and Replace instrument menus offered Core's own instruments and a
-// sampler track. Core's own instruments left the engine (2026-11-16): addTrack always creates kind "none" (a
-// silent track with no instrument), so each of those entries promised a sound the engine no longer makes
-// (PROD-06: "Nenhum menu oferece um instrumento/efeito criativo interno como se produzisse som"). The menus
-// offer only external plugins, an audio track and import. The offer model is MenuIds.h (extracted from the two
-// menu lambdas); the builtin id bands stay allocated (BUG-SWEEP-32), they are simply never offered.
+// sampler track. Core makes no sound of its own (owner 2026-11-18): addTrack always creates kind "none" (a silent
+// track waiting for a plugin), so those entries promised a sound the engine no longer makes (PROD-06). The
+// menus offer only external plugins, an audio track and import. The offer model is MenuIds.h (extracted from the
+// two menu lambdas); the built-in id bands are gone with the built-in instruments.
 TEST("BUG-SWEEP-09: the track menus offer no built-in instrument (each would create a silent, unassigned track)") {
   const std::vector<int> add = menu::addTrackFixedItems();
   const std::vector<int> repl = menu::replaceFixedItems();
   auto has = [](const std::vector<int>& v, int id) { return std::find(v.begin(), v.end(), id) != v.end(); };
-  // No built-in instrument and no sampler track is offered on either menu.
-  for (int i = 0; i < 8; ++i) {
-    CHECK(!has(add, menu::kBuiltinAddFirst + i));
-    CHECK(!has(repl, menu::kBuiltinReplaceFirst + i));
-  }
-  CHECK(!has(add, menu::kSamplerTrack));
-  // The plugin path stays (the uncapped band), and the audio track and import are still offered.
+  // The plugin path stays (the uncapped band), and the audio track and import are still offered; nothing built-in.
   CHECK(has(add, menu::kAudioTrack));
   CHECK(has(add, menu::kImportAudio));
+  CHECK_EQ(add.size(), (size_t)2);   // audio + import only; no built-in instrument, no sampler track
   CHECK_EQ(repl.size(), (size_t)0);  // Replace instrument offers plugins only, no fixed built-in entry
-  // The catalogue itself stays: addTrack names a track from it (edit.cpp). Offering it as a sound is what went.
-  CHECK_EQ(builtinInstruments().size(), (size_t)8);
 }
 
 CORE_TEST_MAIN

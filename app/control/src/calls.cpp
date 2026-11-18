@@ -2,7 +2,6 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
-#include <set>
 #include <sstream>
 #include <string_view>
 #include "edit.hpp"
@@ -79,20 +78,6 @@ std::string num(double v) {
     if (!t.empty() && t.back() == '.') t.pop_back();
   }
   return t == "-0" || t.empty() ? "0" : t;
-}
-
-// What the built-in effects are for (search words, Portuguese and English).
-const char* builtinTags(const std::string& name) {
-  static const std::map<std::string, std::string> t = {
-      {"eq", "eq core eq equalizer tone low high cut shelf bell notch dynamic mid side boost clean equalizacao graves agudos"},
-      {"filter", "filter sweep high pass low pass buildup riser transition filtro subida"},
-      {"compressor", "compressor dynamics punch glue sidechain ducking compressao"},
-      {"corefx", "core fx effects saturation distortion drive grit reverb space room hall tail delay echo repeats ping pong "
-                 "phaser flanger chorus modulation lofi lo-fi bitcrush regions frequency distorcao saturacao reverberacao espaco eco"},
-      {"limiter", "limiter loudness master ceiling clipping volume"},
-      {"utility", "utility gain volume pan width mono stereo largura"}};
-  const auto it = t.find(name);
-  return it == t.end() ? "" : it->second.c_str();
 }
 
 // The words of a rack's role and what track types they suit.
@@ -294,11 +279,6 @@ std::string trackType(const doc::Track& t) {
   if (hasWord(ws, {"fx", "sfx", "noise", "fill", "glitch", "zap"})) return "fx";
   const std::string sampleRole = doc::trackSampleRole(t);
   if (!sampleRole.empty()) return sampleRole;
-  if (t.instrument.kind == "builtin") {
-    if (t.instrument.name == "kick") return "kick";
-    if (t.instrument.name == "hats") return "hat";
-    if (t.instrument.name == "drums") return "drums";
-  }
   return "";
 }
 
@@ -317,18 +297,8 @@ bool roleFits(const std::string& functionRole, const std::string& type) {
   return !known;
 }
 
-std::string sampleKey(const doc::LibrarySample& sample) { return "s:" + sample.sha256.substr(0, std::min<size_t>(10, sample.sha256.size())); }
-
-const doc::LibrarySample* findSampleKey(const doc::SampleIndex& index, const std::string& key) {
-  std::string k = key.rfind("s:", 0) == 0 ? key.substr(2) : key;
-  if (k.size() < 6) return index.find(key);
-  for (const auto& s : index.samples)
-    if (s.sha256.rfind(k, 0) == 0) return &s;
-  return index.find(key);
-}
-
 // Compact: what is empty, false or the usual value is left out (AICORE reads a missing field as that), so the
-// state stays a few lines per function however many effects and racks Core has.
+// state stays a few lines per function however many functions Core has.
 json functionsJson(const std::vector<CoreFunction>& functions) {
   json out = json::array();
   for (const auto& f : functions) {
@@ -345,9 +315,7 @@ json functionsJson(const std::vector<CoreFunction>& functions) {
     if (f.version != 1) fn["version"] = f.version;
     if (!f.styles.empty()) fn["styles"] = f.styles;
     if (!f.tags.empty()) fn["tags"] = f.tags;
-    if (f.instrument) fn["instrument"] = true;
     if (f.rises) fn["rises"] = true;
-    if (f.native) fn["native"] = true;
     if (!f.presets.empty()) fn["presets"] = f.presets;
     if (!f.options.empty()) fn["options"] = f.options;
     if (f.extra.is_object()) for (auto it = f.extra.begin(); it != f.extra.end(); ++it) fn[it.key()] = it.value();
@@ -357,63 +325,30 @@ json functionsJson(const std::vector<CoreFunction>& functions) {
   return out;
 }
 
-namespace {
-// The Core effects of a chain as they are now, for "set" ({id, fn, args: every knob's value, ranges, on}); effects
-// tagged by the old intent FX (the legacy "fcore" mark) are left out: their knobs belong to the tool that wrote
-// them, and "set" would be overwritten.
-// ranges: every knob's [min, max, default], so an AI moves a knob inside what it takes instead of guessing (audit
-// 2026-11-05).
-json chainJson(const json& effects) {
-  json out = json::array();
-  if (!effects.is_array()) return out;
-  for (const auto& fx : effects) {
-    if (!fx.is_object() || fx.value("type", std::string()) != "builtin" || fx.value("fcore", false)) continue;
-    const doc::EffectInfo* info = doc::findEffect(doc::effectName(fx));
-    if (!info) continue;
-    json args = json::object();
-    json ranges = json::object();
-    for (const auto& prm : info->params) {
-      args[prm.name] = doc::effectParam(fx, prm.name, prm.def);
-      ranges[prm.name] = json::array({prm.min, prm.max, prm.def});
-    }
-    json e = {{"id", fx.value("id", std::string())}, {"fn", std::string("fx:") + info->name}, {"args", args}, {"ranges", ranges}};
-    if (doc::effectBypassed(fx)) e["on"] = false;
-    out.push_back(std::move(e));
-  }
-  return out;
-}
-}  // namespace
-
-json songJson(const doc::Document& song, const doc::SampleIndex* samples) {
+json songJson(const doc::Document& song) {
   json sections = json::array();
   for (const auto& s : song.sections)
     sections.push_back({{"name", s.name}, {"startBar", (double)s.startTick / (4.0 * doc::kPpq)},
                         {"endBar", (double)(s.startTick + s.lengthTicks) / (4.0 * doc::kPpq)}});
   json tracks = json::array();
   for (const auto& t : song.tracks) {
-    std::string sound;
-    if ((t.instrument.kind == "builtin" || t.instrument.kind == "sample") && t.instrument.name == "sampler" && !t.instrument.samples.empty())
-      sound = "sampler: " + (samples ? doc::shownName(*samples, t.instrument.samples.front()) : t.instrument.samples.front().name);
-    else sound = t.instrument.kind + (t.instrument.name.empty() ? "" : " " + t.instrument.name);
+    const std::string sound = t.instrument.kind + (t.instrument.name.empty() ? "" : " " + t.instrument.name);
     json devices = json::array();
-    for (const auto& fx : t.effects)
-      if (fx.value("type", std::string()) == "builtin") devices.push_back("fx:" + doc::effectName(fx));
     if (t.instrument.kind == "plugin") devices.push_back("plugin:" + t.instrument.plugin.value("name", std::string()));
+    for (const auto& fx : t.effects)
+      if (fx.is_object() && fx.value("type", std::string()) == "plugin" && fx.contains("plugin"))
+        devices.push_back("plugin:" + fx["plugin"].value("name", std::string()));
     json tj = {{"id", t.id}, {"name", t.name}, {"type", trackType(t)}, {"sound", sound}, {"plays", doc::playsPatterns(t)}, {"devices", devices},
                {"mix", {{"gainDb", t.mix.gainDb}, {"pan", t.mix.pan}}}};
-    const json chain = chainJson(t.effects);
-    if (!chain.empty()) tj["chain"] = chain;
     if (!t.audioClips.empty()) tj["audioClips"] = (int)t.audioClips.size();  // recorded words VOICE STUTTER can cut
     tracks.push_back(std::move(tj));
   }
   json master = json::array();
   for (const auto& fx : song.masterEffects)
-    if (fx.value("type", std::string()) == "builtin") master.push_back("fx:" + doc::effectName(fx));
-  json out = {{"name", song.name}, {"style", songStyleKey(song)}, {"bpm", song.bpm}, {"bars", (double)song.lengthTicks / (4.0 * doc::kPpq)},
-              {"sections", sections}, {"tracks", tracks}, {"master", master}, {"masterGainDb", song.masterGainDb}};
-  const json masterChain = chainJson(song.masterEffects);
-  if (!masterChain.empty()) out["masterChain"] = masterChain;
-  return out;
+    if (fx.is_object() && fx.value("type", std::string()) == "plugin" && fx.contains("plugin"))
+      master.push_back("plugin:" + fx["plugin"].value("name", std::string()));
+  return {{"name", song.name}, {"style", songStyleKey(song)}, {"bpm", song.bpm}, {"bars", (double)song.lengthTicks / (4.0 * doc::kPpq)},
+          {"sections", sections}, {"tracks", tracks}, {"master", master}, {"masterGainDb", song.masterGainDb}};
 }
 
 json coreState(const std::vector<CoreFunction>& functions, const doc::Document& song, const doc::SampleIndex* samples) {
@@ -424,7 +359,7 @@ json coreState(const std::vector<CoreFunction>& functions, const doc::Document& 
     lib = {{"count", samples->samples.size()}, {"roles", roles}};
   }
   return {{"format", "core-state"}, {"version", kCallsFormatVersion}, {"functions", functionsJson(functions)},
-          {"song", songJson(song, samples)}, {"samples", lib}};
+          {"song", songJson(song)}, {"samples", lib}};
 }
 
 // ---------------------------------------------------------------- proposals
@@ -454,7 +389,7 @@ std::string str(const json& o, const char* k) { return o.is_object() && o.contai
 }  // namespace
 
 Proposal validateProposal(const json& raw, const std::vector<CoreFunction>& functions, const doc::Document& song,
-                          const doc::SampleIndex* samples) {
+                          const doc::SampleIndex* /*samples*/) {
   Proposal p;
   p.raw = raw;
   if (!raw.is_object()) {
@@ -487,7 +422,7 @@ Proposal validateProposal(const json& raw, const std::vector<CoreFunction>& func
     const std::string on = str(c, "on").empty() ? str(c, "target") : str(c, "on");
     if (!on.empty()) {
       if (lowerCopy(on) == "master") {
-        if (f->family != "effect" && f->family != "setting" && f->family != "mix" && f->family != "open") {
+        if (f->family != "mix" && f->family != "open") {
           p.problems.push_back(f->name + " goes on a track, not the master: left out");
           continue;
         }
@@ -508,59 +443,6 @@ Proposal validateProposal(const json& raw, const std::vector<CoreFunction>& func
           call.warnings.push_back("no track called \"" + on + "\": choose one when applying");
         }
       }
-    }
-    // "set": the effect already there, its preset and knobs (checked against what that effect is).
-    if (f->family == "setting") {
-      if (call.trackId.empty()) {
-        p.problems.push_back("Set an effect: no track or master given (\"on\"): left out");
-        continue;
-      }
-      const std::string want = str(c, "effect");
-      const json& chain = call.trackId == "master" ? song.masterEffects : track->effects;
-      const json* found = nullptr;
-      for (const auto& fx : chain)
-        if (fx.is_object() && !want.empty() && !fx.value("fcore", false) &&
-            (fx.value("id", std::string()) == want || sameName(doc::effectName(fx), want))) { found = &fx; break; }
-      const doc::EffectInfo* info = found ? doc::findEffect(doc::effectName(*found)) : nullptr;
-      if (!info) {
-        p.problems.push_back(want.empty() ? std::string("Set an effect: no \"effect\" given: left out")
-                                          : "no Core effect \"" + want + "\" on " + call.trackName + ": left out (add it with fx:<name>)");
-        continue;
-      }
-      call.effectId = found->value("id", std::string());
-      call.effectName = info->label;
-      const std::string preset = str(c, "preset");
-      if (!preset.empty()) {
-        const doc::EffectPreset* pr = nullptr;
-        for (const auto& x : doc::effectPresets())
-          if (x.effect == std::string(info->name) && sameName(x.name, preset)) pr = &x;
-        if (!pr) {
-          p.problems.push_back(std::string(info->label) + ": no preset \"" + preset + "\": left out");
-          continue;
-        }
-        call.preset = pr->name;
-      }
-      if (c.contains("args") && c["args"].is_object())
-        for (auto kv = c["args"].begin(); kv != c["args"].end(); ++kv) {
-          const doc::EffectParamInfo* a = nullptr;
-          for (const auto& prm : info->params) if (kv.key() == prm.name) a = &prm;
-          if (!a || !kv.value().is_number()) {
-            p.problems.push_back(std::string(info->label) + ": no knob \"" + kv.key() + "\" (or not a number): left out");
-            continue;
-          }
-          const double v = kv.value().get<double>();
-          if (!std::isfinite(v) || v < a->min || v > a->max) {
-            p.problems.push_back(std::string(info->label) + " " + kv.key() + " " + num(v) + " is outside " + num(a->min) + ".." + num(a->max) + ": left out");
-            continue;
-          }
-          call.args[a->name] = v;
-        }
-      if (call.preset.empty() && call.args.empty()) {
-        p.problems.push_back("Set " + std::string(info->label) + " on " + call.trackName + ": nothing to change: left out");
-        continue;
-      }
-      p.calls.push_back(std::move(call));
-      continue;
     }
     if (f->family == "open") {
       call.open = str(c, "what").empty() ? std::string("effects") : str(c, "what");
@@ -649,14 +531,6 @@ Proposal validateProposal(const json& raw, const std::vector<CoreFunction>& func
       }
       if (plugin->check && !plugin->check(*f, track, call, p.problems)) continue;
     }
-    if (f->family == "effect" && !str(c, "preset").empty()) {
-      const std::string preset = str(c, "preset");
-      for (const auto& name : f->presets) if (sameName(name, preset)) call.preset = name;
-      if (call.preset.empty()) {
-        p.problems.push_back(f->name + ": no preset \"" + preset + "\": left out");
-        continue;
-      }
-    }
     if (f->family == "mix" && call.trackId == "master" && c.contains("args") && c["args"].is_object() && c["args"].contains("pan"))
       p.problems.push_back("Mix: the master has no pan: left out");
     // The knobs.
@@ -710,30 +584,10 @@ Proposal validateProposal(const json& raw, const std::vector<CoreFunction>& func
     } else if (f->rises && !(plugin && plugin->quietWithoutSection)) {
       call.warnings.push_back("no section given: the knobs are set, nothing rises");
     }
-    // A sample: a value of the library.
-    if (f->family == "sample") {
-      const std::string key = str(c, "sample");
-      const doc::LibrarySample* s = samples && !key.empty() ? findSampleKey(*samples, key) : nullptr;
-      if (!s) {
-        p.problems.push_back(key.empty() ? std::string("a sample call without \"sample\" was left out") : "no sample \"" + key + "\" in the library: left out");
-        continue;
-      }
-      call.sample = s->sha256;
-      call.sampleName = doc::shownName(*s);
-      if (track) {
-        const doc::SampleFit fit = doc::sampleFit(*s, doc::trackSampleRole(*track), doc::fastestTempo(song));
-        if (fit.known && !fit.fits && !fit.why.empty()) call.warnings.push_back(call.sampleName + " on " + track->name + ": " + fit.why);
-      }
-    }
     // Types: a warning, never a refusal.
     if (track) {
       const std::string type = trackType(*track);
       if (!roleFits(f->role, type)) call.warnings.push_back(f->name + " is made for " + f->role + "; " + track->name + " looks like a " + type);
-      if (f->instrument && !doc::playsPatterns(*track)) {
-        p.problems.push_back(f->name + " needs a track that plays notes: left out");
-        continue;
-      }
-      if (f->instrument) call.warnings.push_back(f->name + " replaces the instrument of " + track->name);
     }
     if (!style.empty() && !f->styles.empty() && std::find(f->styles.begin(), f->styles.end(), style) == f->styles.end())
       call.warnings.push_back(f->name + " is made for " + f->styles.front() + (f->styles.size() > 1 ? " and others" : "") + ", the song is " + style + ": try it by ear");
@@ -746,8 +600,6 @@ Proposal validateProposal(const json& raw, const std::vector<CoreFunction>& func
 
 std::string describeCall(const Call& c) {
   std::string out = c.fn->name;
-  if (c.fn->family == "sample") out += " " + c.sampleName;
-  if (c.fn->family == "setting") out = "Set " + c.effectName;
   if (c.fn->family == "open") out = "Open " + (c.open == "effects" ? std::string("the effects") : c.open == "instrument" ? std::string("the instrument")
                                                : c.open == "patterns" ? std::string("the notes") : c.open == "mixer" ? std::string("the mixer")
                                                : c.open == "score" ? std::string("Stage Core") : "effect " + c.open);
@@ -768,7 +620,7 @@ std::string describeCall(const Call& c) {
   return out;
 }
 
-std::vector<std::string> applyProposal(doc::Document& song, const Proposal& p, const std::string& chosenTrack, const ApplyEnv& env) {
+std::vector<std::string> applyProposal(doc::Document& song, const Proposal& p, const std::string& chosenTrack, const ApplyEnv&) {
   std::vector<std::string> lines;
   for (const auto& c : p.calls) {
     const std::string where = c.trackId.empty() ? chosenTrack : c.trackId;
@@ -776,29 +628,7 @@ std::vector<std::string> applyProposal(doc::Document& song, const Proposal& p, c
     const bool master = where == "master";
     const doc::Track* t = master ? nullptr : song.findTrack(where);
     if (!master && !t) throw doc::DocumentError("calls", "no track '" + where + "'");
-    const std::string name = master ? std::string("Master") : t->name;
-    if (c.fn->family == "effect") {
-      const std::string chain = master ? std::string() : where;
-      const std::string effect = c.fn->id.substr(3);
-      const doc::EffectPreset* preset = c.preset.empty() ? nullptr : doc::findEffectPreset(effect, c.preset);
-      const int at = preset ? doc::addEffect(song, chain, *preset) : doc::addEffect(song, chain, effect);
-      for (const auto& [k, v] : c.args) doc::setEffectParam(song, chain, at, k, v);
-      lines.push_back(c.fn->name + (preset ? std::string(" \u00b7 ") + preset->name : std::string()) + " on " + name);
-    } else if (c.fn->family == "setting") {
-      const std::string chain = master ? std::string() : where;
-      const json& list = doc::effectChain(song, chain);
-      int at = -1;
-      for (size_t i = 0; i < list.size(); ++i)
-        if (list[i].is_object() && list[i].value("id", std::string()) == c.effectId) at = (int)i;
-      if (at < 0) throw doc::DocumentError("calls", c.effectName + " is not on " + name + " any more");
-      if (!c.preset.empty()) {
-        const doc::EffectPreset* pr = doc::findEffectPreset(doc::effectName(list[(size_t)at]), c.preset);
-        if (!pr) throw doc::DocumentError("calls", c.effectName + " has no preset " + c.preset);
-        doc::applyEffectPreset(song, chain, at, *pr);
-      }
-      for (const auto& [k, v] : c.args) doc::setEffectParam(song, chain, at, k, v);
-      lines.push_back(describeCall(c));
-    } else if (c.fn->family == "mix") {
+    if (c.fn->family == "mix") {
       if (master) {
         if (c.args.count("gainDb")) song.masterGainDb = c.args.at("gainDb");
       } else {
@@ -814,14 +644,6 @@ std::vector<std::string> applyProposal(doc::Document& song, const Proposal& p, c
       lines.push_back(plugin->apply(song, c, where));
     } else if (c.fn->family == "open") {
       lines.push_back(describeCall(c));  // nothing changes: the window opens it after Apply (opensOf)
-    } else if (c.fn->family == "sample") {
-      if (master) throw doc::DocumentError("samples", "a sample goes on a track, not the master");
-      if (!env.samples) throw doc::DocumentError("samples", "the sample library is not loaded");
-      const doc::LibrarySample* s = env.samples->findHash(c.sample);
-      if (!s) throw doc::DocumentError("samples", "the sample " + c.sampleName + " is not in the library any more");
-      if (!doc::playsPatterns(*t)) throw doc::DocumentError("samples", name + " plays no notes (an audio track or a bus)");
-      doc::setTrackSample(song, where, *env.samples, *s);
-      lines.push_back(c.sampleName + " on " + name);
     } else {
       throw doc::DocumentError("calls", "Core cannot apply " + c.fn->name + " yet");
     }

@@ -19,15 +19,6 @@ target_include_directories(domain_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(domain_tests PRIVATE core_domain core_engine_lib)
 add_test(NAME domain_tests COMMAND domain_tests)
 
-# Characterization guards for the L1/L2 dead-code removal (2026-11-18): the live legacy behavior
-# (old songs, stored built-in data, legacy engine renders) stays green. The shipped templates were
-# removed (owner «remove templates com efeitos»); the template->engine path is guarded in domain_tests.
-add_executable(legacy_guard_tests legacy_guard_tests.cpp)
-target_include_directories(legacy_guard_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(legacy_guard_tests PRIVATE core_domain core_engine_lib)
-target_compile_definitions(legacy_guard_tests PRIVATE CORE_PCORE_CATALOG="${CMAKE_SOURCE_DIR}/pcore/styles.json")
-add_test(NAME legacy_guard_tests COMMAND legacy_guard_tests)
-
 # The legacy module cleanup (2026-11-18, PROD-02/04/06): the Tools cards lose the W/D/F/R-Core titles, the old
 # ids and titles stay lookup aliases, legacy buses are reused, and the bridge's "open" takes the old ids.
 add_executable(modules_tests modules_tests.cpp)
@@ -75,7 +66,7 @@ add_test(NAME audit2_tests COMMAND audit2_tests)
 # The deep bug hunt (2026-11-16, RELATORIO-CAÇA-PROFUNDA.md, P01-P06): each case of the report.
 add_executable(hunt_tests hunt_tests.cpp)
 target_include_directories(hunt_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/engine/src ${CMAKE_SOURCE_DIR}/app/engine-client/src)
-target_link_libraries(hunt_tests PRIVATE core_domain core_engine_lib core_sampling)
+target_link_libraries(hunt_tests PRIVATE core_domain core_engine_lib)
 target_compile_definitions(hunt_tests PRIVATE CORE_LANG_DIR="${CMAKE_SOURCE_DIR}/lang")
 add_test(NAME hunt_tests COMMAND hunt_tests)
 
@@ -125,7 +116,7 @@ if(TARGET core-package)
   set_tests_properties(cli_package_stale PROPERTIES LABELS merge TIMEOUT 300 RUN_SERIAL TRUE)
 endif()
 
-set_tests_properties(engine_tests domain_tests role_tests midi_tests bug_tests audit_tests audit2_tests hunt_tests round3_tests calls_tests bitwig_tests legacy_guard_tests menu_tests modules_tests window_tests cli_version cli_demo_render cli_measure cli_unicode
+set_tests_properties(engine_tests domain_tests role_tests midi_tests bug_tests audit_tests audit2_tests hunt_tests round3_tests calls_tests bitwig_tests menu_tests modules_tests window_tests cli_version cli_demo_render cli_measure cli_unicode
                      PROPERTIES LABELS merge TIMEOUT 300)
 
 # The engine process driven through the app's client (core-engine serve, null audio backend): messages larger than

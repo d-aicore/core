@@ -199,12 +199,10 @@ Pattern& rackPatternFor(Document& doc, const std::string& slotId, const std::str
 }
 
 bool rackStepRow(const Track& t) {
-  const std::string& n = t.instrument.name;
-  if (t.instrument.kind == "builtin" && (n == "kick" || n == "hats" || n == "snare" || n == "drums")) return true;
   const std::string part = pcoreGuessPart(t);
   if (part == "bass" || part == "lead" || part == "arp" || part == "pad") return false;
   if (part == "kick" || part == "hats" || part == "cymbals" || part == "perc" || part == "build") return true;
-  return (t.instrument.kind == "builtin" || t.instrument.kind == "sample") && n == "sampler";  // a one-shot sound (fx, stabs...)
+  return false;
 }
 
 int rackStepPitch(const Track& t, const Pattern* p) {
@@ -217,7 +215,6 @@ int rackStepPitch(const Track& t, const Pattern* p) {
   if (n == "kick" || n == "drums") return 36;
   if (n == "snare") return 38;
   if (n == "hats") return lower(t.name).find("open") != std::string::npos ? 46 : 42;
-  if (n == "sampler" && !t.instrument.samples.empty()) return t.instrument.samples.front().rootKey;
   const int root = trackRoot(t, p);
   return root >= 0 ? root : 60;
 }

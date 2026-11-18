@@ -127,37 +127,15 @@ TEST("module cleanup: a legacy R-Core / D-Core bus is reused under its own name,
   CHECK_EQ(canon(parseDocument(toJson(d))), canon(d));
 }
 
-TEST("module cleanup: a legacy project with old module identifiers opens and keeps its data") {
-  json j = toJson(newTemplateDocument());
-  json& bass = j["tracks"][1];
-  bass["instrument"]["kind"] = "builtin";
-  bass["instrument"]["name"] = "wave";  // W-Core's engine identifier stays readable (silent, kept as data)
-  bass["instrument"]["version"] = 2;
-  bass["instrument"]["synth"] = {{"layers", json::array({{{"lfos", json::array()}, {"links", json::array()}}})}};
-  // An effect tagged by the old intent FX (the "fcore" mark): the tag stays, the effect stays.
-  bass["effects"] = json::array({{{"id", "fx1"}, {"type", "builtin"}, {"name", "filter"}, {"fcore", true},
-                                  {"params", {{"cutoff", 1200.0}}}}});
-  j["tracks"].push_back({{"id", "rbus"}, {"name", "R-Core \xC2\xB7 Room"}, {"instrument", {{"kind", "bus"}}},
-                         {"corePlace", {{"kind", "reverb"}, {"place", "room"}}}});
-  const Document d = parseDocument(j);
-  CHECK_EQ(d.tracks.size(), (size_t)4);
-  CHECK_EQ(d.tracks[1].instrument.name, std::string("wave"));
-  CHECK(d.tracks[1].instrument.synth.is_object());
-  CHECK_EQ(d.tracks[1].effects[0].value("fcore", false), true);
-  CHECK_EQ(d.tracks[3].name, std::string("R-Core \xC2\xB7 Room"));
-  CHECK_EQ(d.tracks[3].extra.value("corePlace", json::object()).value("place", std::string()), std::string("room"));
-  CHECK_EQ(canon(parseDocument(toJson(d))), canon(d));  // save/reopen byte for byte
-  // The old bus is still a place bus: the tool reuses it instead of making a new one.
-  Document e = d;
-  const SharedBusResult r = toolSharedBus(e, noteTracks(e), spaceMap(), "reverb", "room");
-  CHECK(!r.newBus);
-  CHECK_EQ(r.busId, std::string("rbus"));
-}
+// (Removed: "a legacy project with old module identifiers opens and keeps its data" — it asserted a saved
+// kind="builtin" instrument with its synth/params/effects stays loadable. Built-in document data was removed
+// outright (owner 2026-11-18, D104/D105: no legacy projects exist), so the parser now refuses kind "builtin".
+// The legacy-bus reuse the test also touched is covered by the R-Core / D-Core reuse test above.)
 
 TEST("module cleanup: a new track of the old wave role is not named after the retired module") {
   Document d = newEmptyDocument();
   const std::string id = addTrack(d, "wave");
-  CHECK_EQ(trackById(d, id).name, std::string("Synth"));  // the catalogue's own name, not "W-Core"
+  CHECK_EQ(trackById(d, id).name, std::string("wave"));  // the role's own name, not the retired module "W-Core"
   CHECK_EQ(trackById(d, id).instrument.kind, std::string("none"));  // no built-in sound comes back
 }
 

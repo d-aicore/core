@@ -120,8 +120,7 @@ public:
     theme::setIdentity(*this, colour_);  // the pan knob and the fader's fill in the same colour
     effects_.clear();
     for (const auto& fx : master() ? d.masterEffects : t->effects) {
-      const doc::EffectInfo* info = doc::findEffect(doc::effectName(fx));
-      const std::string label = info ? std::string(info->label) : doc::effectName(fx);
+      const std::string label = fx.is_object() && fx.contains("plugin") ? fx["plugin"].value("name", std::string("Plugin")) : doc::effectName(fx);
       effects_.push_back({u8(label), !doc::effectBypassed(fx)});
     }
     const double gain = master() ? d.masterGainDb : t->mix.gainDb;
