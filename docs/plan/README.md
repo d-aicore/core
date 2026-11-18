@@ -56,10 +56,13 @@ which stay verbatim. Line numbers refer to e7968c8 and have drifted since.
    export reads state from the live instance (`server.cpp`, `juce_host.cpp`, `EngineSession.cpp`,
    `render_job.cpp`; review `history.cpp` at the same time). Not verified: Save and Export in the app with real
    plugins above 8 MB.
-3. **Plugin state is lost** — data-loss map items 2, 3, 7, 8: the autosave applies fetched states to a copy only
-   (`MainComponent.cpp:6384-6387`); remove/replace/duplicate track and sample-on-track do not fetch state first;
-   non-parameter changes do not mark the song dirty (`juce_host.cpp:85`, `:195` ignore `audioProcessorChanged`);
-   undo history shrinks to a few steps with large states (`history.cpp:7`, `:20-23`).
+3. **Plugin state, follow-ups** (fixed and tested on 2026-11-18: autosave states go into the document; an edit that
+   takes a plugin away fetches its state first or is refused; non-parameter changes mark the song changed; undo
+   keeps at least 50 steps up to a 1 GB ceiling; undo/redo never take back the state of a plugin that stays alive —
+   desktop self-test steps 100–111). Still open: sharing state blobs between undo snapshots instead of copying the
+   whole document per step (goes with item 2); not exercised in the app: replace instrument, sample on a plugin
+   track, remove effect, redo, the refusal when the engine does not answer, and real third-party plugins (one that
+   calls `setDirty` on load would open the song already marked as changed).
 4. **A failed plugin is never retried and the UI says otherwise** (FL-2): the app never sends `plugin.retry`;
    export reports success with a muted plugin (`render_job.cpp:295-299`); a plugin that does not load is not
    reported; an invalid state is ignored silently.
