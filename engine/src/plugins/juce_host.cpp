@@ -446,12 +446,13 @@ void JuceHost::resetAll() {
   });
 }
 
-json JuceHost::captureStates() {
+json JuceHost::captureStates(const std::vector<std::string>& keys) {
   json out = json::object();
   std::map<std::string, std::shared_ptr<JuceProcessor>> slots;
   {
     std::lock_guard<std::mutex> g(impl_->mutex);
-    for (auto& [key, slot] : impl_->live) slots[key] = slot.processor;
+    for (auto& [key, slot] : impl_->live)
+      if (keys.empty() || std::find(keys.begin(), keys.end(), key) != keys.end()) slots[key] = slot.processor;
   }
   runSync([&] {
     for (auto& [key, p] : slots) {

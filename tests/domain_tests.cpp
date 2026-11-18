@@ -929,5 +929,25 @@ TEST("projection: plugin state does not travel with every edit (STATE-PER-EDIT)"
   bool accepted = true;
   try { core::fromJson(p); } catch (const std::exception&) { accepted = false; }
   CHECK(accepted);
+  // The keys of the song (what the app asks plugins.states for) and the states that answer statesNeeded.
+  const std::vector<std::string> keys = pluginKeys(d);
+  CHECK_EQ(keys.size(), (size_t)4);  // a, b, a's effect, the master's
+  const std::string fxKey = pluginKey(a, d.tracks[0].effects[0]["id"].get<std::string>());
+  const json states = pluginStatesFor(d, {pluginKey(a), pluginKey(b), fxKey, "fx:master:m1"});
+  CHECK_EQ(states.size(), (size_t)3);  // b has no state: nothing to supply
+  CHECK_EQ(states.value(pluginKey(a), std::string()), std::string("QUJDRA=="));
+  CHECK_EQ(states.value(fxKey, std::string()), std::string("RUZHSA=="));
+  CHECK_EQ(states.value("fx:master:m1", std::string()), std::string("TUFTVA=="));
+  CHECK(!states.contains(pluginKey(b)));
+  // applyPluginStates names the keys it changed: what the app pushes back to the engine before Save/Export.
+  Document e = d;
+  std::vector<std::string> changed;
+  CHECK_EQ(applyPluginStates(e, {{pluginKey(a), "TkVX"}, {pluginKey(b), "QQ=="}}, &changed), 2);
+  CHECK_EQ(changed.size(), (size_t)2);
+  CHECK_EQ(changed[0], pluginKey(a));
+  CHECK_EQ(changed[1], pluginKey(b));
+  std::vector<std::string> unchanged;
+  CHECK_EQ(applyPluginStates(e, {{pluginKey(a), "TkVX"}}, &unchanged), 0);
+  CHECK(unchanged.empty());
 }
 CORE_TEST_MAIN

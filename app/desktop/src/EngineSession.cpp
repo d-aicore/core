@@ -1,6 +1,7 @@
 #include "EngineSession.h"
 #include <thread>
 #include <juce_events/juce_events.h>
+#include "edit.hpp"
 
 namespace core::app {
 
@@ -98,8 +99,9 @@ void EngineSession::cpuAsync(int timeoutMs, std::function<void(json)> done) {
   answerLater(answer, timeoutMs, std::move(done));
 }
 
-json EngineSession::pluginStates(int timeoutMs) {
+json EngineSession::pluginStates(int timeoutMs, const std::vector<std::string>& keys) {
   Action a{Action::PluginStates};
+  if (!keys.empty()) a.args = {{"keys", keys}};
   a.reply = std::make_shared<std::promise<json>>();
   std::future<json> answer = a.reply->get_future();
   queue(a);
@@ -113,12 +115,24 @@ json EngineSession::pluginStates(int timeoutMs) {
   }
 }
 
-void EngineSession::pluginStatesAsync(int timeoutMs, std::function<void(json)> done) {
+void EngineSession::pluginStatesAsync(int timeoutMs, std::function<void(json)> done, const std::vector<std::string>& keys) {
   Action a{Action::PluginStates};
+  if (!keys.empty()) a.args = {{"keys", keys}};
   a.reply = std::make_shared<std::promise<json>>();
   auto answer = std::make_shared<std::future<json>>(a.reply->get_future());
   queue(a);
   answerLater(answer, timeoutMs, std::move(done));
+}
+
+void EngineSession::pushPluginStates(const json& states) {
+  if (!states.is_object() || states.empty()) return;
+  std::lock_guard<std::mutex> g(mutex_);
+  for (auto it = states.begin(); it != states.end(); ++it) pendingStates_[it.key()] = it.value();
+  // The projection carries no blobs (STATE-PER-EDIT): a refresh changes nothing in it, so setDocument sends
+  // nothing. The sync is asked for here — the engine's stored copy is what an export makes its instances from,
+  // and it must receive the refreshed states even when no edit is pending.
+  snap_.documentRevision = ++wantedRevision_;
+  wake_.notify_all();
 }
 
 json EngineSession::pluginParams(const std::string& key, int timeoutMs) {
@@ -178,6 +192,7 @@ void EngineSession::newSong() {
   std::lock_guard<std::mutex> g(mutex_);
   ++documentEpoch_;
   acceptedDocument_.reset();
+  pendingStates_ = json::object();  // another song: the refreshed states of the old one are not this one's
   snap_.hasAcceptedDocument = false;
 }
 
@@ -393,7 +408,7 @@ void EngineSession::run() {
             action.reply->set_value(client_->command("engine.cpu"));
             break;
           case Action::PluginStates:
-            action.reply->set_value(client_->command("plugins.states"));
+            action.reply->set_value(client_->command("plugins.states", action.args.is_object() ? action.args : json::object()));
             break;
           case Action::PluginParams:
             action.reply->set_value(client_->command("plugin.params", {{"key", action.text}}));
@@ -567,6 +582,7 @@ void EngineSession::openDevice(client::EngineClient& engine) {
 void EngineSession::sync(std::unique_lock<std::mutex>& lock) {
   const json projection = wantedProjection_;
   const doc::Document document = wantedDocument_;
+  const json states = pendingStates_;  // refreshed live states ride this load; kept until the engine accepts
   const auto epoch = documentEpoch_;
   const int64_t revision = wantedRevision_;
   sentRevision_ = revision;
@@ -578,8 +594,29 @@ void EngineSession::sync(std::unique_lock<std::mutex>& lock) {
   lock.unlock();
   try {
     if (simulateTimeout > 0) throw EngineError(EngineError::Kind::Timeout, "no reply in time (simulated by the self-test)");
-    const json result = engine->command("project.load", {{"project", projection}, {"revision", revision}});
+    json loadArgs = {{"project", projection}, {"revision", revision}};
+    if (!states.empty()) loadArgs["states"] = states;
+    json result = engine->command("project.load", loadArgs);
+    const json needed = result.value("statesNeeded", json::array());
+    if (!needed.empty()) {
+      // STATE-PER-EDIT: the engine does not hold the state of these places (a first load, another stateId, a
+      // plugin brought back by Undo). The document has it: send exactly those keys, same revision — nothing
+      // was accepted yet, the engine keeps playing what it had until this second pass.
+      std::vector<std::string> keys;
+      for (const auto& k : needed) if (k.is_string()) keys.push_back(k.get<std::string>());
+      json supply = doc::pluginStatesFor(document, keys);
+      for (auto it = states.begin(); it != states.end(); ++it) supply[it.key()] = it.value();
+      loadArgs["states"] = supply;
+      result = engine->command("project.load", loadArgs);
+      if (!result.value("statesNeeded", json::array()).empty())
+        throw EngineError(EngineError::Kind::Rejected, "the engine still needs plugin state it was just given");
+    }
     lock.lock();
+    // Accepted: the engine holds the states sent. A newer push for the same key during the send stays for the next.
+    for (auto it = states.begin(); it != states.end(); ++it) {
+      const auto p = pendingStates_.find(it.key());
+      if (p != pendingStates_.end() && *p == it.value()) pendingStates_.erase(p);
+    }
     if (epoch == documentEpoch_) { acceptedDocument_ = document; snap_.hasAcceptedDocument = true; }
     syncRetry_.succeeded();
     syncTimeoutsForTest_ = 0;  // a real answer ends the simulation

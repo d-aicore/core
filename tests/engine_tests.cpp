@@ -660,17 +660,18 @@ namespace {
 struct StateHost final : PluginHost {
   std::string state;
   std::vector<std::string> keys;
-  std::vector<json> offlineGets;  // what an export's graph asked of the provider: the state it renders from
+  std::vector<std::pair<std::string, json>> offlineGets;  // what an export's graph asked of the provider: the state it renders from
   std::shared_ptr<PluginProcessor> get(const std::string& key, const json& plugin, double, bool offline, std::string* why) override {
     if (why) why->clear();
-    if (offline) offlineGets.push_back(plugin);
+    if (offline) offlineGets.emplace_back(key, plugin);
     if (!offline && std::find(keys.begin(), keys.end(), key) == keys.end()) keys.push_back(key);
     return std::make_shared<FakeProc>();
   }
   void keepOnly(const std::vector<std::string>&) override {}
-  json captureStates() override {
+  json captureStates(const std::vector<std::string>& keys) override {
     json out = json::object();
-    for (const auto& k : keys) out[k] = state;
+    for (const auto& k : this->keys)
+      if (keys.empty() || std::find(keys.begin(), keys.end(), k) != keys.end()) out[k] = state;
     return out;
   }
   bool showEditor(const std::string&, bool, std::string*) override { return false; }
@@ -771,8 +772,10 @@ TEST("protocol: project.load asks for the state it needs and edits carry none (S
   host.offlineGets.clear();
   renderProject(server.project(), kSr, 512, false, 0.05, nullptr, nullptr, &host, 0);
   CHECK(!host.offlineGets.empty());
-  if (!host.offlineGets.empty())
-    CHECK_EQ(host.offlineGets.back().value("state", std::string()), std::string("TkVX"));  // the export reads the refreshed state
+  bool exportReadsRefreshed = false;
+  for (const auto& [key, plugin] : host.offlineGets)
+    if (key == "track:t0" && plugin.value("state", std::string()) == "TkVX") exportReadsRefreshed = true;
+  CHECK(exportReadsRefreshed);  // the export makes its instance from the refreshed state
   // A new identity (the document chose another state, e.g. a preset) needs its state again.
   json preset = edit;
   preset["tracks"][0]["plugin"]["stateId"] = "s2";

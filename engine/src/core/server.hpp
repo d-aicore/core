@@ -44,7 +44,7 @@ RenderResult renderProject(const Project& project, double sampleRate, int blockS
 // What the server needs from a plugin host beyond loading plugins (the JUCE host gives all of it).
 class PluginHost : public PluginProvider {
 public:
-  virtual json captureStates() = 0;                                              // {key: base64}
+  virtual json captureStates(const std::vector<std::string>& keys = {}) = 0;     // {key: base64}; empty keys = every loaded plugin
   virtual bool showEditor(const std::string& key, bool open, std::string* why) = 0;
   virtual bool takeChanged() = 0;                                                // a plugin's own editor changed it
   virtual void releaseAll() = 0;                                                 // another song: no instance carries over

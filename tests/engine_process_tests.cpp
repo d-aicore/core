@@ -657,13 +657,19 @@ TEST("serve: plugin state on demand renders bit-identical to state in the song (
   stateless["tracks"][0]["plugin"].erase("state");
   stateless["tracks"][0]["plugin"]["hasState"] = true;
 
+  // Legacy: the state in the song, one pass (its own session, as opening a song).
+  json ra;
+  {
+    EngineClient legacy(engineOptions());
+    legacy.start();
+    legacy.command("project.load", {{"project", full}}, 30000ms);
+    ra = legacy.command("render", {{"path", wavA.string()}, {"bits", 24}}, 60000ms);
+    legacy.close();
+  }
+  CHECK(ra.value("peak", 0.0f) > 0.01f);  // the fixture sounds: a silence==silence comparison would prove nothing
+  // On demand: a fresh engine holds nothing — it asks for the key, the app supplies it, the load is accepted.
   EngineClient engine(engineOptions());
   engine.start();
-  // Legacy: the state in the song, one pass.
-  engine.command("project.load", {{"project", full}}, 30000ms);
-  const json ra = engine.command("render", {{"path", wavA.string()}, {"bits", 24}}, 60000ms);
-  CHECK(ra.value("peak", 0.0f) > 0.01f);  // the fixture sounds: a silence==silence comparison would prove nothing
-  // On demand: the engine asks for the key, the app supplies it, the load is accepted.
   const json first = engine.command("project.load", {{"project", stateless}}, 30000ms);
   const json needed = first.value("statesNeeded", json::array());
   CHECK_EQ(needed.size(), (size_t)1);

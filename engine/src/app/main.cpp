@@ -76,7 +76,7 @@ public:
     return host_.get(key, plugin, sr, offline, why);
   }
   void keepOnly(const std::vector<std::string>& keys) override { host_.keepOnly(keys); }
-  core::json captureStates() override { return host_.captureStates(); }
+  core::json captureStates(const std::vector<std::string>& keys) override { return host_.captureStates(keys); }
   bool showEditor(const std::string& key, bool open, std::string* why) override { return host_.showEditor(key, open, why); }
   bool takeChanged() override { return host_.takeChanged(); }
   void releaseAll() override { host_.releaseAll(); }
@@ -687,6 +687,10 @@ int main(int argc, char** argv) {
 #endif
       json r = server.handle({{"cmd", "project.load"}, {"args", {{"project", project}}}});
       if (!r["ok"]) throw std::runtime_error(r["error"].get<std::string>());
+      // A projection that names state instead of carrying it (hasState) is not accepted until the states arrive:
+      // the CLI renders songs with their state in the file, it does not answer statesNeeded.
+      const json needed = r.value("result", json::object()).value("statesNeeded", json::array());
+      if (!needed.empty()) throw std::runtime_error("the project needs plugin state for " + std::to_string(needed.size()) + " places (statesNeeded); render a song with its state in the file");
       // A render with a plugin or a sample that did not load still renders (they are silent), but says so.
       const json loaded = r.value("result", json::object());
       const json missing = loaded.value("missing", json::array()), missingAssets = loaded.value("missingAssets", json::array());

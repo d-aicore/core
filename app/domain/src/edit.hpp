@@ -169,8 +169,16 @@ void replaceInstrumentWithPlugin(Document& doc, const std::string& trackId, cons
 // Where the engine keeps a plugin: "track:<id>", or "fx:<track id or master>:<effect id>".
 std::string pluginKey(const std::string& trackId, const std::string& effectId = "");
 bool hasPlugins(const Document& doc);
+// Every plugin place of the document (instruments and effects, by pluginKey): the keys the app asks the engine's
+// plugins.states for (only the ones the song has, not every instance the engine ever loaded).
+std::vector<std::string> pluginKeys(const Document& doc);
+// The states of the named keys that the document holds ({key: base64}, non-empty states only): what the app answers
+// the engine's project.load statesNeeded with (STATE-PER-EDIT: the projection carries no blobs).
+json pluginStatesFor(const Document& doc, const std::vector<std::string>& keys);
 // The states the engine gave ({key: base64}) written into the document; returns how many changed.
-int applyPluginStates(Document& doc, const json& states);
+// changedKeys (optional): the keys whose state changed — what the app pushes back to the engine, whose stored
+// copy is what an export makes its instances from (the projection itself carries no blobs any more).
+int applyPluginStates(Document& doc, const json& states, std::vector<std::string>* changedKeys = nullptr);
 // The plugins (instruments and effects, by pluginKey) that `before` has and `after` no longer has in the same
 // place: gone, or another plugin (file or id) under the same key. The engine lets their instances go when it
 // gets `after`, and what they hold is only there: it must be in the document first, or Undo brings them back
