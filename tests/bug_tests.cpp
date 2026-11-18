@@ -724,4 +724,130 @@ TEST("sweep-27: unknown song and slot properties survive the parse and save roun
   CHECK_EQ(again.extra["patternSlots"][0]["mystery"], std::string("keep-me"));
 }
 
+// ---------------------------------------------------------------- BUG-SWEEP-28 (2026-11-18)
+// pattern_rack.hpp's Load Template contract says "the same part first (else the same name)", and matchRows' own
+// comment agrees, but the code ran the NAME pass first: with conflicting names/parts the first pick stole the row
+// another track needed (the used set), mapping notes onto the wrong musical parts. Part first, name second.
+
+TEST("sweep-28: conflicting names and parts map by part first, as the header contract says") {
+  Document d = newEmptyDocument();
+  const std::string bass = addTrack(d, "bass", "Bass");
+  const std::string lead = addTrack(d, "lead", "Lead");
+  PatternTemplate t;
+  t.id = "conflict";
+  t.name = "Conflict";
+  t.bars = 1;
+  PatternTemplateRow rb;  // the bass row, named "Lead"
+  rb.part = "bass";
+  rb.name = "Lead";
+  rb.lengthTicks = kBar;
+  Note nb;
+  nb.tick = 0;
+  nb.length = 120;
+  nb.pitch = 36;
+  rb.notes.push_back(nb);
+  PatternTemplateRow rl;  // the lead row, named "Bass"
+  rl.part = "lead";
+  rl.name = "Bass";
+  rl.lengthTicks = kBar;
+  Note nl;
+  nl.tick = 0;
+  nl.length = 120;
+  nl.pitch = 84;
+  rl.notes.push_back(nl);
+  t.rows.push_back(rb);
+  t.rows.push_back(rl);
+  CHECK_EQ(applyRackTemplate(d, nullptr, t, "s1"), 2);
+  const auto slots = rackSlots(d);
+  const PatternSlot* slot = findRackSlot(slots, "s1");
+  CHECK(slot != nullptr);
+  if (!slot) return;
+  const Pattern* pb = rackPattern(d, *slot, bass);
+  const Pattern* pl = rackPattern(d, *slot, lead);
+  CHECK(pb != nullptr);
+  CHECK(pl != nullptr);
+  if (!pb || !pl || pb->notes.empty() || pl->notes.empty()) return;
+  CHECK_EQ(pb->notes[0].pitch, 36);  // before: 84, the name "Bass" stole the lead row
+  CHECK_EQ(pl->notes[0].pitch, 84);  // before: 36, the name "Lead" stole the bass row
+}
+
+TEST("sweep-28: one row of a part goes to the first track of that part only") {
+  Document d = newEmptyDocument();
+  const std::string b1 = addTrack(d, "bass", "Bass");
+  const std::string b2 = addTrack(d, "bass", "Sub Bass");  // a second bass track, id bass-2
+  PatternTemplate t;
+  t.id = "one-bass";
+  t.name = "One bass";
+  t.bars = 1;
+  PatternTemplateRow row;
+  row.part = "bass";
+  row.name = "Whatever";
+  row.lengthTicks = kBar;
+  Note n;
+  n.tick = 0;
+  n.length = 120;
+  n.pitch = 36;
+  row.notes.push_back(n);
+  t.rows.push_back(row);
+  CHECK_EQ(rackTemplateTracks(d, t), 1);
+  CHECK_EQ(applyRackTemplate(d, nullptr, t, "s1"), 1);
+  const auto slots = rackSlots(d);
+  const PatternSlot* slot = findRackSlot(slots, "s1");
+  CHECK(slot != nullptr);
+  if (!slot) return;
+  const Pattern* p1 = rackPattern(d, *slot, b1);
+  CHECK(p1 != nullptr);
+  if (p1) {
+    CHECK_EQ(p1->notes.size(), (size_t)1);
+    if (!p1->notes.empty()) CHECK_EQ(p1->notes[0].pitch, 36);
+  }
+  const Pattern* p2 = rackPattern(d, *slot, b2);  // the row was used: the second bass stays empty
+  CHECK(p2 != nullptr);
+  if (p2) CHECK(p2->notes.empty());
+}
+
+TEST("sweep-28: unambiguous name-only and part-only matches keep working") {
+  Document d = newEmptyDocument();
+  const std::string keys = addTrack(d, "keys", "Rhodes");  // no part guessed from id/name
+  const std::string kick = addTrack(d, "kick", "Kick");
+  CHECK(pcoreGuessPart(d.tracks[0]).empty());
+  PatternTemplate t;
+  t.id = "unambiguous";
+  t.name = "Unambiguous";
+  t.bars = 1;
+  PatternTemplateRow byName;
+  byName.part = "zzz-unknown";
+  byName.name = "Rhodes";
+  byName.lengthTicks = kBar;
+  Note nk;
+  nk.tick = 0;
+  nk.length = 120;
+  nk.pitch = 60;
+  byName.notes.push_back(nk);
+  PatternTemplateRow byPart;
+  byPart.part = "kick";
+  byPart.name = "Totally Different";
+  byPart.lengthTicks = kBar;
+  Note nkk;
+  nkk.tick = 0;
+  nkk.length = 120;
+  nkk.pitch = 36;
+  byPart.notes.push_back(nkk);
+  t.rows.push_back(byName);
+  t.rows.push_back(byPart);
+  CHECK_EQ(rackTemplateTracks(d, t), 2);
+  CHECK_EQ(applyRackTemplate(d, nullptr, t, "s1"), 2);
+  const auto slots = rackSlots(d);
+  const PatternSlot* slot = findRackSlot(slots, "s1");
+  CHECK(slot != nullptr);
+  if (!slot) return;
+  const Pattern* pk = rackPattern(d, *slot, keys);
+  const Pattern* pd = rackPattern(d, *slot, kick);
+  CHECK(pk != nullptr);
+  CHECK(pd != nullptr);
+  if (!pk || !pd || pk->notes.empty() || pd->notes.empty()) return;
+  CHECK_EQ(pk->notes[0].pitch, 60);  // name-only: the part is unknown on both sides
+  CHECK_EQ(pd->notes[0].pitch, 36);  // part-only: the names do not match
+}
+
 CORE_TEST_MAIN

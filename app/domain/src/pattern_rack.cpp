@@ -516,11 +516,14 @@ std::map<std::string, const PatternTemplateRow*> matchRows(const Document& doc, 
     if (!playsPatterns(tr)) continue;
     const std::string part = pcoreGuessPart(tr);
     const PatternTemplateRow* pick = nullptr;
-    for (const auto& r : t.rows)
-      if (!used.count(&r) && lower(r.name) == lower(tr.name)) { pick = &r; break; }
-    if (!pick && !part.empty())
+    // The part pass runs first (the header contract and the comment above): a name that conflicts with another
+    // track's part must not steal that row (BUG-SWEEP-28).
+    if (!part.empty())
       for (const auto& r : t.rows)
         if (!used.count(&r) && r.part == part) { pick = &r; break; }
+    if (!pick)
+      for (const auto& r : t.rows)
+        if (!used.count(&r) && lower(r.name) == lower(tr.name)) { pick = &r; break; }
     if (pick) { out[tr.id] = pick; used.insert(pick); }
   }
   return out;
