@@ -1,0 +1,3 @@
+healthy autosaves=1 backupName=First recoverable
+corrupt primary autosaves=0 backupStillReadable=First recoverable
+nonfinite audio accepted=1 renderedNonfinite=0 first=0
