@@ -34,12 +34,21 @@ Track* trackPtr(Document& doc, const std::string& id) {
 
 PatternSlot slotFromJson(const json& j) {
   PatternSlot s;
-  s.id = j.value("id", std::string());
-  s.name = j.value("name", std::string());
-  s.bars = validBars(j.value("bars", 4));
-  s.swing = std::clamp(j.value("swing", 0.0), 0.0, kRackMaxSwing);
-  s.root = j.value("root", std::string());
-  s.scale = j.value("scale", std::string());
+  // The parser keeps patternSlots unvalidated (compat); this is the consumption boundary, so a field of the
+  // wrong type takes its default instead of throwing type_error.302 out of rackSlots (BUG-SWEEP-27).
+  const auto text = [&](const char* key) {
+    return j.contains(key) && j[key].is_string() ? j[key].get<std::string>() : std::string();
+  };
+  s.id = text("id");
+  s.name = text("name");
+  int bars = 4;
+  if (j.contains("bars") && j["bars"].is_number_integer()) bars = j["bars"].get<int>();
+  s.bars = validBars(bars);
+  double swing = 0.0;
+  if (j.contains("swing") && j["swing"].is_number()) swing = j["swing"].get<double>();
+  s.swing = std::clamp(swing, 0.0, kRackMaxSwing);
+  s.root = text("root");
+  s.scale = text("scale");
   if (j.contains("tracks") && j["tracks"].is_object())
     for (const auto& [k, v] : j["tracks"].items()) if (v.is_string()) s.tracks[k] = v.get<std::string>();
   return s;

@@ -664,4 +664,64 @@ TEST("sweep-26 builtin: a P-Core style loaded into a swung slot keeps the swing"
   CHECK(swung);  // before: the style wrote straight notes, none delayed by the slot's swing
 }
 
+// ---------------------------------------------------------------- BUG-SWEEP-27 (2026-11-18)
+// parseDocument keeps extra.patternSlots unvalidated on purpose (compat: document.cpp r.rest()), but slotFromJson
+// read it with typed j.value("bars", 4) / j.value("swing", 0.0): a wrong type threw type_error.302 out of rackSlots,
+// the consumption boundary, with no catch anywhere in the UI chain. The consumer must recover with defaults.
+
+TEST("sweep-27: malformed patternSlots metadata is read with defaults, not thrown at the consumer") {
+  Document d = newEmptyDocument();
+  addTrack(d, "bass");
+  json j = toJson(d);
+  j["patternSlots"] = json::array({
+      {{"id", "s1"}, {"bars", "four"}, {"swing", "lots"}, {"name", 7}, {"root", json::array()}, {"scale", 3}, {"tracks", "nope"}},
+      {{"id", 42}, {"bars", 4}},                      // id not a string: the entry is skipped, not a throw
+      "not an object",                                // already skipped before the fix
+      {{"id", "s2"}, {"bars", 2}, {"swing", 0.5}}});  // a well-formed neighbour survives
+  Document parsed = parseDocument(j);  // the parser keeps patternSlots as extra, unvalidated, by design
+  CHECK_EQ(parsed.extra["patternSlots"].size(), (size_t)4);
+  bool threw = false;
+  std::vector<PatternSlot> slots;
+  try {
+    slots = rackSlots(parsed);
+  } catch (const std::exception& e) {
+    threw = true;
+    std::fprintf(stderr, "  rackSlots threw: %s\n", e.what());
+  }
+  CHECK(!threw);  // before: type_error.302 from j.value("bars", 4) on the string "four"
+  if (threw) return;
+  const PatternSlot* s1 = findRackSlot(slots, "s1");
+  CHECK(s1 != nullptr);
+  if (s1) {
+    CHECK_EQ(s1->bars, 4);  // conservative default for a bars that is not a number
+    CHECK_NEAR(s1->swing, 0.0, 1e-12);
+    CHECK_EQ(s1->name, std::string("Pattern 1"));  // a name that is not a string falls back to the default naming
+    CHECK(s1->root.empty());
+    CHECK(s1->scale.empty());
+    CHECK(s1->tracks.empty());
+  }
+  CHECK(findRackSlot(slots, "s2") != nullptr);
+  const PatternSlot* s2 = findRackSlot(slots, "s2");
+  if (s2) {
+    CHECK_EQ(s2->bars, 2);
+    CHECK_NEAR(s2->swing, 0.5, 1e-12);
+  }
+  CHECK_EQ(slots.size(), (size_t)2);  // the numeric-id entry and the non-object entry are left out
+}
+
+TEST("sweep-27: unknown song and slot properties survive the parse and save round-trip") {
+  Document d = newEmptyDocument();
+  json j = toJson(d);
+  j["futureFeature"] = {{"mode", "x"}};
+  j["patternSlots"] = json::array({{{"id", "s1"}, {"bars", 4}, {"mystery", "keep-me"}}});
+  Document parsed = parseDocument(j);
+  CHECK(parsed.extra.contains("futureFeature"));
+  CHECK_EQ(parsed.extra["patternSlots"][0]["mystery"], std::string("keep-me"));
+  const json out = toJson(parsed);
+  CHECK(out.contains("futureFeature"));
+  CHECK_EQ(out["patternSlots"][0]["mystery"], std::string("keep-me"));
+  const Document again = parseDocument(out);
+  CHECK_EQ(again.extra["patternSlots"][0]["mystery"], std::string("keep-me"));
+}
+
 CORE_TEST_MAIN
