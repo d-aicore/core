@@ -541,4 +541,79 @@ TEST("duplicar uma seccao copia tambem as mudancas de tempo que ha dentro dela")
   if (moved) CHECK_EQ(moved->startTick, 4 * kBar);
 }
 
+// ---------------------------------------------------------------- work preservation (2026-11-18), BUG-SWEEP-17
+// A save that fails half way through the replace keeps the new version as "<song>.core.saving-N" (storage.cpp,
+// previousFileIntact=false). audioSavedSongsUse read .core/.core.bak/.json/.json.bak only: audio that only the
+// retained recovery copy references was listed as stray, and "Remove unused" sent it to the Recycle Bin.
+TEST("work preservation BUG-SWEEP-17: a retained .saving-N copy keeps the audio only it references") {
+  const fs::path dir = freshDir("sweep17-saving-copy");
+  Document a;
+  const fs::path audioA = songWithAudio(dir, "A", 1000, &a);
+  Document b = newEmptyDocument();  // B on disk has no audio yet
+  b.name = "B";
+  saveFile(b, dir / "B.core");
+  // The new version of B imports X; the replace fails half way (the D4 shape): B.core's name is taken by a
+  // directory, the previous version (no X) is the .bak, and the new one stays only in B.core.saving-N.
+  const fs::path source = dir / "B-take.wav";
+  tinyWav(source, 2000);
+  const std::string asset = importAudio(b, source, dir);
+  addAudioClip(b, addAudioTrack(b, "take"), asset, 0);
+  const fs::path audioX = assetFile(*b.findAsset(asset), dir);
+  fs::remove(source);
+  bool threw = false;
+  setReplaceStepForTests(failHalfWay);
+  try { saveFile(b, dir / "B.core"); } catch (const SaveError&) { threw = true; }
+  setReplaceStepForTests(nullptr);
+  CHECK(threw);
+  std::vector<fs::path> retained;
+  for (fs::directory_iterator it(dir), end; it != end; ++it) {
+    const std::string n = it->path().filename().string();
+    if (n.rfind("B.core.saving-", 0) == 0) retained.push_back(it->path());
+  }
+  CHECK_EQ(retained.size(), (size_t)1);  // the new version's only copy is on disk
+  CHECK(fs::exists(audioX));
+  // X is referenced by no asset of the open song, no .core and no .bak: only the retained copy. It must stay.
+  CHECK_EQ(strayAudioFiles(a, dir).size(), (size_t)0);  // before: X was listed -> Recycle Bin
+  CHECK_EQ(filesNoSavedSongNeeds({audioX}, dir).size(), (size_t)0);
+  CHECK(!lists(strayAudioFiles(a, dir), audioA));
+  // A real orphan still goes: the fix must not freeze the cleanup (D1 Recycle-Bin semantics stay).
+  const fs::path orphan = dir / kAssetFolder / "orphan.wav";
+  tinyWav(orphan, 3000);
+  const auto stray = strayAudioFiles(a, dir);
+  CHECK_EQ(stray.size(), (size_t)1);
+  CHECK(lists(stray, orphan));
+  fs::remove_all(dir / "B.core");  // the directory that took the name
+}
+
+TEST("work preservation BUG-SWEEP-17: an unreadable retained .saving-N copy is doubt; a non-song copy does not block") {
+  const fs::path dir = freshDir("sweep17-saving-doubt");
+  Document a;
+  songWithAudio(dir, "A", 1000, &a);
+  const fs::path orphan = dir / kAssetFolder / "orphan.wav";
+  tinyWav(orphan, 3000);
+  // A retained copy named as a song that cannot be read: nobody knows what it needs, nothing goes.
+  writeText(dir / "C.core.saving-4", "{ this is not json");
+  CHECK_EQ(strayAudioFiles(a, dir).size(), (size_t)0);
+  CHECK_EQ(filesNoSavedSongNeeds({orphan}, dir).size(), (size_t)0);
+  writeText(dir / "C.core.saving-4", R"({"format":"core-document","schemaVersion":99,"name":"from a newer Core"})");
+  CHECK_EQ(filesNoSavedSongNeeds({orphan}, dir).size(), (size_t)0);
+  // A retained copy of something that is not a song (notes, a template) is not a song either; ".saving-" with
+  // no number is not a save temporary.
+  fs::remove(dir / "C.core.saving-4");
+  writeText(dir / "notes.txt.saving-2", "anything");
+  writeText(dir / "C.core.saving-", "anything");
+  const auto stray = strayAudioFiles(a, dir);
+  CHECK_EQ(stray.size(), (size_t)1);
+  CHECK(lists(stray, orphan));
+  // A retained copy of an engine-format project counts too: the wav paths in it keep their audio.
+  fs::remove(dir / "notes.txt.saving-2");
+  fs::remove(dir / "C.core.saving-");
+  const json clip = {{"path", "Audio/orphan.wav"}, {"startTick", 0}, {"durationSeconds", 0.001}};
+  const json project = {{"format", "core-project"}, {"version", 2}, {"bpm", 145}, {"lengthTicks", 960},
+                        {"tracks", json::array({json{{"id", "audio1"}, {"instrument", "audio"}, {"audioClips", json::array({clip})}}})}};
+  writeText(dir / "Motor.core.saving-9", project.dump());
+  CHECK_EQ(filesNoSavedSongNeeds({orphan}, dir).size(), (size_t)0);
+  CHECK_EQ(strayAudioFiles(a, dir).size(), (size_t)0);
+}
+
 CORE_TEST_MAIN
