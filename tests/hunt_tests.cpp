@@ -21,7 +21,6 @@
 #include "core/server.hpp"
 #include "io/audio_file.hpp"
 #include "engine_protocol.hpp"
-#include "pattern_sound.hpp"
 #include "sampling.hpp"
 #include <fstream>
 #include "io/wav.hpp"
@@ -261,15 +260,6 @@ TEST("caca 2, IPC: uma resposta com um campo event continua a ser a resposta") {
   CHECK(readEngineLine(R"({"event":"ready","protocol":1})").kind == EngineLine::Kind::Ready);
   CHECK(readEngineLine(R"({"event":"job","jobId":3})").kind == EngineLine::Kind::Event);
   CHECK(readEngineLine(R"({"event":{"a":1}})").kind == EngineLine::Kind::Event);  // sem id: um evento, como antes
-}
-
-TEST("caca 2, U-5: a duracao de um preview com sampleRate 0 e 0, nao infinito") {
-  core::preview::Sound s;
-  s.peaks.assign(10, 0.5f);
-  s.sampleRate = 0;
-  CHECK_EQ(s.seconds(), 0.0);
-  s.sampleRate = 48000;
-  CHECK(std::abs(s.seconds() - 10.0 * 128 / 48000) < 1e-12);
 }
 
 TEST("caca 2, U-8: os tres textos que faltavam tem traducao") {

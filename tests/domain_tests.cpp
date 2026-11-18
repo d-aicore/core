@@ -15,6 +15,7 @@
 #include "pattern_rack.hpp"
 #include "plugin_refs.hpp"
 #include "randomize.hpp"
+#include "score.hpp"
 #include "storage.hpp"
 #include "templates.hpp"
 
@@ -809,6 +810,84 @@ TEST("randomize: tempo-only keeps an unarranged Patterns-window idea (BUG-SWEEP-
   CHECK(history.undo());
   CHECK(history.current().findTrack("bass")->findPattern(pid) != nullptr);
   CHECK_EQ(canon(history.current()), before);
+}
+
+// Characterization for BUG-LEGACY-RISE: the Stage Core panel's LIVE operations (Song shape, Arrange, the grid's
+// cell on/off) keep working after the inactive scoreRises action left. These domain functions had no test before.
+TEST("score: Stage Core's live operations (song shape, arrange, cell on/off) on the template song") {
+  Document d = newTemplateDocument();
+  const int64_t bar = 4 * kPpq;
+  // Song shape: the sections laid out from bar 0, contiguous, in the shape's lengths; the song long enough.
+  const ScoreShape* s = findScoreShape("darkpsycore-64");
+  CHECK(s != nullptr);
+  if (!s) return;
+  setScoreShape(d, s->id);
+  CHECK_EQ(d.sections.size(), s->stages.size());
+  int64_t at = 0;
+  for (size_t i = 0; i < d.sections.size(); ++i) {
+    CHECK_EQ(d.sections[i].name, std::string(s->stages[i].name));
+    CHECK_EQ(d.sections[i].startTick, at);
+    CHECK_EQ(d.sections[i].lengthTicks, (int64_t)s->stages[i].bars * bar);
+    at += d.sections[i].lengthTicks;
+  }
+  CHECK(d.lengthTicks >= at);
+  CHECK_EQ(scoreStageOf("Build-up 2"), std::string("build"));
+  CHECK_EQ(scoreStageOf("Drop 2"), std::string("drop"));
+  CHECK_EQ(scoreStageOf("Rise"), std::string("build"));  // a section named "Rise" is still a build-up
+  // The template's tracks keep their parts (the grid's row labels).
+  CHECK_EQ(scorePartOf(trackById(d, "kick")), std::string("kick"));
+  CHECK_EQ(scorePartOf(trackById(d, "bass")), std::string("bass"));
+  CHECK_EQ(scorePartOf(trackById(d, "hats")), std::string("hats"));
+  CHECK_EQ(scorePartName("openhats"), std::string("Open hats"));
+  CHECK_EQ(scorePartName(""), std::string("Every section"));
+  // Arrange: the rules write the clips (kick 5, bass 5, hats 5 over the six sections; the break rests).
+  const size_t notesBefore = trackById(d, "kick").patterns.front().notes.size();
+  const int written = scoreArrange(d, {"kick", "bass", "hats"});
+  CHECK_EQ(written, 15);
+  const Track& kick = trackById(d, "kick");
+  const Track& bass = trackById(d, "bass");
+  for (const auto& sec : d.sections) {
+    const std::string stage = scoreStageOf(sec.name);
+    if (stage == "break") CHECK(!scorePlays(kick, sec));
+    if (stage == "drop" || stage == "roll") CHECK(scorePlays(kick, sec));
+  }
+  // The bar before the drop has no kick and no bass; the bass enters the intro at bar 4.
+  const Section& build = d.sections[1], &intro = d.sections[0];
+  const int64_t lastBar = build.startTick + build.lengthTicks - bar;
+  bool kickInLastBar = false;
+  for (const auto& c : kick.clips)
+    if (c.startTick < build.startTick + build.lengthTicks && c.startTick + c.lengthTicks > lastBar) kickInLastBar = true;
+  CHECK(!kickInLastBar);
+  bool bassInFirstBars = false;
+  for (const auto& c : bass.clips)
+    if (c.startTick < intro.startTick + 4 * bar && c.startTick + c.lengthTicks > intro.startTick) bassInFirstBars = true;
+  CHECK(!bassInFirstBars);
+  CHECK(scorePlays(bass, intro));
+  // A cell click: the track rests in the section, then plays again (one edit each, as the panel does).
+  const std::string dropId = d.sections[2].id;
+  CHECK(scorePlays(trackById(d, "kick"), d.sections[2]));
+  scoreSetPlays(d, "kick", dropId, false);
+  CHECK(!scorePlays(trackById(d, "kick"), d.sections[2]));
+  scoreSetPlays(d, "kick", dropId, true);
+  CHECK(scorePlays(trackById(d, "kick"), d.sections[2]));
+  // Every clip still plays one of the track's own patterns with its notes (what the lane draws and the engine plays).
+  CHECK_EQ(trackById(d, "kick").patterns.front().notes.size(), notesBefore);
+  for (const auto& c : trackById(d, "kick").clips) {
+    const Pattern* p = trackById(d, "kick").findPattern(c.patternId);
+    CHECK(p != nullptr);
+    if (p) CHECK(!p->notes.empty());
+  }
+  // The domain guards the panel never trips: an unknown shape, no track chosen, a track that plays no notes.
+  bool threw = false;
+  try { setScoreShape(d, "no-such-shape"); } catch (const DocumentError&) { threw = true; }
+  CHECK(threw);
+  threw = false;
+  try { scoreArrange(d, {}); } catch (const DocumentError&) { threw = true; }
+  CHECK(threw);
+  const std::string audio = addAudioTrack(d, "audio");
+  threw = false;
+  try { scoreSetPlays(d, audio, dropId, true); } catch (const DocumentError&) { threw = true; }
+  CHECK(threw);
 }
 
 CORE_TEST_MAIN

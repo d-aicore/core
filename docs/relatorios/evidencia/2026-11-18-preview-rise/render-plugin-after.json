@@ -1,0 +1,16 @@
+{
+  "ok": true,
+  "result": {
+    "channels": 2,
+    "denseEventBlocks": 0,
+    "missing": [],
+    "missingAssets": [],
+    "path": "after-plugin.wav",
+    "peak": 0.4488188922405243,
+    "realtimeFactor": 397.76192622842143,
+    "renderMs": 15.084399999999999,
+    "sampleRate": 48000.0,
+    "seconds": 6.0,
+    "stems": []
+  }
+}

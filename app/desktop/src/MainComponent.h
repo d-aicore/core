@@ -500,7 +500,6 @@ private:
   void duplicateClips();
   std::vector<std::string> missing_;          // asset ids whose file is not in the project folder
   WaveformCache waves_{[this] { repaint(); }};  // the clip lanes and the audio editor
-  PatternWaves patternWaves_{[this] { repaint(); }};  // what each pattern sounds like, drawn inside its clips
   std::map<int, std::pair<std::string, int>> heldKeys_;  // key code -> (track, pitch) sounding now
   int keyboardOctave_ = 2;                                // the Z key plays C of this octave (C2 = 36)
   bool realOutput_ = true;

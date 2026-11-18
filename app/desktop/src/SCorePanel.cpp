@@ -29,14 +29,10 @@ SCorePanel::SCorePanel(PatternEditor::Host& host) : host_(host) {
   arrangeDot_.setTooltip(u8("Puts the selected tracks (or every track, when only one is selected) where their part plays: "
                             "no kick in the break, hats later in the drop, the lead in the second half, pads in the intro "
                             "and the break, no kick and bass in the bar before each drop. One Ctrl+Z."));
-  rise_.setButtonText(u8("Rise on build-ups"));
-  rise_.onClick = [this] { rises(); };
-  riseDot_.setTooltip(u8("Puts FX Core's build-up (the rising curve) over every build-up section, on the tracks that have "
-                         "FX Core in region mode (a riser, a noise sweep)."));
   close_.setButtonText(u8("✕"));
   close_.onClick = [this] { if (onClose) onClose(); };
   for (juce::Component* c : std::initializer_list<juce::Component*>{&title_, &titleDot_, &shape_, &shapeDot_, &arrange_, &arrangeDot_,
-                                                                    &rise_, &riseDot_, &close_}) {
+                                                                    &close_}) {
     c->setWantsKeyboardFocus(false);
     addAndMakeVisible(c);
   }
@@ -71,7 +67,6 @@ SCorePanel::Cell SCorePanel::cellAt(juce::Point<int> p) const {
 void SCorePanel::documentChanged() {
   const bool any = !host_.currentDocument().sections.empty();
   arrange_.setEnabled(any);
-  rise_.setEnabled(any);
   repaint();
 }
 
@@ -142,7 +137,6 @@ void SCorePanel::resized() {
     b.setBounds(header.removeFromRight(w));
     header.removeFromRight(10);
   };
-  place(rise_, riseDot_, 140);
   place(arrange_, arrangeDot_, 90);
   place(shape_, shapeDot_, 130);
   const int tw = juce::GlyphArrangement::getStringWidthInt(title_.getFont(), title_.getText()) + 10;
@@ -200,14 +194,6 @@ void SCorePanel::arrange() {
   int written = 0;
   host_.applyEdit([&](doc::Document& d) { written = doc::scoreArrange(d, ids); }, u8("Stage Core: Arrange"));
   if (onSay) onSay(u8("Stage Core: ") + juce::String(written) + u8(" clips placed by the rules. Click a square to change one."));
-}
-
-void SCorePanel::rises() {
-  int added = 0;
-  const auto ids = rows();
-  host_.applyEdit([&](doc::Document& d) { added = doc::scoreRises(d, ids); }, u8("Stage Core: Rise on build-ups"));
-  if (onSay) onSay(added ? u8("Stage Core: the build-up rise is on ") + juce::String(added) + u8(" build-up(s).")
-                         : u8("Stage Core: no track has FX Core in region mode yet (put FX Core · Build-up on a riser first)."));
 }
 
 }  // namespace core::app

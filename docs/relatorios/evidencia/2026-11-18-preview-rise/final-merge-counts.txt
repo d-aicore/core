@@ -1,0 +1,13 @@
+1: 25 testes, 130 verificacoes, 0 falhas
+2: 20 testes, 201 verificacoes, 0 falhas
+3: 21 testes, 216 verificacoes, 0 falhas
+4: 8 testes, 115 verificacoes, 0 falhas
+5: 22 testes, 138 verificacoes, 0 falhas
+6: 2 testes, 25 verificacoes, 0 falhas
+7: 7 testes, 65 verificacoes, 0 falhas
+8: 6 testes, 80 verificacoes, 0 falhas
+9: 13 testes, 647 verificacoes, 0 falhas
+10: 7 testes, 82 verificacoes, 0 falhas
+11: 10 testes, 44 verificacoes, 0 falhas
+16: 4 testes, 49 verificacoes, 0 falhas
+100% tests passed out of 17
