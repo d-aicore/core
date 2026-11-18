@@ -2052,7 +2052,7 @@ void PatternEditor::setVelocityAt(int x, int y) {
   const std::string trackId = trackId_, patternId = patternId_;
   host_.applyEdit([&](doc::Document& d) {
     for (auto& n : doc::patternById(doc::trackById(d, trackId), patternId).notes)
-      if (ids.count(n.id)) n.velocity = v;
+      if (ids.count(n.id)) doc::setNoteVelocity(n, v);
   }, u8("Velocity"));
 }
 
@@ -2113,7 +2113,7 @@ void PatternEditor::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseW
   const double step = wheel.deltaY > 0 ? 0.05 : -0.05;
   host_.applyEdit([&](doc::Document& d) {
     for (auto& n : doc::patternById(doc::trackById(d, trackId), patternId).notes)
-      if (n.id == id) n.velocity = std::clamp(std::round((n.velocity + step) * 100) / 100, 0.05, 1.0);
+      if (n.id == id) doc::setNoteVelocity(n, std::clamp(std::round((n.velocity + step) * 100) / 100, 0.05, 1.0));
   }, "Velocity");
 }
 

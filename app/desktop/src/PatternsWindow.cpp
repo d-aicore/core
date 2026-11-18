@@ -824,7 +824,7 @@ void PatternsPanel::setVelocity(const std::string& trackId, const std::string& n
   const std::string id = slotId_;
   change(u8("Velocity"), [id, trackId, noteId, velocity](doc::Document& d) {
     doc::Pattern& p = doc::rackPatternFor(d, id, trackId);
-    for (auto& n : p.notes) if (n.id == noteId) n.velocity = velocity;
+    for (auto& n : p.notes) if (n.id == noteId) doc::setNoteVelocity(n, velocity);
   });
 }
 

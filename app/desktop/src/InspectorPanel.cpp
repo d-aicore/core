@@ -78,7 +78,7 @@ InspectorPanel::InspectorPanel(PatternEditor::Host& host, PatternEditor& editor)
   velocity_.setTooltip("Velocity (1-127) of every selected note");
   velocity_.onValueChange = [this] {
     const double v = std::round(velocity_.getValue()) / 127.0;
-    editNotes("Velocity", [v](doc::Note& n) { n.velocity = v; });
+    editNotes("Velocity", [v](doc::Note& n) { doc::setNoteVelocity(n, v); });
   };
   for (int i = 0; i < kLengthCount; ++i) length_.addItem(kLengthNames[i], i + 1);
   length_.setTooltip("Length of every selected note");

@@ -56,6 +56,23 @@ struct Note {
   json extra = json::object();
 };
 
+// BUG-SWEEP-30: a roll with count > 1 plays its velocityFrom..velocityTo envelope, not n.velocity
+// (the engine and the MIDI exporter interpolate the hits). Every edit that moves the base velocity
+// must move the envelope by the factor the base ACTUALLY moved by (after the edit's own rounding and
+// clamping: Louder 1.15 on 0.5 lands on 0.57, so the realized factor is 1.14), proportionally, so the
+// ramp keeps its shape. Endpoints clamp to [0,1]; a zero endpoint stays zero (silent). With count <= 1
+// the note plays n.velocity once and the envelope is dead data: it stays untouched (single-note
+// contract). A base of 0 has no realized factor: the envelope stays untouched too.
+inline void setNoteVelocity(Note& n, double v) {
+  const double old = n.velocity;
+  n.velocity = v;
+  if (n.roll.count > 1 && old > 0.0 && v != old) {
+    const double factor = v / old;
+    n.roll.velocityFrom = std::clamp(n.roll.velocityFrom * factor, 0.0, 1.0);
+    n.roll.velocityTo = std::clamp(n.roll.velocityTo * factor, 0.0, 1.0);
+  }
+}
+
 struct AutomationPoint { int64_t tick = 0; double value = 0; json extra = json::object(); };
 struct Automation {
   std::string param;       // instrument parameter, or "gainDb" / "pan"
