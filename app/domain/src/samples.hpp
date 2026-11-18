@@ -250,8 +250,10 @@ double roleLoudnessTarget(const std::string& role);
 // The sampler level (dB, -24..+24) that brings this sample to its role's target; 0 when not measured.
 double levelFor(const LibrarySample& sample, const std::string& role);
 
-// The Core Sampler that plays this sample on a track of that role: a one-shot on every key, or for a
-// bass recorded note by note (same folder, names that differ only in the note) every note as a zone.
+// The user-sample host that plays this sample on a track of that role (kind "sample", name "sampler"): a
+// one-shot on every key, or for a bass recorded note by note (same folder, names that differ only in the
+// note) every note as a zone. It PLAYS the user's files — no sound source of its own, no synthesis (owner
+// ratified 2026-11-18: «sampler = host de samples do utilizador, sem fontes de som próprias.»).
 Instrument samplerInstrument(const SampleIndex& index, const LibrarySample& sample, const std::string& role);
 // The name Core shows for a sample of the library (its catalogue name), else its file name.
 std::string shownName(const LibrarySample& sample);
@@ -259,11 +261,12 @@ std::string shownName(const LibrarySample& sample);
 std::string shownName(const SampleIndex& index, const SampleRef& zone);
 SampleRef sampleRef(const LibrarySample& sample);
 
-// Gives a note track the sampler for this sample (one undo step for the caller). The track's notes,
-// mixer, effects and their automation stay; the old instrument's knobs and its own automation go (a new
-// sample starts from its own sound, the same however many samples were tried before).
+// Gives a note track the user-sample host for this sample (one undo step for the caller). The host (kind
+// "sample") PLAYS the user's file through the engine's audio path — no synthesis. The track's notes, mixer,
+// effects and their automation stay; the old instrument's knobs and its own automation go (a new sample
+// starts from its own sound, the same however many samples were tried before).
 // Throws DocumentError for an audio track or a bus (they do not play samples) and for a track played by a plugin
-// (BUG-SWEEP-10: the sampler is a removed built-in, silent; a working plugin is never silently replaced by it).
+// (BUG-SWEEP-10: a working plugin is never silently replaced; the guard stays).
 void setTrackSample(Document& doc, const std::string& trackId, const SampleIndex& index, const LibrarySample& sample);
 
 // The style of a song made from a style template ("" otherwise).

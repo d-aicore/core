@@ -238,9 +238,12 @@ Track parseTrack(const json& v, const std::string& path, const std::set<std::str
 
   Reader ir(r.object("instrument"), r.at("instrument"));
   t.instrument.kind = ir.string("kind", "builtin", 16);
-  if (t.instrument.kind == "builtin") {
+  if (t.instrument.kind == "builtin" || t.instrument.kind == "sample") {
     t.instrument.name = ir.string("name", "", 40);
     if (t.instrument.name.empty()) throw DocumentError(ir.at("name"), "is required");
+    // The user-sample host (BUG-SWEEP-10 positive) is the "sampler": it plays the user's files, no synth.
+    if (t.instrument.kind == "sample" && t.instrument.name != "sampler")
+      throw DocumentError(ir.at("name"), "the sample host is \"sampler\"");
     t.instrument.version = (int)ir.integer("version", 1, 1, 1000000);
     json params = ir.object("params");
     for (auto it = params.begin(); it != params.end(); ++it) {
@@ -275,6 +278,8 @@ Track parseTrack(const json& v, const std::string& path, const std::set<std::str
       t.instrument.samples.push_back(std::move(z));
     }
     t.instrument.synth = ir.take("synth");
+    if (t.instrument.kind == "sample" && !t.instrument.synth.is_null())
+      throw DocumentError("instrument.synth", "the sample host plays user samples: it has no synth of its own");
   } else if (t.instrument.kind == "plugin") {
     // A plugin plays the track (Diogo 2026-11-16: Core's sound comes from plugins): {format, id, name, vendor, file, state}.
     t.instrument.plugin = ir.object("plugin");
@@ -285,7 +290,7 @@ Track parseTrack(const json& v, const std::string& path, const std::set<std::str
     if (!p.contains("file") || !p["file"].is_string() || p["file"].get<std::string>().empty()) throw DocumentError(join(ir.at("plugin"), "file"), "is required");
     t.instrument.plugin.erase("missing");
   } else if (t.instrument.kind != "audio" && t.instrument.kind != "bus" && t.instrument.kind != "none") {
-    throw DocumentError(ir.at("kind"), "must be plugin, none, audio, bus or builtin");
+    throw DocumentError(ir.at("kind"), "must be plugin, none, audio, bus, sample or builtin");
   }
   t.instrument.extra = ir.rest();
 
@@ -412,7 +417,7 @@ json mixJson(const Mix& m) {
 json trackJson(const Track& t) {
   json instrument = {{"kind", t.instrument.kind}};
   if (t.instrument.kind == "plugin") instrument["plugin"] = t.instrument.plugin;
-  else if (t.instrument.kind == "builtin") { instrument["name"] = t.instrument.name; instrument["version"] = t.instrument.version; instrument["params"] = t.instrument.params; }
+  else if (t.instrument.kind == "builtin" || t.instrument.kind == "sample") { instrument["name"] = t.instrument.name; instrument["version"] = t.instrument.version; instrument["params"] = t.instrument.params; }
   if (!t.instrument.synth.is_null()) instrument["synth"] = t.instrument.synth;
   if (!t.instrument.samples.empty()) {
     json samples = json::array();
@@ -751,6 +756,21 @@ json toProjection(const Document& d, const std::filesystem::path& assetRoot) {
       track["audioClips"] = audioClips;
     } else if (t.instrument.kind == "bus") { track["instrument"] = "bus"; track.erase("clips"); }
     else if (t.instrument.kind == "plugin") { track["instrument"] = "plugin"; track["plugin"] = t.instrument.plugin; }
+    else if (t.instrument.kind == "sample") {
+      // The user-sample host (BUG-SWEEP-10 positive): the engine plays the user's files on the track's notes
+      // (dsp/sample_host.hpp, the audio clips' AssetStore path). The zones carry the files; the params are the
+      // host's playback controls. No synthesis: the file is the sound.
+      track["instrument"] = "sample";
+      track["instrumentVersion"] = t.instrument.version;
+      track["params"] = t.instrument.params;
+      json samples = json::array();
+      for (const auto& z : t.instrument.samples) {
+        json zone = {{"file", z.file}, {"rootKey", z.rootKey}, {"loKey", z.loKey}, {"hiKey", z.hiKey}};
+        if (z.loops()) { zone["loopStart"] = z.loopStart; zone["loopEnd"] = z.loopEnd; }
+        samples.push_back(zone);
+      }
+      track["samples"] = samples;
+    }
     else track["instrument"] = "none";  // an old Core instrument, or no instrument yet: its notes wait for a plugin
     if (!t.mix.output.empty()) track["output"] = t.mix.output;
     if (!t.mix.sends.empty()) {

@@ -353,7 +353,7 @@ void InspectorPanel::update(const std::string& selectedTrack, const std::string&
     fact(facts_, "Sound", soundOf(*t));
     // The sampler's zones: which file plays which keys (the first zone holding a key plays it).
     const auto& zones = t->instrument.samples;
-    if (t->instrument.kind == "builtin" && !zones.empty()) {
+    if ((t->instrument.kind == "builtin" || t->instrument.kind == "sample") && !zones.empty()) {
       const size_t shown = zones.size() <= 4 ? zones.size() : 3;
       for (size_t i = 0; i < shown; ++i) {
         const auto& z = zones[i];

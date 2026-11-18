@@ -302,6 +302,110 @@ TEST("render: ficheiro em falta nao parte o render") {
   CHECK_NEAR(r.peak, 0, 0);
 }
 
+// --- Sample host (BUG-SWEEP-10 positive, owner ratified 2026-11-18) -----------------------------------------
+// The "sample" instrument is a HOST for the user's samples: a note plays the user's audio file (loaded by the
+// AssetStore, the audio clips' path), with no sound source of its own — no oscillator, no filter, no synthesis.
+// The files are generated here. «sampler = host de samples do utilizador, sem fontes de som próprias.»
+
+namespace {
+// A song with one sample-host track: one zone over the whole keyboard, the given notes and host params.
+json sampleHostSong(const std::string& path, const json& notes, const json& params = json::object(),
+                    double loopStart = 0, double loopEnd = 0, int rootKey = 60) {
+  json zone = {{"file", path}, {"rootKey", rootKey}, {"loKey", 0}, {"hiKey", 127}};
+  if (loopEnd > 0) { zone["loopStart"] = loopStart; zone["loopEnd"] = loopEnd; }
+  json track = {{"id", "kick"}, {"name", "Kick"}, {"instrument", "sample"}, {"params", params},
+                {"samples", json::array({zone})}, {"patternTicks", 4 * kPpq}, {"notes", notes}};
+  // One bar: the pattern plays once, so the silence after the file's end is not another repeat.
+  return {{"format", kProjectFormat}, {"version", 2}, {"name", "sample-host"}, {"bpm", 150.0},
+          {"lengthTicks", 4 * kPpq}, {"masterGainDb", 0}, {"tracks", json::array({track})}};
+}
+const json oneHit = json::array({{{"tick", 0}, {"length", 240}, {"pitch", 60}, {"velocity", 1.0}}});
+}  // namespace
+
+TEST("sample host: a note plays the user's file at its level, to the file's end (not silence)") {
+  const std::string path = writeSine("host-sine.wav", 440, 0.2, 0.5f);
+  Project p = fromJson(sampleHostSong(path, oneHit));
+  CHECK_EQ(p.tracks[0].instrument, std::string("sample"));  // the host, not projected to a silent "none"
+  CHECK_EQ(toJson(p)["tracks"][0]["samples"].size(), (size_t)1);  // the zone survives the load
+  AssetStore assets;
+  RenderResult r = renderProject(p, kSr, 512, false, 0.1, nullptr, &assets, nullptr, 0);
+  CHECK(allFinite(r.L) && allFinite(r.R));
+  CHECK(r.peak > 0.1f);           // the user's file sounds: the render is not silence
+  CHECK_NEAR(r.peak, 0.5, 0.02);  // velocity 1, level 0 dB, master 0 dB: the file's own peak
+  // The one-shot plays to the file's end (0.2 s), past the note's gate (240 ticks = 0.1 s at 150 BPM):
+  // the file's own tail is the sound. After it, silence.
+  CHECK_NEAR(peakOf(std::vector<float>(r.L.begin() + (size_t)(0.15 * kSr), r.L.begin() + (size_t)(0.19 * kSr))), 0.5, 0.02);
+  CHECK_NEAR(peakOf(std::vector<float>(r.L.begin() + (size_t)(0.21 * kSr), r.L.end())), 0, 1e-6);
+}
+
+TEST("sample host: the level and the velocity scale the file's gain") {
+  const std::string path = writeSine("host-level.wav", 440, 0.2, 0.5f);
+  AssetStore assets;
+  RenderResult a = renderProject(fromJson(sampleHostSong(path, oneHit)), kSr, 512, false, 0.05, nullptr, &assets, nullptr, 0);
+  RenderResult b = renderProject(fromJson(sampleHostSong(path, oneHit, {{"level", -6.0206}})), kSr, 512, false, 0.05, nullptr, &assets, nullptr, 0);
+  const json halfVel = json::array({{{"tick", 0}, {"length", 240}, {"pitch", 60}, {"velocity", 0.5}}});
+  RenderResult c = renderProject(fromJson(sampleHostSong(path, halfVel)), kSr, 512, false, 0.05, nullptr, &assets, nullptr, 0);
+  CHECK(a.peak > 0.1f);
+  CHECK_NEAR(b.peak / a.peak, 0.5, 0.01);  // -6 dB: half the level
+  CHECK_NEAR(c.peak / a.peak, 0.5, 0.01);  // velocity 0.5: half the level
+}
+
+TEST("sample host: a pitched zone follows the key (an octave up reads twice as fast)") {
+  const std::string path = writeSine("host-pitch.wav", 440, 0.2, 0.5f);
+  const json up = json::array({{{"tick", 0}, {"length", 240}, {"pitch", 72}, {"velocity", 1.0}}});
+  AssetStore assets;
+  // pitched 1: the note at 72 (root 60) reads the file at double rate: it ends in 0.1 s, an octave up.
+  RenderResult r = renderProject(fromJson(sampleHostSong(path, up, {{"pitched", 1}})), kSr, 512, false, 0.05, nullptr, &assets, nullptr, 0);
+  CHECK(r.peak > 0.1f);
+  CHECK_NEAR(peakOf(std::vector<float>(r.L.begin() + (size_t)(0.05 * kSr), r.L.begin() + (size_t)(0.09 * kSr))), 0.5, 0.02);
+  CHECK_NEAR(peakOf(std::vector<float>(r.L.begin() + (size_t)(0.11 * kSr), r.L.end())), 0, 1e-6);
+  // pitched 0 (the default): every key plays the file as it is (a drum hit), the full 0.2 s.
+  RenderResult d = renderProject(fromJson(sampleHostSong(path, up)), kSr, 512, false, 0.05, nullptr, &assets, nullptr, 0);
+  CHECK_NEAR(peakOf(std::vector<float>(d.L.begin() + (size_t)(0.15 * kSr), d.L.begin() + (size_t)(0.19 * kSr))), 0.5, 0.02);
+}
+
+TEST("sample host: a held zone loops while the note is held and releases after it") {
+  const std::string path = writeSine("host-loop.wav", 440, 0.2, 0.5f);
+  // The zone loops 0.05..0.15 s of the file; the note holds 2 beats (0.8 s at 150 BPM).
+  const json held = json::array({{{"tick", 0}, {"length", 2 * kPpq}, {"pitch", 60}, {"velocity", 1.0}}});
+  AssetStore assets;
+  RenderResult r = renderProject(fromJson(sampleHostSong(path, held, json::object(), 0.05, 0.15)), kSr, 512, false, 0.05, nullptr, &assets, nullptr, 0);
+  CHECK(r.peak > 0.1f);
+  // Past the file's own end (0.2 s) the loop keeps sounding while the note is held (0.3..0.7 s).
+  CHECK_NEAR(peakOf(std::vector<float>(r.L.begin() + (size_t)(0.3 * kSr), r.L.begin() + (size_t)(0.7 * kSr))), 0.5, 0.02);
+  // After the note-off (0.8 s) and the release (30 ms default), silence.
+  CHECK_NEAR(peakOf(std::vector<float>(r.L.begin() + (size_t)(0.85 * kSr), r.L.end())), 0, 1e-6);
+}
+
+TEST("sample host: the block size does not change the render") {
+  const std::string path = writeSine("host-block.wav", 220, 0.3, 0.4f);
+  const json notes = json::array({{{"tick", 0}, {"length", 240}, {"pitch", 60}, {"velocity", 0.9}},
+                                  {{"tick", 480}, {"length", 240}, {"pitch", 67}, {"velocity", 0.7}}});
+  Project p = fromJson(sampleHostSong(path, notes, {{"pitched", 1}}));
+  AssetStore assets;
+  RenderResult ref = renderProject(p, kSr, 512, false, 0.05, nullptr, &assets, nullptr, 0);
+  CHECK(ref.peak > 0.1f);
+  for (int block : {1, 64, 333, 1024}) {
+    RenderResult r = renderProject(p, kSr, block, false, 0.05, nullptr, &assets, nullptr, 0);
+    CHECK_EQ(r.L.size(), ref.L.size());
+    double worst = 0;
+    for (size_t i = 0; i < r.L.size() && i < ref.L.size(); ++i) worst = std::max(worst, (double)std::fabs(r.L[i] - ref.L[i]));
+    CHECK_NEAR(worst, 0, 0);
+  }
+}
+
+TEST("sample host: a missing file is silent and reported, the song plays on") {
+  const std::string gone = (tempDir() / "host-gone.wav").string();
+  Project p = fromJson(sampleHostSong(gone, oneHit));
+  AssetStore assets;
+  Graph g(p, kSr, &assets);
+  CHECK(!g.missingAssets().empty());  // reported, never dropped in silence
+  std::vector<float> L(512), R(512);
+  g.process(L.data(), R.data(), 512, 0, false);
+  CHECK(allFinite(L));
+  CHECK_NEAR(peakOf(L), 0, 0);
+}
+
 // --- Loop e mudanca de tempo (sweep: o loop era convertido duas vezes) ------------------------------------------
 
 TEST("loop: posto no tempo novo antes de o audio aplicar o grafo novo nao e convertido outra vez") {

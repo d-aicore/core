@@ -8,8 +8,11 @@
 #include <share.h>
 #endif
 #include "support/check.hpp"
+#include "support/signals.hpp"
+#include "core/assets.hpp"
 #include "core/project.hpp"
 #include "core/server.hpp"
+#include "io/wav.hpp"
 #include "edit.hpp"
 #include "history.hpp"
 #include "pattern_rack.hpp"
@@ -501,13 +504,13 @@ TEST("BUG-SWEEP-09 characterization: every built-in catalogue role adds a silent
   }
 }
 
-// BUG-SWEEP-10 (2026-11-18): setTrackSample installed the removed built-in sampler (kind "builtin", name
+// BUG-SWEEP-10 (2026-11-18): setTrackSample used to install the removed built-in sampler (kind "builtin", name
 // "sampler"), which the engine projects as "none" (silent). On a track played by a plugin it overwrote the
 // working plugin and erased its instrument automation — a silent replacement of a working sound (PROD :113:
 // "Falta de plugin é explícita; não é substituída silenciosamente por som próprio"). A sample assignment on a
-// plugin track is refused; the plugin and its state survive. A silent "none" track and a legacy built-in track
-// still take a sample (legacy load preserved). The positive target for a plugin track (audio clip vs an external
-// plugin sampler) is an owner decision; the guard ships now.
+// plugin track is refused; the plugin and its state survive. A silent "none" track takes the sample as the
+// user-sample host (kind "sample") that PLAYS the user's file — the positive behaviour the owner ratified on
+// 2026-11-18 («sampler = host de samples do utilizador, sem fontes de som próprias.»), proven below.
 TEST("BUG-SWEEP-10: assigning a sample never replaces a working plugin instrument with the removed sampler") {
   Document d = newEmptyDocument();
   const json synth = {{"id", "synth-a"}, {"file", "synth-a.vst3"}, {"name", "Synth A"}, {"state", "QQ=="}};
@@ -522,11 +525,12 @@ TEST("BUG-SWEEP-10: assigning a sample never replaces a working plugin instrumen
   CHECK_EQ(d.findTrack(id)->instrument.kind, std::string("plugin"));
   CHECK(d.findTrack(id)->instrument.plugin == pluginBefore);
   CHECK(d.findTrack(id)->instrument.samples.empty());
-  // A silent "none" track still takes the sample (the legacy behaviour, preserved).
+  // A silent "none" track still takes the sample: it becomes the user-sample host (kind "sample") that plays
+  // the user's file (BUG-SWEEP-10 positive, owner ratified 2026-11-18) — never the removed silent built-in.
   Document legacy = newEmptyDocument();
   const std::string lid = addTrack(legacy, "kick");
   setTrackSample(legacy, lid, index, s);
-  CHECK_EQ(legacy.findTrack(lid)->instrument.kind, std::string("builtin"));
+  CHECK_EQ(legacy.findTrack(lid)->instrument.kind, std::string("sample"));
   CHECK_EQ(legacy.findTrack(lid)->instrument.name, std::string("sampler"));
 }
 
@@ -545,10 +549,67 @@ TEST("BUG-SWEEP-10: suggested samples keep a plugin role track's plugin (the bul
   SampleIndex index; index.root = "D:/Samples"; index.samples.push_back(s);
   const std::vector<std::string> changed = applySuggestedSamples(d, index, "Dark psycore", 0);
   CHECK_EQ(d.findTrack(pid)->instrument.kind, std::string("plugin"));  // kept, never replaced
-  // The silent track takes the sample: proves the sample is good enough, so the plugin track was skipped on
-  // purpose (not because nothing fitted).
-  CHECK_EQ(d.findTrack(nid)->instrument.kind, std::string("builtin"));
+  // The silent track takes the sample (the user-sample host): proves the sample is good enough, so the plugin
+  // track was skipped on purpose (not because nothing fitted).
+  CHECK_EQ(d.findTrack(nid)->instrument.kind, std::string("sample"));
   CHECK(!changed.empty());
+}
+
+// BUG-SWEEP-10 positive (owner ratified 2026-11-18: «sampler = host de samples do utilizador, sem fontes de som
+// próprias.»): a library sample on an unassigned track creates a USER-SAMPLE HOST (kind "sample") that PLAYS the
+// user's audio file through the engine's audio path — no synthesis, no own sound source. The track keeps its
+// notes; the projection carries the host and its zones; the render is the file's sound, not silence. The guard
+// that refuses a plugin track stays (the working plugin is never overwritten).
+TEST("BUG-SWEEP-10 positive: a sample on a none track becomes a user-sample host that plays the user's file") {
+  // A generated user sample in a temporary library: 0.2 s of a 440 Hz sine at 0.5 (no fixture in the repo).
+  const fs::path root = tempDir() / "sample-host-lib";
+  fs::create_directories(root);
+  const fs::path file = root / "kick.wav";
+  const auto wave = coretest::sine(440, 48000, 9600, 0.5f);
+  core::writeWav(file.string(), wave, wave, 48000, 32);
+  SampleIndex index = scanLibrary(root);
+  CHECK_EQ(index.samples.size(), (size_t)1);
+  const LibrarySample& sample = index.samples.front();
+
+  Document d = newEmptyDocument();
+  d.masterGainDb = 0;  // the render proves the host's level, not the empty song's headroom
+  const std::string id = addTrack(d, "kick");  // kind "none": its notes wait for a sound
+  Note n; n.id = "n1"; n.tick = 2 * kPpq; n.length = kPpq; n.pitch = 36; n.velocity = 1.0;
+  trackById(d, id).patterns[0].notes.push_back(n);
+  setTrackSample(d, id, index, sample);
+  const Track& host = *d.findTrack(id);
+  CHECK_EQ(host.instrument.kind, std::string("sample"));  // the user-sample host, not the removed built-in
+  CHECK_EQ(host.instrument.name, std::string("sampler"));
+  CHECK_EQ(host.instrument.samples.size(), (size_t)1);
+  CHECK_EQ(host.instrument.samples.front().sha256, sample.sha256);  // the user's file, by content
+  CHECK_EQ(host.instrument.samples.front().file, sample.file);
+  // No synthesis: none of the removed sampler's sound-source knobs (oscillator/filter) on the host.
+  CHECK(host.instrument.params.count("cutoff") == 0);
+  CHECK(host.instrument.params.count("filterType") == 0);
+  CHECK(host.instrument.params.count("resonance") == 0);
+  CHECK(host.instrument.synth.is_null());
+  // Save and reopen keeps the host and its zones (legacy load path unchanged).
+  CHECK_EQ(canon(parseDocument(toJson(d))), canon(d));
+  // The projection carries the host and its zones to the engine's audio/sample path.
+  const json proj = toProjection(d);
+  CHECK_EQ(proj["tracks"][0]["instrument"].get<std::string>(), std::string("sample"));
+  CHECK_EQ(proj["tracks"][0]["samples"].size(), (size_t)1);
+  CHECK_EQ(proj["tracks"][0]["samples"][0]["file"].get<std::string>(), sample.file);
+  // The engine plays the user's file: the render is the sample's sound (peak > 0), not silence. The note is
+  // at beat 2 (0.827 s at 145 BPM): before it, silence; the file at 0.5 with the host's level near 0 dB.
+  core::Project p = core::fromJson(proj);
+  core::AssetStore assets;
+  core::RenderResult r = core::renderProject(p, 48000, 512, false, 0.1, nullptr, &assets, nullptr, 0);
+  CHECK(coretest::allFinite(r.L) && coretest::allFinite(r.R));
+  CHECK(r.peak > 0.1f);
+  CHECK_NEAR(r.peak, 0.5, 0.05);
+  const int64_t noteStart = (int64_t)(2 * kPpq * core::samplesPerTick(145, 48000));
+  CHECK_NEAR(coretest::peakOf(std::vector<float>(r.L.begin(), r.L.begin() + (size_t)noteStart)), 0, 1e-6);
+  // A plugin track is still refused: the interim guard stays, the working plugin is never overwritten.
+  Document pd = newEmptyDocument();
+  const std::string pid = addPluginTrack(pd, {{"id", "synth-a"}, {"file", "synth-a.vst3"}, {"name", "Synth A"}});
+  CHECK_THROWS(setTrackSample(pd, pid, index, sample));
+  CHECK_EQ(pd.findTrack(pid)->instrument.kind, std::string("plugin"));
 }
 
 // BUG-SWEEP-11 (2026-11-18): the Randomize sound menu item was enabled for any styled song, but the sound axis

@@ -78,6 +78,14 @@ struct AudioClip {
   double pitchSemitones = 0, freezeSeconds = 0;
 };
 
+// A zone of the user-sample host (instrument "sample", BUG-SWEEP-10 positive, owner ratified 2026-11-18):
+// a key range and the user's audio file. The host PLAYS the file on notes — no sound source of its own.
+struct SampleZone {
+  std::string file;            // UTF-8, absolute (the app resolves the library's files)
+  int rootKey = 60, loKey = 0, hiKey = 127;
+  double loopStart = 0, loopEnd = 0;  // seconds into the file; loopEnd 0 = a one-shot (plays to the end)
+};
+
 // M7a: a copy of a track's signal into a bus. Post-fader (after gain and pan) unless pre: then right
 // after the inserts, before the fader. A muted track sends nothing.
 struct Send {
@@ -120,7 +128,7 @@ const std::vector<std::string>& modulatorShapes();
 struct Track {
   std::string id;
   std::string name;
-  std::string instrument;               // "none" (waits for a plugin) | "plugin" (VST3) | "audio" | "bus"; an older song's kick/wave/hats/drums/sampler loads as "none" with a load note
+  std::string instrument;               // "none" (waits for a plugin) | "plugin" (VST3) | "sample" (user-sample host) | "audio" | "bus"; an older song's kick/wave/hats/drums/sampler loads as "none" with a load note
   std::map<std::string, double> params; // instrument parameters (unknown keys rejected)
   // Version of the built-in instrument's sound. An update that changes the sound gets a new number and
   // keeps the old one playable, so old songs never change silently. (Same rule as plugin.version.)
@@ -137,6 +145,7 @@ struct Track {
   // pattern looping from the song start). The native app always sends clips.
   std::vector<Clip> clips;
   std::vector<AudioClip> audioClips;    // instrument == "audio"; overlapping clips add up
+  std::vector<SampleZone> samples;      // instrument == "sample": the host's zones (the first holding a key plays)
   // instrument == "plugin": which plugin plays this track and its saved state. Kept as data, so a
   // project opens even when the plugin is not installed ("missing instrument"): notes stay, sound is silent.
   // {format: "vst3" | "clap" | "core", id: "<class id>", name, vendor, version: "<x.y.z used when saved>",

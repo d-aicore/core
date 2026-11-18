@@ -1286,7 +1286,7 @@ int fitToSampler(Document& doc, const std::vector<PCoreTarget>& targets, int64_t
   int moved = 0;
   for (const auto& tg : targets) {
     const Track* t = findTrackPtr(doc, tg.trackId);
-    if (!t || t->instrument.kind != "builtin" || t->instrument.name != "sampler" || t->instrument.samples.empty()) continue;
+    if (!t || (t->instrument.kind != "builtin" && t->instrument.kind != "sample") || t->instrument.name != "sampler" || t->instrument.samples.empty()) continue;
     auto plays = [&](int key) {
       for (const auto& s : t->instrument.samples) if (key >= s.loKey && key <= s.hiKey) return true;
       return false;

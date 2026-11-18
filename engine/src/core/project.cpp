@@ -231,6 +231,14 @@ json toJson(const Project& p) {
       }
     }
     if (t.instrument == "bus") { track.erase("params"); track.erase("instrumentVersion"); track.erase("notes"); }
+    if (t.instrument == "sample") {
+      track["samples"] = json::array();
+      for (const auto& z : t.samples) {
+        json zone = {{"file", z.file}, {"rootKey", z.rootKey}, {"loKey", z.loKey}, {"hiKey", z.hiKey}};
+        if (z.loopEnd > 0) { zone["loopStart"] = z.loopStart; zone["loopEnd"] = z.loopEnd; }  // only when set
+        track["samples"].push_back(zone);
+      }
+    }
     if (!t.output.empty()) track["output"] = t.output;  // older songs stay as they were
     if (!t.modulators.empty()) {
       track["modulators"] = json::array();
@@ -536,6 +544,13 @@ Track trackFromJson(const json& input) {
     t.plugin = validatePlugin(tv.value("plugin", json()));
   } else if (!hasNoInstrumentParams(t.instrument)) {
     for (const auto& s : specs) t.params[s.name] = s.def;
+    // The set values over the defaults (the user-sample host's playback controls), clamped to their range;
+    // an unknown or odd parameter is left out (the default plays), as an effect's are.
+    if (tv.contains("params") && tv["params"].is_object())
+      for (auto it = tv["params"].begin(); it != tv["params"].end(); ++it) {
+        auto spec = std::find_if(specs.begin(), specs.end(), [&](const ParamSpec& s) { return it.key() == s.name; });
+        if (spec != specs.end() && it.value().is_number()) t.params[it.key()] = clampd(it.value().get<double>(), spec->min, spec->max);
+      }
   }
   if (tv.contains("effects") && !tv["effects"].is_null()) t.effects = effectsFromJson(tv["effects"]);
   // One version of each instrument (2026-11-09): what an older version needed was migrated above; it plays the current sound.
@@ -605,7 +620,34 @@ Track trackFromJson(const json& input) {
       }
     }
   }
-  if (tv.contains("samples") && tv["samples"].is_array() && !tv["samples"].empty())
+  if (t.instrument == "sample") {
+    // The user-sample host (BUG-SWEEP-10 positive): its zones are the user's files, the sound it plays.
+    if (!tv.contains("samples") || !tv["samples"].is_array() || tv["samples"].empty())
+      throw std::runtime_error("a sample host needs its samples (the user's audio files).");
+    if (tv["samples"].size() > 128) throw std::runtime_error("samples must be a list (max 128).");
+    int index = 0;
+    for (const auto& zv : tv["samples"]) {
+      ++index;
+      try {
+        if (!zv.is_object()) throw std::runtime_error("not an object.");
+        SampleZone z;
+        z.file = str(zv, "file", "");
+        if (z.file.empty()) throw std::runtime_error("file is required.");
+        z.rootKey = whole(zv, "rootKey", 60, 0, 127, "rootKey must be 0-127.");
+        z.loKey = whole(zv, "loKey", 0, 0, 127, "loKey must be 0-127.");
+        z.hiKey = whole(zv, "hiKey", 127, 0, 127, "hiKey must be 0-127.");
+        if (z.loKey > z.hiKey) throw std::runtime_error("hiKey must not be below loKey.");
+        z.loopStart = num(zv, "loopStart", 0);
+        z.loopEnd = num(zv, "loopEnd", 0);
+        if (!(z.loopStart >= 0) || !(z.loopEnd >= 0) || z.loopEnd > 3600) throw std::runtime_error("invalid loop.");
+        if (z.loopEnd > 0 && z.loopEnd < z.loopStart + 0.002) throw std::runtime_error("loopEnd must be at least 2 ms after loopStart.");
+        if (z.loopEnd == 0 && z.loopStart > 0) throw std::runtime_error("loopEnd is needed with loopStart (0: no loop).");
+        t.samples.push_back(std::move(z));
+      } catch (const std::exception& e) {
+        throw std::runtime_error("sample " + std::to_string(index) + ": " + e.what());
+      }
+    }
+  } else if (tv.contains("samples") && tv["samples"].is_array() && !tv["samples"].empty())
     t.loadNotes.push_back("the sampler's sounds are not played any more (Core's sound comes from plugins)");
   if (t.instrument == "audio" && (!t.notes.empty() || !t.clips.empty())) throw std::runtime_error("an audio track has audio clips, not notes.");
   if (t.instrument == "bus" && (!t.notes.empty() || !t.clips.empty() || !t.audioClips.empty()))

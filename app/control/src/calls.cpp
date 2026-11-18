@@ -390,7 +390,7 @@ json songJson(const doc::Document& song, const doc::SampleIndex* samples) {
   json tracks = json::array();
   for (const auto& t : song.tracks) {
     std::string sound;
-    if (t.instrument.kind == "builtin" && t.instrument.name == "sampler" && !t.instrument.samples.empty())
+    if ((t.instrument.kind == "builtin" || t.instrument.kind == "sample") && t.instrument.name == "sampler" && !t.instrument.samples.empty())
       sound = "sampler: " + (samples ? doc::shownName(*samples, t.instrument.samples.front()) : t.instrument.samples.front().name);
     else sound = t.instrument.kind + (t.instrument.name.empty() ? "" : " " + t.instrument.name);
     json devices = json::array();
