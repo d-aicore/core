@@ -131,6 +131,7 @@ std::string systemError(unsigned long code) {
 }
 
 ReplaceStep replaceStep = systemReplace;
+WriteFault writeFault = nullptr;
 
 // Puts the written temporary file in the target's place. When it throws with previousFileIntact, the target is as
 // it was and the temporary file may go; otherwise the temporary file is the only copy of the new version and stays.
@@ -162,6 +163,11 @@ void replaceWith(const fs::path& temporary, const fs::path& target) {
 } // namespace
 
 void setReplaceStepForTests(ReplaceStep step) { replaceStep = step ? step : systemReplace; }
+
+void setWriteFaultForTests(WriteFault fault) { writeFault = fault; }
+void writeFaultForTests(std::ostream& out, const fs::path& file) {
+  if (writeFault) writeFault(out, file);
+}
 
 fs::path backupPath(const fs::path& path) { return withSuffix(path, ".bak"); }
 
@@ -211,6 +217,7 @@ void writeFileSafely(const std::string& text, const fs::path& path, const std::f
       std::ofstream out(temporary, std::ios::binary | std::ios::trunc);
       if (!out) throw SaveError("Cannot write in " + show(path.parent_path()) + ".");
       out << text;
+      writeFaultForTests(out, temporary);  // test-only seam: no fault is set outside the tests
       out.close();
       if (!out) throw SaveError("Writing " + show(temporary) + " failed (disk full?).");
     }

@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <functional>
+#include <iosfwd>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -46,6 +47,15 @@ std::filesystem::path backupPath(const std::filesystem::path& path);  // "<file>
 using ReplaceStep = unsigned long (*)(const std::filesystem::path& target, const std::filesystem::path& temporary,
                                       const std::filesystem::path& backup);
 void setReplaceStepForTests(ReplaceStep step);
+
+// For the tests (BUG-SWEEP-16): a fault in the write path, to simulate a disk that fails at the final flush,
+// after the file was opened and written. The safe write calls it with the open stream and the file it is
+// writing, after the bytes are in the stream and before the stream is closed; a fault may flush the stream
+// and then empty the file, as a failed flush leaves it. With no fault set (always, outside the tests) the
+// call does nothing: no production behaviour changes. nullptr clears the fault.
+using WriteFault = void (*)(std::ostream& out, const std::filesystem::path& file);
+void setWriteFaultForTests(WriteFault fault);
+void writeFaultForTests(std::ostream& out, const std::filesystem::path& file);
 
 // What a file was when this window last read or wrote it, to see at the next Save whether somebody else (another
 // window of Core, another program) wrote it meanwhile. Its content decides (the size, then the SHA-256): a file that

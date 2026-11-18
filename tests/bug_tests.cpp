@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include "support/check.hpp"
 #include "assets.hpp"
 #include "edit.hpp"
@@ -11,6 +12,7 @@
 #include "pattern_rack.hpp"
 #include "pattern_tools.hpp"
 #include "pcore.hpp"
+#include "roles.hpp"
 #include "samples.hpp"
 #include "stutter.hpp"
 #include "storage.hpp"
@@ -64,6 +66,24 @@ fs::path songWithAudio(const fs::path& dir, const std::string& name, int16_t val
   fs::remove(source);
   if (out) *out = d;
   return assetFile(*d.findAsset(asset), dir);
+}
+
+// BUG-SWEEP-16: the disk fails at the final flush, after the file was opened and written. The bytes reach
+// the system and are then lost: what is on disk is an empty file, while the stream itself reports no error.
+void lateFlushFault(std::ostream& out, const fs::path& file) {
+  out.flush();
+  std::ofstream lost(file, std::ios::binary | std::ios::trunc);
+}
+struct WriteFaultAgain { ~WriteFaultAgain() { setWriteFaultForTests(nullptr); } };
+std::string bytesIn(const fs::path& file) {
+  std::ifstream in(file, std::ios::binary);
+  return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+}
+// Every regular file under the folder is non-empty: no truncated file left behind.
+bool noEmptyFileUnder(const fs::path& dir) {
+  for (auto it = fs::recursive_directory_iterator(dir); it != fs::recursive_directory_iterator(); ++it)
+    if (it->is_regular_file() && fs::file_size(it->path()) == 0) return false;
+  return true;
 }
 }  // namespace
 
@@ -1197,6 +1217,116 @@ TEST("sweep-28: unambiguous name-only and part-only matches keep working") {
   if (!pk || !pd || pk->notes.empty() || pd->notes.empty()) return;
   CHECK_EQ(pk->notes[0].pitch, 60);  // name-only: the part is unknown on both sides
   CHECK_EQ(pd->notes[0].pitch, 36);  // part-only: the names do not match
+}
+
+// BUG-SWEEP-16 (work preservation): the preset/template/roles writers answered success with an empty file
+// when the write failed late (after the open, at the flush/close), over what the user had. Each case here
+// failed before the fix: no exception, and an empty file on disk.
+TEST("write safety BUG-SWEEP-16: a late write failure on a pattern preset throws and leaves no empty file") {
+  const fs::path dir = freshDir("ws16-preset");
+  PatternPreset first;
+  first.id = "mine/first";
+  first.name = "First";
+  first.lengthTicks = kBar;
+  Note n;
+  n.id = "n1"; n.tick = 0; n.length = 480; n.pitch = 36; n.velocity = 1.0;
+  first.notes.push_back(n);
+  const PatternPreset saved = savePatternPreset(dir, first, {});
+  const std::string before = bytesIn(saved.file);
+  CHECK(!before.empty());
+  PatternPreset next = first;
+  next.id = "mine/second";
+  next.name = "Second";
+  bool threw = false;
+  {
+    WriteFaultAgain restore;
+    setWriteFaultForTests(lateFlushFault);
+    try { savePatternPreset(dir, next, {saved}); } catch (const DocumentError&) { threw = true; }
+  }
+  CHECK(threw);  // before: success, and an empty .json left in the library
+  CHECK_EQ(bytesIn(saved.file), before);  // the preset already in the folder, byte for byte
+  CHECK(!fs::exists(dir / "mine" / "second.json"));  // no empty file at the new path
+  CHECK(noEmptyFileUnder(dir));
+  std::vector<std::string> problems;
+  CHECK_EQ(loadPatternLibrary({{"user", dir}}, &problems).size(), (size_t)1);
+  CHECK(problems.empty());
+  // The normal path still works afterwards: the new preset is written and reads back.
+  const PatternPreset ok = savePatternPreset(dir, next, {saved});
+  CHECK(fs::file_size(ok.file) > 0);
+  CHECK_EQ(loadPatternLibrary({{"user", dir}}, &problems).size(), (size_t)2);
+  CHECK(problems.empty());
+}
+
+TEST("write safety BUG-SWEEP-16: a late write failure on a rack template throws and leaves no empty file") {
+  const fs::path dir = freshDir("ws16-template");
+  PatternTemplate keep;
+  keep.id = "keep";
+  keep.name = "Keep";
+  keep.bpm = 140;
+  keep.bars = 2;
+  PatternTemplateRow row;
+  row.part = "kick";
+  row.name = "Kick";
+  row.lengthTicks = 2 * kBar;
+  Note n;
+  n.tick = 0; n.length = 240; n.pitch = 36; n.velocity = 0.9;
+  row.notes.push_back(n);
+  keep.rows.push_back(row);
+  const fs::path keepFile = saveRackTemplate(dir, keep);
+  const std::string before = bytesIn(keepFile);
+  CHECK(!before.empty());
+  PatternTemplate t = keep;
+  t.id = "mine";
+  t.name = "Mine";
+  bool threw = false;
+  {
+    WriteFaultAgain restore;
+    setWriteFaultForTests(lateFlushFault);
+    try { saveRackTemplate(dir, t); } catch (const DocumentError&) { threw = true; }
+  }
+  CHECK(threw);  // before: success, with an empty template file
+  CHECK_EQ(bytesIn(keepFile), before);  // the template already in the folder, byte for byte
+  CHECK(!fs::exists(dir / ("mine" + std::string(kRackTemplateExtension))));  // no empty file at the new path
+  CHECK(noEmptyFileUnder(dir));
+  std::vector<std::string> problems;
+  CHECK_EQ(loadRackTemplates(dir, &problems).size(), (size_t)1);
+  CHECK(problems.empty());
+  // The normal path still works afterwards.
+  const fs::path ok = saveRackTemplate(dir, t);
+  CHECK(fs::file_size(ok) > 0);
+  CHECK_EQ(loadRackTemplates(dir, &problems).size(), (size_t)2);
+  CHECK(problems.empty());
+}
+
+TEST("write safety BUG-SWEEP-16: a late write failure on the roles file throws and the previous map stays byte-identical") {
+  const fs::path dir = freshDir("ws16-roles");
+  const fs::path file = dir / "roles.json";
+  const json plugin = {{"format", "vst3"}, {"id", "VST3-Room-1234"}, {"name", "Room"}, {"file", "C:/VST3/Room.vst3"}};
+  RoleMap first;
+  first.roles["reverb"] = {plugin, {{"mix", "0"}}, {}};
+  saveRoleMap(first, file);
+  const std::string before = bytesIn(file);
+  CHECK(!before.empty());
+  RoleMap next = first;
+  next.roles["delay"] = {plugin, {{"mix", "3"}}, {}};
+  bool threw = false;
+  {
+    WriteFaultAgain restore;
+    setWriteFaultForTests(lateFlushFault);
+    try { saveRoleMap(next, file); } catch (const DocumentError&) { threw = true; }
+  }
+  CHECK(threw);  // before: success, and the roles file emptied
+  CHECK_EQ(bytesIn(file), before);  // the user's roles, byte for byte
+  CHECK(!fs::exists(fs::path(file.string() + ".tmp")));
+  CHECK(noEmptyFileUnder(dir));
+  std::string problem;
+  CHECK_EQ(loadRoleMap(file, &problem).roles.size(), (size_t)1);  // still reads as it was
+  CHECK(problem.empty());
+  // A successful save afterwards keeps the previous map as .bak (before: it was overwritten, no backup).
+  saveRoleMap(next, file);
+  CHECK_EQ(loadRoleMap(file).roles.size(), (size_t)2);
+  CHECK_EQ(bytesIn(backupPath(file)), before);
+  CHECK(noEmptyFileUnder(dir));
 }
 
 CORE_TEST_MAIN
