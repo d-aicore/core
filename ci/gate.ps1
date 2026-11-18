@@ -37,9 +37,17 @@ $log = Join-Path $Build "gate.log"
 $bat = Join-Path $env:TEMP "core-gate.bat"
 @"
 @echo off
+REM Header dependencies (2026-11-18): a localized MSVC printed its /showIncludes prefix in the console code page, Ninja
+REM could not match the prefix CMake had stored, and recorded no header dependency at all - a changed header did not
+REM rebuild the files that include it, and the gate was green on old objects. VSLANG asks for English messages (it is
+REM ignored where the English resources are not installed); the UTF-8 code page makes any language match.
+set VSLANG=1033
+chcp 65001 >nul
 call "$vcvars" > "$Build\vcvars.log" 2>&1 || exit /b 1
 cmake -S "$src" -B "$Build" -G Ninja -DCMAKE_BUILD_TYPE=Release -DCORE_BUILD_TESTS=ON $juceArg || exit /b 1
 cmake --build "$Build" --parallel $Jobs || exit /b 1
+REM A build folder configured before this fix keeps the unmatched prefix in its cache: never a green on it.
+ninja -C "$Build" -t deps | findstr /R /C:"#deps [1-9]" >nul || (echo GATE FAILED: Ninja recorded no header dependencies in "$Build". The folder was configured before the fix of 2026-11-18: delete it and run the gate again. & exit /b 1)
 REM Audit 30: --no-tests=error fecha o verde-falso quando a cache tem CORE_BUILD_TESTS=OFF (medido em Linux: rc 0 -> 8).
 ctest --test-dir "$Build" $label --output-on-failure --timeout 600 --no-tests=error || exit /b 1
 "@ | Set-Content -Encoding ASCII $bat
