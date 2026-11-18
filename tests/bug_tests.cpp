@@ -618,4 +618,62 @@ TEST("BUG-SWEEP-22: a duplicated section starts at its own tempo, boundary ramps
   CHECK_NEAR(bpmAt(e, 4 * kBar), e.bpm, 1e-9);
 }
 
+TEST("BUG-SWEEP-23: swapping sections moves the tempo with the music") {
+  using namespace tempo_sweep;
+  // The probe's song: the map used to stay byte-identical while the music exchanged places.
+  Document d = newEmptyDocument();
+  d.bpm = 120;
+  const std::string a = addSection(d, "A", 0, 4 * kBar);
+  addSection(d, "B", 4 * kBar, 4 * kBar);
+  setTempoMap(d, {{4 * kBar, 240, json::object(), false}});
+  const json mapBefore = toJson(d)["transport"]["tempoMap"];
+  const Document original = d;
+  swapSection(d, a, true);
+  CHECK_EQ(d.sections[0].name, std::string("B"));
+  CHECK_NEAR(bpmAt(d, 0), 240, 1e-9);                               // before the fix: 120 (B's music, A's tempo)
+  CHECK_NEAR(bpmAt(d, 4 * kBar), 120, 1e-9);                        // before the fix: 240
+  CHECK_NEAR(bpmAt(d, 8 * kBar), bpmAt(original, 8 * kBar), 1e-9);  // outside the swap: unchanged
+  CHECK(toJson(d)["transport"]["tempoMap"] != mapBefore);
+  CHECK_NEAR(engineSeconds(d, 4 * kBar), engineSeconds(original, 8 * kBar) - engineSeconds(original, 4 * kBar), 1e-4);
+  CHECK(validSavedForm(d));
+
+  // Unequal lengths (2 bars vs 4) with ramps inside both sections: translation keeps the ramp slopes.
+  Document g = newEmptyDocument();
+  g.bpm = 120;
+  const std::string ga = addSection(g, "A", 0, 2 * kBar);
+  addSection(g, "B", 2 * kBar, 4 * kBar);
+  setTempoMap(g, {{1 * kBar, 180, json::object(), true}, {3 * kBar, 240, json::object(), false}, {5 * kBar, 150, json::object(), true}});
+  const Document gOrig = g;
+  swapSection(g, ga, true);
+  CHECK_NEAR(bpmAt(g, 0), 180, 1e-9);                               // B's effective start becomes the song's start
+  for (int64_t t : {(int64_t)0, (int64_t)kBar, (int64_t)(2 * kBar), (int64_t)(3 * kBar), (int64_t)(4 * kBar - 1)})
+    CHECK_NEAR(bpmAt(g, t), bpmAt(gOrig, t + 2 * kBar), 1e-6);      // B's curve, translated by -aLen
+  CHECK_NEAR(bpmAt(g, 4 * kBar), 120, 1e-9);                        // A's effective start pinned where A lands
+  for (int64_t t : {(int64_t)(4 * kBar), (int64_t)(5 * kBar), (int64_t)(6 * kBar - 1)})
+    CHECK_NEAR(bpmAt(g, t), bpmAt(gOrig, t - 4 * kBar), 1e-6);      // A's curve, translated by +bLen
+  CHECK_NEAR(bpmAt(g, 6 * kBar), bpmAt(gOrig, 6 * kBar), 1e-9);
+  CHECK_NEAR(bpmAt(g, 8 * kBar), bpmAt(gOrig, 8 * kBar), 1e-9);
+  CHECK_NEAR(engineSeconds(g, 4 * kBar), engineSeconds(gOrig, 6 * kBar) - engineSeconds(gOrig, 2 * kBar), 1e-4);
+  CHECK(validSavedForm(g));
+
+  // Swapping with the previous section is the same exchange seen from the other side.
+  Document h = newEmptyDocument();
+  h.bpm = 120;
+  addSection(h, "A", 0, 2 * kBar);
+  const std::string hb = addSection(h, "B", 2 * kBar, 4 * kBar);
+  setTempoMap(h, {{1 * kBar, 180, json::object(), true}, {3 * kBar, 240, json::object(), false}, {5 * kBar, 150, json::object(), true}});
+  swapSection(h, hb, false);
+  CHECK_EQ(toJson(h)["transport"]["tempoMap"].dump(), toJson(g)["transport"]["tempoMap"].dump());
+  CHECK_NEAR(h.bpm, g.bpm, 1e-9);
+
+  // No tempo map: the swap stays sound-neutral.
+  Document e = newEmptyDocument();
+  const std::string ea = addSection(e, "A", 0, 4 * kBar);
+  addSection(e, "B", 4 * kBar, 4 * kBar);
+  const double base = e.bpm;
+  swapSection(e, ea, true);
+  CHECK(e.tempoMap.empty());
+  CHECK_NEAR(e.bpm, base, 1e-9);
+}
+
 CORE_TEST_MAIN

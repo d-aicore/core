@@ -758,8 +758,61 @@ void swapSection(Document& doc, const std::string& sectionId, bool withNext) {
   Section& b = withNext ? *(it + 1) : *it;
   if (a.startTick + a.lengthTicks != b.startTick) throw DocumentError("sections", "only sections that touch can swap");
   const int64_t aStart = a.startTick, bStart = b.startTick, end = b.startTick + b.lengthTicks;
-  for (int64_t at : {aStart, bStart, end}) { splitClipsAt(doc, at); splitAutomationAt(doc, at); }
   const int64_t aLen = bStart - aStart, bLen = end - bStart;
+  // Tempo goes with the music (BUG-SWEEP-23, the policy duplicateSection already follows): each section's
+  // curve moves to the other's place with its effective start value pinned, and the music outside the swap
+  // keeps its curve. Built before anything moves: a map over the cap throws with the song untouched.
+  const double vA = bpmAt(doc, aStart), vB = bpmAt(doc, bStart), vEnd = bpmAt(doc, end);
+  const double vBMinus = bpmAt(doc, bStart - 1), vEndMinus = bpmAt(doc, end - 1);
+  const auto firstFrom = [&](int64_t tick) -> const TempoPoint* {
+    for (const auto& p : doc.tempoMap) if (p.tick >= tick) return &p;
+    return nullptr;
+  };
+  const TempoPoint* atA = firstFrom(aStart);
+  const TempoPoint* atB = firstFrom(bStart);
+  const TempoPoint* atEnd = firstFrom(end);
+  const bool glideAtA = atA && atA->ramp;        // a glide arriving at or crossing aStart
+  const bool glideAtB = atB && atB->ramp;        // ... bStart (the tail of A)
+  const bool glideAtEnd = atEnd && atEnd->ramp;  // ... end (the tail of B)
+  const TempoPoint* afterEnd = nullptr;
+  for (const auto& p : doc.tempoMap) if (p.tick > end) { afterEnd = &p; break; }
+  const bool glideCrossesEnd = afterEnd && afterEnd->ramp;
+  std::vector<TempoPoint> tempo;
+  double baseBpm = doc.bpm;
+  if (!doc.tempoMap.empty()) {
+    const auto taken = [&](int64_t tick) { for (const auto& p : tempo) if (p.tick == tick) return true; return false; };
+    // Before the swapped region: unchanged; a glide crossing aStart keeps its shape up to aStart - 1.
+    for (const auto& p : doc.tempoMap) if (p.tick < aStart) tempo.push_back(p);
+    if (glideAtA && aStart >= 2 && !taken(aStart - 1)) tempo.push_back({aStart - 1, bpmAt(doc, aStart - 1), json::object(), true});
+    // B's music comes first: its curve translated by -aLen, starting at its own effective value.
+    for (const auto& p : doc.tempoMap)
+      if (p.tick > bStart && p.tick < end) tempo.push_back({p.tick - aLen, p.bpm, p.extra, p.ramp});
+    const TempoPoint* atBStart = nullptr;
+    for (const auto& p : doc.tempoMap) if (p.tick == bStart) { atBStart = &p; break; }
+    if (aStart == 0) baseBpm = atBStart ? atBStart->bpm : vB;  // tick 0 is the song's bpm, not a point
+    else if (atBStart) tempo.push_back({aStart, atBStart->bpm, atBStart->extra, false});
+    else tempo.push_back({aStart, vB, json::object(), false});
+    if (glideAtEnd && bLen > 1 && !taken(aStart + bLen - 1))
+      tempo.push_back({aStart + bLen - 1, vEndMinus, json::object(), true});  // B's tail glide, cut at end
+    // A's music follows: its curve translated by +bLen, starting at its own effective value.
+    for (const auto& p : doc.tempoMap)
+      if (p.tick > aStart && p.tick < bStart) tempo.push_back({p.tick + bLen, p.bpm, p.extra, p.ramp});
+    const TempoPoint* atAStart = nullptr;
+    for (const auto& p : doc.tempoMap) if (p.tick == aStart) { atAStart = &p; break; }
+    if (atAStart) tempo.push_back({aStart + bLen, atAStart->bpm, atAStart->extra, false});
+    else tempo.push_back({aStart + bLen, vA, json::object(), false});
+    if (glideAtB && aLen > 1 && !taken(end - 1))
+      tempo.push_back({end - 1, vBMinus, json::object(), true});  // A's tail glide, cut at bStart
+    // After the swapped region: unchanged, with the value the music had at end pinned there.
+    for (const auto& p : doc.tempoMap) if (p.tick == end) tempo.push_back({end, p.bpm, p.extra, false});
+    for (const auto& p : doc.tempoMap) if (p.tick > end) tempo.push_back(p);
+    if (end < doc.lengthTicks && !taken(end) && (glideCrossesEnd || std::abs(vBMinus - vEnd) > 1e-9))
+      tempo.push_back({end, vEnd, json::object(), false});
+    if (tempo.size() > (size_t)kMaxTempoPoints)
+      throw DocumentError("tempoMap", "at most " + std::to_string(kMaxTempoPoints) + " tempo changes");
+    std::sort(tempo.begin(), tempo.end(), [](const TempoPoint& x, const TempoPoint& y) { return x.tick < y.tick; });
+  }
+  for (int64_t at : {aStart, bStart, end}) { splitClipsAt(doc, at); splitAutomationAt(doc, at); }
   for (auto* list : automationLists(doc))
     for (auto& a : *list)
       for (auto& p : a.points) {
@@ -787,6 +840,8 @@ void swapSection(Document& doc, const std::string& sectionId, bool withNext) {
   b.startTick = aStart + bLen;
   b.lengthTicks = aLen;
   sortSections(doc);
+  doc.tempoMap = std::move(tempo);
+  doc.bpm = baseBpm;
 }
 
 // Inserts a copy of the section right after it: everything later moves on, the song gets longer.
