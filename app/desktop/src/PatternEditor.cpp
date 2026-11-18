@@ -228,8 +228,11 @@ PatternEditor::PatternEditor(Host& host) : host_(host) {
   rootBox_.setSelectedId(1, juce::dontSendNotification);
   rootBox_.setTooltip(u8("The scale guide's root key"));
   rootBox_.onChange = [this] { setScaleGuide(rootBox_.getSelectedId() - 1, scaleName_); };
+  noteTools_.setButtonText(u8("Note tools"));
+  noteTools_.setTooltip(u8("Note tools window: Quantize (grid, strength, swing), Humanize, Groove, and the kick/bass tools. Each choice is one Ctrl+Z."));
+  noteTools_.onClick = [this] { openNoteTools(); };
   for (auto* c : std::initializer_list<juce::Component*>{&zoomIn_, &zoomOut_, &patternBox_, &newPattern_, &clearPattern_, &removePattern_, &snap_, &length_, &octaveUp_, &octaveDown_, &title_, &hint_, &addSound_, &pagePrev_, &pageNext_,
-                                                                &drawTool_, &selectTool_, &eraseTool_, &paintTool_, &edit_, &editInfo_, &keysMinus_, &keysPlus_, &fitKeys_, &scaleBox_, &rootBox_}) {
+                                                                &drawTool_, &selectTool_, &eraseTool_, &paintTool_, &edit_, &editInfo_, &keysMinus_, &keysPlus_, &fitKeys_, &scaleBox_, &rootBox_, &noteTools_}) {
     c->setWantsKeyboardFocus(false);
     addAndMakeVisible(c);
   }
@@ -569,7 +572,7 @@ void PatternEditor::documentChanged() {
   length_.setEnabled(editable);
   octaveUp_.setVisible(editable && !drums());
   octaveDown_.setVisible(editable && !drums());
-  for (auto* b : {&keysMinus_, &keysPlus_, &fitKeys_}) b->setVisible(editable && !drums());
+  for (auto* b : {&keysMinus_, &keysPlus_, &fitKeys_, &noteTools_}) b->setVisible(editable && !drums());
   scaleBox_.setVisible(editable && !drums());
   rootBox_.setVisible(editable && !drums() && scaleGuideOn());
   setTooltip(!editable ? juce::String()
@@ -632,6 +635,8 @@ void PatternEditor::resized() {
     row2.removeFromLeft(6);
     scaleBox_.setBounds(row2.removeFromLeft(130).reduced(2));
     if (rootBox_.isVisible()) rootBox_.setBounds(row2.removeFromLeft(52).reduced(2));
+    row2.removeFromLeft(6);
+    noteTools_.setBounds(row2.removeFromLeft(78).reduced(2));
     hint_.setBounds(row2.reduced(4, 0));
     hint_.setVisible(true);
   } else {
@@ -657,26 +662,25 @@ void PatternEditor::fitKeys() {
 }
 
 void PatternEditor::keysMore() {
-  const int before = keysShown();
-  rowsWanted_ = std::clamp(before + 4, kKeysMin, kKeysMax);
-  lowPitch_ = std::clamp(lowPitch_ - (keysShown() - before) / 2, 0, 128 - keysShown());
+  rowsWanted_ = std::clamp(keysShown() + 4, kKeysMin, kKeysMax);
+  lowPitch_ = std::clamp(lowPitch_, 0, 128 - keysShown());
   updateKeysHint();
   repaint();
 }
 
 void PatternEditor::keysLess() {
-  const int before = keysShown();
-  rowsWanted_ = std::clamp(before - 4, kKeysMin, kKeysMax);
-  lowPitch_ = std::clamp(lowPitch_ + (before - keysShown()) / 2, 0, 128 - keysShown());
+  rowsWanted_ = std::clamp(keysShown() - 4, kKeysMin, kKeysMax);
+  lowPitch_ = std::clamp(lowPitch_, 0, 128 - keysShown());
   updateKeysHint();
   repaint();
 }
 
-// Ctrl+wheel: Keys+ / Keys- (the owner's «no piano ctrl+scroll keys+ e keys»), the key under the mouse kept in place.
+// Ctrl+wheel: Keys+ / Keys- (the owner's «no piano ctrl+scroll keys+ e keys»). The range grows up from the lowest
+// key shown and shrinks from the top, so expanding never hides what you were looking at.
 void PatternEditor::keysWheel(float deltaY, int y) {
-  const int under = pitchAtY(y), before = keysShown();
-  rowsWanted_ = std::clamp(before + (deltaY > 0 ? 4 : -4), kKeysMin, kKeysMax);
-  if (under >= 0) lowPitch_ = std::clamp(under - (under - lowPitch_) * keysShown() / std::max(1, before), 0, 128 - keysShown());
+  juce::ignoreUnused(y);
+  rowsWanted_ = std::clamp(keysShown() + (deltaY > 0 ? 4 : -4), kKeysMin, kKeysMax);
+  lowPitch_ = std::clamp(lowPitch_, 0, 128 - keysShown());
   updateKeysHint();
   repaint();
 }
@@ -893,11 +897,6 @@ void PatternEditor::paint(juce::Graphics& g) {
     const bool black = !drums() && juce::String("0101001010100").substring(r[i] % 12, r[i] % 12 + 1) == "1";
     g.setColour(black ? kGridDark : kGridDark.brighter(0.05f));
     g.fillRect(area.getX(), y, area.getWidth(), (int)std::ceil(rowH));
-    // The scale guide: a faint tint on the scale's keys, a stronger one on the root (a guide, never a trap).
-    if (!drums() && scaleGuideOn() && scaleContains(scaleRoot_, scaleName_, r[i])) {
-      g.setColour(kNote.withAlpha(r[i] % 12 == scaleRoot_ ? 0.10f : 0.045f));
-      g.fillRect(area.getX(), y, area.getWidth(), (int)std::ceil(rowH));
-    }
     int labelRight = area.getX() - 6;
     if (!drums()) {
       const float kx = (float)(area.getX() - kKeys - 1), h = std::max(1.0f, rowH);
@@ -906,11 +905,6 @@ void PatternEditor::paint(juce::Graphics& g) {
       if (black) {
         g.setColour(juce::Colour(0xff1c2027));
         g.fillRoundedRectangle(kx, (float)y + 0.5f, kKeys * 0.62f, h - 1.0f, 1.5f);
-      }
-      // The scale guide's root mark: 3 px of the highlight on the root key, every octave.
-      if (scaleGuideOn() && r[i] % 12 == scaleRoot_) {
-        g.setColour(kNote);
-        g.fillRect(kx, (float)y, 3.0f, h);
       }
       // A line between white keys where no black key sits (B|C and E|F), and under every C.
       const int pc = r[i] % 12;
@@ -938,6 +932,21 @@ void PatternEditor::paint(juce::Graphics& g) {
     if (hovered && removableRow(r[i])) {
       g.setColour(kMuted);
       g.drawText(u8("✕"), removeMark(r[i]), juce::Justification::centred);
+    }
+  }
+  // The scale guide, over the rows and the keyboard (after them: with 128 keys in a short grid the rows are
+  // sub-pixel and a later row's fill would overwrite a mark drawn inside the loop). A guide, never a trap.
+  if (!drums() && scaleGuideOn()) {
+    for (size_t i = 0; i < r.size(); ++i) {
+      if (!scaleContains(scaleRoot_, scaleName_, r[i])) continue;
+      const int y = area.getY() + (int)std::round(i * rowH);
+      const bool root = r[i] % 12 == scaleRoot_;
+      g.setColour(kNote.withAlpha(root ? 0.10f : 0.045f));
+      g.fillRect(area.getX(), y, area.getWidth(), (int)std::ceil(rowH));
+      if (root) {  // 3 px of the highlight on the root key, every octave
+        g.setColour(kNote);
+        g.fillRect((float)(area.getX() - kKeys - 1), (float)y, 3.0f, std::max(1.0f, rowH));
+      }
     }
   }
   // Grid lines and notes stay inside the grid (zoomed in, the rest of the pattern is off to the sides).
@@ -1529,9 +1538,9 @@ void PatternEditor::say(const juce::String& text) {
   });
 }
 
-void PatternEditor::quantize() {
+void PatternEditor::quantize(int64_t gridTicks) {
   if (!currentTrack()) return;
-  const int64_t grid = snapTicks();
+  const int64_t grid = gridTicks > 0 ? gridTicks : snapTicks();
   const double strength = quantizeStrength, sw = swing;
   // Nothing moves: say why, so it does not look broken (notes already on a fine grid such as 1/64, or 0 % strength).
   const std::set<std::string> ids = editIds();
@@ -1539,7 +1548,8 @@ void PatternEditor::quantize() {
     doc::Pattern trial = *pattern();
     if (doc::quantizeNotes(trial, ids, grid, strength, sw) == 0) {
       juce::String snapName;
-      for (int id : kSnapOrder) if (id == snap_.getSelectedId()) snapName = kSnapNames[id - 1];
+      for (int id : kSnapOrder) if (kSnaps[id - 1] == grid) snapName = kSnapNames[id - 1];
+      if (snapName.isEmpty()) snapName = lengthName(grid);
       say(strength <= 0 ? u8("Quantize: the strength is 0 %, so nothing moves. Raise Strength first.")
                         : u8("Quantize: the notes are already on the ") + snapName +
                               u8(" grid, so nothing moves. Choose a bigger grid (1/16 or 1/8) to pull them onto it. "
@@ -2372,9 +2382,18 @@ void PatternEditor::zoom(double factor, double at) {
 
 void PatternEditor::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) {
   struct After { PatternEditor& ed; juce::Point<int> p; ~After() { ed.updateHover(p); } } after{*this, e.getPosition()};  // keys or zoom moved under the mouse
+  const bool ctrl = e.mods.isCtrlDown() || e.mods.isCommandDown();
+  // Ctrl+Alt+wheel: fine velocity (±1 %) on the note under the mouse, or the selection when it is selected.
+  if (currentTrack() && ctrl && e.mods.isAltDown()) {
+    const doc::Note* hit = noteAt(e.getPosition(), nullptr);
+    if (!hit && velocityLane().contains(e.getPosition()))
+      for (const auto& n : pattern()->notes)
+        if (const int x0 = xOfTick(n.tick); e.x >= x0 - 2 && e.x <= x0 + 10) { hit = &n; break; }
+    if (hit) wheelVelocityAt(e.x, wheel.deltaY > 0 ? 0.01 : -0.01);
+    return;
+  }
   // Ctrl+Shift+wheel: zoom in or out around the mouse (down to a beat across the grid). Shift+wheel (or a sideways
   // swipe) while zoomed: move along the pattern.
-  const bool ctrl = e.mods.isCtrlDown() || e.mods.isCommandDown();
   if (currentTrack() && ctrl && e.mods.isShiftDown()) {
     zoom(std::pow(2.0, -wheel.deltaY * 2.0), shownStart() + std::clamp((e.x - grid().getX()) / (double)std::max(1, grid().getWidth()), 0.0, 1.0) * shownLength());
     return;
@@ -2383,15 +2402,6 @@ void PatternEditor::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseW
   if (currentTrack() && ctrl) {
     if (!drums()) { keysWheel(wheel.deltaY, e.y); return; }
     zoom(std::pow(2.0, -wheel.deltaY * 2.0), shownStart() + std::clamp((e.x - grid().getX()) / (double)std::max(1, grid().getWidth()), 0.0, 1.0) * shownLength());
-    return;
-  }
-  // Ctrl+Alt+wheel: fine velocity (±1 %) on the note under the mouse, or the selection when it is selected.
-  if (currentTrack() && ctrl && e.mods.isAltDown()) {
-    const doc::Note* hit = noteAt(e.getPosition(), nullptr);
-    if (!hit && velocityLane().contains(e.getPosition()))
-      for (const auto& n : pattern()->notes)
-        if (const int x0 = xOfTick(n.tick); e.x >= x0 - 2 && e.x <= x0 + 10) { hit = &n; break; }
-    if (hit) wheelVelocityAt(e.x, wheel.deltaY > 0 ? 0.01 : -0.01);
     return;
   }
   // Alt+wheel over a note or the velocity lane: its velocity ±5 % (the selection's when the note is selected);
@@ -2405,7 +2415,7 @@ void PatternEditor::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseW
     if (!drums()) {
       const int under = pitchAtY(e.y), before = keysShown();
       rowsWanted_ = std::clamp(before + (wheel.deltaY > 0 ? -2 : 2), kKeysMin, kKeysMax);
-      if (under >= 0) lowPitch_ = std::clamp(under - (under - lowPitch_) * keysShown() / std::max(1, before), 0, 128 - keysShown());
+      if (under >= 0) lowPitch_ = std::clamp((int)std::lround(under - (under - lowPitch_) * (double)keysShown() / std::max(1, before)), 0, 128 - keysShown());
       updateKeysHint();
       repaint();
     }
@@ -2467,5 +2477,153 @@ bool PatternEditor::keyPressed(const juce::KeyPress& key) {
   if (keys.matches("edit.selectAll", key)) { selectAll(); return true; }
   return false;  // the window handles the rest (Space, undo...)
 }
+
+// ---------------------------------------------------------------- Note tools window (the piano roll's button)
+
+// The small window the owner asked for (2026-11-18: «quero uma pequena janela com isto , ou sej um botao no piano
+// que me da estas opçoes, incluindo as do baixo kbbb que ja existem»): Quantize with its grid, position strength and
+// swing, Humanize, Groove (the variations), and Core's kick/bass tools (FOLLOW, transpose). Every button is one
+// undo step through the editor's own tools. The full preview/Apply-Cancel window (Euclidean, Arpeggiator, position
+// window, ends/filters) is the next slice; this one applies immediately, like Edit ▾ does today.
+class NoteToolsPanel final : public juce::Component {
+public:
+  explicit NoteToolsPanel(PatternEditor& ed) : ed_(ed) {
+    for (int id : kSnapOrder) grid_.addItem(kSnapNames[id - 1], id);
+    grid_.setSelectedId(2, juce::dontSendNotification);
+    grid_.setTooltip(u8("The grid Quantize pulls the notes onto"));
+    theme::useBar(strength_);
+    strength_.setRange(0.0, 1.0);
+    strength_.setNumDecimalPlacesToDisplay(2);
+    strength_.setTooltip(u8("How far the notes move towards the grid (0: nothing moves, 1: all the way)"));
+    theme::useBar(swing_);
+    swing_.setRange(0.0, 1.0);
+    swing_.setNumDecimalPlacesToDisplay(2);
+    swing_.setTooltip(u8("Swing applied with Quantize (about 0.33: a triplet feel)"));
+    quantize_.setButtonText(u8("Quantize"));
+    quantize_.onClick = [this] {
+      ed_.quantizeStrength = strength_.getValue();
+      ed_.swing = swing_.getValue();
+      ed_.quantize(gridTicks());
+    };
+    humanize_.setButtonText(u8("Humanize"));
+    humanize_.setTooltip(u8("Small random timing and velocity, one undo step"));
+    humanize_.onClick = [this] { ed_.humanize(); };
+    groove_.addItem(u8("Octave jumps (some notes)"), 1);
+    groove_.addItem(u8("Reverse"), 2);
+    groove_.addItem(u8("Thin out (about one in four)"), 3);
+    groove_.addItem(u8("Accents on the beat"), 4);
+    groove_.setSelectedId(1, juce::dontSendNotification);
+    grooveApply_.setButtonText(u8("Apply groove"));
+    grooveApply_.onClick = [this] {
+      static const char* kinds[] = {"octave", "reverse", "thin", "accent"};
+      ed_.vary(kinds[std::clamp(groove_.getSelectedId(), 1, 4) - 1]);
+    };
+    followZone_.setButtonText(u8("Kick + bass follow selection"));
+    followZone_.setTooltip(u8("FOLLOW: the kick and the bass follow the selected notes (a stutter zone)"));
+    followZone_.onClick = [this] { ed_.follow(0); };
+    followKick_.setButtonText(u8("Kick follows STUTTER"));
+    followKick_.setTooltip(u8("FOLLOW: the kick follows the STUTTER of the bars shown"));
+    followKick_.onClick = [this] { ed_.follow(1); };
+    followBass_.setButtonText(u8("Bass follows kick"));
+    followBass_.setTooltip(u8("FOLLOW: the bass fills the steps after each kick in the bars shown"));
+    followBass_.onClick = [this] { ed_.follow(2); };
+    octDown_.setButtonText(u8("−12"));
+    octDown_.setTooltip(u8("Transpose the notes an octave down"));
+    octDown_.onClick = [this] { ed_.noteTool("transpose", -12); };
+    octUp_.setButtonText(u8("+12"));
+    octUp_.setTooltip(u8("Transpose the notes an octave up"));
+    octUp_.onClick = [this] { ed_.noteTool("transpose", 12); };
+    for (auto* l : {&quantizeTitle_, &gridLabel_, &strengthLabel_, &swingLabel_, &grooveTitle_, &grooveLabel_, &bassTitle_}) {
+      l->setColour(juce::Label::textColourId, l == &quantizeTitle_ || l == &grooveTitle_ || l == &bassTitle_ ? theme::kTitle : theme::kMuted);
+      l->setFont(juce::FontOptions(l == &quantizeTitle_ || l == &grooveTitle_ || l == &bassTitle_ ? theme::kFontStrong : theme::kFontSmall,
+                                   l == &quantizeTitle_ || l == &grooveTitle_ || l == &bassTitle_ ? juce::Font::bold : juce::Font::plain));
+      addAndMakeVisible(l);
+    }
+    quantizeTitle_.setText(u8("QUANTIZE"), juce::dontSendNotification);
+    gridLabel_.setText(u8("Grid"), juce::dontSendNotification);
+    strengthLabel_.setText(u8("Position strength"), juce::dontSendNotification);
+    swingLabel_.setText(u8("Grid swing"), juce::dontSendNotification);
+    grooveTitle_.setText(u8("GROOVE"), juce::dontSendNotification);
+    grooveLabel_.setText(u8("Variation"), juce::dontSendNotification);
+    bassTitle_.setText(u8("BASS / KICK (CORE)"), juce::dontSendNotification);
+    for (auto* c : std::initializer_list<juce::Component*>{&grid_, &strength_, &swing_, &quantize_, &humanize_, &groove_, &grooveApply_,
+                                                          &followZone_, &followKick_, &followBass_, &octDown_, &octUp_}) {
+      c->setWantsKeyboardFocus(false);
+      addAndMakeVisible(c);
+    }
+    refresh();
+  }
+  void refresh() {
+    strength_.setValue(ed_.quantizeStrength, juce::dontSendNotification);
+    swing_.setValue(ed_.swing, juce::dontSendNotification);
+  }
+  void resized() override {
+    auto r = getLocalBounds().reduced(10);
+    auto row = [&](int h) { return r.removeFromTop(h).reduced(0, 2); };
+    quantizeTitle_.setBounds(row(20));
+    auto g = row(24);
+    gridLabel_.setBounds(g.removeFromLeft(70));
+    grid_.setBounds(g);
+    auto s = row(24);
+    strengthLabel_.setBounds(s.removeFromLeft(110));
+    strength_.setBounds(s);
+    auto w = row(24);
+    swingLabel_.setBounds(w.removeFromLeft(110));
+    swing_.setBounds(w);
+    auto b = row(28);
+    quantize_.setBounds(b.removeFromLeft(b.getWidth() / 2).reduced(2));
+    humanize_.setBounds(b.reduced(2));
+    r.removeFromTop(6);
+    grooveTitle_.setBounds(row(20));
+    auto v = row(24);
+    grooveLabel_.setBounds(v.removeFromLeft(70));
+    groove_.setBounds(v.removeFromLeft(v.getWidth() - 96));
+    grooveApply_.setBounds(v.reduced(2, 0));
+    r.removeFromTop(6);
+    bassTitle_.setBounds(row(20));
+    followZone_.setBounds(row(26).reduced(0, 2));
+    followKick_.setBounds(row(26).reduced(0, 2));
+    followBass_.setBounds(row(26).reduced(0, 2));
+    auto t = row(26);
+    octDown_.setBounds(t.removeFromLeft(t.getWidth() / 2).reduced(2));
+    octUp_.setBounds(t.reduced(2));
+  }
+
+private:
+  int64_t gridTicks() const {
+    const int id = grid_.getSelectedId();
+    return id >= 1 && id <= 7 ? kSnaps[id - 1] : 240;
+  }
+  PatternEditor& ed_;
+  juce::Label quantizeTitle_, gridLabel_, strengthLabel_, swingLabel_, grooveTitle_, grooveLabel_, bassTitle_;
+  juce::ComboBox grid_, groove_;
+  theme::BarSlider strength_, swing_;
+  juce::TextButton quantize_, humanize_, grooveApply_, followZone_, followKick_, followBass_, octDown_, octUp_;
+};
+
+// Close hides the window (its settings stay for the next open), as the Patterns window does.
+class NoteToolsWindow final : public juce::DocumentWindow {
+public:
+  NoteToolsWindow() : juce::DocumentWindow(u8("Piano roll - Note tools"), theme::kBackground, juce::DocumentWindow::allButtons) {
+    setUsingNativeTitleBar(true);
+    setResizable(true, true);
+    setResizeLimits(300, 400, 700, 900);
+  }
+  void closeButtonPressed() override { setVisible(false); }
+};
+
+void PatternEditor::openNoteTools() {
+  if (!noteToolsWin_) {
+    auto w = std::make_unique<NoteToolsWindow>();
+    w->setContentOwned(new NoteToolsPanel(*this), false);
+    w->centreWithSize(330, 440);
+    noteToolsWin_ = std::move(w);
+  }
+  if (auto* p = dynamic_cast<NoteToolsPanel*>(noteToolsWin_->getContentComponent())) p->refresh();
+  noteToolsWin_->setVisible(true);
+  noteToolsWin_->toFront(true);
+}
+
+bool PatternEditor::noteToolsVisible() const { return noteToolsWin_ && noteToolsWin_->isVisible(); }
 
 }  // namespace core::app

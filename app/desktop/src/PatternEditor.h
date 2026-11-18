@@ -70,7 +70,7 @@ public:
   double quantizeStrength = 1.0, swing = 0.0;
   // Edit > Play the selected notes: the notes on their track (they were in the Inspector's PREVIEW, Diogo 2026-11-09).
   std::function<void(const std::string& trackId, const std::vector<doc::Note>& notes)> onPreviewNotes;
-  void quantize();
+  void quantize(int64_t gridTicks = 0);  // 0: the editor's snap grid (the Note tools window passes its own)
   void humanize();
   void vary(const std::string& kind);
   void stutter(const std::string& presetId);  // STUTTER note slice: the notes become repeats
@@ -131,6 +131,11 @@ public:
   juce::Point<int> cellGrabPoint(int64_t tick, int pitch) const;
   // The length a click on empty space gives a new note: the last one created or resized (0: the snap grid).
   int64_t lastNoteLength() const { return lastLength_; }
+  // The Note tools window (owner, 2026-11-18: «quero uma pequena janela com isto , ou sej um botao no piano que me da
+  // estas opçoes, incluindo as do baixo kbbb que ja existem»): the toolbar button opens it; close hides it.
+  void openNoteTools();
+  bool noteToolsVisible() const;
+  juce::DocumentWindow* noteToolsWindow() const { return noteToolsWin_.get(); }
 
 private:
   void stepMouseDown(const juce::MouseEvent& e, const doc::Note* hit);  // drums
@@ -201,6 +206,8 @@ private:
   // The second toolbar row (pitched tracks): the key range and the scale guide, as dropdowns where there is a choice.
   juce::TextButton keysMinus_, keysPlus_, fitKeys_;
   juce::ComboBox scaleBox_, rootBox_;
+  juce::TextButton noteTools_;  // opens the Note tools window (Quantize/Humanize/Groove + the kick/bass tools)
+  std::unique_ptr<juce::DocumentWindow> noteToolsWin_;
   int headerHeight() const;  // one row for drums, two for pitched tracks
   void updateKeysHint();
   void keysWheel(float deltaY, int y);  // Ctrl+wheel: Keys+/Keys- around the key under the mouse

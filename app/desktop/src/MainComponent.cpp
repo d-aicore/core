@@ -7455,7 +7455,7 @@ void MainComponent::selfTestStep() {
         if (notes().size() != 1 || ed.selection().size() != 1) return finish(false, "ctrl lasso any tool");
         // 6. Plain wheel over a note scrolls (no velocity change); Alt+wheel is velocity; Ctrl+Alt fine.
         const double v0 = notes()[0].velocity;
-        const juce::MouseWheelDetails up{1.0f, 0.0f, false, false};
+        const juce::MouseWheelDetails up{0.0f, 1.0f, false, false};  // deltaX, deltaY: one notch up
         ed.mouseWheelMove(mouse(ed.cellGrabPoint(notes()[0].tick, notes()[0].pitch), ed.cellGrabPoint(notes()[0].tick, notes()[0].pitch), left), up);
         if (notes()[0].velocity != v0) return finish(false, "plain wheel velocity");
         ed.mouseWheelMove(mouse(ed.cellGrabPoint(notes()[0].tick, notes()[0].pitch), ed.cellGrabPoint(notes()[0].tick, notes()[0].pitch), alt), up);
@@ -7466,14 +7466,84 @@ void MainComponent::selfTestStep() {
         // 7. Ctrl+wheel expands the key range (Keys+): a key far above the view comes into it.
         if (ed.cellGrabPoint(0, 100).y != 0) return finish(false, "keys view precondition");
         for (int i = 0; i < 20; ++i) ed.mouseWheelMove(mouse(a, a, ctrl), up);
-        if (ed.cellGrabPoint(0, 100).y <= 0) return finish(false, "ctrl wheel keys+");
+        if (ed.cellGrabPoint(0, 100).y <= 0) {
+          juce::String ys;
+          for (int p : {0, 23, 50, 90, 95, 99, 100, 105, 115, 127}) ys += juce::String(p) + ":" + juce::String(ed.cellGrabPoint(0, p).y) + " ";
+          return finish(false, "ctrl wheel keys+ keys=" + juce::String(ed.keysShown()) + " " + ys);
+        }
         ed.deleteSelection();
         next("piano gestures");
       }
       break;
     }
-    case 40:
-      if (inStep > 300) return finish(true, "M1c + M2 path, live notes, audio clips, mixer, save with audio");
+    case 40: {  // piano roll, new surfaces: Paint seeds per cell, Fit keys/Keys±, the scale guide's root mark,
+      // and the Note tools window opened from the piano roll button with its Quantize acting in one undo step.
+      if (applied && inStep > 300) {
+        auto& ed = editor_;
+        auto mouse = [&](juce::Point<int> at, juce::Point<int> down, juce::ModifierKeys mods) {
+          return juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(), at.toFloat(), mods, 0, 0, 0, 0, 0, &ed, &ed,
+                                  juce::Time::getCurrentTime(), down.toFloat(), juce::Time::getCurrentTime(), 1, at != down);
+        };
+        const auto left = juce::ModifierKeys(juce::ModifierKeys::leftButtonModifier);
+        auto notes = [&]() -> const std::vector<doc::Note>& { return history_.current().findTrack("bass")->findPattern(ed.patternId())->notes; };
+        ed.setTool(PatternEditor::Tool::Paint);
+        const auto p0 = ed.cellGrabPoint(0, 50);
+        ed.mouseDown(mouse(p0, p0, left));
+        for (int i = 1; i <= 3; ++i) {
+          const auto p = ed.cellGrabPoint(i * 240, 50);
+          ed.mouseDrag(mouse(p, p0, left));
+        }
+        ed.mouseUp(mouse(ed.cellGrabPoint(3 * 240, 50), p0, left));
+        if (notes().size() != 4 || history_.undoLabel() != "Paint notes") return finish(false, "paint seeds per cell");
+        undo();
+        if (!notes().empty()) return finish(false, "paint one undo");
+        ed.setTool(PatternEditor::Tool::Draw);
+        ed.fitKeys();
+        if (ed.keysShown() != 128 || ed.cellGrabPoint(0, 127).y <= 0) return finish(false, "fit keys 128");
+        ed.keysLess();
+        if (ed.keysShown() != 124) return finish(false, "keys-");
+        ed.keysMore();
+        if (ed.keysShown() != 128) return finish(false, "keys+");
+        // The scale guide paints a solid highlight mark on every root key: more exact-accent pixels than without.
+        ed.mouseExit(mouse({-1, -1}, {-1, -1}, left));
+        auto rootPixels = [&] {
+          const juce::Image shot = ed.createComponentSnapshot(ed.getLocalBounds(), false, 1.0f);
+          int n = 0;
+          for (int y = 0; y < shot.getHeight(); ++y)
+            for (int x = 0; x < shot.getWidth(); ++x)
+              if (shot.getPixelAt(x, y) == theme::kAccent) ++n;
+          return n;
+        };
+        const int before = rootPixels();
+        ed.setScaleGuide(0, "Major");
+        const int withGuide = rootPixels();
+        if (withGuide < before + 12) return finish(false, "scale root mark before=" + juce::String(before) + " with=" + juce::String(withGuide));
+        ed.setScaleGuide(0, "");
+        // The Note tools window: the button's wiring, and its Quantize button acting on the notes in one undo step.
+        ed.openNoteTools();
+        if (!ed.noteToolsVisible() || !ed.noteToolsWindow()) return finish(false, "note tools open");
+        ed.clickCell(0, 40);
+        edit([&](doc::Document& d) { doc::patternById(doc::trackById(d, "bass"), ed.patternId()).notes[0].tick = 100; }, u8("Offset"));
+        juce::TextButton* q = nullptr;
+        std::function<void(juce::Component*)> find = [&](juce::Component* c) {
+          if (auto* b = dynamic_cast<juce::TextButton*>(c); b && b->getButtonText() == "Quantize") q = b;
+          for (auto* ch : c->getChildren()) find(ch);
+        };
+        find(ed.noteToolsWindow()->getContentComponent());
+        if (!q) return finish(false, "note tools quantize button");
+        q->onClick();  // synchronous, as the arrangement button's programmatic click: triggerClick posts a message this step would not wait for
+        if (notes().empty() || notes()[0].tick % 240 != 0 || history_.undoLabel() != "Quantize")
+          return finish(false, "note tools quantize n=" + juce::String((int)notes().size()) + " tick=" + juce::String(notes().empty() ? -1 : notes()[0].tick) +
+                               " label=" + history_.undoLabel() + " str=" + juce::String(ed.quantizeStrength, 2) + " sel=" + juce::String((int)ed.selection().size()));
+        ed.noteToolsWindow()->closeButtonPressed();
+        if (ed.noteToolsVisible()) return finish(false, "note tools close");
+        next("piano surfaces");
+      }
+      break;
+    }
+    case 41:
+      if (inStep > 300 && applied)
+        return finish(true, "M1c + M2 path, live notes, audio clips, mixer, save with audio, piano roll Pulse gestures");
       break;
   }
 }
