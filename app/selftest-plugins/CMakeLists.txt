@@ -47,6 +47,24 @@ target_sources(CoreTestCrash PRIVATE TestPlugins.cpp)
 target_compile_definitions(CoreTestCrash PUBLIC CORE_TEST_CRASH=1 JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0)
 target_link_libraries(CoreTestCrash PRIVATE juce::juce_audio_utils PUBLIC juce::juce_recommended_config_flags)
 
+# An instrument that asks the host to restart the component (restartComponent(kReloadComponent)) and then crashes in
+# the same processBlock frame (CORE_TEST_CRASH_RESTART, D restart deadlock): the engine must skip the crashed
+# instance's internal restart, keep answering and play on. Built for the tests; never shipped.
+juce_add_plugin(CoreTestCrashRestart
+  PRODUCT_NAME "Core Test Crash Restart"
+  COMPANY_NAME "Core"
+  VERSION 1.0.0
+  PLUGIN_MANUFACTURER_CODE Core
+  PLUGIN_CODE CTrs
+  IS_SYNTH TRUE
+  NEEDS_MIDI_INPUT TRUE
+  FORMATS VST3
+  COPY_PLUGIN_AFTER_BUILD FALSE
+  VST3_AUTO_MANIFEST TRUE)
+target_sources(CoreTestCrashRestart PRIVATE TestPlugins.cpp)
+target_compile_definitions(CoreTestCrashRestart PUBLIC CORE_TEST_CRASH_RESTART=1 JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0)
+target_link_libraries(CoreTestCrashRestart PRIVATE juce::juce_audio_utils PUBLIC juce::juce_recommended_config_flags)
+
 # A gain that throws a C++ exception in processBlock after 0.1 s (CORE_TEST_THROW, audit 6.4): the engine must
 # silence its track and play the others on. Built for the tests; never shipped.
 juce_add_plugin(CoreTestThrow

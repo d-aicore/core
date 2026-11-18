@@ -128,6 +128,15 @@ if(TARGET CoreTestFault_VST3 AND TARGET CoreTestSynth_VST3 AND TARGET engine_pro
   add_dependencies(engine_process_tests CoreTestFault_VST3)
 endif()
 
+# The crash-restart plugin (CORE_TEST_CRASH_RESTART, D restart deadlock): asks the host to restart the component and
+# then crashes in processBlock, so the vendored JUCE gate + Core's markCrashedByHost() wiring are tested. The synth
+# definition comes from the CoreTestCrash block above (both are built with the app). Built with the app, as above.
+if(TARGET CoreTestCrashRestart_VST3 AND TARGET CoreTestSynth_VST3 AND TARGET engine_process_tests)
+  set(CORE_TEST_CRASH_RESTART_VST3 "$<GENEX_EVAL:$<TARGET_PROPERTY:CoreTestCrashRestart_VST3,JUCE_PLUGIN_ARTEFACT_FILE>>")
+  target_compile_definitions(engine_process_tests PRIVATE CORE_TEST_CRASH_RESTART_VST3="${CORE_TEST_CRASH_RESTART_VST3}")
+  add_dependencies(engine_process_tests CoreTestCrashRestart_VST3)
+endif()
+
 # The app's own end-to-end test (play, undo, save/reopen, export... on the null device, with its test plugins).
 # It opens Core's window for ~20 s, so it has its own label.
 if(TARGET CoreApp)

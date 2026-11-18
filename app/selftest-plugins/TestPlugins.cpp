@@ -10,6 +10,11 @@
 #include <cmath>
 #include <cstdlib>
 #include <stdexcept>
+#if CORE_TEST_CRASH_RESTART
+// The VST3 host context (IComponentHandler, kReloadComponent) so the plugin can ask the host to restart it, as a
+// real plugin does from its editor or a background thread. The SDK include dir comes with juce_audio_processors.
+#include <pluginterfaces/vst/ivsteditcontroller.h>
+#endif
 
 namespace {
 
@@ -197,6 +202,52 @@ private:
   volatile int* volatile nowhere_ = nullptr;  // volatile: the compiler cannot prove the write is invalid and drop it
 };
 juce::AudioProcessor* make() { return new Crash(); }
+#endif
+
+#if CORE_TEST_CRASH_RESTART
+// D (restart deadlock): an instrument that, 0.1 s in, asks the host to reload the component (VST3
+// IComponentHandler::restartComponent(kReloadComponent), as a plugin does from its editor or a worker thread) and
+// then crashes in the same processBlock frame. The host catches the crash with SEH, which runs no destructor, so
+// JUCE's processMutex stays held; the message thread then dispatches the restart and would spin on that lock forever
+// (reset()/releaseResources()), deadlocking the engine. With the vendored gate + Core's markCrashedByHost() wiring the
+// restart is skipped for the crashed instance: the engine answers, the song plays on, retry works (quality bar 2).
+class RestartExtensions final : public juce::VST3ClientExtensions {
+public:
+  ~RestartExtensions() override { if (handler_) handler_->release(); }
+  // The wrapper hands the host's IComponentHandler here (as a FUnknown); query and keep it (queryInterface addRefs).
+  void setIComponentHandler(Steinberg::FUnknown* unknown) override {
+    if (handler_) { handler_->release(); handler_ = nullptr; }
+    if (unknown) unknown->queryInterface(Steinberg::Vst::IComponentHandler::iid, reinterpret_cast<void**>(&handler_));
+  }
+  Steinberg::Vst::IComponentHandler* handler() const { return handler_; }
+private:
+  Steinberg::Vst::IComponentHandler* handler_ = nullptr;
+};
+
+class CrashRestart final : public TestPlugin {
+public:
+  CrashRestart() : TestPlugin(BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true)) {}
+  bool acceptsMidi() const override { return true; }
+  bool producesMidi() const override { return false; }
+  bool isBusesLayoutSupported(const BusesLayout& l) const override { return l.getMainOutputChannelSet() == juce::AudioChannelSet::stereo(); }
+  juce::VST3ClientExtensions* getVST3ClientExtensions() override { return &extensions_; }
+  void prepareToPlay(double sampleRate, int) override { limit_ = (int64_t)(0.1 * sampleRate); played_ = 0; }
+  void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) override {
+    buffer.clear();
+    if (played_ >= limit_) {
+      // Ask the host to reload the component, then crash in the same frame: the restart is dispatched on the message
+      // thread while the SEH catch leaves processMutex held. This is the exact path that deadlocked without the gate.
+      if (auto* h = extensions_.handler()) h->restartComponent(Steinberg::Vst::kReloadComponent);
+      *nowhere_ = 1;  // the crash, on purpose
+    }
+    played_ += buffer.getNumSamples();
+  }
+private:
+  RestartExtensions extensions_;
+  int64_t limit_ = 4800, played_ = 0;
+  volatile int* volatile nowhere_ = nullptr;  // volatile: the compiler cannot prove the write is invalid and drop it
+};
+juce::AudioProcessor* make() { return new CrashRestart(); }
 #endif
 
 #if CORE_TEST_FAULT
