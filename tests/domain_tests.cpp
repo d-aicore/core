@@ -2,6 +2,8 @@
 #include <algorithm>
 #include <chrono>
 #include <filesystem>
+#include <fstream>
+#include <utility>
 #ifdef _WIN32
 #include <share.h>
 #endif
@@ -261,6 +263,56 @@ TEST("data loss D4: locked .bak -> refused with an error, the previous file inta
   CHECK(message.find("Cannot replace") == 0);
 }
 #endif
+
+// Data loss (2026-11-18), BUG-SWEEP-01: the ".saving-N" counter starts at zero in every process. A save that failed
+// half way through the replacement keeps its temporary file as the new version's only copy (D4 above); after a
+// restart the next save of the same file picks the same name, truncates that retained recovery copy and — when the
+// save is rejected — deletes it. Even a successful save consumed it (ReplaceFileW moves the temporary file into the
+// target's place). A save may only write, move or delete a temporary file it created itself.
+namespace {
+// Seeds a range of retained recovery copies with distinct bytes. The suite's counter is already advanced (and is
+// zero again in a fresh process), so the colliding name can be anywhere in the range.
+std::vector<std::pair<fs::path, std::string>> seedRecoveryCopies(const fs::path& file) {
+  std::vector<std::pair<fs::path, std::string>> seeds;
+  for (int n = 0; n < 64; ++n) {
+    const fs::path kept = file.parent_path() / (file.filename().string() + ".saving-" + std::to_string(n));
+    const std::string bytes = "retained recovery copy " + std::to_string(n) + ": the only copy of a newer version\n";
+    { std::ofstream out(kept, std::ios::binary | std::ios::trunc); out << bytes; }
+    seeds.emplace_back(kept, bytes);
+  }
+  return seeds;
+}
+}  // namespace
+
+TEST("data loss BUG-SWEEP-01: a rejected save leaves every retained recovery copy byte-identical") {
+  const fs::path file = cleanSong("sweep01-rejected");
+  { std::ofstream out(file, std::ios::binary); out << "the song on disk"; }
+  const auto seeds = seedRecoveryCopies(file);
+  bool threw = false;
+  try { writeFileSafely("a new version", file, [](const std::string&) { return false; }); }
+  catch (const SaveError&) { threw = true; }
+  CHECK(threw);
+  CHECK_EQ(readTextFile(file), std::string("the song on disk"));  // the previous file is intact
+  for (const auto& [kept, bytes] : seeds) {
+    CHECK(fs::is_regular_file(kept));  // before: exactly one was truncated and then deleted
+    if (fs::is_regular_file(kept)) CHECK_EQ(readTextFile(kept), bytes);
+  }
+  CHECK_EQ(temporaries(file).size(), seeds.size());  // the save's own temporary file was discarded, nothing else
+}
+
+TEST("data loss BUG-SWEEP-01: a successful save does not consume a retained recovery copy") {
+  const fs::path file = cleanSong("sweep01-success");
+  { std::ofstream out(file, std::ios::binary); out << "the song on disk"; }
+  const auto seeds = seedRecoveryCopies(file);
+  writeFileSafely("a new version", file, [](const std::string&) { return true; });
+  CHECK_EQ(readTextFile(file), std::string("a new version"));
+  CHECK_EQ(readTextFile(backupPath(file)), std::string("the song on disk"));
+  for (const auto& [kept, bytes] : seeds) {
+    CHECK(fs::is_regular_file(kept));  // before: ReplaceFileW moved the retained copy into the target's place
+    if (fs::is_regular_file(kept)) CHECK_EQ(readTextFile(kept), bytes);
+  }
+  CHECK_EQ(temporaries(file).size(), seeds.size());
+}
 
 TEST("undo/redo: adicionar e remover pistas volta exactamente atras") {
   Document start = newEmptyDocument();
