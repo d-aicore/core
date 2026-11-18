@@ -2329,6 +2329,24 @@ void removeAudioRange(Document& doc, const std::string& trackId, const std::stri
 
 void setSongLength(Document& doc, int64_t lengthTicks) {
   if (lengthTicks < kPpq || lengthTicks > 4096LL * 4 * kPpq) throw DocumentError("lengthTicks", "invalid song length");
+  // Shortening keeps the documented removal of changes past the new end, but a glide the retained music
+  // was riding gets an in-range endpoint at the new last tick (BUG-SWEEP-25), the same arrival trick
+  // deleteTime uses when it cuts to the end of the song. Without it the retained passage flattens.
+  if (lengthTicks < doc.lengthTicks && !doc.tempoMap.empty()) {
+    const TempoPoint* crossing = nullptr;
+    for (const auto& p : doc.tempoMap) if (p.tick >= lengthTicks) { crossing = &p; break; }
+    if (crossing && crossing->ramp) {
+      const int64_t at = lengthTicks - 1;
+      const TempoPoint* lastKept = nullptr;
+      for (const auto& p : doc.tempoMap) if (p.tick < lengthTicks) lastKept = &p;
+      if (at >= 1 && (!lastKept || at > lastKept->tick)) {
+        TempoPoint p = *crossing;
+        p.tick = at;
+        p.bpm = bpmAt(doc, at);
+        doc.tempoMap.push_back(p);  // stays sorted: after every kept point, before every removed one
+      }
+    }
+  }
   doc.lengthTicks = lengthTicks;
   // Tempo changes after the new end go with it (they could never play).
   doc.tempoMap.erase(std::remove_if(doc.tempoMap.begin(), doc.tempoMap.end(), [&](const TempoPoint& t) { return t.tick >= lengthTicks; }), doc.tempoMap.end());

@@ -752,4 +752,67 @@ TEST("BUG-SWEEP-24: inserted empty bars hold the tempo, the ramp keeps its shape
   CHECK_EQ(full.lengthTicks, 100 * kBar);
 }
 
+TEST("BUG-SWEEP-25: shortening the song keeps the retained ramp with a derived endpoint") {
+  using namespace tempo_sweep;
+  // The probe's song: removing the future ramp target used to flatten the retained passage (150 -> 120,
+  // 1.78515 s -> 2 s). The documented past-end removal stays; the glide gets an in-range endpoint.
+  Document d = newEmptyDocument();
+  d.bpm = 120;
+  setTempoMap(d, {{4 * kBar, 240, json::object(), true}});
+  const Document original = d;
+  setSongLength(d, 2 * kBar);
+  CHECK_EQ(d.lengthTicks, 2 * kBar);
+  CHECK_NEAR(bpmAt(d, kBar), 150, 1e-6);                            // before the fix: 120
+  CHECK_NEAR(bpmAt(d, 2 * kBar - 1), bpmAt(original, 2 * kBar - 1), 1e-6);
+  CHECK_NEAR(engineSeconds(d, kBar), engineSeconds(original, kBar), 1e-4);
+  CHECK_EQ(d.tempoMap.size(), (size_t)1);                           // the derived endpoint, inside the song
+  if (!d.tempoMap.empty()) {
+    CHECK_EQ(d.tempoMap[0].tick, 2 * kBar - 1);
+    CHECK(d.tempoMap[0].ramp);
+  }
+  CHECK(validSavedForm(d));
+  // Extending again does not resurrect the removed target (documented destructive removal; Undo is the
+  // restore path), but the retained passage keeps playing the ramp it had.
+  setSongLength(d, original.lengthTicks);
+  CHECK_NEAR(bpmAt(d, kBar), 150, 1e-6);                            // before the fix: 120
+  CHECK(validSavedForm(d));
+
+  // A glide between two kept points, heading for a removed target: the retained shape survives.
+  Document g = newEmptyDocument();
+  g.bpm = 120;
+  setTempoMap(g, {{1 * kBar, 180, json::object(), true}, {4 * kBar, 240, json::object(), true}});
+  const Document gOrig = g;
+  setSongLength(g, 3 * kBar);
+  CHECK_NEAR(bpmAt(g, 2 * kBar), bpmAt(gOrig, 2 * kBar), 1e-6);     // before the fix: 180, the ramp flattened
+  CHECK_NEAR(bpmAt(g, 3 * kBar - 1), bpmAt(gOrig, 3 * kBar - 1), 1e-6);
+  CHECK_EQ(g.tempoMap.size(), (size_t)2);
+  CHECK(validSavedForm(g));
+
+  // Shortening onto the target's own tick: it goes (documented), the retained glide keeps its shape.
+  Document t = newEmptyDocument();
+  t.bpm = 120;
+  setTempoMap(t, {{4 * kBar, 240, json::object(), true}});
+  const Document tOrig = t;
+  setSongLength(t, 4 * kBar);
+  CHECK_NEAR(bpmAt(t, 2 * kBar), bpmAt(tOrig, 2 * kBar), 1e-6);
+  CHECK_EQ(t.tempoMap.size(), (size_t)1);
+  CHECK(validSavedForm(t));
+
+  // Step control: a step past the new end goes, as documented, and nothing else changes.
+  Document s = newEmptyDocument();
+  s.bpm = 120;
+  setTempoMap(s, {{4 * kBar, 240, json::object(), false}});
+  setSongLength(s, 2 * kBar);
+  CHECK(s.tempoMap.empty());
+  CHECK_NEAR(bpmAt(s, kBar), 120, 1e-9);
+
+  // Extending only (the other callers: stutter, pattern rack, the UI) never touches the map.
+  Document e = newEmptyDocument();
+  e.bpm = 120;
+  setTempoMap(e, {{4 * kBar, 240, json::object(), true}});
+  const json mapBefore = toJson(e)["transport"]["tempoMap"];
+  setSongLength(e, 20 * kBar);
+  CHECK_EQ(toJson(e)["transport"]["tempoMap"].dump(), mapBefore.dump());
+}
+
 CORE_TEST_MAIN
