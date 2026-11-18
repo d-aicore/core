@@ -382,6 +382,9 @@ static json validatePlugin(const json& plugin) {
   if (plugin.contains("version") && !plugin["version"].is_string()) throw std::runtime_error("plugin version must be text.");
   if (plugin.contains("state") && !plugin["state"].is_string()) throw std::runtime_error("plugin state must be base64 text.");
   if (plugin.contains("stateId") && !plugin["stateId"].is_string()) throw std::runtime_error("plugin stateId must be text.");
+  // STATE-PER-EDIT: the projection marks a place whose state the engine must hold (the blob itself stays in the
+  // document and arrives through project.load's "states", asked for by statesNeeded).
+  if (plugin.contains("hasState") && !plugin["hasState"].is_boolean()) throw std::runtime_error("plugin hasState must be true or false.");
   json clean = plugin;
   clean.erase("missing");  // decided by the engine when it loads, never saved
   return clean;

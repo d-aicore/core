@@ -136,10 +136,15 @@ public:
   // waiting: `done` runs on the message thread (empty if no answer in timeoutMs). The Mixer asks once a second.
   void cpuAsync(int timeoutMs, std::function<void(json)> done);
   void newSong();  // another song (open, new): the document the engine accepted is not this song's any more
-  // Plugins: the state of every loaded plugin ({key: base64}); waits at most timeoutMs (null if no answer; {} is an answer).
-  json pluginStates(int timeoutMs);
+  // Plugins: the state of the loaded plugins named by keys ({key: base64}; every loaded plugin when keys is
+  // empty — the app asks for the keys of its song); waits at most timeoutMs (null if no answer; {} is an answer).
+  json pluginStates(int timeoutMs, const std::vector<std::string>& keys = {});
   // The same without waiting: `done` runs later on the message thread with the states (null if no answer).
-  void pluginStatesAsync(int timeoutMs, std::function<void(json)> done);
+  void pluginStatesAsync(int timeoutMs, std::function<void(json)> done, const std::vector<std::string>& keys = {});
+  // Refreshed live states the app adopted into the document (before Save/Export, or a change that takes plugins
+  // away): they ride the next project.load as its "states" — the engine's stored copy is what an export makes its
+  // instances from, and the projection itself carries no blobs any more (STATE-PER-EDIT). Kept until accepted.
+  void pushPluginStates(const json& states);
   // The parameters of a loaded plugin that can be automated ([{id, name, value, default, steps, text}]);
   // empty if it is not loaded or there is no answer in timeoutMs. UI thread.
   json pluginParams(const std::string& key, int timeoutMs);
@@ -190,6 +195,7 @@ private:
   bool quit_ = false, restartRequested_ = false;
   json wantedProjection_;   // latest projection; sent when wantedRevision_ > sentRevision_
   doc::Document wantedDocument_;
+  json pendingStates_ = json::object();  // refreshed live states (pushPluginStates): sent with the next project.load, kept until accepted
   std::optional<doc::Document> acceptedDocument_;
   uint64_t documentEpoch_ = 0;
   int64_t wantedRevision_ = 1, sentRevision_ = 0;

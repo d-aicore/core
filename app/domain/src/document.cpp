@@ -692,9 +692,26 @@ json toJson(const Document& d) {
 // What the engine plays (Diogo 2026-11-16: the sound comes from plugins): the plugin effects of a chain, and the curves of
 // the mixer and of plugin parameters. Core's own effects, instruments and their curves stay in the song, unplayed.
 namespace {
+// STATE-PER-EDIT (2026-11-18): the projection names a plugin's state, it does not carry it. The full blob in every
+// edit cost ~157 ms with 32 tracks (serialization + the pipe + the engine's parse); the blob stays in the document
+// (Save writes it) and in the engine, which asks for the keys it needs (project.load answers statesNeeded). hasState
+// marks a place whose state the engine must hold; stateId is the identity it keeps the live instance by.
+json pluginRefWithoutState(const json& plugin) {
+  if (!plugin.is_object()) return plugin;
+  json ref = plugin;
+  const bool hasState = ref.contains("state") && ref["state"].is_string() && !ref["state"].get<std::string>().empty();
+  ref.erase("state");
+  if (hasState) ref["hasState"] = true;
+  else ref.erase("hasState");
+  return ref;
+}
 json pluginChain(const json& chain) {
   json out = json::array();
-  for (const auto& fx : chain) if (fx.is_object() && fx.value("type", std::string()) == "plugin") out.push_back(fx);
+  for (const auto& fx : chain) if (fx.is_object() && fx.value("type", std::string()) == "plugin") {
+    json copy = fx;
+    if (copy.contains("plugin")) copy["plugin"] = pluginRefWithoutState(copy["plugin"]);
+    out.push_back(std::move(copy));
+  }
   return out;
 }
 std::vector<Automation> playedCurves(const std::vector<Automation>& list, const json& chain) {
@@ -750,7 +767,7 @@ json toProjection(const Document& d, const std::filesystem::path& assetRoot) {
       }
       track["audioClips"] = audioClips;
     } else if (t.instrument.kind == "bus") { track["instrument"] = "bus"; track.erase("clips"); }
-    else if (t.instrument.kind == "plugin") { track["instrument"] = "plugin"; track["plugin"] = t.instrument.plugin; }
+    else if (t.instrument.kind == "plugin") { track["instrument"] = "plugin"; track["plugin"] = pluginRefWithoutState(t.instrument.plugin); }
     else track["instrument"] = "none";  // an old Core instrument, or no instrument yet: its notes wait for a plugin
     if (!t.mix.output.empty()) track["output"] = t.mix.output;
     if (!t.mix.sends.empty()) {

@@ -119,7 +119,7 @@ set_tests_properties(engine_tests domain_tests role_tests midi_tests bug_tests a
 if(TARGET core_engine_client)
   add_executable(engine_process_tests engine_process_tests.cpp)
   target_include_directories(engine_process_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-  target_link_libraries(engine_process_tests PRIVATE core_engine_client)
+  target_link_libraries(engine_process_tests PRIVATE core_engine_client core_domain)
   target_compile_definitions(engine_process_tests PRIVATE CORE_ENGINE_EXE="$<TARGET_FILE:core-engine>")
   add_dependencies(engine_process_tests core-engine)
   add_test(NAME engine_process_tests COMMAND engine_process_tests)

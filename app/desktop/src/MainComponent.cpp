@@ -2118,7 +2118,7 @@ void MainComponent::edit(const std::function<void(doc::Document&)>& change, cons
 bool MainComponent::takePluginStates(json* taken) {
   if (!doc::hasPlugins(history_.current())) return true;
   if (session_->snapshot().status == EngineStatus::Stopped) return true;
-  json states = session_->pluginStates(5000);
+  json states = session_->pluginStates(5000, doc::pluginKeys(history_.current()));
   if (!states.is_object()) {
     showError(u8("Plugins"), u8("The engine did not give the plugins' current settings in time, so nothing was changed: "
                                 "a plugin taken away now would come back with Undo as it was last saved. Try again."));
@@ -3874,7 +3874,7 @@ void MainComponent::scanPlugins() {
 // replaces a plugin (so Undo brings it back as it sounded). False when the engine gave no answer.
 bool MainComponent::fetchPluginStates() {
   if (!doc::hasPlugins(history_.current())) return true;
-  const json states = session_->pluginStates(5000);
+  const json states = session_->pluginStates(5000, doc::pluginKeys(history_.current()));
   if (!states.is_object()) return false;  // no answer from the engine ({} is an answer: nothing to take)
   adoptPluginStates(states);
   return true;
@@ -3884,9 +3884,15 @@ bool MainComponent::fetchPluginStates() {
 // which is what a restarted engine makes its plugins from.
 void MainComponent::adoptPluginStates(const json& states) {
   doc::Document withStates = history_.current();
-  if (doc::applyPluginStates(withStates, states) == 0) return;
+  std::vector<std::string> changed;
+  if (doc::applyPluginStates(withStates, states, &changed) == 0) return;
   history_.amend(withStates);
-  session_->setDocument(engineDocument());  // the same plugins: the engine keeps them as they are
+  session_->setDocument(engineDocument());
+  // The engine's stored copy is what an export makes its plugins from: the refreshed states ride the next
+  // project.load (the projection itself carries no blobs any more, STATE-PER-EDIT). Only the keys that changed.
+  json push = json::object();
+  for (const auto& key : changed) push[key] = states[key];
+  session_->pushPluginStates(push);
 }
 
 MainComponent::SaveResult MainComponent::writeTo(const juce::File& target) {

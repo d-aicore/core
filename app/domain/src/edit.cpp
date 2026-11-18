@@ -1565,7 +1565,43 @@ bool hasPlugins(const Document& doc) {
   return false;
 }
 
-int applyPluginStates(Document& doc, const json& states) {
+std::vector<std::string> pluginKeys(const Document& doc) {
+  std::vector<std::string> keys;
+  auto chain = [&](const json& list, const std::string& trackId) {
+    for (const auto& fx : list)
+      if (fx.is_object() && fx.value("type", "") == "plugin" && fx.contains("id") && fx["id"].is_string() && fx.contains("plugin"))
+        keys.push_back(pluginKey(trackId, fx["id"].get<std::string>()));
+  };
+  chain(doc.masterEffects, "");
+  for (const auto& t : doc.tracks) {
+    if (t.instrument.kind == "plugin") keys.push_back(pluginKey(t.id));
+    chain(t.effects, t.id);
+  }
+  return keys;
+}
+
+json pluginStatesFor(const Document& doc, const std::vector<std::string>& keys) {
+  const std::set<std::string> wanted(keys.begin(), keys.end());
+  json out = json::object();
+  auto take = [&](const json& plugin, const std::string& key) {
+    if (!wanted.count(key) || !plugin.is_object()) return;
+    const std::string state = plugin.value("state", "");
+    if (!state.empty()) out[key] = state;
+  };
+  auto chain = [&](const json& list, const std::string& trackId) {
+    for (const auto& fx : list)
+      if (fx.is_object() && fx.value("type", "") == "plugin" && fx.contains("id") && fx["id"].is_string() && fx.contains("plugin"))
+        take(fx["plugin"], pluginKey(trackId, fx["id"].get<std::string>()));
+  };
+  chain(doc.masterEffects, "");
+  for (const auto& t : doc.tracks) {
+    if (t.instrument.kind == "plugin") take(t.instrument.plugin, pluginKey(t.id));
+    chain(t.effects, t.id);
+  }
+  return out;
+}
+
+int applyPluginStates(Document& doc, const json& states, std::vector<std::string>* changedKeys) {
   if (!states.is_object()) return 0;
   int changed = 0;
   auto set = [&](json& plugin, const std::string& key) {
@@ -1573,6 +1609,7 @@ int applyPluginStates(Document& doc, const json& states) {
     if (plugin.value("state", "") == states[key].get<std::string>()) return;
     plugin["state"] = states[key];
     ++changed;
+    if (changedKeys) changedKeys->push_back(key);
   };
   auto chain = [&](json& list, const std::string& trackId) {
     for (auto& fx : list)
