@@ -6,17 +6,23 @@
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <mutex>
 #include <string>
 #include <thread>
 #include "support/check.hpp"
 #include "engine_client.hpp"
+#include "document.hpp"
+#include "edit.hpp"
 
 using namespace std::chrono_literals;
 using core::client::EngineClient;
 using core::client::EngineError;
 using core::client::EngineOptions;
 using core::client::json;
+namespace doc = core::doc;  // the app's document: the bench drives doc::toProjection, the app's own edit path
 
 namespace {
 
@@ -543,4 +549,174 @@ TEST("serve: a message over the limit fails that command with a clear error and 
   CHECK_EQ(end.get(), std::string("The engine exited (code 0)."));
 }
 
+// STATE-PER-EDIT (2026-11-18, work plan item 2): the root of the ~157 ms/edit measured with 32 tracks was the full
+// plugin state blob in every edit projection. This drives the real app path (doc::toProjection + the app's client +
+// core-engine serve) with 32 tracks holding a Vital-default-patch-sized state each (318 128 bytes of base64, as
+// measured for the M2 limit): the projection must carry no blobs, the first load answers statesNeeded and the app
+// supplies exactly those keys once, and every ordinary edit after that is accepted with no state in the message.
+// The ms/edit printed here is the before/after measurement of the fix (red ~157 ms on f6b86dc, green after).
+TEST("serve: 32 tracks of plugin state edit without carrying the blobs (STATE-PER-EDIT)") {
+  doc::Document d = doc::newEmptyDocument();
+  for (int i = 0; i < 32; ++i) {
+    doc::addPluginTrack(d, {{"format", "vst3"}, {"id", "not-installed"}, {"name", "Synth"}, {"file", ""}});
+    std::string state(318128, 'A');
+    state[0] = (char)('B' + i % 20);  // each track its own, as a real song
+    d.tracks.back().instrument.plugin["state"] = std::move(state);
+  }
+  EndReason end;
+  EngineClient engine(engineOptions());
+  end.attach(engine);
+  engine.start();
+  const json projection = doc::toProjection(d);
+  const size_t projectionBytes = projection.dump().size();
+  CHECK(projectionBytes < (size_t)(1u << 20));  // 32 full blobs would be ~10 MB in every edit
+
+  // The first load: the engine answers the keys it needs; the app supplies exactly those, once.
+  json loaded = engine.command("project.load", {{"project", projection}}, 60000ms);
+  const json needed = loaded.value("statesNeeded", json::array());
+  CHECK_EQ(needed.size(), (size_t)32);
+  if (!needed.empty()) {
+    json supply = json::object();
+    for (const auto& t : d.tracks) supply["track:" + t.id] = t.instrument.plugin.value("state", std::string());
+    loaded = engine.command("project.load", {{"project", projection}, {"states", supply}}, 60000ms);
+  }
+  CHECK(loaded.value("statesNeeded", json::array()).empty());
+  CHECK_EQ(loaded.value("tracks", (size_t)0), (size_t)32);
+
+  // Steady state: 20 ordinary edits (a fader move), each a fresh projection + project.load, as EngineSession sends.
+  const int kEdits = 20;
+  double totalProjMs = 0, totalTripMs = 0, worstMs = 0;
+  for (int i = 0; i < kEdits; ++i) {
+    d.tracks[(size_t)(i % 32)].mix.gainDb = -0.5 * (i + 1);
+    const auto t0 = std::chrono::steady_clock::now();
+    const json p = doc::toProjection(d);
+    const auto t1 = std::chrono::steady_clock::now();
+    const json r = engine.command("project.load", {{"project", p}}, 60000ms);
+    const auto t2 = std::chrono::steady_clock::now();
+    const double projMs = std::chrono::duration<double, std::milli>(t1 - t0).count();
+    const double tripMs = std::chrono::duration<double, std::milli>(t2 - t1).count();
+    totalProjMs += projMs;
+    totalTripMs += tripMs;
+    worstMs = std::max(worstMs, projMs + tripMs);
+    CHECK(r.value("statesNeeded", json::array()).empty());  // an ordinary edit needs no state
+    CHECK_EQ(r.value("tracks", (size_t)0), (size_t)32);
+  }
+  std::printf("  STATE-PER-EDIT 32 tracks x 318128 B: projection %zu B; %d edits: projection avg %.2f ms, "
+              "round-trip avg %.1f ms, total avg %.1f ms/edit (worst %.1f ms)\n",
+              projectionBytes, kEdits, totalProjMs / kEdits, totalTripMs / kEdits, (totalProjMs + totalTripMs) / kEdits, worstMs);
+
+  // The engine holds every state whole: what Save reads back and Export makes its instances from.
+  json got;
+  CHECK(answersWithin(engine, "project.get", json::object(), 60000ms, &got) >= 0);
+  CHECK_EQ(got.value("tracks", json::array()).size(), (size_t)32);
+  for (int i = 0; i < 32 && i < (int)got.value("tracks", json::array()).size(); ++i)
+    CHECK_EQ(got["tracks"][(size_t)i]["plugin"].value("state", std::string()), d.tracks[(size_t)i].instrument.plugin.value("state", std::string()));
+  engine.close();
+  CHECK_EQ(end.get(), std::string("The engine exited (code 0)."));
+}
+
+#ifdef CORE_TEST_SYNTH_VST3
+// STATE-PER-EDIT sound-neutral: state supplied on demand (statesNeeded -> "states") and refreshed live state riding
+// project.load make the SAME sound as the state carried in the song, byte for byte, through the real test synth
+// (its state is its gain). Also: plugins.states takes a list of keys and captures only those.
+TEST("serve: plugin state on demand renders bit-identical to state in the song (STATE-PER-EDIT)") {
+  const json synth = scanFirst(CORE_TEST_SYNTH_VST3);
+  CHECK(synth.is_object());
+  if (!synth.is_object()) return;
+  auto readAll = [](const std::filesystem::path& p) {
+    std::ifstream f(p, std::ios::binary);
+    return std::string(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path dir = std::filesystem::temp_directory_path();
+  const std::filesystem::path wavA = dir / "core-state-neutral-a.wav", wavB = dir / "core-state-neutral-b.wav",
+                              wavC = dir / "core-state-neutral-c.wav", wavD = dir / "core-state-neutral-d.wav";
+  for (const auto& w : {wavA, wavB, wavC, wavD}) std::filesystem::remove(w);
+
+  // A real state blob: the synth with its gain moved to 0.25 (a sound the default 0.5 does not make).
+  std::string blob25;
+  {
+    EngineClient e(engineOptions());
+    e.start();
+    e.command("project.load", {{"project", song(json::array({pluginTrack("s", synth)}))}}, 30000ms);
+    const json params = e.command("plugin.params", {{"key", "track:s"}});
+    std::string gainId;
+    for (const auto& p : params) if (p.value("name", "") == "Gain") gainId = p.value("id", "");
+    CHECK(!gainId.empty());
+    e.command("plugin.param", {{"key", "track:s"}, {"id", gainId}, {"value", 0.25}});
+    const json st = e.command("plugins.states");
+    blob25 = st.value("track:s", std::string());
+    e.close();
+  }
+  CHECK(!blob25.empty());
+  if (blob25.empty()) return;
+  json withState = synth;
+  withState["state"] = blob25;
+  json full = song(json::array({pluginTrack("s", withState)}));
+  full["lengthTicks"] = 4 * 960;  // one bar: the renders stay quick
+  json stateless = full;
+  stateless["tracks"][0]["plugin"].erase("state");
+  stateless["tracks"][0]["plugin"]["hasState"] = true;
+
+  EngineClient engine(engineOptions());
+  engine.start();
+  // Legacy: the state in the song, one pass.
+  engine.command("project.load", {{"project", full}}, 30000ms);
+  const json ra = engine.command("render", {{"path", wavA.string()}, {"bits", 24}}, 60000ms);
+  CHECK(ra.value("peak", 0.0f) > 0.01f);  // the fixture sounds: a silence==silence comparison would prove nothing
+  // On demand: the engine asks for the key, the app supplies it, the load is accepted.
+  const json first = engine.command("project.load", {{"project", stateless}}, 30000ms);
+  const json needed = first.value("statesNeeded", json::array());
+  CHECK_EQ(needed.size(), (size_t)1);
+  if (needed.size() == 1) CHECK_EQ(needed[0], std::string("track:s"));
+  const json second = engine.command("project.load", {{"project", stateless}, {"states", {{"track:s", blob25}}}}, 30000ms);
+  CHECK(second.value("statesNeeded", json::array()).empty());
+  const json rb = engine.command("render", {{"path", wavB.string()}, {"bits", 24}}, 60000ms);
+  CHECK(rb.value("peak", 0.0f) > 0.01f);
+  const std::string a = readAll(wavA), b = readAll(wavB);
+  CHECK(!a.empty());
+  CHECK_EQ(a.size(), b.size());
+  CHECK(a == b);  // the plumbing changed, the sound did not
+  std::printf("  sound-neutral (on demand): %zu bytes rendered, peak %.3f (identity checked above)\n", a.size(), ra.value("peak", 0.0f));
+
+  // Refreshed live state (what the app adopts before Save/Export) rides project.load; the export follows it.
+  const json params = engine.command("plugin.params", {{"key", "track:s"}});
+  std::string gainId;
+  for (const auto& p : params) if (p.value("name", "") == "Gain") gainId = p.value("id", "");
+  CHECK(!gainId.empty());
+  engine.command("plugin.param", {{"key", "track:s"}, {"id", gainId}, {"value", 0.75}});
+  const json some = engine.command("plugins.states", {{"keys", json::array({"track:s"})}});
+  CHECK_EQ(some.size(), (size_t)1);  // batched: only the keys asked for
+  CHECK(some.contains("track:s"));
+  const std::string blob75 = some.value("track:s", std::string());
+  CHECK(!blob75.empty());
+  CHECK(blob75 != blob25);
+  const json refreshed = engine.command("project.load", {{"project", stateless}, {"states", {{"track:s", blob75}}}}, 30000ms);
+  CHECK(refreshed.value("statesNeeded", json::array()).empty());
+  const json rc = engine.command("render", {{"path", wavC.string()}, {"bits", 24}}, 60000ms);
+  CHECK(rc.value("peak", 0.0f) > 0.01f);
+  json full75 = full;
+  full75["tracks"][0]["plugin"]["state"] = blob75;
+  engine.command("project.load", {{"project", full75}}, 30000ms);
+  const json rd = engine.command("render", {{"path", wavD.string()}, {"bits", 24}}, 60000ms);
+  const std::string c = readAll(wavC), dd = readAll(wavD);
+  CHECK(!c.empty());
+  CHECK_EQ(c.size(), dd.size());
+  CHECK(c == dd);  // the refreshed state is what the export reads
+  CHECK(a != c);   // and it is a different sound: the refresh really reached the render
+  std::printf("  sound-neutral (refreshed): %zu bytes rendered, peak %.3f (identity checked above)\n", c.size(), rc.value("peak", 0.0f));
+
+  // Two tracks, ask for one: only that key comes back; no keys argument = every loaded plugin.
+  json two = song(json::array({pluginTrack("s", withState), pluginTrack("s2", withState)}));
+  two["lengthTicks"] = 4 * 960;
+  engine.command("project.load", {{"project", two}}, 30000ms);
+  const json all = engine.command("plugins.states");
+  CHECK_EQ(all.size(), (size_t)2);
+  const json one = engine.command("plugins.states", {{"keys", json::array({"track:s2"})}});
+  CHECK_EQ(one.size(), (size_t)1);
+  CHECK(one.contains("track:s2"));
+  CHECK(!one.contains("track:s"));
+  engine.close();
+  for (const auto& w : {wavA, wavB, wavC, wavD}) std::filesystem::remove(w);
+}
+#endif
 CORE_TEST_MAIN

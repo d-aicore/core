@@ -660,8 +660,10 @@ namespace {
 struct StateHost final : PluginHost {
   std::string state;
   std::vector<std::string> keys;
-  std::shared_ptr<PluginProcessor> get(const std::string& key, const json&, double, bool offline, std::string* why) override {
+  std::vector<json> offlineGets;  // what an export's graph asked of the provider: the state it renders from
+  std::shared_ptr<PluginProcessor> get(const std::string& key, const json& plugin, double, bool offline, std::string* why) override {
     if (why) why->clear();
+    if (offline) offlineGets.push_back(plugin);
     if (!offline && std::find(keys.begin(), keys.end(), key) == keys.end()) keys.push_back(key);
     return std::make_shared<FakeProc>();
   }
@@ -719,4 +721,75 @@ TEST("protocol: a song with more than 8 MB of plugin state is read, loaded and a
   CHECK(answer.rfind("{\"id\":2,", 0) == 0);               // an answer starts with its id: the client relies on it
 }
 
+// STATE-PER-EDIT (2026-11-18, work plan item 2): the projection carries stateId only. project.load answers WHICH
+// keys need state (a place marked hasState whose state the engine does not hold under that identity), accepts
+// nothing until they arrive in "states", and an ordinary edit is accepted at once with no blobs. plugins.states
+// takes a list of keys. A legacy song with its state in the projection is still accepted in one pass.
+TEST("protocol: project.load asks for the state it needs and edits carry none (STATE-PER-EDIT)") {
+  StateHost host;
+  host.state = "U1RBVEU=";
+  Server server(nullptr, kSr, &host);
+  auto track = [](const std::string& id, const json& plugin) {
+    return json{{"id", id}, {"name", id}, {"instrument", "plugin"}, {"plugin", plugin},
+                {"patternTicks", 4 * kPpq}, {"notes", json::array()}};
+  };
+  const json song = {{"format", kProjectFormat}, {"version", 2}, {"name", "state on demand"}, {"bpm", 120.0},
+                     {"lengthTicks", 4LL * 4 * kPpq}, {"masterGainDb", 0.0},
+                     {"tracks", json::array({track("t0", {{"format", "vst3"}, {"id", "fake"}, {"stateId", "s1"}, {"hasState", true}}),
+                                             track("t1", {{"format", "vst3"}, {"id", "fake"}})})}};
+  // The engine names the keys it needs and accepts nothing yet (no revision spent, the old project keeps playing).
+  const json first = server.execute("project.load", {{"project", song}});
+  const json neededFirst = first.value("statesNeeded", json::array());
+  CHECK_EQ(neededFirst.size(), (size_t)1);  // t0 only: t1 has no state to ask for
+  if (neededFirst.size() == 1) CHECK_EQ(neededFirst[0], std::string("track:t0"));
+  CHECK_EQ(server.project().tracks.size(), (size_t)0);
+  // The app answers with the state for exactly those keys: the load is accepted.
+  const json accepted = server.execute("project.load", {{"project", song}, {"states", {{"track:t0", "U1RBVEU="}}}});
+  CHECK(accepted.value("statesNeeded", json::array()).empty());
+  CHECK_EQ(accepted.value("tracks", (size_t)0), (size_t)2);
+  CHECK_EQ(server.project().tracks.size(), (size_t)2);
+  CHECK_EQ(server.project().tracks[0].plugin.value("state", std::string()), std::string("U1RBVEU="));
+  // An ordinary edit (a fader) carries no blob and is accepted at once; the state the engine holds stays.
+  json edit = song;
+  edit["tracks"][0]["gainDb"] = -3.0;
+  const json edited = server.execute("project.load", {{"project", edit}});
+  CHECK(edited.value("statesNeeded", json::array()).empty());
+  CHECK_EQ(server.project().tracks.size(), (size_t)2);
+  CHECK_EQ(server.project().tracks[0].plugin.value("state", std::string()), std::string("U1RBVEU="));
+  CHECK_NEAR(server.project().tracks[0].gainDb, -3.0, 1e-9);
+  // plugins.states takes a list of keys: only those come back (empty list absent = every loaded plugin).
+  const json some = server.execute("plugins.states", {{"keys", json::array({"track:t1"})}});
+  CHECK_EQ(some.size(), (size_t)1);
+  CHECK(some.contains("track:t1"));
+  const json all = server.execute("plugins.states", json::object());
+  CHECK_EQ(all.size(), (size_t)2);
+  // Refreshed live state rides project.load (what the app sends before Save/Export): same identity, new content,
+  // accepted at once, and it is what an offline render makes its instances from.
+  const json refreshed = server.execute("project.load", {{"project", edit}, {"states", {{"track:t0", "TkVX"}}}});
+  CHECK(refreshed.value("statesNeeded", json::array()).empty());
+  CHECK_EQ(server.project().tracks[0].plugin.value("state", std::string()), std::string("TkVX"));
+  host.offlineGets.clear();
+  renderProject(server.project(), kSr, 512, false, 0.05, nullptr, nullptr, &host, 0);
+  CHECK(!host.offlineGets.empty());
+  if (!host.offlineGets.empty())
+    CHECK_EQ(host.offlineGets.back().value("state", std::string()), std::string("TkVX"));  // the export reads the refreshed state
+  // A new identity (the document chose another state, e.g. a preset) needs its state again.
+  json preset = edit;
+  preset["tracks"][0]["plugin"]["stateId"] = "s2";
+  const json asked = server.execute("project.load", {{"project", preset}});
+  const json neededPreset = asked.value("statesNeeded", json::array());
+  CHECK_EQ(neededPreset.size(), (size_t)1);
+  if (neededPreset.size() == 1) CHECK_EQ(neededPreset[0], std::string("track:t0"));
+  CHECK_EQ(server.project().tracks[0].plugin.value("stateId", std::string()), std::string("s1"));  // nothing accepted yet
+  const json presetOk = server.execute("project.load", {{"project", preset}, {"states", {{"track:t0", "UFJFU0VU"}}}});
+  CHECK(presetOk.value("statesNeeded", json::array()).empty());
+  CHECK_EQ(server.project().tracks[0].plugin.value("state", std::string()), std::string("UFJFU0VU"));
+  // Legacy: a song with its state in the projection is accepted in one pass, as always.
+  json legacy = song;
+  legacy["tracks"][0]["plugin"]["state"] = "TEVHQUNZ";
+  legacy["tracks"][0]["plugin"].erase("hasState");
+  const json one = server.execute("project.load", {{"project", legacy}});
+  CHECK(one.value("statesNeeded", json::array()).empty());
+  CHECK_EQ(server.project().tracks[0].plugin.value("state", std::string()), std::string("TEVHQUNZ"));
+}
 CORE_TEST_MAIN

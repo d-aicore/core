@@ -890,4 +890,44 @@ TEST("score: Stage Core's live operations (song shape, arrange, cell on/off) on 
   CHECK(threw);
 }
 
+// STATE-PER-EDIT (2026-11-18, work plan item 2): every edit projection carried the FULL state blob of every plugin
+// (document.cpp toProjection copied t.instrument.plugin and the effect JSON verbatim), measured ~157 ms per edit with
+// 32 tracks. The projection must name the state (stateId, and hasState for the places that have one) and leave the
+// blob in the document: Save keeps writing it, and the engine asks for the keys it needs (project.load statesNeeded).
+TEST("projection: plugin state does not travel with every edit (STATE-PER-EDIT)") {
+  Document d = newEmptyDocument();
+  const json synth = {{"id", "synth-a"}, {"file", "synth-a.vst3"}, {"name", "Synth A"}, {"format", "vst3"}};
+  const std::string a = addPluginTrack(d, synth);
+  const std::string b = addPluginTrack(d, synth);  // no state: a default plugin, nothing to ask for
+  d.tracks[0].instrument.plugin["state"] = "QUJDRA==";
+  d.tracks[0].instrument.plugin["stateId"] = "s1";
+  addPluginEffect(d, a, {{"id", "fx-a"}, {"file", "fx-a.vst3"}, {"name", "FX A"}, {"format", "vst3"}});
+  d.tracks[0].effects[0]["plugin"]["state"] = "RUZHSA==";
+  d.masterEffects.push_back({{"id", "m1"}, {"type", "plugin"},
+                             {"plugin", {{"id", "m-a"}, {"file", "m-a.vst3"}, {"format", "vst3"}, {"state", "TUFTVA=="}}}});
+  const json p = toProjection(d);
+  // No full blob anywhere in the projection (the 157 ms root).
+  CHECK(p.dump().find("QUJDRA==") == std::string::npos);
+  CHECK(p.dump().find("RUZHSA==") == std::string::npos);
+  CHECK(p.dump().find("TUFTVA==") == std::string::npos);
+  const json& pa = p["tracks"][0]["plugin"];
+  CHECK(!pa.contains("state"));
+  CHECK_EQ(pa.value("stateId", std::string()), std::string("s1"));  // the identity the engine keeps the instance by
+  CHECK_EQ(pa.value("hasState", false), true);
+  CHECK(!p["tracks"][1]["plugin"].contains("state"));
+  CHECK(!p["tracks"][1]["plugin"].contains("hasState"));
+  CHECK(!p["tracks"][0]["effects"][0]["plugin"].contains("state"));
+  CHECK_EQ(p["tracks"][0]["effects"][0]["plugin"].value("hasState", false), true);
+  CHECK(!p["masterEffects"][0]["plugin"].contains("state"));
+  CHECK_EQ(p["masterEffects"][0]["plugin"].value("hasState", false), true);
+  // The document keeps every blob: Save writes them, and they answer the engine's statesNeeded.
+  const json saved = toJson(d);
+  CHECK_EQ(saved["tracks"][0]["instrument"]["plugin"].value("state", std::string()), std::string("QUJDRA=="));
+  CHECK_EQ(saved["tracks"][0]["effects"][0]["plugin"].value("state", std::string()), std::string("RUZHSA=="));
+  CHECK_EQ(saved["master"]["effects"][0]["plugin"].value("state", std::string()), std::string("TUFTVA=="));
+  // The engine accepts the projection's shape (hasState passes its validation).
+  bool accepted = true;
+  try { core::fromJson(p); } catch (const std::exception&) { accepted = false; }
+  CHECK(accepted);
+}
 CORE_TEST_MAIN
