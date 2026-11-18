@@ -2,6 +2,7 @@
 // (app/engine-client), on the null audio backend. No window, no real audio device.
 // Run: engine_process_tests [part of a name]
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cstdio>
 #include <mutex>
@@ -149,6 +150,37 @@ TEST("serve: after a plugin crashes in processBlock the engine still answers, re
   // Closing stdin ends the session: the engine exits by itself (code 0), it is not terminated.
   engine.close();
   CHECK_EQ(end.get(), std::string("The engine exited (code 0)."));
+}
+
+// Data loss (2026-11-18), S3: the host listened to parameter changes only. A plugin that changes what it holds
+// without moving a parameter (a sample or a wavetable loaded in its window) tells the host through VST3's setDirty,
+// which JUCE delivers as audioProcessorChanged: nobody listened, the app never heard "pluginsChanged", and the
+// song closed without a question, losing the change.
+TEST("serve: a plugin change that is not a parameter is reported as pluginsChanged") {
+  const json synth = scanFirst(CORE_TEST_SYNTH_VST3);
+  CHECK(synth.is_object());
+  if (!synth.is_object()) return;
+
+  std::atomic<int> changes{0};
+  EngineClient engine(engineOptions());
+  engine.setEventHandler([&changes](const json& e) { if (e.value("event", "") == "pluginsChanged") ++changes; });
+  engine.start();
+  const json loaded = engine.command("project.load", {{"project", song(json::array({pluginTrack("synth", synth)}))}}, 30000ms);
+  CHECK(loaded.value("missing", json::array()).empty());
+  engine.command("engine.start", {{"backend", "null"}});
+  std::this_thread::sleep_for(500ms);
+  CHECK_EQ(changes.load(), 0);  // loading a plugin and giving it its state is not a change the user made
+
+  // An ordinary note changes nothing; the test synth's note 0 reports a change of state that is not a parameter.
+  engine.command("note.on", {{"trackId", "synth"}, {"pitch", 60}, {"velocity", 0.8}});
+  engine.command("note.off", {{"trackId", "synth"}, {"pitch", 60}});
+  std::this_thread::sleep_for(500ms);
+  CHECK_EQ(changes.load(), 0);
+  engine.command("note.on", {{"trackId", "synth"}, {"pitch", 0}, {"velocity", 0.8}});
+  for (int i = 0; i < 50 && changes.load() == 0; ++i) std::this_thread::sleep_for(100ms);
+  CHECK_EQ(changes.load(), 1);
+  engine.command("note.off", {{"trackId", "synth"}, {"pitch", 0}});
+  engine.close();
 }
 #endif
 

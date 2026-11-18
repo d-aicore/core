@@ -82,7 +82,7 @@ bool guarded(const std::function<void()>& f) {
   return ok;
 }
 
-class JuceProcessor final : public PluginProcessor, private juce::AudioProcessorParameter::Listener {
+class JuceProcessor final : public PluginProcessor, private juce::AudioProcessorParameter::Listener, private juce::AudioProcessorListener {
 public:
   JuceProcessor(std::unique_ptr<juce::AudioPluginInstance> instance, bool instrument, std::atomic<bool>* changed, int block = kPluginBlock)
       : instance_(std::move(instance)), instrument_(instrument), changed_(changed), block_(std::clamp(block, 1, kMaxBlock)) {
@@ -93,9 +93,13 @@ public:
       p->addListener(this);
       params_.push_back(p);
     }
+    instance_->addListener(this);
   }
 
   ~JuceProcessor() override {
+    // The listeners go first, also from a crashed plugin: these calls stay in the host's own lists and run no
+    // plugin code, and an instance that is leaked must not keep a pointer to this object.
+    instance_->removeListener(this);
     for (auto* p : instance_->getParameters()) p->removeListener(this);
     juce::AudioPluginInstance* raw = instance_.release();
     // A plugin that crashed is never called again, not even to be released or deleted: it is leaked on purpose.
@@ -214,6 +218,14 @@ private:
   // A parameter moved (in the plugin's editor, usually): the document needs this plugin's state again.
   void parameterValueChanged(int, float) override { if (changed_) changed_->store(true); }
   void parameterGestureChanged(int, bool) override {}
+  // What the plugin holds changed without a parameter moving (a sample or a wavetable loaded in its window, a
+  // preset chosen there): VST3's setDirty, which JUCE gives as nonParameterStateChanged. The document needs this
+  // plugin's state again just the same, or the song closes without a question and the change is lost. Any
+  // thread; only the flag is set.
+  void audioProcessorChanged(juce::AudioProcessor*, const ChangeDetails& details) override {
+    if (details.nonParameterStateChanged && changed_ && !failed()) changed_->store(true);  // (a failed plugin is never asked for its state)
+  }
+  void audioProcessorParameterChanged(juce::AudioProcessor*, int, float) override {}  // (parameterValueChanged has them)
 
   std::unique_ptr<juce::AudioPluginInstance> instance_;
   bool instrument_;

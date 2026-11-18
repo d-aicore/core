@@ -1,7 +1,8 @@
 // The test plugins (one file, built once per plugin): CORE_TEST_SYNTH (a sine per note), CORE_TEST_GAIN or
 // CORE_TEST_DELAY (a delay that reports it as latency), CORE_TEST_THROW (a gain that throws after 0.1 s, audit 6.4),
 // CORE_TEST_CRASH (an instrument that crashes after 0.1 s). All have one parameter, "gain" (0..1, 0.5), saved in
-// their state, and the generic editor.
+// their state, and the generic editor. The synth's note 0 plays nothing: it tells the host that its state changed
+// without moving a parameter, as a plugin does when a sample or a wavetable is loaded in its window.
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <array>
 #include <cmath>
@@ -62,7 +63,11 @@ public:
     for (const auto m : midi) {
       render(m.samplePosition);
       const auto msg = m.getMessage();
-      if (msg.isNoteOn()) {
+      if (msg.isNoteOn() && msg.getNoteNumber() == kStateChangeNote) {
+        // What a plugin does when the user loads a sample or a wavetable in its window: no parameter moves, it
+        // only tells the host that its state is another one (VST3: IComponentHandler2::setDirty).
+        updateHostDisplay(ChangeDetails().withNonParameterStateChanged(true));
+      } else if (msg.isNoteOn()) {
         Voice* free = &voices_[0];
         for (auto& v : voices_) if (!v.on && v.level <= 0) { free = &v; break; }
         *free = Voice{msg.getNoteNumber(), msg.getFloatVelocity(), 0, 0, true};
@@ -75,6 +80,7 @@ public:
     render(buffer.getNumSamples());
   }
 private:
+  static constexpr int kStateChangeNote = 0;  // this note plays nothing: the plugin reports a change that is not a parameter
   struct Voice { int pitch = 0; float velocity = 0; double phase = 0, level = 0; bool on = false; };
   Voice voices_[16];
   double rate_ = 48000;
