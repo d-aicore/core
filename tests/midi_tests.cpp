@@ -4,6 +4,7 @@
 #include "support/check.hpp"
 #include "edit.hpp"
 #include "midi.hpp"
+#include "storage.hpp"
 
 using namespace core::doc;
 namespace fs = std::filesystem;
@@ -221,6 +222,69 @@ TEST("MIDI ler: o cabecalho a prometer mais pistas do que as que o ficheiro tem 
   listed.insert(listed.end(), chunk.begin(), chunk.end());
   const MidiFile both = parseMidi(listed);
   CHECK_EQ(both.tracks.size(), (size_t)2);
+}
+
+// BUG-SWEEP-18 (2026-11-18): cleanName checked the lead/continuation structure only. Overlong sequences (E0 80 80),
+// surrogate halves (ED A0 80) and code points above U+10FFFF (F4 90 80 80) passed as "valid UTF-8": the import guard
+// (parseDocument(toJson(next))) never dumps, so the import succeeded, but saveFile's .dump(2) and the autosave's
+// .dump() throw on invalid UTF-8 (nlohmann, strict): the song could not be saved any more.
+TEST("MIDI import BUG-SWEEP-18: overlong, surrogate and above-U+10FFFF names keep the song savable") {
+  const std::vector<std::string> bad = {
+      std::string("\xE0\x80\x80", 3),      // overlong 3-byte sequence
+      std::string("\xED\xA0\x80", 3),      // surrogate half U+D800
+      std::string("\xF4\x90\x80\x80", 4),  // above U+10FFFF
+      std::string("\xF0\x80\x80\x80", 4),  // overlong 4-byte sequence
+      std::string("\xF5\x80\x80\x80", 4),  // lead byte beyond F4
+      std::string("Kick\xED\xA0\x80" "Drums")};  // invalid bytes inside an otherwise plain name
+  for (const std::string& raw : bad) {
+    MidiFile f;
+    f.ppq = 960;
+    MidiTrack t;
+    t.name = raw;
+    t.notes = {{0, 960, 60, 90, 0}};
+    f.tracks = {t};
+    Document d = newEmptyDocument();
+    const MidiImportResult r = importMidi(d, f);  // the import itself succeeds
+    CHECK_EQ(r.trackIds.size(), (size_t)1);
+    bool threw = false;
+    std::string text;
+    try { text = toJson(d).dump(); } catch (const std::exception&) { threw = true; }
+    CHECK(!threw);  // before: nlohmann type_error.316 (invalid UTF-8) -> saveFile and the autosave throw
+    if (threw) continue;
+    CHECK_EQ(toJson(parseDocument(toJson(d))).dump(), text);  // round trip stable
+    // The real failure path: save to disk (.dump(2)) and reopen.
+    const fs::path file = fs::temp_directory_path() / "core-midi-sweep18.core";
+    saveFile(d, file);
+    Document back = openFile(file).document;
+    CHECK_EQ(trackById(back, r.trackIds[0]).name, trackById(d, r.trackIds[0]).name);
+    fs::remove(file);
+    fs::remove(backupPath(file));
+  }
+  // The Latin-1 fallback stays: each invalid byte is read as Latin-1, valid text around it is kept.
+  MidiFile f;
+  f.ppq = 960;
+  MidiTrack t;
+  t.name = std::string("Kick\xED\xA0\x80", 7);
+  t.notes = {{0, 960, 60, 90, 0}};
+  f.tracks = {t};
+  Document d = newEmptyDocument();
+  const MidiImportResult r = importMidi(d, f);
+  CHECK_EQ(trackById(d, r.trackIds[0]).name, std::string("Kick\xC3\xAD\xC2\xA0\xC2\x80"));
+}
+
+TEST("rename BUG-SWEEP-18: a track name that is not valid UTF-8 is refused, the song stays savable") {
+  Document d = newEmptyDocument();
+  const std::string id = addTrack(d, "", "Kick");
+  for (const std::string bad : {std::string("\xE0\x80\x80", 3), std::string("\xED\xA0\x80", 3),
+                                std::string("\xF4\x90\x80\x80", 4), std::string("Bass\xC0\xAF")}) {
+    CHECK_THROWS(renameTrack(d, id, bad));
+    CHECK_EQ(trackById(d, id).name, std::string("Kick"));  // nothing changed
+  }
+  renameTrack(d, id, "Ba\xC3\xA7o");  // valid UTF-8 still goes through
+  CHECK_EQ(trackById(d, id).name, std::string("Ba\xC3\xA7o"));
+  bool threw = false;
+  try { (void)toJson(d).dump(); } catch (const std::exception&) { threw = true; }
+  CHECK(!threw);
 }
 
 CORE_TEST_MAIN

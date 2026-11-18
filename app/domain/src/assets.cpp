@@ -372,7 +372,9 @@ void wavPathsIn(const json& value, const fs::path& projectDir, std::set<fs::path
 // The audio files the songs saved in projectDir use, added to `used`: all of them share <projectDir>/Audio (the
 // project folder is the folder of the .core file). Every "*.core" and its "*.core.bak" is read (the open song's own
 // too: what is on disk may still need a file the open song dropped), and a ".json" that is a song of Core's (File >
-// Open takes them). False when one of them cannot be read: then nobody knows what it needs.
+// Open takes them). A retained recovery copy "<song>.saving-N" (a save that failed half way keeps the new version
+// there, storage.cpp) is read as the song it is a copy of: it may be the only copy referencing an audio file
+// (BUG-SWEEP-17). False when one of them cannot be read: then nobody knows what it needs.
 bool audioSavedSongsUse(const fs::path& projectDir, std::set<fs::path>& used) {
   std::error_code e;
   for (fs::directory_iterator it(projectDir, e), end; !e && it != end; it.increment(e)) {
@@ -381,6 +383,13 @@ bool audioSavedSongsUse(const fs::path& projectDir, std::set<fs::path>& used) {
     try {
       std::string name = utf8(it->path().filename());
       for (auto& c : name) c = (char)std::tolower((unsigned char)c);
+      // ".saving-<number>" at the end: the name of the file this is a copy of decides (same format checks).
+      if (const size_t at = name.rfind(".saving-"); at != std::string::npos) {
+        const std::string number = name.substr(at + 8);
+        bool digits = !number.empty();
+        for (char c : number) digits = digits && c >= '0' && c <= '9';
+        if (digits) name.resize(at);
+      }
       const bool song = endsWith(name, kFileExtension) || endsWith(name, (std::string(kFileExtension) + ".bak").c_str());
       if (!song && !endsWith(name, ".json") && !endsWith(name, ".json.bak")) continue;
       const json value = json::parse(readTextFile(it->path()), nullptr, false);

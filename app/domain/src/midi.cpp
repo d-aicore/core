@@ -290,6 +290,8 @@ std::vector<uint8_t> readMidiFile(const std::filesystem::path& file) {
 namespace {
 // A track name from a file: valid UTF-8 (a byte that is not is read as Latin-1, as old MIDI files write names), no
 // control characters, at most 80 bytes and never cut inside a character (a bad name made the song unsavable, D4/D6).
+// "Valid" is the whole of UTF-8: overlong forms, surrogate halves and code points above U+10FFFF are not valid either
+// (BUG-SWEEP-18); they take the same Latin-1 fallback.
 std::string cleanName(const std::string& raw) {
   std::string out;
   for (size_t i = 0; i < raw.size();) {
@@ -297,6 +299,12 @@ std::string cleanName(const std::string& raw) {
     size_t len = c < 0x80 ? 1 : (c & 0xE0) == 0xC0 ? 2 : (c & 0xF0) == 0xE0 ? 3 : (c & 0xF8) == 0xF0 ? 4 : 0;
     bool valid = len > 0 && i + len <= raw.size() && !(len == 2 && c < 0xC2);
     for (size_t k = 1; valid && k < len; ++k) valid = ((unsigned char)raw[i + k] & 0xC0) == 0x80;
+    // The shortest form only, no surrogate halves, nothing above U+10FFFF: the structure above is not enough,
+    // and nlohmann's dump refuses such bytes (the song would import but never save, BUG-SWEEP-18).
+    if (valid && len == 3)
+      valid = !((c == 0xE0 && (unsigned char)raw[i + 1] < 0xA0) || (c == 0xED && (unsigned char)raw[i + 1] >= 0xA0));
+    if (valid && len == 4)
+      valid = c <= 0xF4 && !(c == 0xF0 && (unsigned char)raw[i + 1] < 0x90) && !(c == 0xF4 && (unsigned char)raw[i + 1] >= 0x90);
     std::string piece;
     if (!valid) { piece = {(char)(0xC0 | (c >> 6)), (char)(0x80 | (c & 0x3F))}; len = 1; }  // Latin-1
     else if (len == 1 && (c < 0x20 || c == 0x7F)) piece = " ";

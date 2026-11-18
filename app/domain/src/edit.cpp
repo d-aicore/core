@@ -40,6 +40,22 @@ std::string slug(const std::string& text) {
   return out.substr(0, 32);
 }
 
+// Whether the text is well-formed UTF-8: the shortest form only, no surrogate halves, nothing above U+10FFFF, no
+// cut sequence. nlohmann's dump refuses anything else, and a song holding such a name cannot be saved
+// (BUG-SWEEP-18).
+bool wellFormedUtf8(const std::string& s) {
+  for (size_t i = 0; i < s.size();) {
+    const unsigned char c = (unsigned char)s[i];
+    const size_t len = c < 0x80 ? 1 : (c & 0xE0) == 0xC0 ? 2 : (c & 0xF0) == 0xE0 ? 3 : (c & 0xF8) == 0xF0 ? 4 : 0;
+    if (len == 0 || i + len > s.size() || (len == 2 && c < 0xC2)) return false;
+    for (size_t k = 1; k < len; ++k) if (((unsigned char)s[i + k] & 0xC0) != 0x80) return false;
+    if (len == 3 && ((c == 0xE0 && (unsigned char)s[i + 1] < 0xA0) || (c == 0xED && (unsigned char)s[i + 1] >= 0xA0))) return false;
+    if (len == 4 && (c > 0xF4 || (c == 0xF0 && (unsigned char)s[i + 1] < 0x90) || (c == 0xF4 && (unsigned char)s[i + 1] >= 0x90))) return false;
+    i += len;
+  }
+  return true;
+}
+
 } // namespace
 
 const std::vector<InstrumentChoice>& builtinInstruments() {
@@ -361,6 +377,7 @@ void renameTrack(Document& doc, const std::string& trackId, const std::string& n
   clean.erase(clean.find_last_not_of(" \t") + 1);
   if (clean.empty()) throw DocumentError("name", "cannot be empty");
   if (clean.size() > 80) throw DocumentError("name", "is longer than 80 bytes (an accented letter counts as 2)");
+  if (!wellFormedUtf8(clean)) throw DocumentError("name", "is not valid UTF-8 text");  // it would make the song unsavable (BUG-SWEEP-18)
   find(doc, trackId).name = clean;  // the id stays: it is what links meters, history and the engine
 }
 
