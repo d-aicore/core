@@ -84,6 +84,7 @@ struct PatternTemplateRow { std::string part, name; int64_t lengthTicks = 0; std
 struct PatternTemplate {
   std::string id, name, style, about;
   double bpm = 0;         // 0: not said
+  double swing = 0;       // BUG-SWEEP-26 (ratified): the slot's swing at save; load reconciles from it (0: legacy/straight)
   int bars = 4;
   bool builtin = false;   // a P-Core style, written fresh at each load (rows empty)
   std::vector<PatternTemplateRow> rows;
@@ -96,7 +97,11 @@ PatternTemplate rackTemplateFromJson(const json& j);  // throws DocumentError
 json rackTemplateToJson(const PatternTemplate& t);
 std::vector<PatternTemplate> loadRackTemplates(const std::filesystem::path& folder, std::vector<std::string>* problems = nullptr);
 // The slot as a template (its rows: each track's part, name and notes). The song's BPM goes with it.
-PatternTemplate rackTemplateFromSlot(const Document& doc, const std::string& slotId, const std::string& name);
+// BUG-SWEEP-26 (owner ratified 2026-11-18: «preservar swing ao guardar; unswing só em opção explícita de export»):
+// the swing is PRESERVED — the slot's swing goes with the template, the notes keep their rendered ticks AND
+// their rackSwingBase records, so load reconciles once (never double-swung). `unswing` (the explicit export
+// option) renders the notes straight at their bases and carries no swing.
+PatternTemplate rackTemplateFromSlot(const Document& doc, const std::string& slotId, const std::string& name, bool unswing = false);
 // Writes it as <id>.core-patterns.json in the folder (a used id gets -2, -3...). Returns the file.
 // Safe write (read back, .bak on a race); throws DocumentError on a failed write, never leaves an empty file.
 std::filesystem::path saveRackTemplate(const std::filesystem::path& folder, PatternTemplate t);

@@ -1433,4 +1433,182 @@ TEST("freeze split BUG-SWEEP-21: unfreeze is one Undo step, then the split succe
   CHECK(!p.canUndo());
 }
 
+// ---------------------------------------------------------------- BUG-SWEEP-26 adjust (ratified 2026-11-18)
+// Owner, verbatim: «preservar swing ao guardar; unswing só em opção explícita de export.» The shipped 26 fix
+// made load apply the slot's swing fresh; but save stripped the rackSwingBase records (and had no swing
+// metadata), so a swung slot saved as a template lost its swing state: loading into a different swing kept
+// the old rendering and the next setRackSwing drifted the notes off the grid; with style jitter a small
+// swing was even doubled. Save now carries the swing (metadata + rendered ticks + base records); load
+// reconciles once; unswing is an explicit export option. Legacy templates (no metadata) load as before.
+
+namespace {
+// The swing delay of an odd 1/16 (the same math as pattern_rack.cpp's swingTicks).
+int64_t delayOf(double swing) { return (int64_t)std::llround(std::clamp(swing, 0.0, 0.75) * (kPpq / 4) / 2.0); }
+// A song with one kick track: four 1/16 notes a bar, slot s1 swung by `swing` (records written). Returns the track id.
+std::string swungSlotSong(Document& d, double swing) {
+  d = newEmptyDocument();
+  d.bpm = 150;
+  d.lengthTicks = 4 * kBar;
+  const std::string tid = addTrack(d, "kick", "Kick");
+  Track& t = trackById(d, tid);
+  Pattern& p = t.patterns[0];
+  p.lengthTicks = kBar;
+  p.notes.clear();
+  for (int i = 0; i < 4; ++i) {
+    Note n;
+    n.id = "n" + std::to_string(i + 1);
+    n.tick = i * (kPpq / 4);
+    n.length = kPpq / 8;
+    n.pitch = 36;
+    n.velocity = 0.8;
+    p.notes.push_back(n);
+  }
+  t.clips = {{"c1", p.id, 0, 4 * kBar, 0, json::object()}};
+  ensureRackSlots(d, 0);
+  setRackBars(d, "s1", 4);  // a 4-bar slot: the pattern repeats its four 1/16s over the four bars
+  if (swing > 0) setRackSwing(d, "s1", swing);
+  return tid;
+}
+std::vector<int64_t> ticksOf(const Pattern& p) {
+  std::vector<int64_t> v;
+  for (const auto& n : p.notes) v.push_back(n.tick);
+  std::sort(v.begin(), v.end());
+  return v;
+}
+// The slot's pattern ticks on a track (empty when missing: the comparison fails loudly, never a crash).
+std::vector<int64_t> slotTicks(const Document& doc, const std::string& slotId, const std::string& tid) {
+  const auto slots = rackSlots(doc);  // kept alive: findRackSlot points into this vector
+  const PatternSlot* s = findRackSlot(slots, slotId);
+  const Pattern* p = s ? rackPattern(doc, *s, tid) : nullptr;
+  return p ? ticksOf(*p) : std::vector<int64_t>{};
+}
+// The four 1/16 bases of each bar, the odd ones delayed by the swing: what the slot's pattern must play.
+std::vector<int64_t> gridTicks(double swing, int bars) {
+  std::vector<int64_t> v;
+  for (int b = 0; b < bars; ++b)
+    for (int i = 0; i < 4; ++i)
+      v.push_back(b * kBar + i * (kPpq / 4) + (i % 2 == 1 ? delayOf(swing) : 0));
+  std::sort(v.begin(), v.end());
+  return v;
+}
+}  // namespace
+
+TEST("swing save BUG-SWEEP-26: saving a swung slot preserves its swing state, never strips it") {
+  Document d;
+  swungSlotSong(d, 0.5);
+  const PatternTemplate t = rackTemplateFromSlot(d, "s1", "Mine");
+  const json j = rackTemplateToJson(t);
+  CHECK_NEAR(j.value("swing", 0.0), 0.5, 1e-9);  // before: the swing was dropped on save
+  // The rendered ticks stay AND the base records travel with them (load reconciles without double swing).
+  bool found = false;
+  for (const auto& n : t.rows[0].notes)
+    if (n.tick == 240 + delayOf(0.5)) {  // the odd 1/16 at base 240, rendered later
+      found = true;
+      CHECK(n.extra.contains("rackSwingBase"));  // before: extra wiped, the base lost
+      if (n.extra.contains("rackSwingBase") && n.extra["rackSwingBase"].is_object())
+        CHECK_EQ(n.extra["rackSwingBase"].value("tick", (int64_t)-1), (int64_t)240);
+    }
+  CHECK(found);
+  // The on-disk form carries both: save, load back, same swing and records.
+  const fs::path dir = freshDir("swing26-save");
+  saveRackTemplate(dir, t);
+  std::vector<std::string> problems;
+  const auto loaded = loadRackTemplates(dir, &problems);
+  CHECK(problems.empty());
+  CHECK_EQ(loaded.size(), (size_t)1);
+  if (!loaded.empty()) {
+    CHECK_NEAR(rackTemplateToJson(loaded[0]).value("swing", 0.0), 0.5, 1e-9);
+    bool rec = false;
+    for (const auto& n : loaded[0].rows[0].notes)
+      if (n.tick == 240 + delayOf(0.5) && n.extra.contains("rackSwingBase")) rec = true;
+    CHECK(rec);
+  }
+}
+
+TEST("swing save BUG-SWEEP-26: load applies the saved swing once — same-swing round trip exact, other swing reconciles without drift") {
+  Document d;
+  const std::string tid = swungSlotSong(d, 0.5);
+  const PatternTemplate t = rackTemplateFromSlot(d, "s1", "Mine");
+  // Round trip into the same slot: the notes play exactly as saved (no double swing)...
+  Document a = d;
+  CHECK(applyRackTemplate(a, nullptr, t, "s1", 1) > 0);
+  CHECK(slotTicks(a, "s1", tid) == gridTicks(0.5, 4));
+  // ...and the swing state stays consistent: turning the slot's swing off brings the true grid back.
+  setRackSwing(a, "s1", 0.0);
+  CHECK(slotTicks(a, "s1", tid) == gridTicks(0.0, 4));
+  // Load into a slot with a DIFFERENT swing: the notes reconcile from the saved base to the slot's swing.
+  Document b = d;
+  const std::string s2 = addRackSlot(b, "Other", 4);
+  setRackSwing(b, s2, 0.75);
+  CHECK(applyRackTemplate(b, nullptr, t, s2, 1) > 0);
+  CHECK(slotTicks(b, s2, tid) == gridTicks(0.75, 4));  // before: kept the template's 0.5 rendering
+  setRackSwing(b, s2, 0.0);
+  CHECK(slotTicks(b, s2, tid) == gridTicks(0.0, 4));  // before: drifted off the grid (base 210, not 240)
+}
+
+TEST("swing save BUG-SWEEP-26: a small swing with style jitter is never doubled on load") {
+  Document d;
+  const std::string tid = swungSlotSong(d, 0.1);  // 12 ticks of delay
+  PatternTemplate t = rackTemplateFromSlot(d, "s1", "Mine");
+  t.style = "human";
+  PCoreCatalog c;
+  PCoreStyle st;
+  st.id = "human"; st.name = "Human"; st.humanize = 0.5;  // jitter 12 >= the 12-tick delay: the old load re-swung
+  c.styles.push_back(st);
+  Document a = d;
+  CHECK(applyRackTemplate(a, &c, t, "s1", 1) > 0);
+  CHECK(slotTicks(a, "s1", tid) == gridTicks(0.1, 4));  // before: 252 -> 264, doubled
+  setRackSwing(a, "s1", 0.0);
+  CHECK(slotTicks(a, "s1", tid) == gridTicks(0.0, 4));
+}
+
+TEST("swing save BUG-SWEEP-26: legacy templates (no swing metadata) load exactly as before") {
+  // (a) A straight legacy template into a swung slot: the fresh-apply swing goes on once (the shipped 26 fix).
+  Document d;
+  swungSlotSong(d, 0.0);
+  const json j = rackTemplateToJson(rackTemplateFromSlot(d, "s1", "Legacy"));
+  CHECK(!j.contains("swing"));  // the old form: no swing key
+  Document a;
+  const std::string atid = swungSlotSong(a, 0.5);
+  CHECK(applyRackTemplate(a, nullptr, rackTemplateFromJson(j), "s1", 1) > 0);
+  CHECK(slotTicks(a, "s1", atid) == gridTicks(0.5, 4));
+  // (b) An old-save swung template (rendered ticks, records stripped by the old save): the off-grid guard
+  // keeps the rendered ticks, as before — no metadata to reconcile, no new behavior forced on it.
+  Document old;
+  swungSlotSong(old, 0.5);
+  PatternTemplate ot = rackTemplateFromSlot(old, "s1", "OldSwung");
+  for (auto& row : ot.rows)
+    for (auto& n : row.notes) n.extra = json::object();  // what the pre-fix save produced
+  json oj = rackTemplateToJson(ot);
+  oj.erase("swing");
+  Document b;
+  const std::string btid = swungSlotSong(b, 0.5);
+  CHECK(applyRackTemplate(b, nullptr, rackTemplateFromJson(oj), "s1", 1) > 0);
+  CHECK(slotTicks(b, "s1", btid) == gridTicks(0.5, 4));
+}
+
+TEST("swing save BUG-SWEEP-26: the explicit unswing export option strips the swing; the default keeps it") {
+  Document d;
+  swungSlotSong(d, 0.5);
+  const PatternTemplate kept = rackTemplateFromSlot(d, "s1", "Kept");
+  CHECK_NEAR(kept.swing, 0.5, 1e-9);  // the default save preserves the swing
+  const PatternTemplate straight = rackTemplateFromSlot(d, "s1", "Straight", true);
+  CHECK_NEAR(straight.swing, 0.0, 0);
+  CHECK(!rackTemplateToJson(straight).contains("swing"));  // the old form: nothing to reconcile
+  std::vector<int64_t> ticks;
+  for (const auto& n : straight.rows[0].notes) {
+    ticks.push_back(n.tick);
+    CHECK(!n.extra.contains("rackSwingBase"));  // rendered straight at the bases, records gone
+  }
+  std::sort(ticks.begin(), ticks.end());
+  CHECK(ticks == gridTicks(0.0, 4));
+  // The straight export loads into a swung slot and takes its swing once (the fresh-apply path).
+  Document a;
+  const std::string atid = swungSlotSong(a, 0.5);
+  CHECK(applyRackTemplate(a, nullptr, straight, "s1", 1) > 0);
+  CHECK(slotTicks(a, "s1", atid) == gridTicks(0.5, 4));
+  setRackSwing(a, "s1", 0.0);
+  CHECK(slotTicks(a, "s1", atid) == gridTicks(0.0, 4));
+}
+
 CORE_TEST_MAIN
