@@ -33,8 +33,12 @@ $juceArg = ""
 if (Test-Path $Juce) { $juceArg = '"-DFETCHCONTENT_SOURCE_DIR_JUCE=' + $Juce + '"' }
 $label = if ($Desktop) { "" } else { "-L merge" }
 $log = Join-Path $Build "gate.log"
-# Um .bat temporario numa pasta sem espacos: o cmd /c com caminhos com espacos ja partiu launchers antes.
-$bat = Join-Path $env:TEMP "core-gate.bat"
+# A temporary .bat in a space-free folder (cmd /c with spaced paths has broken launchers before).
+# Unique per invocation (2026-11-18): a fixed core-gate.bat was overwritten mid-run by a concurrent gate
+# from another coordinator stream, corrupting the bat while cmd read it ("'e' is not recognized...") and
+# even running ctest against the other stream's build dir. A per-invocation GUID name makes concurrent
+# gates independent (no shared file to clobber).
+$bat = Join-Path $env:TEMP ("core-gate-" + [guid]::NewGuid().ToString("N") + ".bat")
 @"
 @echo off
 REM Header dependencies (2026-11-18): a localized MSVC printed its /showIncludes prefix in the console code page, Ninja
@@ -58,6 +62,7 @@ $t0 = Get-Date
 $ErrorActionPreference = "Continue"
 cmd /c "`"$bat`" 2>&1" | Tee-Object -FilePath $log
 $rc = $LASTEXITCODE
+Remove-Item -ErrorAction SilentlyContinue $bat
 $ErrorActionPreference = "Stop"
 $secs = [int]((Get-Date) - $t0).TotalSeconds
 $commit = (git -C $src rev-parse --short HEAD 2>$null)
