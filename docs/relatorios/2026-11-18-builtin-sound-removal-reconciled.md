@@ -93,11 +93,30 @@ No live-behaviour test was weakened to force green; the only count shrink is rem
 
 Final integrated tip **`92fb1734af…`** (merge `7dbb5b0` of `2d953c2`+`fdb72f3`, then fixups `cedf4d0`, `92fb173`).
 
-- **merge:** VERDE, `ctest -L merge` **21/21 passed**, **253 test-case lines / 0 failures**. 21 = the slice-A
-  baseline's 22 merge suites minus `legacy_guard_tests` (deleted, D106).
+- **merge (21 suites, `ctest -L merge`), cases / fails** (extracted from `D:/Core-build/removal-reconcile-evidence/ctest-merge-verbose.txt`):
+  engine_tests 39/0 · domain_tests 33/0 · modules_tests 6/0 · role_tests 21/0 · midi_tests 20/0 ·
+  bug_tests 48/0 · bitwig_tests 2/0 · audit_tests 7/0 · audit2_tests 15/0 · hunt_tests 11/0 · round3_tests 7/0 ·
+  calls_tests 12/0 · menu_tests 7/0 · window_tests 10/0 · engine_process_tests 15/0 · cli_version 0 ·
+  cli_demo_render 0 · cli_measure 0 · cli_unicode 0 · cli_package_stale 0 · cli_plugin_crash_render 0.
+  **Total 253 cases / 0 failures.** `engine_tests` still contains the dormant engine `sample host` cases
+  (engine untouched); the suites' verifications ("checks") are not printed separately by this framework —
+  cases (= `TEST` blocks) are the per-suite metric reported.
+- **Denominator reconciliation:** slice-A main (`2d953c2`) had **269 cases** over **22** merge suites;
+  this tip has **253** over **21** — the −16 cases and −1 suite are the D106 removed-feature test deletions
+  (the whole `legacy_guard_tests` suite; `hunt` P04+P08; the 3 domain `BUG-SWEEP-10` sampler/user-host cases
+  + 1 `BUG-SWEEP-09` catalogue case; the `modules` "keeps built-in data" case). The `bug`/`menu` built-in
+  assertions were ADJUSTED (case count unchanged), not deleted. No live-behaviour case was removed to force green.
 - **desktop:** VERDE, **22/22** (21 merge + `desktop_self_test` **Passed, 24.51 s**). Self-test
   `loudest=0.735 > 0` (sound out through the generic test-synth plugin — not silence-by-construction),
-  `build=0.7.0+92fb1734af == engine=0.7.0+92fb1734af`, document=75/accepted=75/applied=75.
+  `build=0.7.0+92fb1734af == engine=0.7.0+92fb1734af`, document=75/accepted=75/applied=75,
+  **66 logged transitions**, **a single `finish(true,…)` final exit** (step `case 47`; the piano group ends
+  at case 40, the detachable-window group is 41-47 — the slice-A renumbering that avoids the collision).
+- **Gate commands + build dir (fresh, unique-bat `core-gate-<guid>.bat`, GATE-LOCK stream=removal-reconcile,
+  released after the gate exited):**
+  `powershell -NoProfile -ExecutionPolicy Bypass -File ci/gate.ps1 -Build D:/Core-build/removal-reconcile -Jobs 6`
+  then `powershell -NoProfile -ExecutionPolicy Bypass -File ci/gate.ps1 -Build D:/Core-build/removal-reconcile -Desktop`.
+  Worktree `D:/CORE/CORE/.agents/worktrees/removal-reconcile`, created with `-c core.autocrlf=false` (LF blobs
+  → no `.modified`). Verdict read from `D:/Core-build/removal-reconcile/gate-resumo.txt` + `gate.log`, never a stale file.
 - **version == sha, no `.modified`:** `core-engine --version` → `0.7.0+92fb1734af`; `git status --porcelain` = 0.
 - **self-test content (generic plugin-host, both UX groups, single final exit):** play / bpm / undo / seek /
   loop / save+reopen / export / device / crash+restart / **new from template (generic)** / tracks / notes /
@@ -107,13 +126,6 @@ Final integrated tip **`92fb1734af…`** (merge `7dbb5b0` of `2d953c2`+`fdb72f3`
   diagnostics / **piano group** (piano gestures, piano surfaces) / **window group** (mixer detach/dock,
   piano roll+browser detach/dock, channel rack dock/detach/close, playlist detach/dock, layout save/restore,
   off-screen rescue, bring-back, legacy settings load). One `ok:` final line = single exit.
-- **Denominator reconciliation:** slice-A main (`2d953c2`) carried 269 cases; this integrated tip measures
-  **253 case-lines** — the −16 is the D106 removed-feature test deletions (the whole `legacy_guard_tests`
-  suite; `hunt` P04+P08; the 3 `domain` BUG-SWEEP-10 sampler/user-host cases + 1 BUG-SWEEP-09 catalogue case;
-  the `modules` "keeps built-in data" case; `bug`/`menu` built-in assertions ADJUSTED not deleted). No
-  live-behaviour coverage was lost; every shrink is a removed-feature deletion.
-  Exact per-suite case breakdown was NOT cleanly re-parsed from the non-verbose gate (limitation) — total
-  253 cases / 0 failures is measured directly (`ctest -V`, 253 `ok` / 0 `FAIL` lines).
 - **Catalogue + kick/bass/cymbal alignment PRESERVED (proven):** `patterns/` (bass/break/cymbals/…) and
   `pcore/styles.json` present; the alignment-bearing suites (engine/domain/role/midi/bug/menu/hunt/round3/
   calls/modules/window) all pass; `fitToSampler` (sampler-key snapping) deleted but note alignment kept.
@@ -133,9 +145,18 @@ Final integrated tip **`92fb1734af…`** (merge `7dbb5b0` of `2d953c2`+`fdb72f3`
 
 - Decisões: reference the owner «O Core não tem sampler… apaga» (D104/D105) prevailing over D110(10); the
   built-in sound removal reconciled onto the slice-A main.
-- Estado medido: branch `main-removal-reconcile` @ `92fb173` (merge `7dbb5b0` of `2d953c2`+`fdb72f3` + 2 fixups);
-  counts here.
+- Estado medido: branch `main-removal-reconcile`, code tip `92fb173` (merge `7dbb5b0` of `2d953c2`+`fdb72f3`
+  + fixups `7e1f862`/`cedf4d0`/`92fb173`; docs tip `c6920f6`), VERDE merge 21/21 + desktop 22/22,
+  253 cases / 0 failures, version `0.7.0+92fb1734af` no `.modified`, self-test ok loudest=0.735 — table above.
 - Bug namespace: record the auto-merge-dropped-live-symbol pattern (`soundOn`, `randomizeAxes` "sound",
-  `recipe[sound]`) as a merge-hazard note; it is not a product defect.
-- Pendência (owner/coordinator): whether to physically remove the dormant engine `sample_host` + residual
-  `restoreBuiltinTemplates` plumbing in a follow-up.
+  `allAxes` exclusion, `recipe[sound]`) as a merge-hazard note; it is not a product defect.
+- **Pendências (follow-up cleanup slice; DO NOT block landing):**
+  1. **Dormant engine `sample_host`** (`dsp/sample_host.hpp` + the `"sample"` instrument registration in
+     `dsp/instruments.cpp` + zone build in `core/graph.cpp`, and the 6 `sample host` cases in `engine_tests`):
+     the domain no longer produces `kind="sample"` (parser rejects it; `samplerInstrument`/`setTrackSample`
+     deleted), so it is unreachable from Core documents. Removal made 0 engine changes and it is round-2
+     single-owner code, so it was left intact (engine union preserved). Decide whether to physically delete it.
+  2. **Inert built-in-template plumbing** (`MainComponent::restoreBuiltinTemplates()` + `doc::restoreBuiltinTemplates`
+     + the Library "bring back the built-in templates" item + `loadTemplates` builtin-folder arg): now restores
+     nothing (no built-in templates ship). `builtinTemplatesFolder()` was removed to satisfy the grep-0
+     acceptance; the restore path is a harmless no-op. Decide whether to retire it too.
