@@ -262,6 +262,8 @@ SampleRef sampleRef(const LibrarySample& sample);
 // Gives a note track the sampler for this sample (one undo step for the caller). The track's notes,
 // mixer, effects and their automation stay; the old instrument's knobs and its own automation go (a new
 // sample starts from its own sound, the same however many samples were tried before).
+// Throws DocumentError for an audio track or a bus (they do not play samples) and for a track played by a plugin
+// (BUG-SWEEP-10: the sampler is a removed built-in, silent; a working plugin is never silently replaced by it).
 void setTrackSample(Document& doc, const std::string& trackId, const SampleIndex& index, const LibrarySample& sample);
 
 // The style of a song made from a style template ("" otherwise).

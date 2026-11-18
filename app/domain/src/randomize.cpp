@@ -431,6 +431,19 @@ const std::vector<std::string>& randomizeAxes() {
   return axes;
 }
 
+// BUG-SWEEP-11: the sound axis (K) has a target only where a built-in instrument of the style's sound ranges is
+// still on its track (a legacy song). Core's own instruments left the engine, so a plugin/audio/sample song has
+// none. The menu disables the axis when this is false; randomizeStyle treats a sole sound axis with no target as
+// a graceful no-op. The condition mirrors the K loop below (kind, name and a parameter that exists).
+bool soundAxisAvailable(const Document& doc) {
+  for (const SoundRange& r : soundRanges(songStyle(doc))) {
+    const Track* t = doc.findTrack(r.track);
+    if (t && t->instrument.kind == "builtin" && t->instrument.name == r.instrument && findInstrumentParam(*t, r.param))
+      return true;
+  }
+  return false;
+}
+
 std::vector<std::string> randomizeStyle(Document& doc, const RandomizeOptions& o) {
   const std::string style = songStyle(doc);
   const StyleCard* card = cardFor(style);
@@ -781,8 +794,10 @@ std::vector<std::string> randomizeStyle(Document& doc, const RandomizeOptions& o
       line += (line.empty() ? "" : ", ") + std::string(text);
     }
     if (lines.empty() && o.axes.size() == 1)
-      throw DocumentError("sound", "this song's kick, bass and hats have no built-in sound to change (samples or audio): Randomize sound "
-                                   "works on Core's own instruments");
+      return {};  // BUG-SWEEP-11: the sound axis has no built-in target in this song (plugins/audio/samples):
+                  // nothing to change, not an error. The menu disables the axis (soundAxisAvailable), so this is
+                  // only reached by an explicit request (e.g. the AI's randomize_style); it is a graceful no-op.
+                  // Making the axis work on plugins is an owner decision (the K contract is built-in-only).
     for (const auto& [name, line] : lines) changes.insert(changes.begin(), "Sound, " + name + ": " + line);
   }
   json allAxes = json::array();
