@@ -38,6 +38,11 @@ std::vector<std::string> randomizeStyle(Document& doc, const RandomizeOptions& o
 // clips of the bass track (id "bass" or the built-in bass) that start there get a copy of their pattern
 // with the note lengths scaled by new/old BPM, as Randomize J does; a longer note stays inside 80 % of
 // the gap to the next one. Drums, hats and the rest keep their ticks (their notes are hits, not gates).
+// A tempo movement that goes exactly back (A -> B -> A, in separate edits or one drag) restores the
+// original pattern with its original gates, name and note ids, and drops the copies it orphaned
+// (BUG-SWEEP-07): the round trip leaves the song byte-identical, so the history cancels the step. Each
+// copy remembers its source and the notes of both sides in its `extra` ("tempoGate"); a copy or a source
+// edited since the copy was made is never restored over - it keeps the normal retiming, no work is lost.
 // The UI, the AI tools and Randomize J use it; one Undo step for the caller. Returns what it did.
 // Throws DocumentError for a BPM outside 40-600 or an invalid map (nothing changes then).
 std::vector<std::string> setTempo(Document& doc, double bpm, std::vector<TempoPoint> changes);

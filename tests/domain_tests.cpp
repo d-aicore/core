@@ -517,4 +517,176 @@ TEST("plugins por fabricante: todos entram num grupo, sem fabricante vai para Ot
   CHECK(pluginsByVendor(json::object()).empty());  // entrada que nao e lista: vazio, sem erro
 }
 
+// ---- BUG-SWEEP-07: tempo round-trip (deeper audit 2026-11-18) --------------------------------------
+// Ported from the Linux probe roundtrip.cpp lines 13-15 (archived verbatim in
+// docs/relatorios/evidencia/2026-11-18-deeper-audit/): real setTempo 145 -> 300 -> 145 in separate
+// edits returned the BPM but not the song: a 3500-tick bass gate became 1692 and the pattern count
+// went 1 -> 3. Within one drag the UI resets from tempoBase_, so that path already round-tripped.
+// This block is self-contained (own include and helpers) so parallel test streams rebase cleanly.
+#include "randomize.hpp"
+
+namespace {
+// The probe's song: a bass track whose one 3840-tick pattern holds a single 3500-tick gate at tick 0.
+Document tempoRoundTripSong() {
+  Document d = newEmptyDocument();  // bpm 145, kPpq 960
+  addTrack(d, "bass");
+  Note n;
+  n.id = "n1";
+  n.length = 3500;
+  d.tracks[0].patterns[0].notes.push_back(n);
+  return d;
+}
+const Note& tempoActiveNote(const Document& d) {
+  const Track& t = d.tracks[0];
+  return t.findPattern(t.clips[0].patternId)->notes[0];
+}
+}  // namespace
+
+TEST("tempo round-trip BUG-SWEEP-07: separate edits 145 -> 300 -> 145 restore the song exactly") {
+  const Document base = tempoRoundTripSong();
+  History h(base);
+  Document up = h.current();
+  setTempo(up, 300, {});
+  h.commit(up, "Tempo");
+  // One way, the ratified ms-gate contract holds (randomize.hpp:36-43, Diogo 2026-11-04): the gate
+  // stays inside 80% of the 3840-tick gap, and the original pattern stays in the catalogue.
+  CHECK_EQ(h.current().tracks[0].patterns.size(), (size_t)2);
+  CHECK_EQ(tempoActiveNote(h.current()).length, (int64_t)3500);
+  Document down = h.current();
+  setTempo(down, base.bpm, {});
+  h.commit(down, "Tempo");
+  std::printf("     (round-trip: length=%lld patterns=%zu equal=%d)\n",
+              (long long)tempoActiveNote(h.current()).length, h.current().tracks[0].patterns.size(),
+              (int)sameContent(base, h.current()));
+  CHECK_EQ(tempoActiveNote(h.current()).length, (int64_t)3500);
+  CHECK_EQ(h.current().tracks[0].patterns.size(), (size_t)1);
+  CHECK(sameContent(base, h.current()));
+  CHECK_NEAR(h.current().bpm, 145, 0);
+  CHECK(!h.modified());
+  CHECK(!h.canUndo());  // the exact round-trip cancels the Tempo step (history.cpp cancelsLastStep)
+  CHECK(!h.canRedo());
+}
+
+TEST("tempo round-trip BUG-SWEEP-07: a single drag with the baseline reset restores the song") {
+  const Document base = tempoRoundTripSong();
+  History h(base);
+  h.beginGesture("Tempo");
+  // The UI resets every drag update from tempoBase_ (MainComponent.cpp:1891-1902, :2591-2599).
+  Document up = base;
+  setTempo(up, 300, {});
+  h.updateGesture(up);
+  CHECK_EQ(h.current().tracks[0].patterns.size(), (size_t)2);  // one copy, not one per drag step
+  CHECK_EQ(tempoActiveNote(h.current()).length, (int64_t)3500);
+  Document back = base;
+  setTempo(back, base.bpm, {});
+  h.updateGesture(back);
+  h.endGesture();
+  CHECK_EQ(tempoActiveNote(h.current()).length, (int64_t)3500);
+  CHECK_EQ(h.current().tracks[0].patterns.size(), (size_t)1);
+  CHECK(sameContent(base, h.current()));
+  CHECK(!h.modified());
+  CHECK(!h.canUndo());
+  CHECK(!h.canRedo());
+}
+
+TEST("tempo round-trip BUG-SWEEP-07: a walk 145 -> 300 -> 400 -> 145 still restores the original gates") {
+  const Document base = tempoRoundTripSong();
+  History h(base);
+  for (double bpm : {300.0, 400.0}) {
+    Document d = h.current();
+    setTempo(d, bpm, {});
+    h.commit(d, "Tempo");
+    CHECK_EQ(h.current().tracks[0].patterns.size(), (size_t)2);  // the previous step's orphan copy is dropped
+  }
+  Document d = h.current();
+  setTempo(d, base.bpm, {});
+  h.commit(d, "Tempo");
+  CHECK_EQ(tempoActiveNote(h.current()).length, (int64_t)3500);
+  CHECK_EQ(h.current().tracks[0].patterns.size(), (size_t)1);
+  CHECK(sameContent(base, h.current()));
+  CHECK(!h.modified());
+}
+
+TEST("tempo round-trip BUG-SWEEP-07: an edited copy is retimed, never taken back to the source") {
+  const Document base = tempoRoundTripSong();
+  History h(base);
+  Document up = h.current();
+  setTempo(up, 300, {});
+  h.commit(up, "Tempo");
+  Document edited = h.current();
+  Track& t = edited.tracks[0];
+  t.findPattern(t.clips[0].patternId)->notes[0].length = 2000;  // the user shortens the gate in the copy
+  h.commit(edited, "Edit note");
+  Document down = h.current();
+  setTempo(down, base.bpm, {});
+  h.commit(down, "Tempo");
+  // No exact restoration: the edit is kept and scaled by 145/300 (2000 -> 967); the original stays intact.
+  CHECK_EQ(tempoActiveNote(h.current()).length, (int64_t)967);
+  CHECK(!sameContent(base, h.current()));
+  CHECK_EQ(h.current().tracks[0].patterns.size(), (size_t)2);  // original + new copy; the edited copy is orphaned
+  CHECK_EQ(h.current().tracks[0].patterns[0].notes[0].length, (int64_t)3500);
+}
+
+TEST("tempo round-trip BUG-SWEEP-07: an edited source is never restored over the copy") {
+  const Document base = tempoRoundTripSong();
+  History h(base);
+  Document up = h.current();
+  setTempo(up, 300, {});
+  h.commit(up, "Tempo");
+  Document edited = h.current();
+  edited.tracks[0].patterns[0].notes[0].length = 3600;  // the user edits the original in the catalogue
+  h.commit(edited, "Edit note");
+  Document down = h.current();
+  setTempo(down, base.bpm, {});
+  h.commit(down, "Tempo");
+  CHECK(!sameContent(base, h.current()));
+  CHECK_EQ(tempoActiveNote(h.current()).length, (int64_t)1692);  // normal retiming of the untouched copy
+  CHECK_EQ(h.current().tracks[0].patterns[0].notes[0].length, (int64_t)3600);  // the edit survives
+  CHECK_EQ(h.current().tracks[0].patterns.size(), (size_t)2);
+}
+
+TEST("tempo round-trip BUG-SWEEP-07: short gates keep their ms one way and come back exactly") {
+  Document base = newEmptyDocument();
+  addTrack(base, "bass");
+  Note a; a.id = "n1"; a.tick = 0; a.length = 3500;
+  Note b; b.id = "n2"; b.tick = 1920; b.length = 400;
+  base.tracks[0].patterns[0].notes = {a, b};
+  History h(base);
+  Document up = h.current();
+  setTempo(up, 300, {});
+  h.commit(up, "Tempo");
+  const Track& tu = h.current().tracks[0];
+  const Pattern* cu = tu.findPattern(tu.clips[0].patternId);
+  CHECK_EQ(cu->notes.size(), (size_t)2);
+  CHECK_EQ(cu->notes[0].length, (int64_t)3500);  // clamped: the 80%-gap floor keeps the long gate
+  CHECK_EQ(cu->notes[1].length, (int64_t)828);   // short gate scales with the BPM (its ms is kept)
+  Document down = h.current();
+  setTempo(down, base.bpm, {});
+  h.commit(down, "Tempo");
+  CHECK(sameContent(base, h.current()));
+  CHECK_EQ(tempoActiveNote(h.current()).length, (int64_t)3500);
+  const Track& td = h.current().tracks[0];
+  CHECK_EQ(td.findPattern(td.clips[0].patternId)->notes[1].length, (int64_t)400);
+  CHECK_EQ(td.patterns.size(), (size_t)1);
+}
+
+TEST("tempo round-trip BUG-SWEEP-07: a saved tempo copy reopens and still restores exactly") {
+  const Document base = tempoRoundTripSong();
+  Document up = base;
+  setTempo(up, 300, {});
+  const fs::path file = tempDir() / ("tempo-roundtrip" + std::string(kFileExtension));
+  fs::remove(file);
+  saveFile(up, file);
+  const Document reopened = openFile(file).document;
+  CHECK(sameContent(up, reopened));  // the tempo metadata survives the reader (pattern extra)
+  History h(reopened);
+  Document down = h.current();
+  setTempo(down, base.bpm, {});
+  h.commit(down, "Tempo");
+  CHECK(sameContent(base, h.current()));
+  CHECK_EQ(tempoActiveNote(h.current()).length, (int64_t)3500);
+  CHECK_EQ(h.current().tracks[0].patterns.size(), (size_t)1);
+  fs::remove(file);
+}
+
 CORE_TEST_MAIN
