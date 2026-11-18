@@ -1,0 +1,8 @@
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-pattern\tests\bug_tests.cpp:579: p->notes[0].tick == (int64_t)300: medido 240, esperado 300
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-pattern\tests\bug_tests.cpp:580: p->notes[0].extra.contains("rackSwingBase")
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-pattern\tests\bug_tests.cpp:589: q->notes[0].tick == (int64_t)330: medido 240, esperado 330
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-pattern\tests\bug_tests.cpp:664: swung
+FAIL sweep-26: a template loaded into a swung slot plays swung and the next swing change works
+ok   sweep-26 control: swing back to zero then 0.75 lands at 330
+FAIL sweep-26 builtin: a P-Core style loaded into a swung slot keeps the swing
+3 testes, 23 verificacoes, 4 falhas

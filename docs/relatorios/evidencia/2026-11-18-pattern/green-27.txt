@@ -1,0 +1,3 @@
+ok   sweep-27: malformed patternSlots metadata is read with defaults, not thrown at the consumer
+ok   sweep-27: unknown song and slot properties survive the parse and save round-trip
+2 testes, 18 verificacoes, 0 falhas

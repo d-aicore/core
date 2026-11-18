@@ -1,0 +1,4 @@
+ok   sweep-26: a template loaded into a swung slot plays swung and the next swing change works
+ok   sweep-26 control: swing back to zero then 0.75 lands at 330
+ok   sweep-26 builtin: a P-Core style loaded into a swung slot keeps the swing
+3 testes, 23 verificacoes, 0 falhas

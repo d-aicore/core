@@ -1,0 +1,5 @@
+  rackSlots threw: [json.exception.type_error.302] type must be string, but is number
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-pattern\tests\bug_tests.cpp:691: !threw
+FAIL sweep-27: malformed patternSlots metadata is read with defaults, not thrown at the consumer
+ok   sweep-27: unknown song and slot properties survive the parse and save round-trip
+2 testes, 7 verificacoes, 1 falhas
