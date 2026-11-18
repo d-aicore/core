@@ -125,7 +125,9 @@ void removeClip(Track& track, const std::string& clipId);
 std::string makeClipUnique(Track& track, const std::string& clipId);
 // Cuts a clip at atTick (strictly inside it): the second part keeps the pattern's phase. Returns its id.
 std::string splitClip(Track& track, const std::string& clipId, int64_t atTick);
-void removeUnusedPatterns(Track& track);  // keeps at least one
+// Keeps at least one. `rackRefs`: pattern ids the Patterns window's slots reference on this track — they are
+// the user's ideas even without a timeline clip, so they count as used (BUG-SWEEP-29).
+void removeUnusedPatterns(Track& track, const std::set<std::string>& rackRefs = {});
 
 // ---- effects (M4): built-in inserts on a track or on the master (trackId "")
 struct EffectParamInfo {

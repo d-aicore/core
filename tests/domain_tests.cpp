@@ -10,7 +10,9 @@
 #include "core/server.hpp"
 #include "edit.hpp"
 #include "history.hpp"
+#include "pattern_rack.hpp"
 #include "plugin_refs.hpp"
+#include "randomize.hpp"
 #include "storage.hpp"
 #include "templates.hpp"
 
@@ -515,6 +517,74 @@ TEST("plugins por fabricante: todos entram num grupo, sem fabricante vai para Ot
     CHECK_EQ(groups[2].plugins.size(), (size_t)2);
   }
   CHECK(pluginsByVendor(json::object()).empty());  // entrada que nao e lista: vazio, sem erro
+}
+
+// BUG-SWEEP-29: tempo-only Randomize deleted Patterns-window rack-only ideas (no clip on the timeline).
+// A slot's patterns are the tracks' own and need not be timeline clips (pattern_rack.hpp contract); an
+// unarranged idea is the user's work and survives every Randomize axis without being sent to Arrange.
+TEST("randomize: tempo-only keeps an unarranged Patterns-window idea (BUG-SWEEP-29)") {
+  Document song = newTemplateDocument();
+  song.extra["template"] = {{"style", "Dark psycore"}};
+  addSection(song, "Groove", 0, song.lengthTicks);
+  ensureRackSlots(song, 0);
+  const std::string sid = addRackSlot(song, "Unarranged idea", 4);
+  Note n;
+  n.id = "n1";
+  n.tick = 0;
+  n.length = 960;
+  n.pitch = 36;
+  n.velocity = 0.5;
+  n.hasRoll = true;
+  n.roll.count = 4;
+  n.roll.velocityFrom = 0.3;
+  n.roll.velocityTo = 0.7;
+  Pattern& idea = rackPatternFor(song, sid, "bass");
+  const std::string pid = idea.id;
+  idea.notes = {n};  // never sent to Arrange: no clip of it on the timeline
+  CHECK(song.findTrack("bass")->findPattern(pid) != nullptr);
+  CHECK_EQ(findRackSlot(rackSlots(song), sid)->tracks.size(), (size_t)1);
+  const std::string before = canon(song);
+  History history(song);
+  RandomizeOptions o;
+  o.axes = {"tempo"};
+  const auto lines = randomizeStyle(song, o);
+  CHECK(!lines.empty());  // tempo always yields at least one line, so the UI always commits this change
+  // The idea pattern and the slot's track reference survive the transform.
+  const Pattern* kept = song.findTrack("bass")->findPattern(pid);
+  CHECK(kept != nullptr);
+  if (kept) {
+    CHECK_EQ(kept->notes.size(), (size_t)1);
+    if (!kept->notes.empty()) {
+      CHECK(kept->notes[0].hasRoll);
+      CHECK_EQ(kept->notes[0].roll.count, 4);
+    }
+  }
+  const auto slots = rackSlots(song);
+  const PatternSlot* slot = findRackSlot(slots, sid);
+  CHECK(slot != nullptr);
+  if (slot) {
+    CHECK_EQ(slot->tracks.size(), (size_t)1);
+    CHECK_EQ(slot->tracks.count("bass"), (size_t)1);
+  }
+  // Reopening the slot shows the same pattern with its notes, not a fresh empty one.
+  Pattern& reopened = rackPatternFor(song, sid, "bass");
+  CHECK_EQ(reopened.id, pid);
+  CHECK_EQ(reopened.notes.size(), (size_t)1);
+  // Save/reopen round-trip keeps the idea and its slot reference.
+  const Document reloaded = parseDocument(toJson(song));
+  const Pattern* reloadedIdea = reloaded.findTrack("bass")->findPattern(pid);
+  CHECK(reloadedIdea != nullptr);
+  if (reloadedIdea) CHECK_EQ(reloadedIdea->notes.size(), (size_t)1);
+  const auto reloadedSlots = rackSlots(reloaded);
+  const PatternSlot* reloadedSlot = findRackSlot(reloadedSlots, sid);
+  CHECK(reloadedSlot != nullptr);
+  if (reloadedSlot) CHECK_EQ(reloadedSlot->tracks.count("bass"), (size_t)1);
+  // Undo control: the committed Randomize goes back to the exact pre-transform state.
+  history.commit(song, "Randomize tempo");
+  CHECK(history.canUndo());
+  CHECK(history.undo());
+  CHECK(history.current().findTrack("bass")->findPattern(pid) != nullptr);
+  CHECK_EQ(canon(history.current()), before);
 }
 
 CORE_TEST_MAIN

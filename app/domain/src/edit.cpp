@@ -557,10 +557,10 @@ std::string splitClip(Track& track, const std::string& clipId, int64_t atTick) {
   return second;
 }
 
-void removeUnusedPatterns(Track& track) {
+void removeUnusedPatterns(Track& track, const std::set<std::string>& rackRefs) {
   if (track.patterns.size() <= 1) return;
   std::vector<Pattern> kept;
-  for (auto& p : track.patterns) if (track.clipsUsing(p.id) > 0) kept.push_back(std::move(p));
+  for (auto& p : track.patterns) if (track.clipsUsing(p.id) > 0 || rackRefs.count(p.id) > 0) kept.push_back(std::move(p));
   if (kept.empty()) kept.push_back(track.patterns.front());
   track.patterns = std::move(kept);
 }
