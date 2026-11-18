@@ -5,6 +5,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstdio>
+#include <cstdlib>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -55,7 +56,7 @@ double answersWithin(EngineClient& engine, const std::string& cmd, const json& a
   return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
 }
 
-#ifdef CORE_TEST_CRASH_VST3
+#if defined(CORE_TEST_CRASH_VST3) || defined(CORE_TEST_FAULT_VST3)
 // The first plugin of a file as the engine describes it (core-engine scan): what a song's track carries.
 json scanFirst(const std::string& file) {
   const std::string command = "\"\"" + std::string(CORE_ENGINE_EXE) + "\" scan \"" + file + "\"\"";
@@ -181,6 +182,215 @@ TEST("serve: a plugin change that is not a parameter is reported as pluginsChang
   CHECK_EQ(changes.load(), 1);
   engine.command("note.off", {{"trackId", "synth"}, {"pitch", 0}});
   engine.close();
+}
+#endif
+
+#ifdef CORE_TEST_FAULT_VST3
+// A crash outside processBlock (2026-11-18, plugin-crash follow-ups): the host guards the state, reset and editor
+// entry points with the same structured exception handling as processBlock, so a plugin that crashes in one of them
+// is silenced and leaked, the engine answers the next command and the other tracks play on. These paths were already
+// guarded; the tests are regression guards (measured green on the prior state), except plugin.params below, which
+// was not guarded and took the engine down (its red is measured with the fix).
+namespace {
+// Sets an environment variable for the engine process (it inherits this one's) and clears it when the test ends.
+struct EnvVar {
+  std::string name;
+  EnvVar(const char* n, const char* v) : name(n) { _putenv_s(n, v); }
+  ~EnvVar() { _putenv_s(name.c_str(), ""); }
+};
+
+// True when the engine reports this key as a crashed plugin.
+bool failedAsCrash(const json& failed, const std::string& key) {
+  for (const auto& f : failed)
+    if (f.value("key", std::string()) == key && f.value("why", std::string()) == "crash") return true;
+  return false;
+}
+
+// The audio thread keeps running while the song plays: callbacks advance between two answers.
+bool playingOn(EngineClient& engine) {
+  json a, b;
+  if (answersWithin(engine, "engine.stats", json::object(), 2000ms, &a) < 0) return false;
+  std::this_thread::sleep_for(200ms);
+  if (answersWithin(engine, "engine.stats", json::object(), 2000ms, &b) < 0) return false;
+  return b.value("callbacks", (uint64_t)0) > a.value("callbacks", (uint64_t)0);
+}
+}  // namespace
+
+TEST("serve: a plugin that crashes giving its state is silenced and leaked, the engine answers and plays on") {
+  EnvVar fault("CORE_TEST_FAULT_GETSTATE", "1");
+  const json faultPlugin = scanFirst(CORE_TEST_FAULT_VST3), synth = scanFirst(CORE_TEST_SYNTH_VST3);
+  CHECK(faultPlugin.is_object());
+  CHECK(synth.is_object());
+  if (!faultPlugin.is_object() || !synth.is_object()) return;
+
+  EndReason end;
+  EngineClient engine(engineOptions());
+  end.attach(engine);
+  engine.start();
+  const json loaded = engine.command("project.load", {{"project", song(json::array({pluginTrack("fault", faultPlugin), pluginTrack("synth", synth)}))}}, 30000ms);
+  CHECK(loaded.value("missing", json::array()).empty());
+  engine.command("engine.start", {{"backend", "null"}});
+  engine.command("transport.play");
+  std::this_thread::sleep_for(300ms);  // let it process: the getState fault fires only once it has played
+
+  // The crash happens in getStateInformation: the host catches it, marks the plugin crashed and skips its state.
+  json states;
+  CHECK(answersWithin(engine, "plugins.states", json::object(), 5000ms, &states) >= 0);
+  CHECK(states.contains("track:synth"));   // the healthy plugin's state is still captured
+  CHECK(!states.contains("track:fault"));  // the crashed one is never asked again
+  json failed;
+  CHECK(answersWithin(engine, "plugins.failed", json::object(), 2000ms, &failed) >= 0);
+  CHECK(failedAsCrash(failed, "track:fault"));
+  CHECK(playingOn(engine));  // the song plays on without the crashed plugin
+
+  // Retry: a new instance from the document's state; the engine keeps answering and exits by itself.
+  json retry;
+  CHECK(answersWithin(engine, "plugin.retry", {{"key", "track:fault"}}, 10000ms, &retry) >= 0);
+  CHECK(retry.value("retried", false));
+  CHECK(retry.value("loaded", false));
+  CHECK(answersWithin(engine, "engine.stats", json::object(), 2000ms) >= 0);
+  engine.close();
+  CHECK_EQ(end.get(), std::string("The engine exited (code 0)."));
+}
+
+TEST("serve: a plugin that crashes loading its state is reported missing, the engine answers and plays on") {
+  const json faultPlugin = scanFirst(CORE_TEST_FAULT_VST3), synth = scanFirst(CORE_TEST_SYNTH_VST3);
+  CHECK(faultPlugin.is_object());
+  CHECK(synth.is_object());
+  if (!faultPlugin.is_object() || !synth.is_object()) return;
+
+  // A healthy instance first, to capture a real state blob (JUCE's VST3 state format: a raw chunk is ignored).
+  std::string stateBlob;
+  {
+    EngineClient healthy(engineOptions());
+    healthy.start();
+    healthy.command("project.load", {{"project", song(json::array({pluginTrack("fault", faultPlugin)}))}}, 30000ms);
+    const json states = healthy.command("plugins.states");
+    stateBlob = states.value("track:fault", std::string());
+    healthy.close();
+  }
+  CHECK(!stateBlob.empty());
+  if (stateBlob.empty()) return;
+
+  // With the setState fault, loading that state crashes inside create(): the host catches it and reports why.
+  EnvVar fault("CORE_TEST_FAULT_SETSTATE", "1");
+  json faultWithState = faultPlugin;
+  faultWithState["state"] = stateBlob;
+  EndReason end;
+  EngineClient engine(engineOptions());
+  end.attach(engine);
+  engine.start();
+  json loaded;
+  CHECK(answersWithin(engine, "project.load", {{"project", song(json::array({pluginTrack("fault", faultWithState), pluginTrack("synth", synth)}))}}, 30000ms, &loaded) >= 0);
+  bool named = false;
+  for (const auto& m : loaded.value("missing", json::array()))
+    if (m.value("key", std::string()) == "track:fault" && m.value("why", std::string()).find("crashed while it was loaded") != std::string::npos) named = true;
+  CHECK(named);
+  engine.command("engine.start", {{"backend", "null"}});
+  engine.command("transport.play");
+  CHECK(playingOn(engine));  // the synth plays; the fault track is silent
+  json states;
+  CHECK(answersWithin(engine, "plugins.states", json::object(), 2000ms, &states) >= 0);
+  CHECK(states.contains("track:synth"));
+  engine.close();
+  CHECK_EQ(end.get(), std::string("The engine exited (code 0)."));
+}
+
+TEST("serve: a plugin that crashes in reset is silenced, the engine answers and plays on") {
+  EnvVar fault("CORE_TEST_FAULT_RESET", "1");
+  const json faultPlugin = scanFirst(CORE_TEST_FAULT_VST3), synth = scanFirst(CORE_TEST_SYNTH_VST3);
+  CHECK(faultPlugin.is_object());
+  CHECK(synth.is_object());
+  if (!faultPlugin.is_object() || !synth.is_object()) return;
+
+  EndReason end;
+  EngineClient engine(engineOptions());
+  end.attach(engine);
+  engine.start();
+  const json loaded = engine.command("project.load", {{"project", song(json::array({pluginTrack("fault", faultPlugin), pluginTrack("synth", synth)}))}}, 30000ms);
+  CHECK(loaded.value("missing", json::array()).empty());
+  engine.command("engine.start", {{"backend", "null"}});
+  engine.command("transport.play");
+  CHECK(playingOn(engine));
+
+  // Stop resets every plugin (drops its tails): the crash in reset() is caught and the plugin silenced.
+  CHECK(answersWithin(engine, "transport.stop", json::object(), 5000ms) >= 0);
+  json failed;
+  CHECK(answersWithin(engine, "plugins.failed", json::object(), 2000ms, &failed) >= 0);
+  CHECK(failedAsCrash(failed, "track:fault"));
+  CHECK(answersWithin(engine, "engine.stats", json::object(), 2000ms) >= 0);
+  // Play again: the healthy synth still sounds, the crashed one stays silent.
+  engine.command("transport.play");
+  CHECK(playingOn(engine));
+  engine.close();
+  CHECK_EQ(end.get(), std::string("The engine exited (code 0)."));
+}
+
+TEST("serve: a plugin that crashes opening its editor is silenced, the engine answers and plays on") {
+  EnvVar fault("CORE_TEST_FAULT_EDITOR", "1");
+  const json faultPlugin = scanFirst(CORE_TEST_FAULT_VST3), synth = scanFirst(CORE_TEST_SYNTH_VST3);
+  CHECK(faultPlugin.is_object());
+  CHECK(synth.is_object());
+  if (!faultPlugin.is_object() || !synth.is_object()) return;
+
+  EndReason end;
+  EngineClient engine(engineOptions());
+  end.attach(engine);
+  engine.start();
+  const json loaded = engine.command("project.load", {{"project", song(json::array({pluginTrack("fault", faultPlugin), pluginTrack("synth", synth)}))}}, 30000ms);
+  CHECK(loaded.value("missing", json::array()).empty());
+  engine.command("engine.start", {{"backend", "null"}});
+  engine.command("transport.play");
+
+  // The crash happens in createEditor: the host catches it, marks the plugin crashed and refuses the window.
+  bool refused = false;
+  std::string why;
+  try { engine.command("plugin.editor", {{"key", "track:fault"}, {"open", true}}, 5000ms); }
+  catch (const EngineError& e) { refused = true; why = e.what(); }
+  CHECK(refused);
+  CHECK(why.find("crashed while it opened its window") != std::string::npos);
+  json failed;
+  CHECK(answersWithin(engine, "plugins.failed", json::object(), 2000ms, &failed) >= 0);
+  CHECK(failedAsCrash(failed, "track:fault"));
+  CHECK(playingOn(engine));
+  // The healthy plugin's window still opens and closes (the editor path is not broken for everyone).
+  CHECK(answersWithin(engine, "plugin.editor", {{"key", "track:synth"}, {"open", true}}, 5000ms) >= 0);
+  CHECK(answersWithin(engine, "plugin.editor", {{"key", "track:synth"}, {"open", false}}, 5000ms) >= 0);
+  engine.close();
+  CHECK_EQ(end.get(), std::string("The engine exited (code 0)."));
+}
+
+TEST("serve: a plugin that crashes in a parameter getter is silenced, the engine answers and plays on") {
+  EnvVar fault("CORE_TEST_FAULT_PARAM", "1");
+  const json faultPlugin = scanFirst(CORE_TEST_FAULT_VST3), synth = scanFirst(CORE_TEST_SYNTH_VST3);
+  CHECK(faultPlugin.is_object());
+  CHECK(synth.is_object());
+  if (!faultPlugin.is_object() || !synth.is_object()) return;
+
+  EndReason end;
+  EngineClient engine(engineOptions());
+  end.attach(engine);
+  engine.start();
+  const json loaded = engine.command("project.load", {{"project", song(json::array({pluginTrack("fault", faultPlugin), pluginTrack("synth", synth)}))}}, 30000ms);
+  CHECK(loaded.value("missing", json::array()).empty());
+  engine.command("engine.start", {{"backend", "null"}});
+  engine.command("transport.play");
+  std::this_thread::sleep_for(300ms);  // let it process: the parameter fault fires only once it has played
+
+  // Reading the parameters calls the plugin's getValue: the crash there must cost that plugin, not the engine.
+  json params;
+  CHECK(answersWithin(engine, "plugin.params", {{"key", "track:fault"}}, 5000ms, &params) >= 0);
+  CHECK(params.is_array());
+  json failed;
+  CHECK(answersWithin(engine, "plugins.failed", json::object(), 2000ms, &failed) >= 0);
+  CHECK(failedAsCrash(failed, "track:fault"));
+  CHECK(playingOn(engine));  // the song plays on without the crashed plugin
+  // The healthy plugin's parameters still read.
+  json synthParams;
+  CHECK(answersWithin(engine, "plugin.params", {{"key", "track:synth"}}, 2000ms, &synthParams) >= 0);
+  CHECK(!synthParams.empty());
+  engine.close();
+  CHECK_EQ(end.get(), std::string("The engine exited (code 0)."));
 }
 #endif
 

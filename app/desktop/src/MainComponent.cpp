@@ -6458,7 +6458,10 @@ void MainComponent::timerCallback() {
   }
   stop_.setEnabled(alive && snap_.playing);
   home_.setEnabled(alive);
-  restart_.setVisible(snap_.status == EngineStatus::Stopped || snap_.status == EngineStatus::NoDevice);
+  // Restart is offered when the engine is gone or has no device, and also when it stopped answering the document
+  // and the automatic retries gave up (Diverged + WaitForEdit): repeated timeouts used to leave no way back.
+  restart_.setVisible(snap_.status == EngineStatus::Stopped || snap_.status == EngineStatus::NoDevice ||
+                      (snap_.status == EngineStatus::Diverged && snap_.syncRetriesGaveUp));
   undo_.setEnabled(history_.canUndo());
   redo_.setEnabled(history_.canRedo());
   undo_.setTooltip(history_.canUndo() ? "Undo " + u8(history_.undoLabel()) + " (Ctrl+Z)" : juce::String());
@@ -6769,7 +6772,8 @@ void MainComponent::selfTestStep() {
     return -1.0;
   };
   const bool crashSteps = t.step == 10 || t.step == 11 || t.step == 103 || t.step == 104;
-  if ((snap_.status == EngineStatus::Stopped && !crashSteps) || snap_.status == EngineStatus::Diverged) return finish(false, "engine problem");
+  const bool timeoutSteps = t.step >= 112 && t.step <= 114;  // repeated command timeouts: Diverged is expected there
+  if ((snap_.status == EngineStatus::Stopped && !crashSteps && !timeoutSteps) || (snap_.status == EngineStatus::Diverged && !timeoutSteps)) return finish(false, "engine problem");
   switch (t.step) {
     case 0:
       if (snap_.status == EngineStatus::Ready) { session_->play(); next("play"); }
@@ -7290,10 +7294,36 @@ void MainComponent::selfTestStep() {
         if (history_.current().bpm != bpm + 1 || bassState() != held) return finish(false, "redo changed the plugin's state");
         undo();
         t.log << "undo keeps the living plugin's state; ";
-        t.step = 35;
+        t.step = 112;
         t.stepStarted = now;
       } else if (inStep > 3000) {
         return finish(false, "the plugin's change was not reported (undo)");
+      }
+      break;
+    case 112:  // repeated command timeouts: the engine stops answering project.load (simulated, deterministic)
+      if (applied && inStep > 300) {
+        session_->timeOutSyncForTest(6);  // five retries, then the sixth gives up (WaitForEdit); the retry clock runs fast
+        edit([](doc::Document& d) { d.bpm = d.bpm + 1; }, "Tempo");
+        next("timeouts simulated");
+      }
+      break;
+    case 113:  // the retries gave up: the window must offer Restart, not only a revert
+      if (snap_.status == EngineStatus::Diverged && snap_.syncRetriesGaveUp) {
+        if (!restart_.isVisible()) return finish(false, "no Restart offer after repeated engine timeouts");
+        session_->restart();
+        next("restart offered");
+      } else if (inStep > 5000) {
+        return finish(false, "repeated timeouts did not diverge");
+      }
+      break;
+    case 114:  // the new session answers again; undo the tempo edit and carry on
+      if (snap_.status == EngineStatus::Ready && applied && inStep > 500) {
+        undo();
+        next("restarted after timeouts");
+        t.step = 35;
+        t.stepStarted = now;
+      } else if (inStep > 8000) {
+        return finish(false, "the engine did not restart after the timeouts");
       }
       break;
     case 35:  // the picture shows the waveforms once they are computed

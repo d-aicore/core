@@ -143,6 +143,14 @@ if(TARGET CoreTestCrash_VST3 AND TARGET CoreTestSynth_VST3 AND TARGET engine_pro
   set_tests_properties(cli_plugin_crash_render PROPERTIES LABELS merge TIMEOUT 120)
 endif()
 
+# The fault plugin (CORE_TEST_FAULT): crashes on demand outside processBlock (state, reset, editor) or in a
+# parameter getter, so the host's guards around those entry points are tested. Built with the app, as above.
+if(TARGET CoreTestFault_VST3 AND TARGET CoreTestSynth_VST3 AND TARGET engine_process_tests)
+  set(CORE_TEST_FAULT_VST3 "$<GENEX_EVAL:$<TARGET_PROPERTY:CoreTestFault_VST3,JUCE_PLUGIN_ARTEFACT_FILE>>")
+  target_compile_definitions(engine_process_tests PRIVATE CORE_TEST_FAULT_VST3="${CORE_TEST_FAULT_VST3}")
+  add_dependencies(engine_process_tests CoreTestFault_VST3)
+endif()
+
 # The app's own end-to-end test (play, undo, save/reopen, export... on the null device, with its test plugins).
 # It opens Core's window for ~20 s, so it has its own label.
 if(TARGET CoreApp)

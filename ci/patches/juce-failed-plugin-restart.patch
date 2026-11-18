@@ -1,0 +1,57 @@
+diff --git a/modules/juce_audio_processors_headless/utilities/juce_AudioPluginExtensions.h b/modules/juce_audio_processors_headless/utilities/juce_AudioPluginExtensions.h
+--- a/modules/juce_audio_processors_headless/utilities/juce_AudioPluginExtensions.h
++++ b/modules/juce_audio_processors_headless/utilities/juce_AudioPluginExtensions.h
+@@ -90,6 +90,13 @@
+         virtual Steinberg::Vst::IComponent* getIComponentPtr() const noexcept = 0;
+         virtual MemoryBlock getPreset() const = 0;
+         virtual bool setPreset (const MemoryBlock&) = 0;
++
++        // [Core vendored patch - D restart deadlock] The host marks a wrapped VST3 instance as crashed
++        // so JUCE's internal restart path can skip it. A crash inside processBlock is caught by the host's
++        // SEH handler, which runs no C++ destructors (/EHsc), leaving the wrapper's processMutex held
++        // forever; reset()/releaseResources() on the message thread would spin on it and deadlock the host.
++        // Default no-op: healthy hosting is unchanged (this is only ever called on a crash).
++        virtual void markCrashedByHost() noexcept {}
+     };
+ 
+     /** Can be used to retrieve information about an AudioUnit that is wrapped by an AudioProcessor. */
+diff --git a/modules/juce_audio_processors_headless/format_types/juce_VST3PluginFormatImpl.h b/modules/juce_audio_processors_headless/format_types/juce_VST3PluginFormatImpl.h
+--- a/modules/juce_audio_processors_headless/format_types/juce_VST3PluginFormatImpl.h
++++ b/modules/juce_audio_processors_headless/format_types/juce_VST3PluginFormatImpl.h
+@@ -2255,6 +2255,10 @@
+           AudioPluginExtensions::VST3Client* getVST3Client()       override { return this; }
+     const AudioPluginExtensions::VST3Client* getVST3Client() const override { return this; }
+ 
++    // [Core vendored patch - D restart deadlock] Set by the host when this instance crashed inside
++    // processBlock. Read by restartComponentOnMessageThread to skip the lock-taking restart calls.
++    void markCrashedByHost() noexcept override { hostCrashed.store (true, std::memory_order_release); }
++
+     Steinberg::Vst::IComponent* getIComponentPtr() const noexcept override
+     {
+         return holder->component.get();
+@@ -3022,6 +3026,11 @@
+     */
+     SpinLock processMutex;
+ 
++    // [Core vendored patch - D restart deadlock] True once the host has marked this instance crashed.
++    // The SEH catch leaves processMutex held; the internal restart path must skip this instance instead
++    // of spinning on that lock forever on the message thread. A healthy instance never sets this.
++    std::atomic<bool> hostCrashed { false };
++
+     //==============================================================================
+     template <typename Type>
+     static void appendStateFrom (XmlElement& head, VSTComSmartPtr<Type>& object, const String& identifier)
+@@ -3533,6 +3542,13 @@
+         return;
+     }
+ 
++    // [Core vendored patch - D restart deadlock] A crashed instance holds processMutex forever (the host's
++    // SEH catch runs no C++ destructors under /EHsc). reset()/releaseResources()/updateMidiMappings() below
++    // would spin on that held lock and deadlock the message thread, so the engine answers nothing. Skip the
++    // restart for an instance the host has marked crashed; a healthy instance never sets the flag.
++    if (plugin->hostCrashed.load (std::memory_order_acquire))
++        return;
++
+     if (hasFlag (flags, Vst::kReloadComponent))
+         plugin->reset();
+ 
