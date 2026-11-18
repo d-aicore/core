@@ -6,6 +6,7 @@
 // changed without moving a parameter, as a plugin does when a sample or a wavetable is loaded in its window.
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <array>
+#include <atomic>
 #include <cmath>
 #include <cstdlib>
 #include <stdexcept>
@@ -205,12 +206,26 @@ juce::AudioProcessor* make() { return new Crash(); }
 // at load), CORE_TEST_FAULT_RESET (reset), CORE_TEST_FAULT_EDITOR (createEditor), CORE_TEST_FAULT_PARAM (a parameter's
 // getValue, as the host reads it for plugin.params). With none set it is an ordinary gain. The host must catch the
 // crash, silence this plugin and play the others on, never taking the engine down (quality bar 2).
+// The getState and parameter faults fire only once the plugin has played, so they land on the host's later call
+// (plugins.states / plugin.params) and not while JUCE reads the default state and parameter values at load.
+std::atomic<bool> faultHasPlayed{false};
+
 class FaultParam final : public juce::AudioParameterFloat {
 public:
   FaultParam() : juce::AudioParameterFloat(juce::ParameterID{"fault", 1}, "Fault", 0.0f, 1.0f, 0.5f) {}
   float getValue() const override {
-    if (envSet("CORE_TEST_FAULT_PARAM")) crashNow();
+    if (faultHasPlayed.load() && envSet("CORE_TEST_FAULT_PARAM")) crashNow();
     return get();  // the range is 0..1, so the plain value is already normalized
+  }
+  // The host's plugin.params reads the parameter's text, which reaches the plugin (VST3 getParamStringByValue ->
+  // getText for a modern parameter, getCurrentValueAsText for a legacy one).
+  juce::String getText(float value, int maximumLength) const override {
+    if (faultHasPlayed.load() && envSet("CORE_TEST_FAULT_PARAM")) crashNow();
+    return juce::String(value, 2);
+  }
+  juce::String getCurrentValueAsText() const override {
+    if (faultHasPlayed.load() && envSet("CORE_TEST_FAULT_PARAM")) crashNow();
+    return juce::AudioParameterFloat::getCurrentValueAsText();
   }
 };
 
@@ -225,7 +240,7 @@ public:
     return l.getMainOutputChannelSet() == juce::AudioChannelSet::stereo() && l.getMainInputChannelSet() == juce::AudioChannelSet::stereo();
   }
   void prepareToPlay(double, int) override {}
-  void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) override { buffer.applyGain(gain_->get()); played_ += buffer.getNumSamples(); }
+  void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) override { buffer.applyGain(gain_->get()); played_ += buffer.getNumSamples(); faultHasPlayed.store(true); }
   void getStateInformation(juce::MemoryBlock& data) override {
     if (played_ > 0 && envSet("CORE_TEST_FAULT_GETSTATE")) crashNow();
     TestPlugin::getStateInformation(data);

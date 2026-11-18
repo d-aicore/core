@@ -359,6 +359,39 @@ TEST("serve: a plugin that crashes opening its editor is silenced, the engine an
   engine.close();
   CHECK_EQ(end.get(), std::string("The engine exited (code 0)."));
 }
+
+TEST("serve: a plugin that crashes in a parameter getter is silenced, the engine answers and plays on") {
+  EnvVar fault("CORE_TEST_FAULT_PARAM", "1");
+  const json faultPlugin = scanFirst(CORE_TEST_FAULT_VST3), synth = scanFirst(CORE_TEST_SYNTH_VST3);
+  CHECK(faultPlugin.is_object());
+  CHECK(synth.is_object());
+  if (!faultPlugin.is_object() || !synth.is_object()) return;
+
+  EndReason end;
+  EngineClient engine(engineOptions());
+  end.attach(engine);
+  engine.start();
+  const json loaded = engine.command("project.load", {{"project", song(json::array({pluginTrack("fault", faultPlugin), pluginTrack("synth", synth)}))}}, 30000ms);
+  CHECK(loaded.value("missing", json::array()).empty());
+  engine.command("engine.start", {{"backend", "null"}});
+  engine.command("transport.play");
+  std::this_thread::sleep_for(300ms);  // let it process: the parameter fault fires only once it has played
+
+  // Reading the parameters calls the plugin's getValue: the crash there must cost that plugin, not the engine.
+  json params;
+  CHECK(answersWithin(engine, "plugin.params", {{"key", "track:fault"}}, 5000ms, &params) >= 0);
+  CHECK(params.is_array());
+  json failed;
+  CHECK(answersWithin(engine, "plugins.failed", json::object(), 2000ms, &failed) >= 0);
+  CHECK(failedAsCrash(failed, "track:fault"));
+  CHECK(playingOn(engine));  // the song plays on without the crashed plugin
+  // The healthy plugin's parameters still read.
+  json synthParams;
+  CHECK(answersWithin(engine, "plugin.params", {{"key", "track:synth"}}, 2000ms, &synthParams) >= 0);
+  CHECK(!synthParams.empty());
+  engine.close();
+  CHECK_EQ(end.get(), std::string("The engine exited (code 0)."));
+}
 #endif
 
 // M2 (2026-11-18): one protocol line carries the state of every plugin of the song. The limit was 8 MB and 27 tracks

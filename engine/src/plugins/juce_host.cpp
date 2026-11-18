@@ -241,7 +241,9 @@ private:
   juce::AudioBuffer<float>* view_ = nullptr;  // the block being processed (guardedCall)
 };
 
-// The plugin's own editor in a window of the engine process; closing it only hides it.
+// The plugin's own editor in a window of the engine process; closing it only hides it. The window's own callbacks
+// (close button, resize, repaint) run plugin code through the editor they hold, so they are guarded like every other
+// call into a plugin: a crash there costs that plugin (marked crashed, its window leaked with it), not the engine.
 class EditorWindow final : public juce::DocumentWindow {
 public:
   EditorWindow(const juce::String& title, juce::AudioProcessorEditor* editor)
@@ -252,7 +254,22 @@ public:
     centreWithSize(getWidth(), getHeight());
     setAlwaysOnTop(true);
   }
-  void closeButtonPressed() override { setVisible(false); }
+  void setOwner(JuceProcessor* o) { owner_ = o; }
+  void closeButtonPressed() override {
+    if (!guarded([this] { setVisible(false); })) crashedInWindow("its window's close button was pressed");
+  }
+  void resized() override {
+    if (!guarded([this] { DocumentWindow::resized(); })) crashedInWindow("its window was resized");
+  }
+  void paint(juce::Graphics& g) override {
+    if (!guarded([this, &g] { DocumentWindow::paint(g); })) crashedInWindow("its window was painted");
+  }
+private:
+  void crashedInWindow(const char* what) {
+    trace(std::string("a plugin crashed while ") + what + ": it is silenced (Retry loads it again)");
+    if (owner_) owner_->markCrashed();
+  }
+  JuceProcessor* owner_ = nullptr;  // the instance this window shows (kept alive by the host's Editor entry)
 };
 
 }  // namespace
@@ -461,7 +478,13 @@ bool JuceHost::showEditor(const std::string& key, bool open, std::string* why) {
   runSync([&] {
     if (!open) {
       auto it = impl_->editors.find(key);
-      if (it != impl_->editors.end() && it->second.window) it->second.window->setVisible(false);
+      if (it != impl_->editors.end() && it->second.window) {
+        EditorWindow* w = it->second.window.get();
+        if (!guarded([w] { w->setVisible(false); })) {
+          trace("the plugin of " + key + " crashed while its window was hidden: it is silenced (Retry loads it again)");
+          if (it->second.owner) it->second.owner->markCrashed();
+        }
+      }
       return;
     }
     auto& [window, owner] = impl_->editors[key];
@@ -477,10 +500,15 @@ bool JuceHost::showEditor(const std::string& key, bool open, std::string* why) {
       }
       if (!editor) editor = new juce::GenericAudioProcessorEditor(p->instance());
       window = std::make_unique<EditorWindow>(juce::String::fromUTF8(name.empty() ? key.c_str() : name.c_str()), editor);
+      window->setOwner(p.get());
       owner = p;
     }
-    window->setVisible(true);
-    window->toFront(true);
+    EditorWindow* w = window.get();
+    if (!guarded([w] { w->setVisible(true); w->toFront(true); })) {
+      trace("the plugin of " + key + " crashed while its window was shown: it is silenced (Retry loads it again)");
+      p->markCrashed();
+      ok = false;
+    }
   });
   return ok;
 }
@@ -522,11 +550,21 @@ json JuceHost::parameters(const std::string& key) {
   if (!p || p->failed()) return out;  // a failed plugin is not called any more (its names and values come from it)
   runSync([&] {
     for (auto* param : p->instance().getParameters()) {
-      const juce::String name = param->getName(64).trim();
-      if (name.isEmpty() || !param->isAutomatable()) continue;  // hidden ones, and those the plugin says not to automate
-      out.push_back({{"id", JuceProcessor::parameterId(*param)}, {"name", utf8(name)}, {"value", param->getValue()},
-                     {"default", param->getDefaultValue()}, {"steps", param->isDiscrete() ? param->getNumSteps() : 0},
-                     {"text", utf8(param->getCurrentValueAsText())}});
+      json entry;
+      // Every read here is plugin code (the name, the value, the text): guarded like the rest, so a crash in a
+      // parameter getter costs that plugin, not the engine (it used to take the whole process down).
+      if (!guarded([&] {
+        const juce::String name = param->getName(64).trim();
+        if (name.isEmpty() || !param->isAutomatable()) return;  // hidden ones, and those the plugin says not to automate
+        entry = {{"id", JuceProcessor::parameterId(*param)}, {"name", utf8(name)}, {"value", param->getValue()},
+                 {"default", param->getDefaultValue()}, {"steps", param->isDiscrete() ? param->getNumSteps() : 0},
+                 {"text", utf8(param->getCurrentValueAsText())}};
+      })) {
+        trace("the plugin of " + key + " crashed while its parameters were read: it is silenced (Retry loads it again)");
+        p->markCrashed();
+        return;
+      }
+      if (!entry.is_null()) out.push_back(std::move(entry));
     }
   });
   return out;
