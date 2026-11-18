@@ -387,6 +387,45 @@ TEST("serve: a plugin that crashes in reset is silenced, the engine answers and 
   CHECK_EQ(end.get(), std::string("The engine exited (code 0)."));
 }
 
+// Crash-in-reset audio-thread deadlock (2026-11-18): the same crash with the race window widened on purpose.
+// The fault plugin waits 300 ms inside reset() — under the wrapper's processMutex — before it crashes, so the
+// audio thread (the null backend keeps rendering while stopped) is guaranteed to be waiting on that lock when
+// the host's SEH catch leaves it held forever. The vendored processBlock used a plain SpinLock::ScopedLockType,
+// which never consults hostCrashed: the audio thread spun in SpinLock::enter forever, callbacks froze, the
+// engine never exited and the client terminated it (exit 1, ~14 s). The crash-aware audio acquire gives up once
+// the host marks the crash: the engine answers, plays on and exits by itself. Deterministic red without the fix.
+TEST("serve: a plugin that crashes in reset while the audio thread waits on its lock is silenced (wide window)") {
+  EnvVar fault("CORE_TEST_FAULT_RESET", "1");
+  EnvVar delay("CORE_TEST_FAULT_RESET_DELAY_MS", "300");
+  const json faultPlugin = scanFirst(CORE_TEST_FAULT_VST3), synth = scanFirst(CORE_TEST_SYNTH_VST3);
+  CHECK(faultPlugin.is_object());
+  CHECK(synth.is_object());
+  if (!faultPlugin.is_object() || !synth.is_object()) return;
+
+  EndReason end;
+  EngineClient engine(engineOptions());
+  end.attach(engine);
+  engine.start();
+  const json loaded = engine.command("project.load", {{"project", song(json::array({pluginTrack("fault", faultPlugin), pluginTrack("synth", synth)}))}}, 30000ms);
+  CHECK(loaded.value("missing", json::array()).empty());
+  engine.command("engine.start", {{"backend", "null"}});
+  engine.command("transport.play");
+  CHECK(playingOn(engine));
+
+  // Stop resets every plugin: the fault holds its process lock 300 ms, the audio thread piles onto it, then the
+  // crash lands. The engine must still answer every command and silence only the crashed plugin.
+  CHECK(answersWithin(engine, "transport.stop", json::object(), 5000ms) >= 0);
+  json failed;
+  CHECK(answersWithin(engine, "plugins.failed", json::object(), 2000ms, &failed) >= 0);
+  CHECK(failedAsCrash(failed, "track:fault"));
+  CHECK(answersWithin(engine, "engine.stats", json::object(), 2000ms) >= 0);
+  // Play again: the audio thread survived the crashed lock; the healthy synth still sounds.
+  engine.command("transport.play");
+  CHECK(playingOn(engine));
+  engine.close();
+  CHECK_EQ(end.get(), std::string("The engine exited (code 0)."));
+}
+
 TEST("serve: a plugin that crashes opening its editor is silenced, the engine answers and plays on") {
   EnvVar fault("CORE_TEST_FAULT_EDITOR", "1");
   const json faultPlugin = scanFirst(CORE_TEST_FAULT_VST3), synth = scanFirst(CORE_TEST_SYNTH_VST3);

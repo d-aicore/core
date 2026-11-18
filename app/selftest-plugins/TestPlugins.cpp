@@ -7,9 +7,11 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <array>
 #include <atomic>
+#include <chrono>
 #include <cmath>
 #include <cstdlib>
 #include <stdexcept>
+#include <thread>
 #if CORE_TEST_CRASH_RESTART
 // The VST3 host context (IComponentHandler, kReloadComponent) so the plugin can ask the host to restart it, as a
 // real plugin does from its editor or a background thread. The SDK include dir comes with juce_audio_processors.
@@ -28,6 +30,21 @@ bool envSet(const char* name) {
 #else
   const char* v = std::getenv(name);
   return v != nullptr && v[0] != '\0' && v[0] != '0';
+#endif
+}
+
+// A positive integer from the environment (0 when unset or invalid); the same _dupenv_s pattern as envSet.
+int envInt(const char* name) {
+#ifdef _MSC_VER
+  char* buf = nullptr;
+  size_t len = 0;
+  if (_dupenv_s(&buf, &len, name) == 0 && buf) { const int v = std::atoi(buf); free(buf); return v > 0 ? v : 0; }
+  return 0;
+#else
+  const char* v = std::getenv(name);
+  if (v == nullptr) return 0;
+  const int n = std::atoi(v);
+  return n > 0 ? n : 0;
 #endif
 }
 
@@ -257,6 +274,9 @@ juce::AudioProcessor* make() { return new CrashRestart(); }
 // at load), CORE_TEST_FAULT_RESET (reset), CORE_TEST_FAULT_EDITOR (createEditor), CORE_TEST_FAULT_PARAM (a parameter's
 // getValue, as the host reads it for plugin.params). With none set it is an ordinary gain. The host must catch the
 // crash, silence this plugin and play the others on, never taking the engine down (quality bar 2).
+// CORE_TEST_FAULT_RESET_DELAY_MS (optional, with CORE_TEST_FAULT_RESET): milliseconds to wait inside reset()
+// before the crash, widening the window in which the audio thread waits on the wrapper's processMutex — the
+// crash-in-reset deadlock regression, deterministic instead of a sub-millisecond race.
 // The getState and parameter faults fire only once the plugin has played, so they land on the host's later call
 // (plugins.states / plugin.params) and not while JUCE reads the default state and parameter values at load.
 std::atomic<bool> faultHasPlayed{false};
@@ -300,7 +320,15 @@ public:
     if (envSet("CORE_TEST_FAULT_SETSTATE")) crashNow();
     TestPlugin::setStateInformation(data, size);
   }
-  void reset() override { if (envSet("CORE_TEST_FAULT_RESET")) crashNow(); }
+  void reset() override {
+    if (envSet("CORE_TEST_FAULT_RESET")) {
+      // Widen the race on purpose: sleep while the wrapper's reset() holds processMutex, so the audio thread
+      // is waiting on that lock when the crash lands and the SEH catch leaves it held forever.
+      const int delayMs = envInt("CORE_TEST_FAULT_RESET_DELAY_MS");
+      if (delayMs > 0) std::this_thread::sleep_for(std::chrono::milliseconds(delayMs));
+      crashNow();
+    }
+  }
   juce::AudioProcessorEditor* createEditor() override {
     if (envSet("CORE_TEST_FAULT_EDITOR")) crashNow();
     return TestPlugin::createEditor();
