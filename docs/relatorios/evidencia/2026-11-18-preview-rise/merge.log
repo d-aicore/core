@@ -1,0 +1,70 @@
+Test project /tmp/core-audit-build
+      Start  1: engine_tests
+ 1/15 Test  #1: engine_tests .....................***Failed    0.33 sec
+  FALHOU engine.start: M5 fica 0 (serial) por omissão, sem CORE_LIVE_THREADS nem liveThreads (FL-1, D51):0: excepcao: Cannot open the audio device: Invalid operation
+ok   wav: escrever e ler um seno de 32 bits devolve as mesmas amostras
+ok   wav: 24 bits fica a menos de 2 passos de quantizacao (-132 dBFS)
+ok   wav: ficheiro inexistente da erro, nao audio vazio
+ok   tempo: samplesPerTick a 150 BPM / 48 kHz
+ok   projecto: toJson(fromJson(x)) e estavel
+ok   projecto: entrada invalida e recusada
+ok   projecto: musica antiga com automacao num instrumento proprio abre
+ok   render: musica sem som da silencio finito com a duracao certa
+ok   render: clip de audio toca no sitio, ao nivel certo e sem NaN
+ok   render: ganho do clip de -6 dB baixa o pico para metade
+ok   render: o tamanho do bloco nao muda o resultado
+ok   render: deterministico na mesma build (duas vezes igual)
+ok   render: ficheiro em falta nao parte o render
+ok   loop: posto no tempo novo antes de o audio aplicar o grafo novo nao e convertido outra vez
+ok   audio: o limite de memoria recusa antes de ler o ficheiro que nao cabe (audit 10)
+ok   audio: um ficheiro ao ritmo do projecto nao e copiado outra vez (audit 10)
+ok   freeze: o congelamento fica dentro do pedaco pedido (audit 11)
+ok   adopt: a mudanca de tempo nao desloca o arranque do envelope (audit 12)
+ok   adopt: os note-offs que ficaram na reserva passam para o grafo novo (audit 13)
+ok   engine.start: uma saída que falha não deixa a app sem som (audit 14)
+ok   engine.start: a device switch that fails after a rate change puts the engine, the rate and the output back (FL-3)
+FAIL engine.start: M5 fica 0 (serial) por omissão, sem CORE_LIVE_THREADS nem liveThreads (FL-1, D51)
+ok   ART-003: o Server reporta uma saída que parou ou mudou (dispositivo desligado / rerouted)
+ok   A-009: canção com instrument='elastic' abre em 'none', conversão reportada, e o grafo não crasha
+ok   protocol: a song with more than 8 MB of plugin state is read, loaded and answered whole (M2)
+25 testes, 127 verificacoes, 1 falhas
+
+      Start  2: domain_tests
+ 2/15 Test  #2: domain_tests .....................   Passed    4.32 sec
+      Start  3: role_tests
+ 3/15 Test  #3: role_tests .......................   Passed    0.01 sec
+      Start  4: midi_tests
+ 4/15 Test  #4: midi_tests .......................   Passed    0.00 sec
+      Start  5: bug_tests
+ 5/15 Test  #5: bug_tests ........................   Passed    0.02 sec
+      Start  6: bitwig_tests
+ 6/15 Test  #6: bitwig_tests .....................   Passed    0.00 sec
+      Start  7: audit_tests
+ 7/15 Test  #7: audit_tests ......................   Passed    0.03 sec
+      Start  8: audit2_tests
+ 8/15 Test  #8: audit2_tests .....................   Passed    0.00 sec
+      Start  9: hunt_tests
+ 9/15 Test  #9: hunt_tests .......................   Passed    1.13 sec
+      Start 10: round3_tests
+10/15 Test #10: round3_tests .....................   Passed    0.01 sec
+      Start 11: calls_tests
+11/15 Test #11: calls_tests ......................   Passed    0.00 sec
+      Start 12: cli_version
+12/15 Test #12: cli_version ......................   Passed    0.00 sec
+      Start 13: cli_demo_render
+13/15 Test #13: cli_demo_render ..................   Passed    0.06 sec
+      Start 14: cli_measure
+14/15 Test #14: cli_measure ......................   Passed    3.05 sec
+      Start 15: cli_unicode
+15/15 Test #15: cli_unicode ......................   Passed    0.01 sec
+
+93% tests passed, 1 tests failed out of 15
+
+Label Time Summary:
+merge    =   8.99 sec*proc (15 tests)
+
+Total Test time (real) =   9.00 sec
+
+The following tests FAILED:
+	  1 - engine_tests (Failed)                             merge
+Errors while running CTest

@@ -1,0 +1,437 @@
+﻿CMake Warning (author) at C:/Users/vk_do/AppData/Local/Microsoft/WinGet/Packages/Kitware.CMake_Microsoft.Winget.Source_8wekyb3d8bbwe/cmake-4.4.4-windows-x86_64/share/cmake-4.4/Modules/FetchContent.cmake:1386 (message):
+  The DOWNLOAD_EXTRACT_TIMESTAMP option was not given and policy CMP0135 is
+  not set.  The policy's OLD behavior will be used.  When using a URL
+  download, the timestamps of extracted files should preferably be that of
+  the time of extraction, otherwise code that depends on the extracted
+  contents might not be rebuilt if the URL changes.  The OLD behavior
+  preserves the timestamps from the archive instead, but this is usually not
+  what you want.  Update your project to the NEW behavior or specify the
+  DOWNLOAD_EXTRACT_TIMESTAMP option with a value of true to avoid this
+  robustness issue.
+Call Stack (most recent call first):
+  CMakeLists.txt:64 (FetchContent_Declare)
+This warning is for project developers.  Use -Wno-author to suppress it.
+
+-- Configuring juceaide
+-- Building juceaide
+-- Exporting juceaide
+-- Testing juceaide
+-- Finished setting up juceaide
+-- Configuring done (0.8s)
+-- Generating done (0.1s)
+-- Build files have been written to: D:/Core-build/flawless-deadcode2
+[0/2] Re-checking globbed directories...
+[1/333] Core version
+[2/333] Building C object engine\CMakeFiles\miniaudio_impl.dir\src\io\miniaudio_impl.c.obj
+[3/333] Building CXX object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics_2.cpp.obj
+[4/333] Building CXX object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_extra\juce_gui_extra.cpp.obj
+[5/333] Building CXX object engine\CMakeFiles\core_plugin_host.dir\src\plugins\juce_host.cpp.obj
+D:\CORE\CORE\.agents\worktrees\flawless-deadcode2\engine\src\plugins\juce_host.cpp(471): warning C4996: 'juce::AudioProcessor::createEditorIfNeeded': Prefer createEditorAndMakeActive()
+[6/333] Building CXX object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_processors\juce_audio_processors.cpp.obj
+[7/333] Building CXX object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics_4.cpp.obj
+[8/333] Building CXX object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics.cpp.obj
+[9/333] Building C object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_Sheenbidi.c.obj
+[10/333] Building CXX object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics_3.cpp.obj
+[11/333] Building C object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libjpg_1.c.obj
+[12/333] Building C object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libjpg_2.c.obj
+[13/333] Building C object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libjpg_3.c.obj
+[14/333] Building C object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dec.c.obj
+[15/333] Building C object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_dec_avx2.c.obj
+[16/333] Building C object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_dec.c.obj
+[17/333] Building C object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_dec_sse41.c.obj
+[18/333] Building C object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libpng.c.obj
+[19/333] Building C object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_enc_avx2.c.obj
+[20/333] Building C object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_enc_sse41.c.obj
+[21/333] Building C object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_enc.c.obj
+[22/333] Building C object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_sharpyuv.c.obj
+[23/333] Building C object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_utils.c.obj
+[24/333] Building CXX object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics_5.cpp.obj
+[25/333] Building C object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_enc.c.obj
+[26/333] Building CXX object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_core\juce_core_CompilationTime.cpp.obj
+[27/333] Building C object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_lunasvg.c.obj
+[28/333] Building C object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_core\juce_core_zlib.c.obj
+[29/333] Building CXX object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_events\juce_events.cpp.obj
+[30/333] Building CXX object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_processors_headless\juce_audio_processors_headless_ara.cpp.obj
+[31/333] Building CXX object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_processors_headless\juce_audio_processors_headless_lv2_libs.cpp.obj
+[32/333] Building CXX object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_data_structures\juce_data_structures.cpp.obj
+[33/333] Linking C static library engine\miniaudio_impl.lib
+[34/333] Building CXX object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_core\juce_core.cpp.obj
+[35/333] Building CXX object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_basics\juce_audio_basics.cpp.obj
+[36/333] Building CXX object engine\CMakeFiles\core-engine.dir\src\app\main.cpp.obj
+[37/333] Building CXX object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics.cpp.obj
+[38/333] Building CXX object engine\CMakeFiles\core-engine.dir\src\io\device.cpp.obj
+[39/333] Building CXX object engine\CMakeFiles\core-engine.dir\src\app\measure.cpp.obj
+[40/333] Building CXX object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_processors_headless\juce_audio_processors_headless.cpp.obj
+[41/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\TestPlugins.cpp.obj
+[42/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_processors\juce_audio_processors.cpp.obj
+[43/333] Building CXX object engine\CMakeFiles\core_plugin_host.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_Harfbuzz.cpp.obj
+[44/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics_2.cpp.obj
+[45/333] Linking CXX static library engine\core_plugin_host.lib
+[46/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_extra\juce_gui_extra.cpp.obj
+[47/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics_3.cpp.obj
+[48/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_Sheenbidi.c.obj
+[49/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics_4.cpp.obj
+[50/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics.cpp.obj
+[51/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libjpg_2.c.obj
+[52/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libjpg_1.c.obj
+[53/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libjpg_3.c.obj
+[54/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dec.c.obj
+[55/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libpng.c.obj
+[56/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_dec_avx2.c.obj
+[57/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_dec.c.obj
+[58/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_dec_sse41.c.obj
+[59/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_enc_avx2.c.obj
+[60/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_enc_sse41.c.obj
+[61/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_enc.c.obj
+[62/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_sharpyuv.c.obj
+[63/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_utils.c.obj
+[64/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics_5.cpp.obj
+[65/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_enc.c.obj
+[66/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_lunasvg.c.obj
+[67/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_core\juce_core_CompilationTime.cpp.obj
+[68/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_core\juce_core_zlib.c.obj
+[69/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_events\juce_events.cpp.obj
+[70/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_processors_headless\juce_audio_processors_headless_ara.cpp.obj
+[71/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_processors_headless\juce_audio_processors_headless_lv2_libs.cpp.obj
+[72/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_data_structures\juce_data_structures.cpp.obj
+[73/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_core\juce_core.cpp.obj
+[74/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_processors_headless\juce_audio_processors_headless.cpp.obj
+[75/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_formats\juce_audio_formats_flac_1.c.obj
+[76/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_basics\juce_audio_basics.cpp.obj
+[77/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_formats\juce_audio_formats_ogg.c.obj
+[78/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_formats\juce_audio_formats_flac_2.c.obj
+[79/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_utils\juce_audio_utils.cpp.obj
+[80/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_formats\juce_audio_formats_opusfile.c.obj
+[81/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics.cpp.obj
+[82/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_formats\juce_audio_formats_opus.c.obj
+[83/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_formats\juce_audio_formats.cpp.obj
+[84/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\TestPlugins.cpp.obj
+[85/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_processors\juce_audio_processors.cpp.obj
+[86/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_devices\juce_audio_devices.cpp.obj
+[87/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_Harfbuzz.cpp.obj
+[88/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics_2.cpp.obj
+[89/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_extra\juce_gui_extra.cpp.obj
+[90/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics_4.cpp.obj
+[91/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics.cpp.obj
+[92/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_Sheenbidi.c.obj
+[93/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libjpg_1.c.obj
+[94/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libjpg_2.c.obj
+[95/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libjpg_3.c.obj
+[96/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics_5.cpp.obj
+[97/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libpng.c.obj
+[98/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dec.c.obj
+[99/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_dec_avx2.c.obj
+[100/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_dec_sse41.c.obj
+[101/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_enc_avx2.c.obj
+[102/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_enc.c.obj
+[103/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_enc_sse41.c.obj
+[104/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_dec.c.obj
+[105/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_sharpyuv.c.obj
+[106/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_utils.c.obj
+[107/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_enc.c.obj
+[108/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics_3.cpp.obj
+[109/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_core\juce_core_CompilationTime.cpp.obj
+[110/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_lunasvg.c.obj
+[111/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_core\juce_core_zlib.c.obj
+[112/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_events\juce_events.cpp.obj
+[113/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_processors_headless\juce_audio_processors_headless_ara.cpp.obj
+[114/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_processors_headless\juce_audio_processors_headless_lv2_libs.cpp.obj
+[115/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_data_structures\juce_data_structures.cpp.obj
+[116/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_core\juce_core.cpp.obj
+[117/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_processors_headless\juce_audio_processors_headless.cpp.obj
+[118/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_formats\juce_audio_formats_flac_1.c.obj
+[119/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_basics\juce_audio_basics.cpp.obj
+[120/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_formats\juce_audio_formats_ogg.c.obj
+[121/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_formats\juce_audio_formats_flac_2.c.obj
+[122/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_utils\juce_audio_utils.cpp.obj
+[123/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_formats\juce_audio_formats_opusfile.c.obj
+[124/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics.cpp.obj
+[125/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_formats\juce_audio_formats_opus.c.obj
+[126/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_formats\juce_audio_formats.cpp.obj
+[127/333] Linking CXX executable engine\core-engine.exe
+[128/333] Building VST3 manifest helper for CoreTestSynth
+-- The CXX compiler identification is MSVC 19.51.36260.0
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: C:/Program Files (x86)/Microsoft Visual Studio/18/BuildTools/VC/Tools/MSVC/14.51.36231/bin/Hostx64/x64/cl.exe - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Configuring done (2.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/flawless-deadcode2/vst3_helpers/CoreTestSynth
+[1/2] Building CXX object CMakeFiles\vst3_helper.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_plugin_client\VST3\juce_VST3ManifestHelper.cpp.obj
+[2/2] Linking CXX executable vst3_helper.exe
+[129/333] Building VST3 manifest helper for CoreTestGain
+-- The CXX compiler identification is MSVC 19.51.36260.0
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: C:/Program Files (x86)/Microsoft Visual Studio/18/BuildTools/VC/Tools/MSVC/14.51.36231/bin/Hostx64/x64/cl.exe - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Configuring done (1.9s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/flawless-deadcode2/vst3_helpers/CoreTestGain
+[1/2] Building CXX object CMakeFiles\vst3_helper.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_plugin_client\VST3\juce_VST3ManifestHelper.cpp.obj
+[2/2] Linking CXX executable vst3_helper.exe
+[130/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_devices\juce_audio_devices.cpp.obj
+[131/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestSynth_VST3.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_plugin_client\juce_audio_plugin_client_AAX.cpp.obj
+[132/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestSynth_VST3.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_plugin_client\juce_audio_plugin_client_AAX_utils.cpp.obj
+[133/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestSynth_VST3.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_plugin_client\juce_audio_plugin_client_ARA.cpp.obj
+[134/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestGain.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_Harfbuzz.cpp.obj
+[135/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestSynth_VST3.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_plugin_client\juce_audio_plugin_client_LV2.cpp.obj
+[136/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestSynth_VST3.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_plugin_client\juce_audio_plugin_client_Standalone.cpp.obj
+[137/333] Linking CXX static library "app\selftest-plugins\CoreTestSynth_artefacts\Release\Core Test Synth_SharedCode.lib"
+[138/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestSynth_VST3.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_plugin_client\juce_audio_plugin_client_Unity.cpp.obj
+[139/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestSynth_VST3.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_plugin_client\juce_audio_plugin_client_VST2.cpp.obj
+[140/333] Building RC object app\selftest-plugins\CMakeFiles\CoreTestSynth_rc_lib.dir\CoreTestSynth_artefacts\JuceLibraryCode\CoreTestSynth_resources.rc.res
+[141/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestGain_VST3.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_plugin_client\juce_audio_plugin_client_AAX.cpp.obj
+[142/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestGain_VST3.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_plugin_client\juce_audio_plugin_client_AAX_utils.cpp.obj
+[143/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestGain_VST3.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_plugin_client\juce_audio_plugin_client_ARA.cpp.obj
+[144/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestGain_VST3.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_plugin_client\juce_audio_plugin_client_LV2.cpp.obj
+[145/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestGain_VST3.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_plugin_client\juce_audio_plugin_client_Standalone.cpp.obj
+[146/333] Linking CXX static library "app\selftest-plugins\CoreTestGain_artefacts\Release\Core Test Gain_SharedCode.lib"
+[147/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestGain_VST3.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_plugin_client\juce_audio_plugin_client_Unity.cpp.obj
+[148/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestGain_VST3.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_plugin_client\juce_audio_plugin_client_VST2.cpp.obj
+[149/333] Building RC object app\selftest-plugins\CMakeFiles\CoreTestGain_rc_lib.dir\CoreTestGain_artefacts\JuceLibraryCode\CoreTestGain_resources.rc.res
+[150/333] Copying the app's resources (templates, lang, patterns, pcore)
+[151/333] Building RC object app\desktop\CMakeFiles\CoreApp_rc_lib.dir\CoreApp_artefacts\JuceLibraryCode\CoreApp_resources.rc.res
+[152/333] Building CXX object app\engine-client\CMakeFiles\core_engine_client.dir\src\engine_client.cpp.obj
+[153/333] Linking CXX static library app\engine-client\core_engine_client.lib
+[154/333] Building CXX object app\control\CMakeFiles\core_control.dir\src\calls.cpp.obj
+[155/333] Building CXX object app\control\CMakeFiles\core_control.dir\src\bridge.cpp.obj
+[156/333] Linking CXX static library app\control\core_control.lib
+[157/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestSynth_VST3.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_plugin_client\juce_audio_plugin_client_VST3.cpp.obj
+[158/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestGain_VST3.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_plugin_client\juce_audio_plugin_client_VST3.cpp.obj
+[159/333] Linking CXX shared module "app\selftest-plugins\CoreTestSynth_artefacts\Release\VST3\Core Test Synth.vst3\Contents\x86_64-win\Core Test Synth.vst3"
+removing moduleinfo.json
+creating D:/Core-build/flawless-deadcode2/app/selftest-plugins/CoreTestSynth_artefacts/Release/VST3/Core Test Synth.vst3/Contents/Resources/moduleinfo.json
+[160/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\Main.cpp.obj
+[161/333] Linking CXX shared module "app\selftest-plugins\CoreTestGain_artefacts\Release\VST3\Core Test Gain.vst3\Contents\x86_64-win\Core Test Gain.vst3"
+removing moduleinfo.json
+creating D:/Core-build/flawless-deadcode2/app/selftest-plugins/CoreTestGain_artefacts/Release/VST3/Core Test Gain.vst3/Contents/Resources/moduleinfo.json
+[162/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\Stretch.cpp.obj
+[163/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\EngineSession.cpp.obj
+[164/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\Waveforms.cpp.obj
+[165/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\PatternEditor.cpp.obj
+[166/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\Diagnostics.cpp.obj
+[167/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\Autosave.cpp.obj
+[168/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\Plugins.cpp.obj
+[169/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\Theme.cpp.obj
+[170/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\MainComponent.cpp.obj
+[171/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\InspectorPanel.cpp.obj
+[172/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\LibraryPanel.cpp.obj
+[173/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\Keymap.cpp.obj
+[174/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\Mixer.cpp.obj
+[175/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\Settings.cpp.obj
+[176/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\ChoiceDialog.cpp.obj
+[177/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\SCorePanel.cpp.obj
+[178/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\ToolDock.cpp.obj
+[179/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\ProposalsPanel.cpp.obj
+[180/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\BuildupPanel.cpp.obj
+[181/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\GlobalKeys.cpp.obj
+[182/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\Language.cpp.obj
+[183/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\PatternsWindow.cpp.obj
+[184/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics_2.cpp.obj
+[185/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics_4.cpp.obj
+[186/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics_5.cpp.obj
+[187/333] Building C object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_Sheenbidi.c.obj
+[188/333] Building C object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libjpg_1.c.obj
+[189/333] Building C object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libjpg_2.c.obj
+[190/333] Building C object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libjpg_3.c.obj
+[191/333] Building C object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libpng.c.obj
+[192/333] Building C object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dec.c.obj
+[193/333] Building C object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_dec_avx2.c.obj
+[194/333] Building C object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_dec_sse41.c.obj
+[195/333] Building C object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_dec.c.obj
+[196/333] Building C object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_enc_avx2.c.obj
+[197/333] Building C object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_enc.c.obj
+[198/333] Building C object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_enc_sse41.c.obj
+[199/333] Building C object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_sharpyuv.c.obj
+[200/333] Building C object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_utils.c.obj
+[201/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics_3.cpp.obj
+[202/333] Building C object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_enc.c.obj
+[203/333] Building C object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_lunasvg.c.obj
+[204/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_core\juce_core_CompilationTime.cpp.obj
+[205/333] Building C object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_core\juce_core_zlib.c.obj
+[206/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics.cpp.obj
+[207/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_events\juce_events.cpp.obj
+[208/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_data_structures\juce_data_structures.cpp.obj
+[209/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_core\juce_core.cpp.obj
+[210/333] Building C object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_formats\juce_audio_formats_flac_1.c.obj
+[211/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_basics\juce_audio_basics.cpp.obj
+[212/333] Building C object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_formats\juce_audio_formats_ogg.c.obj
+[213/333] Building C object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_formats\juce_audio_formats_flac_2.c.obj
+[214/333] Building C object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_formats\juce_audio_formats_opusfile.c.obj
+[215/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_devices\juce_audio_devices.cpp.obj
+[216/333] Building C object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_formats\juce_audio_formats_opus.c.obj
+[217/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics.cpp.obj
+[218/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_formats\juce_audio_formats.cpp.obj
+[219/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\TestPlugins.cpp.obj
+[220/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_processors\juce_audio_processors.cpp.obj
+[221/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics_2.cpp.obj
+[222/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_extra\juce_gui_extra.cpp.obj
+[223/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics_3.cpp.obj
+[224/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics_5.cpp.obj
+[225/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics.cpp.obj
+[226/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_Sheenbidi.c.obj
+[227/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libjpg_1.c.obj
+[228/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libjpg_2.c.obj
+[229/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libjpg_3.c.obj
+[230/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics_4.cpp.obj
+[231/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libpng.c.obj
+[232/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dec.c.obj
+[233/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_dec_avx2.c.obj
+[234/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_dec_sse41.c.obj
+[235/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_enc_avx2.c.obj
+[236/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_enc.c.obj
+[237/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_dec.c.obj
+[238/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_enc_sse41.c.obj
+[239/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_sharpyuv.c.obj
+[240/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_utils.c.obj
+[241/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_enc.c.obj
+[242/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_lunasvg.c.obj
+[243/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_core\juce_core_CompilationTime.cpp.obj
+[244/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_core\juce_core_zlib.c.obj
+[245/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_events\juce_events.cpp.obj
+[246/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_data_structures\juce_data_structures.cpp.obj
+[247/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_processors_headless\juce_audio_processors_headless_ara.cpp.obj
+[248/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_processors_headless\juce_audio_processors_headless_lv2_libs.cpp.obj
+[249/333] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_Harfbuzz.cpp.obj
+[250/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_core\juce_core.cpp.obj
+[251/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_basics\juce_audio_basics.cpp.obj
+[252/333] Linking CXX executable app\desktop\CoreApp_artefacts\Release\Core.exe
+[253/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_processors_headless\juce_audio_processors_headless.cpp.obj
+[254/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_formats\juce_audio_formats_flac_1.c.obj
+[255/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_formats\juce_audio_formats_flac_2.c.obj
+[256/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_formats\juce_audio_formats_ogg.c.obj
+[257/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics.cpp.obj
+[258/333] Packing the Core package for the installer
+[259/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_formats\juce_audio_formats_opusfile.c.obj
+[260/333] Building C object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_formats\juce_audio_formats_opus.c.obj
+[261/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_utils\juce_audio_utils.cpp.obj
+[262/333] Building RC object app\selftest-plugins\CMakeFiles\CoreTestCrash_rc_lib.dir\CoreTestCrash_artefacts\JuceLibraryCode\CoreTestCrash_resources.rc.res
+[263/333] Generating juce_binarydata_CoreSetupData/JuceLibraryCode/BinaryData1.cpp, juce_binarydata_CoreSetupData/JuceLibraryCode/CoreSetupData.h
+[264/333] Building RC object app\installer\CMakeFiles\CoreSetup_rc_lib.dir\CoreSetup_artefacts\JuceLibraryCode\CoreSetup_resources.rc.res
+[265/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_formats\juce_audio_formats.cpp.obj
+[266/333] Building CXX object app\installer\CMakeFiles\CoreSetup.dir\Setup.cpp.obj
+[267/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_devices\juce_audio_devices.cpp.obj
+[268/333] Building VST3 manifest helper for CoreTestCrash
+-- The CXX compiler identification is MSVC 19.51.36260.0
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: C:/Program Files (x86)/Microsoft Visual Studio/18/BuildTools/VC/Tools/MSVC/14.51.36231/bin/Hostx64/x64/cl.exe - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Configuring done (2.6s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/flawless-deadcode2/vst3_helpers/CoreTestCrash
+[1/2] Building CXX object CMakeFiles\vst3_helper.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_plugin_client\VST3\juce_VST3ManifestHelper.cpp.obj
+[2/2] Linking CXX executable vst3_helper.exe
+[269/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestCrash_VST3.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_plugin_client\juce_audio_plugin_client_AAX.cpp.obj
+[270/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestCrash_VST3.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_plugin_client\juce_audio_plugin_client_AAX_utils.cpp.obj
+[271/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestCrash_VST3.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_plugin_client\juce_audio_plugin_client_ARA.cpp.obj
+[272/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestCrash_VST3.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_plugin_client\juce_audio_plugin_client_LV2.cpp.obj
+[273/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestCrash_VST3.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_plugin_client\juce_audio_plugin_client_Standalone.cpp.obj
+[274/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestCrash_VST3.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_plugin_client\juce_audio_plugin_client_Unity.cpp.obj
+[275/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestCrash_VST3.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_plugin_client\juce_audio_plugin_client_VST2.cpp.obj
+[276/333] Building CXX object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics_2.cpp.obj
+[277/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_Harfbuzz.cpp.obj
+[278/333] Building CXX object app\installer\CMakeFiles\CoreSetupData.dir\juce_binarydata_CoreSetupData\JuceLibraryCode\BinaryData1.cpp.obj
+[279/333] Linking CXX static library app\installer\CoreSetupData.lib
+[280/333] Linking CXX static library "app\selftest-plugins\CoreTestCrash_artefacts\Release\Core Test Crash_SharedCode.lib"
+[281/333] Building CXX object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics.cpp.obj
+[282/333] Building CXX object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics_3.cpp.obj
+[283/333] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_Sheenbidi.c.obj
+[284/333] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libjpg_1.c.obj
+[285/333] Building CXX object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics_5.cpp.obj
+[286/333] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libjpg_2.c.obj
+[287/333] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libjpg_3.c.obj
+[288/333] Building CXX object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics_4.cpp.obj
+[289/333] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dec.c.obj
+[290/333] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libpng.c.obj
+[291/333] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_dec_avx2.c.obj
+[292/333] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_dec_sse41.c.obj
+[293/333] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_dec.c.obj
+[294/333] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_enc_avx2.c.obj
+[295/333] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_enc_sse41.c.obj
+[296/333] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_enc.c.obj
+[297/333] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_sharpyuv.c.obj
+[298/333] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_utils.c.obj
+[299/333] Building CXX object app\selftest-plugins\CMakeFiles\CoreTestCrash_VST3.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_audio_plugin_client\juce_audio_plugin_client_VST3.cpp.obj
+[300/333] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_enc.c.obj
+[301/333] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_lunasvg.c.obj
+[302/333] Building CXX object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_core\juce_core_CompilationTime.cpp.obj
+[303/333] Linking CXX shared module "app\selftest-plugins\CoreTestCrash_artefacts\Release\VST3\Core Test Crash.vst3\Contents\x86_64-win\Core Test Crash.vst3"
+removing moduleinfo.json
+creating D:/Core-build/flawless-deadcode2/app/selftest-plugins/CoreTestCrash_artefacts/Release/VST3/Core Test Crash.vst3/Contents/Resources/moduleinfo.json
+[304/333] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_core\juce_core_zlib.c.obj
+[305/333] Building CXX object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_events\juce_events.cpp.obj
+[306/333] Building CXX object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_data_structures\juce_data_structures.cpp.obj
+[307/333] Building CXX object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_core\juce_core.cpp.obj
+[308/333] Building CXX object tests\CMakeFiles\engine_tests.dir\__\engine\src\io\device.cpp.obj
+[309/333] Building CXX object tests\CMakeFiles\engine_tests.dir\__\engine\src\app\measure.cpp.obj
+[310/333] Building CXX object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics.cpp.obj
+[311/333] Building CXX object tests\CMakeFiles\engine_tests.dir\engine_tests.cpp.obj
+[312/333] Building CXX object tests\CMakeFiles\role_tests.dir\role_tests.cpp.obj
+[313/333] Building CXX object tests\CMakeFiles\midi_tests.dir\midi_tests.cpp.obj
+[314/333] Building CXX object tests\CMakeFiles\bitwig_tests.dir\bitwig_tests.cpp.obj
+[315/333] Building CXX object tests\CMakeFiles\bug_tests.dir\bug_tests.cpp.obj
+[316/333] Building CXX object tests\CMakeFiles\audit_tests.dir\audit_tests.cpp.obj
+[317/333] Building CXX object tests\CMakeFiles\round3_tests.dir\round3_tests.cpp.obj
+[318/333] Linking CXX executable tests\engine_tests.exe
+[319/333] Linking CXX executable tests\midi_tests.exe
+[320/333] Linking CXX executable tests\role_tests.exe
+[321/333] Linking CXX executable tests\bitwig_tests.exe
+[322/333] Linking CXX executable tests\bug_tests.exe
+[323/333] Linking CXX executable tests\round3_tests.exe
+[324/333] Building CXX object tests\CMakeFiles\audit2_tests.dir\audit2_tests.cpp.obj
+[325/333] Linking CXX executable tests\audit_tests.exe
+[326/333] Linking CXX executable tests\audit2_tests.exe
+[327/333] Building CXX object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_Harfbuzz.cpp.obj
+[328/333] Building CXX object tests\CMakeFiles\calls_tests.dir\calls_tests.cpp.obj
+[329/333] Linking CXX executable tests\calls_tests.exe
+[330/333] Linking CXX executable "app\installer\CoreSetup_artefacts\Release\Core Setup.exe"
+[331/333] Building CXX object tests\CMakeFiles\engine_process_tests.dir\engine_process_tests.cpp.obj
+[332/333] Linking CXX executable tests\engine_process_tests.exe
+Test project D:/Core-build/flawless-deadcode2
+      Start  1: engine_tests
+ 1/17 Test  #1: engine_tests .....................   Passed    0.40 sec
+      Start  2: domain_tests
+ 2/17 Test  #2: domain_tests .....................   Passed    4.17 sec
+      Start  3: role_tests
+ 3/17 Test  #3: role_tests .......................   Passed    0.07 sec
+      Start  4: midi_tests
+ 4/17 Test  #4: midi_tests .......................   Passed    0.06 sec
+      Start  5: bug_tests
+ 5/17 Test  #5: bug_tests ........................   Passed    0.16 sec
+      Start  6: bitwig_tests
+ 6/17 Test  #6: bitwig_tests .....................   Passed    0.04 sec
+      Start  7: audit_tests
+ 7/17 Test  #7: audit_tests ......................   Passed    0.13 sec
+      Start  8: audit2_tests
+ 8/17 Test  #8: audit2_tests .....................   Passed    0.04 sec
+      Start  9: hunt_tests
+ 9/17 Test  #9: hunt_tests .......................   Passed    1.08 sec
+      Start 10: round3_tests
+10/17 Test #10: round3_tests .....................   Passed    0.18 sec
+      Start 11: calls_tests
+11/17 Test #11: calls_tests ......................   Passed    0.14 sec
+      Start 12: cli_version
+12/17 Test #12: cli_version ......................   Passed    0.09 sec
+      Start 13: cli_demo_render
+13/17 Test #13: cli_demo_render ..................   Passed    0.08 sec
+      Start 14: cli_measure
+14/17 Test #14: cli_measure ......................   Passed    2.25 sec
+      Start 15: cli_unicode
+15/17 Test #15: cli_unicode ......................   Passed    0.05 sec
+      Start 16: engine_process_tests
+16/17 Test #16: engine_process_tests .............   Passed    5.64 sec
+      Start 17: cli_plugin_crash_render
+17/17 Test #17: cli_plugin_crash_render ..........   Passed    0.12 sec
+
+100% tests passed out of 17
+
+Label Time Summary:
+merge    =  14.70 sec*proc (17 tests)
+
+Total Test time (real) =  15.38 sec
