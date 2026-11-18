@@ -1,7 +1,8 @@
 // Export as a background job (plan 3.6): one job at a time, on its own thread, with its own graph and
 // DSP instances made from a snapshot of the project. The command loop and the audio thread go on.
-// The WAV is written block by block to "<path>.part", then renamed over the target only on success:
-// cancelling or failing leaves an existing file untouched.
+// The WAV is written block by block to a reserved working file "<path>.<pid>-<n>.part" that belongs to
+// this job alone (BUG-SWEEP-02), then renamed over the target only on success: cancelling or failing
+// leaves an existing file — including a retained "<path>.part" — untouched.
 #pragma once
 #include <atomic>
 #include <cstdint>
@@ -32,8 +33,9 @@ struct RenderOutput {
   bool mono = false;    // one channel, (L + R) / 2: a song or passage exported as an example for the AI
 };
 
-// Shared publication for background exports and the synchronous CLI. Call after every
-// <path>.part is closed. On failure old targets are restored and surviving new files counted.
+// Shared publication for background exports and the synchronous CLI. Call after every working file is
+// closed. workingPaths: the reserved working files, one per output (empty = the legacy "<path>.part"
+// names). On failure old targets are restored and surviving new files counted.
 void validateRenderOutputs(const std::vector<RenderOutput>& outputs);
 // Codex review 2026-11-09 C2: a float export at +15 dBFS was published as a success. Before any file is published,
 // each one is checked: NaN or Inf anywhere, or (except a bounce, which goes back into the song before the master)
@@ -60,7 +62,12 @@ using DiskSpaceQuery = std::function<bool(const std::filesystem::path& folder, s
 uint64_t exportFileBytes(int64_t frames, int bits, bool mono);
 void checkExportSpace(const std::vector<RenderOutput>& outputs, int64_t frames, int bits, const DiskSpaceQuery& query = {});
 void publishRenderOutputs(const std::vector<RenderOutput>& outputs, int& published,
-                          const std::function<void()>& beforePlace = {});
+                          const std::function<void()>& beforePlace = {},
+                          const std::vector<std::string>& workingPaths = {});
+// BUG-SWEEP-02: reserve a working file that belongs to the calling operation alone. The name
+// "<target>.<pid>-<n>.part" is created exclusively (never truncating an existing file, in this process
+// or another); a taken name is skipped. The caller owns the returned path and cleans up only it.
+std::string reserveRenderWorkingFile(const std::string& target);
 
 struct RenderJobRequest {
   Project project;          // a copy: edits made during the export do not change it
