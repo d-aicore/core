@@ -7591,8 +7591,152 @@ void MainComponent::selfTestStep() {
         // M6: this session's logs are there, with the engine's life in them.
         if (!engineLogFile().existsAsFile() || !appLogFile().loadFileAsString().contains("Engine: Ready"))
           return finish(false, "diagnostics: no log in " + logsFolder().getFullPathName());
-        return finish(true, "M1c + M2 path, live notes, audio clips, mixer, patterns, tools, score, save with audio");
+        next("diagnostics");
       }
+      break;
+    case 39: {  // piano roll, Pulse gestures (UX slice): drag-to-size create with the last used length, Shift+drag
+      // clones, Alt bypasses snap, Ctrl+drag lassos in any tool, Alt+wheel velocity (Ctrl+Alt fine), Ctrl+wheel = Keys+.
+      if (applied && inStep > 300) {
+        selectTrack("bass");
+        std::string p3;
+        edit([&](doc::Document& d) { p3 = doc::addPattern(doc::trackById(d, "bass"), 4 * kBar); }, u8("New pattern"));
+        editor_.setTrack("bass", p3);
+        auto& ed = editor_;
+        auto mouse = [&](juce::Point<int> at, juce::Point<int> down, juce::ModifierKeys mods) {
+          return juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(), at.toFloat(), mods, 0, 0, 0, 0, 0, &ed, &ed,
+                                  juce::Time::getCurrentTime(), down.toFloat(), juce::Time::getCurrentTime(), 1, at != down);
+        };
+        const auto left = juce::ModifierKeys(juce::ModifierKeys::leftButtonModifier);
+        const auto alt = juce::ModifierKeys(juce::ModifierKeys::leftButtonModifier | juce::ModifierKeys::altModifier);
+        const auto shift = juce::ModifierKeys(juce::ModifierKeys::leftButtonModifier | juce::ModifierKeys::shiftModifier);
+        const auto ctrl = juce::ModifierKeys(juce::ModifierKeys::leftButtonModifier | juce::ModifierKeys::ctrlModifier);
+        auto notes = [&]() -> const std::vector<doc::Note>& { return history_.current().findTrack("bass")->findPattern(p3)->notes; };
+        ed.setTool(PatternEditor::Tool::Draw);
+        // 1. A click on empty space and a drag define the length, in one undo step.
+        const auto a = ed.cellGrabPoint(0, 40), b = ed.cellGrabPoint(2 * kBeat, 40);
+        ed.mouseDown(mouse(a, a, left));
+        ed.mouseDrag(mouse(b, a, left));
+        ed.mouseUp(mouse(b, a, left));
+        if (notes().size() != 1 || notes()[0].length != 2 * kBeat || history_.undoLabel() != "Note") return finish(false, "create drag length");
+        undo();
+        if (!notes().empty()) return finish(false, "create drag one undo");
+        // 2. A plain click creates with the last used length (the drag above set it to two beats).
+        ed.mouseDown(mouse(a, a, left));
+        ed.mouseUp(mouse(a, a, left));
+        if (notes().size() != 1 || notes()[0].length != 2 * kBeat) return finish(false, "last used length");
+        // 3. Shift+drag clones the selection and drags the copies; one undo step gives the original back.
+        const auto c = ed.cellGrabPoint(2 * kBeat, 40);
+        ed.mouseDown(mouse(a, a, shift));
+        ed.mouseDrag(mouse(c, a, shift));
+        ed.mouseUp(mouse(c, a, shift));
+        if (notes().size() != 2 || history_.undoLabel() != "Clone notes") return finish(false, "shift clone");
+        undo();
+        if (notes().size() != 1 || notes()[0].tick != 0) return finish(false, "clone one undo");
+        // 4. Alt moves off the grid (the tick is not a snap multiple).
+        const auto d = ed.cellGrabPoint(kBeat, 40);
+        const juce::Point<int> off(d.x + 7, d.y);
+        ed.mouseDown(mouse(a, a, alt));
+        ed.mouseDrag(mouse(off, a, alt));
+        ed.mouseUp(mouse(off, a, alt));
+        if (notes().size() != 1 || notes()[0].tick % 240 == 0) return finish(false, "alt free move");
+        undo();
+        // 5. Ctrl+drag in empty space lassos with the Draw tool: selection, not a new note.
+        const auto m0 = ed.cellGrabPoint(0, 43), m1 = ed.cellGrabPoint(2 * kBeat, 37);
+        ed.mouseDown(mouse(m0, m0, ctrl));
+        ed.mouseDrag(mouse(m1, m0, ctrl));
+        ed.mouseUp(mouse(m1, m0, ctrl));
+        if (notes().size() != 1 || ed.selection().size() != 1) return finish(false, "ctrl lasso any tool");
+        // 6. Plain wheel over a note scrolls (no velocity change); Alt+wheel is velocity; Ctrl+Alt fine.
+        const double v0 = notes()[0].velocity;
+        const juce::MouseWheelDetails up{0.0f, 1.0f, false, false};  // deltaX, deltaY: one notch up
+        ed.mouseWheelMove(mouse(ed.cellGrabPoint(notes()[0].tick, notes()[0].pitch), ed.cellGrabPoint(notes()[0].tick, notes()[0].pitch), left), up);
+        if (notes()[0].velocity != v0) return finish(false, "plain wheel velocity");
+        ed.mouseWheelMove(mouse(ed.cellGrabPoint(notes()[0].tick, notes()[0].pitch), ed.cellGrabPoint(notes()[0].tick, notes()[0].pitch), alt), up);
+        if (std::abs(notes()[0].velocity - (v0 + 0.05)) > 1e-9) return finish(false, "alt wheel velocity");
+        const auto fine = juce::ModifierKeys(juce::ModifierKeys::altModifier | juce::ModifierKeys::ctrlModifier);
+        ed.mouseWheelMove(mouse(ed.cellGrabPoint(notes()[0].tick, notes()[0].pitch), ed.cellGrabPoint(notes()[0].tick, notes()[0].pitch), fine), up);
+        if (std::abs(notes()[0].velocity - (v0 + 0.06)) > 1e-9) return finish(false, "ctrl alt fine velocity");
+        // 7. Ctrl+wheel expands the key range (Keys+): a key far above the view comes into it.
+        if (ed.cellGrabPoint(0, 100).y != 0) return finish(false, "keys view precondition");
+        for (int i = 0; i < 20; ++i) ed.mouseWheelMove(mouse(a, a, ctrl), up);
+        if (ed.cellGrabPoint(0, 100).y <= 0) {
+          juce::String ys;
+          for (int p : {0, 23, 50, 90, 95, 99, 100, 105, 115, 127}) ys += juce::String(p) + ":" + juce::String(ed.cellGrabPoint(0, p).y) + " ";
+          return finish(false, "ctrl wheel keys+ keys=" + juce::String(ed.keysShown()) + " " + ys);
+        }
+        ed.deleteSelection();
+        next("piano gestures");
+      }
+      break;
+    }
+    case 40: {  // piano roll, new surfaces: Paint seeds per cell, Fit keys/Keys±, the scale guide's root mark,
+      // and the Note tools window opened from the piano roll button with its Quantize acting in one undo step.
+      if (applied && inStep > 300) {
+        auto& ed = editor_;
+        auto mouse = [&](juce::Point<int> at, juce::Point<int> down, juce::ModifierKeys mods) {
+          return juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(), at.toFloat(), mods, 0, 0, 0, 0, 0, &ed, &ed,
+                                  juce::Time::getCurrentTime(), down.toFloat(), juce::Time::getCurrentTime(), 1, at != down);
+        };
+        const auto left = juce::ModifierKeys(juce::ModifierKeys::leftButtonModifier);
+        auto notes = [&]() -> const std::vector<doc::Note>& { return history_.current().findTrack("bass")->findPattern(ed.patternId())->notes; };
+        ed.setTool(PatternEditor::Tool::Paint);
+        const auto p0 = ed.cellGrabPoint(0, 50);
+        ed.mouseDown(mouse(p0, p0, left));
+        for (int i = 1; i <= 3; ++i) {
+          const auto p = ed.cellGrabPoint(i * 240, 50);
+          ed.mouseDrag(mouse(p, p0, left));
+        }
+        ed.mouseUp(mouse(ed.cellGrabPoint(3 * 240, 50), p0, left));
+        if (notes().size() != 4 || history_.undoLabel() != "Paint notes") return finish(false, "paint seeds per cell");
+        undo();
+        if (!notes().empty()) return finish(false, "paint one undo");
+        ed.setTool(PatternEditor::Tool::Draw);
+        ed.fitKeys();
+        if (ed.keysShown() != 128 || ed.cellGrabPoint(0, 127).y <= 0) return finish(false, "fit keys 128");
+        ed.keysLess();
+        if (ed.keysShown() != 124) return finish(false, "keys-");
+        ed.keysMore();
+        if (ed.keysShown() != 128) return finish(false, "keys+");
+        // The scale guide paints a solid highlight mark on every root key: more exact-accent pixels than without.
+        ed.mouseExit(mouse({-1, -1}, {-1, -1}, left));
+        auto rootPixels = [&] {
+          const juce::Image shot = ed.createComponentSnapshot(ed.getLocalBounds(), false, 1.0f);
+          int n = 0;
+          for (int y = 0; y < shot.getHeight(); ++y)
+            for (int x = 0; x < shot.getWidth(); ++x)
+              if (shot.getPixelAt(x, y) == theme::kAccent) ++n;
+          return n;
+        };
+        const int before = rootPixels();
+        ed.setScaleGuide(0, "Major");
+        const int withGuide = rootPixels();
+        if (withGuide < before + 12) return finish(false, "scale root mark before=" + juce::String(before) + " with=" + juce::String(withGuide));
+        ed.setScaleGuide(0, "");
+        // The Note tools window: the button's wiring, and its Quantize button acting on the notes in one undo step.
+        ed.openNoteTools();
+        if (!ed.noteToolsVisible() || !ed.noteToolsWindow()) return finish(false, "note tools open");
+        ed.clickCell(0, 40);
+        edit([&](doc::Document& d) { doc::patternById(doc::trackById(d, "bass"), ed.patternId()).notes[0].tick = 100; }, u8("Offset"));
+        juce::TextButton* q = nullptr;
+        std::function<void(juce::Component*)> find = [&](juce::Component* c) {
+          if (auto* b = dynamic_cast<juce::TextButton*>(c); b && b->getButtonText() == "Quantize") q = b;
+          for (auto* ch : c->getChildren()) find(ch);
+        };
+        find(ed.noteToolsWindow()->getContentComponent());
+        if (!q) return finish(false, "note tools quantize button");
+        q->onClick();  // synchronous, as the arrangement button's programmatic click: triggerClick posts a message this step would not wait for
+        if (notes().empty() || notes()[0].tick % 240 != 0 || history_.undoLabel() != "Quantize")
+          return finish(false, "note tools quantize n=" + juce::String((int)notes().size()) + " tick=" + juce::String(notes().empty() ? -1 : notes()[0].tick) +
+                               " label=" + history_.undoLabel() + " str=" + juce::String(ed.quantizeStrength, 2) + " sel=" + juce::String((int)ed.selection().size()));
+        ed.noteToolsWindow()->closeButtonPressed();
+        if (ed.noteToolsVisible()) return finish(false, "note tools close");
+        next("piano surfaces");
+      }
+      break;
+    }
+    case 41:
+      if (inStep > 300 && applied)
+        return finish(true, "M1c + M2 path, live notes, audio clips, mixer, save with audio, piano roll Pulse gestures");
       break;
   }
 }

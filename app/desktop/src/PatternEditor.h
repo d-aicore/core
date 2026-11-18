@@ -45,19 +45,32 @@ public:
   const std::string& patternId() const { return patternId_; }
   void documentChanged();                     // after any edit, undo or open
   void playheadMoved();                       // every frame: redraws only where the playhead line was and is
-  // The mouse's tool: draw (click adds a note), select (drag a box), erase (click or drag over notes).
-  enum class Tool { Draw, Select, Erase };
+  // The mouse's tool: draw (click adds a note, drag sizes it), paint (drag seeds a note per cell),
+  // select (drag a box), erase (click or drag over notes).
+  enum class Tool { Draw, Paint, Select, Erase };
   void setTool(Tool tool);
   Tool tool() const { return tool_; }
   // Drawing help (File > Settings > Piano roll, both on by default): a faint note where a click would put one,
   // and thin guides when that note (or a dragged one) lines up with another: same key across, same time down.
   void setDrawingHelp(bool ghost, bool guides);
+  // Expandable key range (owner, 2026-11-18: «piano deve conseguir expandir», «no piano ctrl+scroll keys+ e keys»):
+  // Keys+/Keys- grow or shrink the visible range, Fit keys shows all 128. Ctrl+wheel is Keys+/Keys-.
+  void fitKeys();
+  void keysMore();
+  void keysLess();
+  int keysShown() const;  // keys in the view (128 after Fit keys)
+  // The scale guide (Pulse's «Scale»): a faint tint on the scale's keys, a stronger one and a mark on the root.
+  // A guide only: creating and moving never trap the mouse. "" = off.
+  void setScaleGuide(int root, const std::string& scaleName);
+  bool scaleGuideOn() const { return !scaleName_.empty(); }
+  int scaleRoot() const { return scaleRoot_; }
+  const std::string& scaleName() const { return scaleName_; }
   // Groove tools (Edit > Timing, Variation) on the notes of the bars shown, the selected ones among them; one undo step each.
   // Strength and swing (0..1) are set in the Inspector.
   double quantizeStrength = 1.0, swing = 0.0;
   // Edit > Play the selected notes: the notes on their track (they were in the Inspector's PREVIEW, Diogo 2026-11-09).
   std::function<void(const std::string& trackId, const std::vector<doc::Note>& notes)> onPreviewNotes;
-  void quantize();
+  void quantize(int64_t gridTicks = 0);  // 0: the editor's snap grid (the Note tools window passes its own)
   void humanize();
   void vary(const std::string& kind);
   void stutter(const std::string& presetId);  // STUTTER note slice: the notes become repeats
@@ -116,6 +129,13 @@ public:
   void deleteSelection();
   // A point inside the note drawn at this tick and pitch, 2 px from its left edge (self-test mouse events).
   juce::Point<int> cellGrabPoint(int64_t tick, int pitch) const;
+  // The length a click on empty space gives a new note: the last one created or resized (0: the snap grid).
+  int64_t lastNoteLength() const { return lastLength_; }
+  // The Note tools window (owner, 2026-11-18: «quero uma pequena janela com isto , ou sej um botao no piano que me da
+  // estas opçoes, incluindo as do baixo kbbb que ja existem»): the toolbar button opens it; close hides it.
+  void openNoteTools();
+  bool noteToolsVisible() const;
+  juce::DocumentWindow* noteToolsWindow() const { return noteToolsWin_.get(); }
 
 private:
   void stepMouseDown(const juce::MouseEvent& e, const doc::Note* hit);  // drums
@@ -157,6 +177,7 @@ private:
   juce::Rectangle<int> grid() const;
   juce::Rectangle<int> velocityLane() const;  // under the grid: one bar per note, its height the velocity
   void setVelocityAt(int x, int y);           // the notes drawn at x get the velocity of height y
+  void wheelVelocityAt(int x, double step);   // Alt+wheel: the notes at x (selected ones among them) by step
   void eraseAt(juce::Point<int> p);
   int64_t tickAtX(int x, bool snap) const;
   void movePlayheadTo(int x);  // the ruler: the start line to the tick under x
@@ -175,13 +196,22 @@ private:
   std::set<std::string> selected_;
   int hoverPitch_ = -1;  // the row under the mouse: lit, its note named on the keyboard
   int lowPitch_ = 24;  // bass view: the lowest key shown
-  int rowsWanted_ = 0;  // keys shown (Alt+wheel); 0: as many as fit at a comfortable height
-  int keysShown() const;
+  int rowsWanted_ = 0;  // keys shown (Keys±, Ctrl+wheel, Alt+wheel); 0: as many as fit at a comfortable height
+  int scaleRoot_ = 0;
+  std::string scaleName_;  // "" = the scale guide is off
   juce::ComboBox patternBox_, snap_, length_;
   juce::TextButton newPattern_, clearPattern_, removePattern_;
   juce::TextButton octaveUp_, octaveDown_, zoomIn_, zoomOut_;
   void zoom(double factor, double at);
-  juce::TextButton drawTool_, selectTool_, eraseTool_;
+  // The second toolbar row (pitched tracks): the key range and the scale guide, as dropdowns where there is a choice.
+  juce::TextButton keysMinus_, keysPlus_, fitKeys_;
+  juce::ComboBox scaleBox_, rootBox_;
+  juce::TextButton noteTools_;  // opens the Note tools window (Quantize/Humanize/Groove + the kick/bass tools)
+  std::unique_ptr<juce::DocumentWindow> noteToolsWin_;
+  int headerHeight() const;  // one row for drums, two for pitched tracks
+  void updateKeysHint();
+  void keysWheel(float deltaY, int y);  // Ctrl+wheel: Keys+/Keys- around the key under the mouse
+  juce::TextButton drawTool_, selectTool_, eraseTool_, paintTool_;
   juce::TextButton edit_;        // Edit ▾: every note tool (showTools)
   theme::InfoDot editInfo_;
   std::set<std::string> editIds() const;  // the notes an Edit tool works on (bars shown; the selected ones among them)
@@ -217,14 +247,23 @@ private:
   juce::Rectangle<int> marquee_;               // the select tool's box while it is dragged
   juce::Label title_, hint_;
 
-  enum class Drag { None, Move, Resize, Velocity, Marquee, Erase, Playhead } drag_ = Drag::None;
+  enum class Drag { None, Move, Resize, Velocity, Marquee, Erase, Playhead, Create, Paint } drag_ = Drag::None;
   juce::Point<int> marqueeStart_;
-  std::set<std::string> marqueeBase_;          // selected before the box (Ctrl adds the box to them)
+  std::set<std::string> marqueeBase_;          // selected before the box (Ctrl/Shift adds the box to them)
   std::string dragNote_;
   int64_t dragStartTick_ = 0, dragOffsetTicks_ = 0;
   int dragStartPitch_ = 0;
   std::vector<doc::Note> dragOriginal_;  // the selected notes when the drag started
   bool gestureOpen_ = false;             // drums: the move gesture starts with the first real drag
+  // Pulse gestures (owner 2026-11-18, «apenas muda no piano»): a click creates with the last used length and the
+  // drag sizes it (one undo step); Shift+drag clones; Alt bypasses snap; Paint seeds a note per cell; Ctrl+drag lassos.
+  int64_t lastLength_ = 0;  // the last created/resized length; 0: the snap grid's length
+  std::string createId_;    // the note the create-drag is sizing
+  int64_t createTick_ = 0;
+  std::set<std::pair<int64_t, int>> painted_;  // cells the paint drag already seeded (one gesture)
+  void startMarquee(const juce::MouseEvent& e);
+  void seedPaint(juce::Point<int> p, bool free);
+  void updateCursor(juce::Point<int> p, const juce::ModifierKeys& mods);  // per tool, per place: hand over body, ↔ at edge
 
   // The ghost note and the alignment guides (see setDrawingHelp). Lines are 1 px rectangles; empty = none.
   struct Overlay {
