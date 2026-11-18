@@ -426,6 +426,52 @@ TEST("plugins: droppedPluginKeys names the plugins a change takes away, and noth
   CHECK(droppedPluginKeys(more, before).size() == (size_t)4);  // the new track, its copy's instrument and effect, b's effect
 }
 
+// Data loss (2026-11-18), S5: an undo step is a whole document, plugin states included. Undo put the old state of
+// a plugin that stays alive back into the document while the engine kept the instance and its new sound: the next
+// save without the engine's answer, or an engine restart, brought the old sound.
+TEST("plugins: keepLivePluginStates never takes back the state of a plugin that stays alive") {
+  const json synth = {{"id", "synth-a"}, {"file", "synth-a.vst3"}, {"name", "Synth A"}};
+  const json other = {{"id", "synth-b"}, {"file", "synth-b.vst3"}, {"name", "Synth B"}, {"state", "T1RIRVI="}};
+  const json effect = {{"id", "effect-a"}, {"file", "effect-a.vst3"}, {"name", "Effect A"}};
+  // The state Undo goes to: three synth tracks, an effect on the first, each with the state it had then.
+  Document to = newEmptyDocument();
+  const std::string a = addPluginTrack(to, synth), b = addPluginTrack(to, synth), c = addPluginTrack(to, synth);
+  addPluginEffect(to, a, effect);
+  const std::string fxKey = pluginKey(a, to.tracks[0].effects[0]["id"].get<std::string>());
+  CHECK_EQ(applyPluginStates(to, {{pluginKey(a), "QQ=="}, {pluginKey(b), "Qg=="}, {pluginKey(c), "Qw=="}, {fxKey, "RA=="}}), 4);
+  // The state being left: a and its effect moved on, b plays another plugin, c is gone.
+  Document from = to;
+  CHECK_EQ(applyPluginStates(from, {{pluginKey(a), "TkVX"}, {fxKey, "TkVXMg=="}}), 2);
+  from.tracks[0].instrument.plugin["stateId"] = "s2";
+  replaceInstrumentWithPlugin(from, b, other);
+  removeTrack(from, c);
+  from.bpm = 150;
+  auto stateOf = [](const Document& d, const std::string& trackId) { return d.findTrack(trackId)->instrument.plugin.value("state", std::string()); };
+
+  Document undone = to;
+  CHECK_EQ(keepLivePluginStates(from, undone), 2);
+  CHECK_EQ(stateOf(undone, a), std::string("TkVX"));  // alive on both sides: the newest state
+  CHECK_EQ(undone.tracks[0].instrument.plugin.value("stateId", std::string()), std::string("s2"));
+  CHECK_EQ(undone.tracks[0].effects[0]["plugin"].value("state", std::string()), std::string("TkVXMg=="));
+  CHECK_EQ(stateOf(undone, b), std::string("Qg=="));  // another plugin under the key: the step's own state
+  CHECK_EQ(undone.findTrack(b)->instrument.plugin.value("id", std::string()), std::string("synth-a"));
+  CHECK_EQ(stateOf(undone, c), std::string("Qw=="));  // brought back by the step: the step's own state
+  CHECK_NEAR(undone.bpm, to.bpm, 0);                  // nothing else of the state being left comes along
+
+  // The same the other way (Redo), and a second time changes nothing.
+  Document redone = from;
+  CHECK_EQ(keepLivePluginStates(undone, redone), 0);
+  CHECK_EQ(canon(redone), canon(from));
+  CHECK_EQ(keepLivePluginStates(from, undone), 0);
+  // A plugin with no state in the state being left takes nothing away.
+  Document bare = from;
+  bare.tracks[0].instrument.plugin.erase("state");
+  bare.tracks[0].instrument.plugin.erase("stateId");
+  Document kept = to;
+  CHECK_EQ(keepLivePluginStates(bare, kept), 1);  // (the effect only)
+  CHECK_EQ(stateOf(kept, a), std::string("QQ=="));
+}
+
 // Todos os templates que vao com a app abrem, viram projecto do motor, e o motor aceita-os e renderiza sem NaN.
 TEST("templates: todos abrem e o motor toca-os sem erro") {
   TemplateLibrary lib = loadTemplates(CORE_TEMPLATES_DIR, tempDir() / "user-templates-vazia", true);

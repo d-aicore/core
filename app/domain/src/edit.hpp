@@ -224,6 +224,13 @@ int applyPluginStates(Document& doc, const json& states);
 // gets `after`, and what they hold is only there: it must be in the document first, or Undo brings them back
 // as last saved.
 std::vector<std::string> droppedPluginKeys(const Document& before, const Document& after);
+// Undo and Redo never take back what a living plugin holds. `from` is the state being left, `to` the one Undo or
+// Redo brings: every plugin that is in both under the same key and is the same plugin (file and id) keeps in `to`
+// the state (and stateId) it has in `from`, the newest the app knows. The engine keeps that instance as it is, so
+// an older state in the document would be saved, or loaded by a restarted engine, in place of the sound heard.
+// A plugin the step brings back, or another plugin under the key, keeps the state of `to`. A plugin with no
+// state in `from` takes nothing away from `to`. Returns how many plugins changed.
+int keepLivePluginStates(const Document& from, Document& to);
 // Takes away what an instrument's mood put on the track (the W-Core mood effects, their curves, and the
 // record of the knobs a mood moved), for when the track changes instrument. The user's own effects stay.
 void dropInstrumentMoods(Document& doc, const std::string& trackId);

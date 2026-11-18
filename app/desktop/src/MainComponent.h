@@ -289,6 +289,7 @@ private:
   bool takePluginStates(json* taken = nullptr);  // the same, for a change that needs them (false: no answer, the user was told)
   bool capturePluginsBefore(const doc::Document& target, doc::Document* editable);  // when `target` takes plugins away
   void stepHistory(bool back);  // Undo (true) or Redo
+  bool moveInHistory(bool back);  // the history's own step; living plugins keep the state the document had for them
   void duplicateTrack(const std::string& trackId);
   void selectDevice(const std::string& name);
   // SavedWithoutPlugins: the song is in the file but the plugins' current settings are not (the engine gave no

@@ -1487,6 +1487,47 @@ std::vector<std::string> droppedPluginKeys(const Document& before, const Documen
   return dropped;
 }
 
+int keepLivePluginStates(const Document& from, Document& to) {
+  auto identity = [](const json& plugin) { return plugin.value("file", json()).dump() + "|" + plugin.value("id", json()).dump(); };
+  auto isPluginEffect = [](const json& fx) {
+    return fx.is_object() && fx.value("type", "") == "plugin" && fx.contains("id") && fx["id"].is_string() && fx.contains("plugin");
+  };
+  // The plugins of the state being left, by key.
+  std::map<std::string, const json*> left;
+  auto leftChain = [&](const json& list, const std::string& trackId) {
+    for (const auto& fx : list)
+      if (isPluginEffect(fx) && fx["plugin"].is_object()) left[pluginKey(trackId, fx["id"].get<std::string>())] = &fx["plugin"];
+  };
+  leftChain(from.masterEffects, "");
+  for (const auto& t : from.tracks) {
+    if (t.instrument.kind == "plugin" && t.instrument.plugin.is_object()) left[pluginKey(t.id)] = &t.instrument.plugin;
+    leftChain(t.effects, t.id);
+  }
+  int changed = 0;
+  auto keep = [&](json& plugin, const std::string& key) {
+    const auto it = left.find(key);
+    if (!plugin.is_object() || it == left.end() || identity(*it->second) != identity(plugin)) return;
+    bool moved = false;
+    for (const char* field : {"state", "stateId"}) {
+      const auto newest = it->second->find(field);
+      if (newest == it->second->end() || (plugin.contains(field) && plugin[field] == *newest)) continue;
+      plugin[field] = *newest;
+      moved = true;
+    }
+    if (moved) ++changed;
+  };
+  auto chain = [&](json& list, const std::string& trackId) {
+    for (auto& fx : list)
+      if (isPluginEffect(fx)) keep(fx["plugin"], pluginKey(trackId, fx["id"].get<std::string>()));
+  };
+  chain(to.masterEffects, "");
+  for (auto& t : to.tracks) {
+    if (t.instrument.kind == "plugin") keep(t.instrument.plugin, pluginKey(t.id));
+    chain(t.effects, t.id);
+  }
+  return changed;
+}
+
 int addEffect(Document& doc, const std::string& trackId, const std::string& name) {
   const EffectInfo* info = findEffect(name);
   if (!info) throw DocumentError("effects", "unknown effect '" + name + "'");

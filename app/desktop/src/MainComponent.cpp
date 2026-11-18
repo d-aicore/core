@@ -3533,7 +3533,18 @@ void MainComponent::stepHistory(bool back) {
   if (history_.inGesture()) endGesture();
   const doc::Document* target = back ? history_.undoTarget() : history_.redoTarget();
   if (!target || !capturePluginsBefore(*target, nullptr)) return;
-  if (back ? history_.undo() : history_.redo()) documentChanged(false);
+  if (moveInHistory(back)) documentChanged(false);
+}
+
+// History::undo() or redo(), and the rule that such a step never takes back what a living plugin holds
+// (doc::keepLivePluginStates): the plugins that are in both states keep the state the document had for them
+// before the step, which is the newest the app knows. No question to the engine. False: there was no step.
+bool MainComponent::moveInHistory(bool back) {
+  if (!(back ? history_.undo() : history_.redo())) return false;
+  const doc::Document* left = back ? history_.redoTarget() : history_.undoTarget();  // the state just left
+  doc::Document now = history_.current();
+  if (left && doc::keepLivePluginStates(*left, now) > 0) history_.amend(now);
+  return true;
 }
 
 void MainComponent::buildRows() {
@@ -4418,7 +4429,7 @@ void MainComponent::putSampleOnTrack(const std::string& trackId, const doc::Libr
   if (trackId == lastSampleTrack_ && history_.canUndo() && !history_.canRedo() && u8(history_.undoLabel()) == lastSampleLabel_) {
     bool fits = true;
     try { doc::Document trial = history_.current(); doc::setTrackSample(trial, trackId, sampleIndex_, sample); } catch (const std::exception&) { fits = false; }
-    if (fits) history_.undo();  // (when the new sound cannot go there, the error shows and the last try stays)
+    if (fits) moveInHistory(true);  // (when the new sound cannot go there, the error shows and the last try stays)
   }
   edit([&](doc::Document& d) { doc::setTrackSample(d, trackId, sampleIndex_, sample); }, label);
   lastSampleTrack_ = trackId;
@@ -7221,11 +7232,34 @@ void MainComponent::selfTestStep() {
         if (std::abs(gain - 0.6) > 0.01) return finish(false, "the duplicated plugin does not sound as the original: gain " + juce::String(gain) + ", expected 0.6");
         undo();  // the copy goes again
         if (history_.current().findTrack(t.copyTrack)) return finish(false, "undo of the duplicated plugin track");
-        t.log << "copy sounds as the original; ";
-        t.step = 35;
-        t.stepStarted = now;
+        t.pluginEditsSeen = snap_.pluginEdits;
+        if (!session_->setPluginParam("track:bass", t.gainId, 0.2, 3000)) return finish(false, "plugin parameter not set (undo)");
+        next("copy sounds as the original");
       } else if (inStep > 5000) {
         return finish(false, "duplicate not applied");
+      }
+      break;
+    // Data loss (2026-11-18), S5: Undo never takes back what a plugin that stays alive holds.
+    case 111:  // an edit, then the plugin's new sound reaches the document (as Save does), then Undo of the edit
+      if (snap_.pluginEdits != t.pluginEditsSeen) {
+        auto bassState = [&] { return history_.current().findTrack("bass")->instrument.plugin.value("state", std::string()); };
+        const std::string before = bassState();
+        const double bpm = history_.current().bpm;
+        edit([bpm](doc::Document& d) { d.bpm = bpm + 1; }, "Tempo");
+        if (!fetchPluginStates()) return finish(false, "no plugin states before undo");
+        const std::string held = bassState();
+        if (held.empty() || held == before) return finish(false, "the plugin's new state did not reach the document");
+        undo();
+        if (history_.current().bpm != bpm) return finish(false, "undo of the tempo");
+        if (bassState() != held) return finish(false, "undo took the document back to the plugin's older state");
+        redo();
+        if (history_.current().bpm != bpm + 1 || bassState() != held) return finish(false, "redo changed the plugin's state");
+        undo();
+        t.log << "undo keeps the living plugin's state; ";
+        t.step = 35;
+        t.stepStarted = now;
+      } else if (inStep > 3000) {
+        return finish(false, "the plugin's change was not reported (undo)");
       }
       break;
     case 35:  // the picture shows the waveforms once they are computed
