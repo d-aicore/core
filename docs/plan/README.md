@@ -63,13 +63,21 @@ which stay verbatim. Line numbers refer to e7968c8 and have drifted since.
    whole document per step (goes with item 2); not exercised in the app: replace instrument, sample on a plugin
    track, remove effect, redo, the refusal when the engine does not answer, and real third-party plugins (one that
    calls `setDirty` on load would open the song already marked as changed).
-4. **A failed plugin is never retried and the UI says otherwise** (FL-2): the app never sends `plugin.retry`;
-   export reports success with a muted plugin (`render_job.cpp:295-299`); a plugin that does not load is not
-   reported; an invalid state is ignored silently.
+4. **A failed plugin is never retried and the UI says otherwise** (FL-2). The engine side is ready: the
+   `plugin.retry` command in `server.cpp` already drops the key and rebuilds, and the new instance starts from the
+   document's state because `JuceHost::get` never asks a failed instance for its state. Missing: the app sends
+   `plugin.retry` with the keys from `plugins.failed` (a "Try again" in an existing menu or notice) and the notice
+   text stops promising "silent until your next change". Also open: export reports success with a muted or missing
+   plugin (`render_job.cpp:295-299` checks only missing audio — make the job fail and name track and plugin, without
+   touching the user's existing file); a plugin that does not load is not announced (the engine already gives the
+   reason per plugin through `plugins.missing`: "not found in <file>", "the plugin has no file", "it crashed while it
+   was loaded"; `relinkPlugins` in `plugin_refs.cpp` is never called); an invalid state is ignored silently.
+   Test plugins: `CORE_TEST_THROW`, `CORE_TEST_CRASH`; `RateOutput`/`RateWorld` in `tests/engine_tests.cpp` are a
+   template for fake outputs.
 5. **Export and installer** — data-loss map items 9, 11, 12 (NaN silenced, false messages, `.previous` orphans,
    installer overwriting edited samples).
-6. **`engine.start` restore hole** (FL-3, reproduced): `server.cpp:336-375`, after a failed device switch the engine
-   stays silent and `engine.start` answers ok.
+6. **`engine.start` restore hole** (FL-3): fixed and tested in `tests/engine_tests.cpp`. Not verified with a real
+   WASAPI device, in the desktop self-test, or with real plugins after the restored engine rebuilds.
 7. **Dead code** — lots L1…L10 of the inventory, safest first (L1, L2, L4, L3, L5 = the 16 hidden base templates).
    The 5 visible templates stay until the owner says otherwise. L10: the app opens empty; the engine demo/measure
    are rebuilt on generated audio or the test synth, with an amplitude test in the gate (today no test checks that
