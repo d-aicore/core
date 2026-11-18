@@ -22,6 +22,17 @@
 - Not translated: the owner's verbatim quotes (always kept in the original language) and the existing ledger and history (`ESTADO.md`, `docs/relatorios/`, `docs/historico/`), which are never edited.
 - Existing non-English code, test names and tool messages are converted to English when they are touched; do not mix a translation sweep into an unrelated fix.
 
+## Engine quality bar
+
+- Owner, verbatim (2026-11-18, DSH coordinator session `session-2ff54f03-8344-40bb-8cb4-54df0601eb69`): «eu quero melhor motor que possamos fazer»; and, about the five criteria below: «deixa isso como criterio a chegar».
+- These are targets to reach, not claims about the current state. Each one counts as met only when it is proven by measurement:
+  1. Never loses work.
+  2. A failing plugin never takes the song down.
+  3. Zero audio dropouts: no allocation, lock, I/O or blocking call on the audio thread, proven by tooling rather than by reading.
+  4. Handles many plugins: the multicore path proven identical to the serial path, measured with real plugins under load.
+  5. Exact sound: automation and latency compensation correct at every sample rate and block size, proven by null tests.
+- When they conflict, the owner's order applies: data > real time > performance > compatibility.
+
 ## Ledger (D72/D73/D79/D80)
 
 - `ESTADO.md` é escrito **só pelo escrivão do ledger**. Qualquer outra entrega propõe linhas: descreve-as no relatório e abre/actualiza a pendência — não edita `ESTADO.md`.
