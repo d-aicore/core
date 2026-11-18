@@ -205,6 +205,42 @@ TEST("dados D3: a pergunta 'o ficheiro mudou em disco' tem traducao") {
   CHECK(asked.find("Substituir") != std::string::npos);
 }
 
+// D4 (the tests of the save itself are in domain_tests.cpp): the error that says where each version is, exactly as
+// the domain writes it, has a translation.
+namespace {
+unsigned long failHalfWay(const fs::path& target, const fs::path&, const fs::path& backup) {
+  std::error_code e;
+  fs::remove(backup, e);
+  fs::rename(target, backup, e);  // the previous file is already the .bak
+  fs::create_directory(target);   // and the name is taken: the new one does not get in
+  return 1177;
+}
+}  // namespace
+
+TEST("data loss D4: the error 'the file is not in its place' has a translation") {
+  const Translation pt = loadTranslation(CORE_LANG_DIR "/pt-PT.json");
+  const fs::path dir = freshDir("d4-translation");
+  const fs::path file = dir / "Song.core";
+  Document d = newEmptyDocument();
+  saveFile(d, file);
+  d.bpm = 150;
+  std::string message;
+  setReplaceStepForTests(failHalfWay);
+  try { saveFile(d, file); } catch (const SaveError& e) { message = e.what(); }
+  setReplaceStepForTests(nullptr);
+  CHECK(message.find("The file is not in its place: the new version is in ") != std::string::npos);
+  CHECK(pt.has(message));
+  const std::string shown = pt.translate(message);
+  CHECK(shown.find("O ficheiro n\xC3\xA3o est\xC3\xA1 no s\xC3\xADtio: a vers\xC3\xA3o nova est\xC3\xA1 em ") != std::string::npos);
+  CHECK(shown.find("Song.core.bak") != std::string::npos);
+  CHECK(shown.find("Nothing was deleted") == std::string::npos);
+  // The other two shapes (only the new version, only the previous one).
+  CHECK(pt.has("Cannot replace C:\\x\\Song.core: Access is denied (5). The file is not in its place: the new version is in "
+               "C:\\x\\Song.core.saving-3. Nothing was deleted: give it the name Song.core to open it."));
+  CHECK(pt.has("Cannot replace C:\\x\\Song.core: Access is denied (5). The file is not in its place: the previous version is in "
+               "C:\\x\\Song.core.bak. Nothing was deleted: give it the name Song.core to open it."));
+}
+
 TEST("sweep: addPattern recusa um padrao de comprimento 0 (dividia por zero na projeccao)") {
   Document d = newEmptyDocument();
   const std::string id = addTrack(d, "", "X");

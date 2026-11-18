@@ -1,6 +1,10 @@
 // Testes do dominio (core_domain): o documento da app, guardar/reabrir, undo/redo, templates e a projeccao para o motor.
+#include <algorithm>
 #include <chrono>
 #include <filesystem>
+#ifdef _WIN32
+#include <share.h>
+#endif
 #include "support/check.hpp"
 #include "core/project.hpp"
 #include "core/server.hpp"
@@ -123,6 +127,140 @@ TEST("dados D3: o Save ve que o ficheiro mudou em disco desde que esta janela o 
   saveFile(other, fresh);
   CHECK(diskChange(none, fresh) == DiskChange::Changed);
 }
+
+// Data loss (2026-11-18), D4: when ReplaceFileW fails with ERROR_UNABLE_TO_MOVE_REPLACEMENT_2 (1177) the original
+// has already been renamed to the .bak and the new file did not get in. Core treated every error the same way:
+// it deleted the temporary file (the only copy of the new version) and said "The previous file was not changed.".
+namespace {
+// What Windows leaves behind on 1177: the file being replaced already has the backup's name; the new one is not in.
+unsigned long fail1177(const fs::path& target, const fs::path&, const fs::path& backup) {
+  std::error_code e;
+  fs::remove(backup, e);
+  fs::rename(target, backup, e);
+  return 1177;
+}
+// The same, and something else takes the name at once (a folder): the new file cannot be put in place either.
+unsigned long fail1177NameTaken(const fs::path& target, const fs::path& temporary, const fs::path& backup) {
+  fail1177(target, temporary, backup);
+  fs::create_directory(target);
+  return 1177;
+}
+struct SystemReplaceAgain { ~SystemReplaceAgain() { setReplaceStepForTests(nullptr); } };
+
+// The temporary files a save left next to the file ("<file>.saving-N").
+std::vector<fs::path> temporaries(const fs::path& file) {
+  std::vector<fs::path> out;
+  const std::string prefix = file.filename().string() + ".saving-";
+  for (const auto& e : fs::directory_iterator(file.parent_path()))
+    if (e.path().filename().string().rfind(prefix, 0) == 0) out.push_back(e.path());
+  return out;
+}
+// The name of the song a file holds; "" when it is not there or does not open.
+std::string songIn(const fs::path& file) {
+  std::error_code e;
+  if (!fs::is_regular_file(file, e)) return "";
+  try { return openFile(file).document.name; } catch (const std::exception&) { return ""; }
+}
+fs::path cleanSong(const std::string& name) {
+  const fs::path file = tempDir() / (name + std::string(kFileExtension));
+  std::error_code e;
+  fs::remove_all(file, e);
+  fs::remove_all(backupPath(file), e);
+  for (const auto& t : temporaries(file)) fs::remove_all(t, e);
+  return file;
+}
+Document songNamed(const std::string& name) {
+  Document d = newTemplateDocument();
+  d.name = name;
+  return d;
+}
+}  // namespace
+
+TEST("data loss D4: ReplaceFileW fails half way (1177) and neither version is lost; the file opens") {
+  const fs::path file = cleanSong("d4-1177");
+  saveFile(songNamed("Version 1"), file);
+  bool threw = false;
+  {
+    SystemReplaceAgain restore;
+    setReplaceStepForTests(fail1177);
+    try { saveFile(songNamed("Version 2"), file); } catch (const SaveError&) { threw = true; }
+  }
+  // The file is in its place and opens (before: it was not there, only the .bak was left).
+  CHECK(fs::is_regular_file(file));
+  CHECK(!songIn(file).empty());
+  // Both versions are on disk: the new one in place (Core finished the swap itself), the previous one in the .bak.
+  std::vector<std::string> onDisk = {songIn(file), songIn(backupPath(file))};
+  for (const auto& t : temporaries(file)) onDisk.push_back(songIn(t));
+  CHECK(std::find(onDisk.begin(), onDisk.end(), "Version 1") != onDisk.end());
+  CHECK(std::find(onDisk.begin(), onDisk.end(), "Version 2") != onDisk.end());  // before: the temporary file had been deleted
+  CHECK_EQ(songIn(file), std::string("Version 2"));
+  CHECK_EQ(songIn(backupPath(file)), std::string("Version 1"));
+  CHECK(!threw);  // the save is done: there is no error to show
+  CHECK_EQ(temporaries(file).size(), (size_t)0);
+}
+
+TEST("data loss D4: 1177 and the new file cannot be moved in either -> the error says where each version is, the temporary file stays") {
+  const fs::path file = cleanSong("d4-1177-name-taken");
+  saveFile(songNamed("Version 1"), file);
+  bool threw = false, intact = true;
+  std::string message;
+  {
+    SystemReplaceAgain restore;
+    setReplaceStepForTests(fail1177NameTaken);
+    try { saveFile(songNamed("Version 2"), file); }
+    catch (const SaveError& e) { threw = true; intact = e.previousFileIntact; message = e.what(); }
+  }
+  CHECK(threw);
+  CHECK(!intact);  // the window can no longer say "The previous file was not changed."
+  const std::vector<fs::path> left = temporaries(file);
+  CHECK_EQ(left.size(), (size_t)1);  // before: 0, the new version had been deleted
+  if (left.size() == 1) {
+    CHECK_EQ(songIn(left[0]), std::string("Version 2"));
+    CHECK(message.find(left[0].filename().string()) != std::string::npos);  // the error says where the new one is...
+  }
+  CHECK_EQ(songIn(backupPath(file)), std::string("Version 1"));
+  CHECK(message.find(backupPath(file).filename().string()) != std::string::npos);  // ...and where the previous one is
+  CHECK(message.find("(1177)") != std::string::npos);
+  std::error_code e;
+  fs::remove_all(file, e);  // (the folder that took the name)
+}
+
+TEST("data loss D4: the normal path is as it was (new in place, previous in the .bak, no temporary files)") {
+  const fs::path file = cleanSong("d4-normal");
+  saveFile(songNamed("Version 1"), file);  // the first save: there is no previous version
+  CHECK_EQ(songIn(file), std::string("Version 1"));
+  CHECK(!fs::exists(backupPath(file)));
+  saveFile(songNamed("Version 2"), file);
+  saveFile(songNamed("Version 3"), file);
+  CHECK_EQ(songIn(file), std::string("Version 3"));
+  CHECK_EQ(songIn(backupPath(file)), std::string("Version 2"));
+  CHECK_EQ(temporaries(file).size(), (size_t)0);
+}
+
+#ifdef _WIN32
+// Windows only (elsewhere an open file locks nothing): the .bak held open by another program.
+TEST("data loss D4: locked .bak -> refused with an error, the previous file intact, no temporary file left, the error has words") {
+  const fs::path file = cleanSong("d4-bak-locked");
+  saveFile(songNamed("Version 1"), file);
+  saveFile(songNamed("Version 2"), file);  // there is a .bak (Version 1)
+  std::FILE* lock = _wfsopen(backupPath(file).c_str(), L"rb", _SH_DENYRW);
+  CHECK(lock != nullptr);
+  bool threw = false, intact = false;
+  std::string message;
+  try { saveFile(songNamed("Version 3"), file); }
+  catch (const SaveError& e) { threw = true; intact = e.previousFileIntact; message = e.what(); }
+  if (lock) std::fclose(lock);
+  CHECK(threw);
+  CHECK(intact);
+  CHECK_EQ(songIn(file), std::string("Version 2"));
+  CHECK_EQ(songIn(backupPath(file)), std::string("Version 1"));
+  CHECK_EQ(temporaries(file).size(), (size_t)0);
+  // The system's words for the error: a Windows without the English messages gave "error 1175 (1175)".
+  std::printf("     (message: %s)\n", message.c_str());
+  CHECK(message.find(": error ") == std::string::npos);
+  CHECK(message.find("Cannot replace") == 0);
+}
+#endif
 
 TEST("undo/redo: adicionar e remover pistas volta exactamente atras") {
   Document start = newEmptyDocument();

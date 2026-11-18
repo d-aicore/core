@@ -3845,6 +3845,10 @@ MainComponent::SaveResult MainComponent::writeTo(const juce::File& target) {
     if (!before.empty() && !history_.current().assets.empty())
       doc::copyAssets(history_.current(), before, pathOf(target.getParentDirectory()));
     doc::saveFile(history_.current(), pathOf(target));
+  } catch (const doc::SaveError& e) {
+    // A save that failed half way through the replacement says itself where each version is (2026-11-18, D4).
+    showError(u8("Could not save"), e.previousFileIntact ? u8(e.what()) + u8("\n\nThe previous file was not changed.") : u8(e.what()));
+    return SaveResult::Failed;
   } catch (const std::exception& e) {
     showError(u8("Could not save"), u8(e.what()) + u8("\n\nThe previous file was not changed."));
     return SaveResult::Failed;

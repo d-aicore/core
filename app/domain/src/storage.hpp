@@ -14,7 +14,12 @@ namespace core::doc {
 
 constexpr const char* kFileExtension = ".core";
 
-struct SaveError : std::runtime_error { using std::runtime_error::runtime_error; };
+struct SaveError : std::runtime_error {
+  using std::runtime_error::runtime_error;
+  // False only when the save failed half way through the replacement and the file is not in its place any more:
+  // the message then says where the new version and the previous one are (nothing is deleted).
+  bool previousFileIntact = true;
+};
 
 struct OpenResult {
   Document document;
@@ -35,6 +40,12 @@ void writeFileSafely(const std::string& text, const std::filesystem::path& path,
 std::string readTextFile(const std::filesystem::path& path);  // throws std::runtime_error
 
 std::filesystem::path backupPath(const std::filesystem::path& path);  // "<file>.bak"
+
+// For the tests: the step that puts the written temporary file in the target's place (on Windows ReplaceFileW: the
+// target's old content becomes the backup). It returns 0, or the system's error code. nullptr: the system's again.
+using ReplaceStep = unsigned long (*)(const std::filesystem::path& target, const std::filesystem::path& temporary,
+                                      const std::filesystem::path& backup);
+void setReplaceStepForTests(ReplaceStep step);
 
 // What a file was when this window last read or wrote it, to see at the next Save whether somebody else (another
 // window of Core, another program) wrote it meanwhile. Its content decides (the size, then the SHA-256): a file that
