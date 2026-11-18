@@ -15,9 +15,9 @@ void History::push(std::deque<Step>& stack, Document document, const std::string
   stack.push_back({std::move(document), label, bytes});
 }
 
-// Oldest undo steps go first; the newest step always stays.
+// Oldest undo steps go first; the newest kMinSteps always stay.
 void History::trim() {
-  while (bytes_ > maxBytes_ && undo_.size() > 1) {
+  while (bytes_ > maxBytes_ && undo_.size() > (size_t)kMinSteps) {
     bytes_ -= undo_.front().bytes;
     undo_.pop_front();
   }

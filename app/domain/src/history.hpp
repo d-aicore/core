@@ -11,6 +11,9 @@ namespace core::doc {
 
 class History {
 public:
+  // The newest kMinSteps undo steps stay whatever they weigh; older ones go when the byte budget is exceeded.
+  // Every snapshot carries the plugin states (base64): with 12 MB of state the budget alone left 5 steps.
+  static constexpr int kMinSteps = 50;
   explicit History(Document initial, size_t maxBytes = 64u << 20);
 
   const Document& current() const { return current_; }

@@ -312,6 +312,37 @@ TEST("modificado: guardar limpa, editar suja, undo ate ao guardado limpa") {
   CHECK(!h.modified());
 }
 
+// A plugin state of 12 MB is in every snapshot: the 64 MB budget alone left 5 undo steps after 12 edits.
+TEST("undo/redo: a large plugin state does not shrink the history below the minimum number of steps") {
+  Document start = newEmptyDocument();
+  addPluginTrack(start, {{"id", "big-state"}, {"file", "big-state.vst3"}, {"state", std::string(12u << 20, 'A')}});
+  History h(start);
+  for (int i = 0; i < 12; ++i) {
+    Document d = h.current();
+    d.bpm = 150 + i;
+    h.commit(d, "bpm " + std::to_string(i));
+  }
+  int steps = 0;
+  while (h.undo()) ++steps;
+  CHECK_EQ(steps, 12);
+  CHECK_NEAR(h.current().bpm, start.bpm, 0);
+}
+
+// Past the minimum, the byte budget still decides: the history does not grow without limit.
+TEST("undo/redo: beyond the minimum number of steps the byte budget still drops the oldest") {
+  Document start = newEmptyDocument();
+  addPluginTrack(start, {{"id", "big-state"}, {"file", "big-state.vst3"}, {"state", std::string(1u << 20, 'A')}});
+  History h(start, 8u << 20);
+  for (int i = 0; i < History::kMinSteps + 20; ++i) {
+    Document d = h.current();
+    d.bpm = 100 + i;
+    h.commit(d, "bpm " + std::to_string(i));
+  }
+  int steps = 0;
+  while (h.undo()) ++steps;
+  CHECK_EQ(steps, History::kMinSteps);
+}
+
 // Todos os templates que vao com a app abrem, viram projecto do motor, e o motor aceita-os e renderiza sem NaN.
 TEST("templates: todos abrem e o motor toca-os sem erro") {
   TemplateLibrary lib = loadTemplates(CORE_TEMPLATES_DIR, tempDir() / "user-templates-vazia", true);
