@@ -199,7 +199,7 @@ DensityResult changeDensity(Pattern& pattern, const NoteScope& scope, const Dens
       c.id = newId();
       c.pitch = m->pitch + 12;
       c.velocity = vel(m->velocity * 0.85);
-      c.hasRoll = false;
+      c.hasRoll = false; c.roll = Roll{};  // BUG-SWEEP-19: no stale roll payload on the plain copy (stutter precedent)
       added.push_back(c);
     }
     if ((long)added.size() < want) r.note = "only " + std::to_string(added.size()) + " notes can get an octave copy";
@@ -230,7 +230,7 @@ DensityResult changeDensity(Pattern& pattern, const NoteScope& scope, const Dens
         c.tick = m->tick + piece * i;
         c.length = std::max<int64_t>(1, piece * 9 / 10);
         c.velocity = vel(m->velocity * (1.0 - 0.12 * i));
-        c.hasRoll = false;
+        c.hasRoll = false; c.roll = Roll{};  // BUG-SWEEP-19: the repeat is a plain note, not the copied roll
         added.push_back(c);
       }
       m->length = std::max<int64_t>(1, piece * 9 / 10);
@@ -422,7 +422,7 @@ PatternPreset presetFromPattern(const Pattern& pattern, int64_t start, int64_t e
     c.id = "n" + std::to_string(++i);
     c.tick = n.tick - start;
     c.length = std::min(n.length, end - n.tick);
-    c.hasRoll = false;
+    c.hasRoll = false; c.roll = Roll{};  // BUG-SWEEP-19: presets stay plain, with no stale roll payload
     c.extra = json::object();
     p.notes.push_back(c);
     lowest = std::min(lowest, n.pitch);
