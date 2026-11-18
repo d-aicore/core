@@ -230,3 +230,12 @@ replacement (the old sound returns), restart the engine (the song reloads with i
   (render_job), 08 dirty-flag reconcile; the engine's per-edit transactional copy of the stored state
   (~12 ms of the remaining 13.2 ms/edit). Save/Export with real plugins above 8 MB not verified in the running app.
   Branch `flawless-state` ready for consolidation; nothing pushed.»
+### Addendum (2026-11-18): docs tip re-gated, version == final HEAD
+
+The docs commit `8e2f221` (this report + the index row) was re-gated on a clean tree under the machine-wide
+`GATE-LOCK` (`flawless-state 2026-11-18T15:08:12Z`), same commands: **merge VERDE 20/20 (47 s) and full
+merge+desktop VERDE 21/21 (44 s)**; `core-engine --version` = `0.7.0+8e2f221c9a` == HEAD
+`8e2f221c9a4c2aba8271dfad4ac113efd1192cdc`, no `.modified`; desktop self-test ok
+(`build=0.7.0+8e2f221c9a engine=0.7.0+8e2f221c9a`). The code is identical to `5df584f` (docs-only commit).
+Evidence: `regate-*` files in `D:/Core-build/flawless-state-evidence/` (the fix-commit gate is preserved as
+`fixcommit-*`).
