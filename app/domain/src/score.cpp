@@ -251,7 +251,4 @@ void scoreSetPlays(Document& doc, const std::string& trackId, const std::string&
   doc = std::move(next);
 }
 
-// The rises were F-Core regions on the build sections; F-Core left with Core's own sound (2026-11-16): nothing to add.
-int scoreRises(Document&, const std::vector<std::string>&) { return 0; }
-
 }  // namespace core::doc

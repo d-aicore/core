@@ -1,8 +1,8 @@
 // Stage Core (S-Core) (layer 3, structure): the song's parts (intro, build-up, drop, break, roll, outro) and which tracks
 // play in each. It has no sounds or patterns of its own: it places the clips of the patterns the tracks already have
-// (written by P-Core), puts F-Core's build-up (the RISE curve) on the riser tracks over each build-up, and R-Core /
-// D-Core follow the sections by themselves. Every plugin's rules apply: it works on the selected tracks at once (one
-// undo step, all or none), then each track and each section can be changed alone; the style guides, never blocks.
+// (written by P-Core), and R-Core / D-Core follow the sections by themselves. Every plugin's rules apply: it works on
+// the selected tracks at once (one undo step, all or none), then each track and each section can be changed alone; the
+// style guides, never blocks.
 //
 // The rules (which part plays where) come from CORE-MANUAL template-rules (the dark psycore MVP plan, core-main#148,
 // tools/templates/mvp.py) and bonedo.de "Crashkurs Psytrance #4": the drop starts without percussion and adds it
@@ -53,7 +53,5 @@ bool scorePlays(const Track& track, const Section& section);
 int scoreArrange(Document& doc, const std::vector<std::string>& trackIds, const std::vector<std::string>& sectionIds = {});
 // One cell of the grid: the track plays the whole section (on) or rests in it (off).
 void scoreSetPlays(Document& doc, const std::string& trackId, const std::string& sectionId, bool on);
-// F-Core's build-up (the RISE curve) over every build-up section, on the tracks given that have F-Core.
-int scoreRises(Document& doc, const std::vector<std::string>& trackIds);
 
 }  // namespace core::doc
