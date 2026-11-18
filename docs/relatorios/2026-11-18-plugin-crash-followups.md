@@ -28,7 +28,7 @@
 | A | Crash outside `processBlock` (state, reset, editor) had no test; the paths were already guarded. Added `CORE_TEST_THROW` target + `CORE_TEST_FAULT` plugin and 4 serve tests as regression guards. | `d434720`; `A-engine_process_tests-green.txt`: 8 tests / 93 checks / 0 failures (was 4 tests). Measured GREEN on the prior state (guards already present), not a fake red. | proven by test | validated |
 | B | A crash in a parameter getter (`plugin.params`) or in the plugin-window surface took the whole engine down (quality bar 2). Guarded each parameter read and the window's close/resize/paint with the existing `guardedCall` pattern; the window knows its owner so a crash there marks it crashed. | `81f835a`; red `B-param-red.txt`: `plugin.params` → "The engine exited (code 3221225477)" (0xC0000005), 8 failures. Green `B-engine_process_tests-green.txt`: 9 tests / 104 checks / 0 failures. | proven by test (red→green) | corrected |
 | C | Restart was offered only when Stopped/NoDevice, not after repeated engine timeouts while playing. Exposed `syncRetriesGaveUp` in the session snapshot and show Restart for Diverged + gave-up; self-test steps 112–114 with a `timeOutSyncForTest` hook. | `8fcce35`; red `C-selftest-red.txt`: "failed: no Restart offer after repeated engine timeouts". Green `C-selftest-green.txt` + `.png`: "restart offered; restarted after timeouts", full self-test ok, loudest=0.735. Green was on a `.modified` build; re-verified clean by the gate below. | proven by test (red→green) | corrected |
-| D | A crashed instance (SEH catch leaves JUCE's `processMutex` held) whose plugin calls `restartComponent` reaches JUCE's internal message-thread path `reset()`/`releaseResources()`, which spin on the held lock → message-thread deadlock; the engine answers nothing. | Reachable path confirmed in code (below); deterministic red measured `D-restart-red.txt`: `plugins.states` and `engine.stats` time out, engine terminated (exit 1), 4 failures. Fix now authorized («sim», 2026-11-18) and the minimal vendored patch prepared: `ci/patches/juce-failed-plugin-restart.patch` (applies clean, read-only `git apply --check` rc 0). See "D update (this session)" below. | confirmed in code + proven by test (red); fix designed + patch prepared, NOT applied/measured | blocked — apply/gate needs the shared JUCE free (parallel streams hold it) |
+| D | A crashed instance (SEH catch leaves JUCE's `processMutex` held) whose plugin calls `restartComponent` reaches JUCE's internal message-thread path `reset()`/`releaseResources()`, which spin on the held lock → message-thread deadlock; the engine answers nothing. | Reachable path confirmed in code (below); deterministic red measured `D-restart-red.txt`: `plugins.states` and `engine.stats` time out, engine terminated (exit 1), 4 failures. Fix now authorized («sim», 2026-11-18) and the minimal vendored patch prepared: `ci/patches/juce-failed-plugin-restart.patch` (applies clean, read-only `git apply --check` rc 0). **APPLIED + GREEN this apply session** (`cc5b874`): a race in the designed entry-only gate was measured and corrected (crash-aware acquire); D test 1/17/0 exit 0, gate merge 17/17 + desktop 18/18, version==sha. See "D update (apply session)" below. | confirmed in code + proven by test (red cited → green measured) + gated VERDE | fixed — vendored patch applied (working-tree mod) + Core wiring + D test committed `cc5b874`; healthy suites unchanged |
 
 ## The D reachable path (confirmed in code, JUCE 9.0.5 pinned)
 
@@ -215,6 +215,74 @@ Classification: design **confirmed in code**; patch **prepared** (applies clean,
 build-verified, measured green, or gated. D stays open until the patch + Core wiring + test land together on a
 free shared JUCE and the gate is VERDE.
 
+## D update (apply session, 2026-11-18): APPLIED + GREEN measured; a race in the designed gate found and corrected
+
+This section supersedes the BLOCKED status of the "D update (this session)" section above **by reference** (that
+prior record is kept as history, not erased). The PM relaxed the apply precondition: apply when MY Core streams'
+`D:/Core-build/GATE-LOCK` is free and no MY-stream cmake/ninja/cl is compiling the shared JUCE; a concurrent SUR
+build is ACCEPTED because the patch is healthy-identical and the unique-bat gate fix (`fffbb41`) prevents gate-bat
+corruption (worst case a transient compile retry, not healthy-code corruption). In a verified MY-streams lull the
+patch was applied, the Core wiring + D test landed, green was measured, and the full gate ran VERDE in both modes.
+
+### Applied + committed
+- Vendored patch applied to the pinned `D:/Core-deps/JUCE-9.0.5` (a PLAIN dir, not a git repo) with `git apply`
+  from the JUCE root (`git apply --check` rc 0 first). Verified by grep: `markCrashedByHost` in both headers, the
+  `hostCrashed` member and the gate in `juce_VST3PluginFormatImpl.h`. The vendored tree carries it as a
+  **working-tree modification, never git-committed in `D:/Core-deps`**.
+- Core wiring + D test + variant committed as **`cc5b874`** (branch flawless-crash): `engine/src/plugins/juce_host.cpp`
+  (`markCrashed()` → `if (auto* c = instance_->getVST3Client()) c->markCrashedByHost();`, atomic only, audio-thread-safe),
+  `app/selftest-plugins/TestPlugins.cpp` + `CMakeLists.txt` (`CORE_TEST_CRASH_RESTART` / `CoreTestCrashRestart`,
+  implements `juce::VST3ClientExtensions`, captures `IComponentHandler` via `setIComponentHandler`, calls
+  `restartComponent(kReloadComponent)` immediately before the access violation), `tests/engine_process_tests.cpp` +
+  `tests/CMakeLists.txt` (the D serve test, bounded timeouts that fail on hang). The unique-bat gate fix `fffbb41`
+  was cherry-picked as **`c61bcd1`** so the gate is collision-independent under the accepted concurrent builds.
+- The in-repo patch record `ci/patches/juce-failed-plugin-restart.patch` was **regenerated to match the corrected
+  vendored state** (10 hunks, was 4). Verified: `git apply --check` rc 0 on a reconstructed pristine tree (the
+  original 4-hunk patch also applies clean to that pristine, confirming the reconstruction), applying the new patch
+  reproduces the live vendored files **byte-identically** (`cmp`), and the **committed blob** applies clean (rc 0).
+  Derivation scripts + pristine/cur copies kept in `D:/Core-build/flawless-crash-evidence/patchwork/`.
+
+### A race in the designed gate (measured) and the correction
+The originally-designed gate (early-return in `restartComponentOnMessageThread` when `hostCrashed`) was applied and
+built first, and the D test **still deadlocked**. Tracing the engine (`D-diag.log`, `D-engine-stderr.txt`) showed the
+order: `restart gate hostCrashed=0` → `calling reset()` → `markCrashedByHost: flag set`. The plugin asks to restart
+(async `triggerAsyncUpdate`) and then crashes in the same frame; the message thread dispatches the restart and enters
+`reset()`'s `processMutex` spin **before** the audio thread finishes the SEH unwind and sets the flag. An entry-only
+gate loses that race (the flag is set too late to stop an already-spinning `reset()`), so it deadlocks just like the red.
+
+Correction (still healthy-identical, still only the failed-plugin path): the restart path's lock-taking calls
+`reset()`, `releaseResources()`, `updateMidiMappings()` acquire through `enterProcessMutexUnlessCrashed()` — a
+`tryEnter` loop that re-checks `hostCrashed` and returns (skips) the moment the host marks the crash, instead of
+spinning forever on the orphaned lock. A healthy instance never sets the flag and acquires exactly when a blocking
+enter would, so **healthy hosting is unchanged**; the audio hot path (`processBlock`), the lock type (`SpinLock`) and
+the SEH mechanism are untouched. The entry gate is kept as a fast skip, and `prepareToPlay`/`resetParameters` in the
+restart path get a `hostCrashed` re-check. This is a **non-additive** change to three control-path functions — the
+designed "additive-only" gate was measured insufficient — but it is behavior-identical for healthy plugins. The
+owner's authorization («sim», 2026-11-18) is for the `restartComponent` deadlock fix; this correction serves that
+goal with healthy hosting unchanged.
+
+### Red → green (measured)
+- **RED — cited** (prior session's deterministic measurement, `D-restart-red.txt`): 1 test / 7 checks / 4 failures;
+  `plugins.states` no reply 5000 ms, `engine.stats` no reply 2000 ms, engine exit 1 (deadlock). Not re-measured
+  against pristine this session (the Core wiring needs the patched header to compile, so a pristine build of the
+  wired test is not possible); the race was instead measured directly on the applied designed gate (above).
+- **GREEN — measured fresh** with the corrected patch + wiring. The D test `serve: a crashed plugin that asks to
+  restart the component does not deadlock the message thread`: **1 test / 17 checks / 0 failures, exit 0**
+  (`D-restart-green.txt`). The engine answers (`plugins.states` ≤ 5000 ms, `engine.stats` ≤ 2000 ms), the song plays
+  on (callbacks advance), retry/rebuild works, and the engine exits by itself (code 0). Full `engine_process_tests`:
+  **10 tests / 121 checks / 0 failures** (`D-engine_process_tests-green.txt`); the healthy crash/fault suites unchanged.
+
+### Full gate (clean committed tree, both modes, GATE-LOCK held)
+- merge: **VERDE, 17/17 tests passed**, 50 s (`gate-merge-D.log`, `gate-merge-D-resumo.txt`), @ `cc5b874`.
+- desktop: **VERDE, 18/18 tests passed** (17 merge + `desktop_self_test` 21.21 s), 41 s (`gate-desktop-D.log`,
+  `gate-desktop-D-resumo.txt`), @ `cc5b874`.
+- `core-engine --version` = `0.7.0+cc5b874fa9` == HEAD `cc5b874`, **no `.modified`** suffix (clean tree).
+- Coverage vs `baseline-suite-counts.txt`: `engine_process_tests` 8/93 (baseline) → **10/121** (grew by the D test;
+  +1 test / +17 checks vs the 9/104 at `85ef0ca`); every other suite equal to baseline; 0 failures everywhere.
+
+Classification: **confirmed in code + proven by test (red cited → green measured) + gated VERDE both modes**. D is
+fixed. The vendored decision and the `BUG-` D line are proposed below for the scribe (D72/D80).
+
 ## Changes
 
 - A (`d434720`, prior engineer): `app/selftest-plugins/CMakeLists.txt`, `app/selftest-plugins/TestPlugins.cpp`,
@@ -230,6 +298,12 @@ free shared JUCE and the gate is VERDE.
   vendored diff, NOT applied) + this report's "D update" section + the index row. No Core code or test is committed
   (the `markCrashed()` wiring + the `CORE_TEST_CRASH_RESTART` serve test are documented as remaining work;
   committing them against the pristine JUCE would break the build/gate). The vendored tree was NOT modified.
+- D (apply session, this delivery, `cc5b874`): `engine/src/plugins/juce_host.cpp` (`markCrashed()` →
+  `markCrashedByHost()`), `app/selftest-plugins/TestPlugins.cpp` + `CMakeLists.txt` (`CORE_TEST_CRASH_RESTART` /
+  `CoreTestCrashRestart`), `tests/engine_process_tests.cpp` + `tests/CMakeLists.txt` (the D serve test), and
+  `ci/patches/juce-failed-plugin-restart.patch` (regenerated to the corrected 10-hunk vendored diff, APPLIED to the
+  pinned JUCE as a working-tree modification). Gate unique-bat fix `fffbb41` cherry-picked as `c61bcd1`. The designed
+  entry-only gate raced (measured) and was corrected to a crash-aware acquire; green measured, gate VERDE both modes.
 - Documentation (prior session): this report + one index row in `docs/relatorios/README.md`.
 
 ## Verification
@@ -241,7 +315,10 @@ free shared JUCE and the gate is VERDE.
 - C: red self-test exit 1 "no Restart offer after repeated engine timeouts" (`C-selftest-red.txt`); green exit 0,
   "restart offered; restarted after timeouts", loudest=0.735 (`C-selftest-green.txt`, `.png`). Both on a
   `.modified` build; the clean-tree re-verification is the gate below.
-- D: red measured as above (`D-restart-red.txt`), exit 1, 4 failures; no green (fix is vendored, not done).
+- D: red cited (`D-restart-red.txt`), exit 1, 4 failures; **green measured this apply session** (`D-restart-green.txt`
+  1 test / 17 checks / 0 failures, exit 0; `D-engine_process_tests-green.txt` 10 / 121 / 0). The designed entry-only gate
+  raced (measured) and was corrected to a crash-aware acquire; vendored patch applied + Core wiring `cc5b874`; gate merge
+  17/17 + desktop 18/18, version==sha. See "D update (apply session)".
 - Full clean gate, both modes, on the clean committed tree (no `.modified`):
   - `ci\gate.ps1 -Build D:\Core-build\flawless-crash -Jobs 6` (merge): **VERDE, 17/17 tests passed**, 57 s
     (`gate-merge-prelim.log`; re-run as the final gate at the docs commit, `gate-merge-final.log`).
@@ -267,29 +344,34 @@ Bugs use the `BUG-` namespace (D75). Proposed lines for the ledger scribe (owner
 - `BUG-` (item 1, C): "Restart is offered after repeated engine timeouts, not only when stopped. Red → green in
   the self-test (steps 112–114); re-verified on a clean tree." Source: `8fcce35`, `C-selftest-red.txt`,
   `C-selftest-green.txt`, the clean gate.
-- `BUG-` (item 1, D, OPEN — fix authorized + prepared, blocked on apply): "A crashed plugin that calls
-  restartComponent deadlocks the engine's message thread on JUCE's held process lock. Red measured. The owner
-  authorized a vendored-JUCE fix («sim», 2026-11-18); the minimal patch is prepared at
-  `ci/patches/juce-failed-plugin-restart.patch` (host-crashed gate on `restartComponentOnMessageThread`). NOT yet
-  applied/measured green: the shared pinned JUCE is held by parallel-stream builds. Lands with the Core
-  `markCrashed()` wiring + the `CORE_TEST_CRASH_RESTART` serve test." Source: this report (D update),
-  `D-restart-red.txt`, the patch file. Pending: a free shared JUCE to apply + build + gate green.
+- `BUG-` (item 1, D, FIXED): "A crashed plugin that calls restartComponent no longer deadlocks the engine's message
+  thread on JUCE's held process lock. The owner authorized a vendored-JUCE fix («sim», 2026-11-18); the patch
+  (`ci/patches/juce-failed-plugin-restart.patch`, host-crashed gate + crash-aware acquire on the restart path) is
+  applied to the pinned `D:/Core-deps/JUCE-9.0.5` as a working-tree modification (never git-committed there), with the
+  Core `markCrashed()` → `markCrashedByHost()` wiring and the `CORE_TEST_CRASH_RESTART` serve test. A race in the
+  designed entry-only gate was measured and corrected. Red cited → green measured (D test 1/17/0 exit 0;
+  engine_process 10/121/0); gate merge 17/17 + desktop 18/18, version==sha. Healthy hosting unchanged." Source:
+  `cc5b874`, this report (D update apply session), `D-restart-red.txt`, `D-restart-green.txt`, the gate logs.
 - Vendored-JUCE DECISION (D-number the scribe assigns): "Owner «sim», 2026-11-18 (this session), approves a
   numbered vendored-JUCE modification for the `restartComponent` message-thread deadlock (item 1, D). The pinned
   `D:/Core-deps/JUCE-9.0.5` carries a host-crashed gate as a working-tree modification, tracked in-repo at
   `ci/patches/juce-failed-plugin-restart.patch` (never git-committed in `D:/Core-deps`); re-apply with `git apply`
   on a JUCE update. Only the failed-plugin restart path is affected; healthy hosting is unchanged." Source: owner
   verbatim «sim», 2026-11-18, this session; the patch file. (Proposed — the scribe writes `ESTADO.md`, D72/D80.)
-- Measured-state line: "Full clean gate (merge 17/17 + desktop 18/18) green, version==sha, coverage not shrunk
-  vs baseline-suite-counts.txt (engine_process_tests 8→9)." Source: the gate logs.
+- Measured-state line: "Full clean gate (merge 17/17 + desktop 18/18) green, version==sha (`0.7.0+cc5b874fa9`),
+  coverage not shrunk vs baseline-suite-counts.txt (engine_process_tests 8→10, the D restart test added; 10/121)."
+  Source: the gate logs (`gate-merge-D.log`, `gate-desktop-D.log` @ `cc5b874`).
 
-Residual risk / next task: D stays open until the authorized vendored patch + the Core `markCrashed()` wiring +
-the `CORE_TEST_CRASH_RESTART` serve test land together on a FREE shared JUCE and the gate is VERDE (merge 17/17 +
-desktop 18/18, engine_process growing by the D test). The patch is prepared and applies clean (read-only check) but
-is NOT build-verified or measured green. Not verified in the running app with real third-party plugins: the D path
-with a real plugin that calls `restartComponent` (the red uses the test plugin); A/B/C GUI flows beyond the
-self-test. The owner decision is now given («sim», 2026-11-18); the remaining input is a safe apply/build window
-(`GATE-LOCK` free, no cmake/ninja/cl on `D:/Core-deps/JUCE-9.0.5`) — coordinate with the parallel streams / SUR.
+Residual risk / next task: D is FIXED (vendored patch applied + Core `markCrashed()` wiring + the
+`CORE_TEST_CRASH_RESTART` serve test, `cc5b874`; gate VERDE merge 17/17 + desktop 18/18, green measured, version==sha).
+The vendored tree carries the patch as a working-tree modification — on a JUCE bump, re-apply
+`ci/patches/juce-failed-plugin-restart.patch` (regenerated to the corrected 10-hunk form; re-locate the sites if the
+anchors drift). Not verified in the running app with real third-party plugins: the D path with a real plugin that
+calls `restartComponent` (the green uses the test plugin); A/B/C GUI flows beyond the self-test. The correction makes
+three control-path functions (`reset`/`releaseResources`/`updateMidiMappings`) acquire crash-aware — behavior-identical
+for healthy plugins (the flag is never set), but a real-plugin load sweep would further confirm healthy hosting under
+contention. The owner decision is given («sim», 2026-11-18); the apply/build window was coordinated via `GATE-LOCK`
+and the MY-streams lull (SUR-concurrent accepted per the PM decision; unique-bat gate `fffbb41`/`c61bcd1`).
 
 Note on process: while this delivery was gating, a cross-worktree `git stash` collision briefly applied another
 stream's (`flawless-deadcode`) domain edits into this worktree. They were preserved (patch
