@@ -206,10 +206,16 @@ std::optional<Addon> readAddon(const fs::path& folder, std::string* error) {
   if (!fs::is_regular_file(file, ec)) return fail("no addon.json in " + u8(folder));
   const json j = readJsonFile(file, 64 * 1024);
   if (!j.is_object()) return fail(u8(file) + " is not a JSON object");
+  // By type, like readAicoreStatus (BUG-SWEEP-04): a field of the wrong type is an unusable add-on with a reason.
+  // Typed json::value() threw type_error.302 instead, and the desktop's calls have no catch around them.
+  if (j.contains("name") && !j["name"].is_string()) return fail(u8(file) + " has a name that is not a string");
   if (j.value("name", std::string()) != "AICORE") return fail(u8(file) + " is not AICORE's");
+  if (j.contains("open") && !j["open"].is_object()) return fail(u8(file) + " has an open that is not an object");
   const json open = j.value("open", json::object());
   if (!open.is_object() || !open.contains("program") || !open["program"].is_string() || open["program"].get<std::string>().empty())
     return fail(u8(file) + " says no program to open");
+  if (j.contains("version") && !j["version"].is_string()) return fail(u8(file) + " has a version that is not a string");
+  if (j.contains("minCore") && !j["minCore"].is_string()) return fail(u8(file) + " has a minCore that is not a string");
   Addon a;
   a.folder = folder;
   a.name = "AICORE";
@@ -222,8 +228,13 @@ std::optional<Addon> readAddon(const fs::path& folder, std::string* error) {
 }
 
 std::optional<Addon> findAddon(const std::vector<fs::path>& folders) {
-  for (const auto& f : folders)
-    if (auto a = readAddon(f)) return a;
+  for (const auto& f : folders) {
+    // One unusable folder must not hide the next ones (BUG-SWEEP-04): readAddon reports a malformed manifest as
+    // nothing-and-why; anything that still throws is treated the same way, per folder.
+    try {
+      if (auto a = readAddon(f)) return a;
+    } catch (const std::exception&) { continue; }
+  }
   return std::nullopt;
 }
 
