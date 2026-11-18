@@ -432,6 +432,14 @@ PatternTemplate rackTemplateFromJson(const json& j) {
         x.length = std::max<int64_t>(1, n.value("length", (int64_t)kSixteenth));
         x.pitch = std::clamp(n.value("pitch", 60), 0, 127);
         x.velocity = std::clamp(n.value("velocity", 0.8), 0.0, 1.0);
+        // BUG-SWEEP-20: the roll is OPTIONAL (absent = no roll), so templates written before rolls load unchanged.
+        if (n.contains("roll") && n["roll"].is_object()) {
+          const json& roll = n["roll"];
+          x.hasRoll = true;
+          x.roll.count = std::clamp(roll.value("count", 0), 0, 64);
+          x.roll.velocityFrom = std::clamp(roll.value("velocityFrom", x.velocity), 0.0, 1.0);
+          x.roll.velocityTo = std::clamp(roll.value("velocityTo", x.velocity), 0.0, 1.0);
+        }
         if (x.tick >= 0 && x.tick < row.lengthTicks) row.notes.push_back(x);
       }
     t.rows.push_back(row);
@@ -443,7 +451,13 @@ json rackTemplateToJson(const PatternTemplate& t) {
   json rows = json::array();
   for (const auto& r : t.rows) {
     json notes = json::array();
-    for (const auto& n : r.notes) notes.push_back({{"tick", n.tick}, {"length", n.length}, {"pitch", n.pitch}, {"velocity", n.velocity}});
+    for (const auto& n : r.notes) {
+      json note = {{"tick", n.tick}, {"length", n.length}, {"pitch", n.pitch}, {"velocity", n.velocity}};
+      // BUG-SWEEP-20: the roll goes with the note when there is one; a roll-less template stays byte-identical
+      // to the old form (the same optional shape the engine projection writes).
+      if (n.hasRoll) note["roll"] = {{"count", n.roll.count}, {"velocityFrom", n.roll.velocityFrom}, {"velocityTo", n.roll.velocityTo}};
+      notes.push_back(note);
+    }
     rows.push_back({{"part", r.part}, {"name", r.name}, {"lengthTicks", r.lengthTicks}, {"notes", notes}});
   }
   json out = {{"format", "core-patterns"}, {"version", 1}, {"id", t.id}, {"name", t.name}, {"bars", t.bars}, {"rows", rows}};
@@ -488,7 +502,8 @@ PatternTemplate rackTemplateFromSlot(const Document& doc, const std::string& slo
     const Pattern* p = rackPattern(doc, *slot, tr.id);
     if (!p || !playsPatterns(tr)) continue;
     PatternTemplateRow row{pcoreGuessPart(tr), tr.name, p->lengthTicks, p->notes};
-    for (auto& n : row.notes) { n.id.clear(); n.extra = json::object(); n.hasRoll = false; }
+    // BUG-SWEEP-20: the roll stays with the note (the template schema carries it now); only ids and extra go.
+    for (auto& n : row.notes) { n.id.clear(); n.extra = json::object(); }
     t.rows.push_back(row);
   }
   if (t.rows.empty()) throw DocumentError("rows", "the pattern has no tracks");

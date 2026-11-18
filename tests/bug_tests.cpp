@@ -1219,6 +1219,103 @@ TEST("sweep-28: unambiguous name-only and part-only matches keep working") {
   CHECK_EQ(pd->notes[0].pitch, 36);  // part-only: the names do not match
 }
 
+// ---------------------------------------------------------------- BUG-SWEEP-20 (2026-11-18)
+// Save as Template stripped hasRoll, and the template schema had no roll at all (tick/length/pitch/velocity
+// only): a reusable pattern saved from a slot with active rolls came back plain. The roll now travels with
+// the template note as an OPTIONAL "roll" object; absent means no roll, so every template written before
+// this keeps loading and saving unchanged (the catalogue preservation rule).
+
+TEST("sweep-20: a slot saved as a template keeps its rolls through save, load and apply") {
+  Document d = newEmptyDocument();
+  const std::string snare = addTrack(d, "snare");
+  Pattern& p = rackPatternFor(d, "s1", snare);
+  Note plain; plain.id = "n1"; plain.tick = 0; plain.length = 240; plain.pitch = 38; plain.velocity = 0.9;
+  Note rolled; rolled.id = "n2"; rolled.tick = 480; rolled.length = 480; rolled.pitch = 38; rolled.velocity = 0.5;
+  rolled.hasRoll = true; rolled.roll.count = 4; rolled.roll.velocityFrom = 0.25; rolled.roll.velocityTo = 1.0;
+  p.notes = {plain, rolled};
+  const PatternTemplate t = rackTemplateFromSlot(d, "s1", "Rolled groove");
+  CHECK_EQ(t.rows.size(), (size_t)1);
+  if (t.rows.empty()) return;
+  CHECK_EQ(t.rows[0].notes.size(), (size_t)2);
+  if (t.rows[0].notes.size() != 2) return;
+  const Note& saved = t.rows[0].notes[1];
+  CHECK(saved.hasRoll);  // before: the strip cleared it
+  CHECK_EQ(saved.roll.count, 4);
+  CHECK_NEAR(saved.roll.velocityFrom, 0.25, 1e-9);
+  CHECK_NEAR(saved.roll.velocityTo, 1.0, 1e-9);
+  const fs::path dir = freshDir("sweep20-templates");
+  saveRackTemplate(dir, t);
+  std::vector<std::string> problems;
+  const auto loaded = loadRackTemplates(dir, &problems);
+  CHECK(problems.empty());
+  CHECK_EQ(loaded.size(), (size_t)1);
+  if (loaded.size() != 1 || loaded[0].rows.empty() || loaded[0].rows[0].notes.size() != 2) return;
+  const Note& read = loaded[0].rows[0].notes[1];
+  CHECK(read.hasRoll);  // before: the schema had no roll, the reader could not return one
+  CHECK_EQ(read.roll.count, 4);
+  CHECK_NEAR(read.roll.velocityFrom, 0.25, 1e-9);
+  CHECK_NEAR(read.roll.velocityTo, 1.0, 1e-9);
+  CHECK(!loaded[0].rows[0].notes[0].hasRoll);  // the plain note stays plain
+  Document e = newEmptyDocument();
+  const std::string snare2 = addTrack(e, "snare");
+  CHECK_EQ(applyRackTemplate(e, nullptr, loaded[0], "s1"), 1);
+  const auto slots = rackSlots(e);
+  const PatternSlot* slot = findRackSlot(slots, "s1");
+  CHECK(slot != nullptr);
+  if (!slot) return;
+  const Pattern* q = rackPattern(e, *slot, snare2);
+  CHECK(q != nullptr);
+  if (!q || q->notes.size() != 2) return;
+  CHECK(q->notes[1].hasRoll);  // before: the applied pattern came back plain
+  CHECK_EQ(q->notes[1].roll.count, 4);
+  CHECK_NEAR(q->notes[1].roll.velocityFrom, 0.25, 1e-9);
+  CHECK_NEAR(q->notes[1].roll.velocityTo, 1.0, 1e-9);
+  CHECK(!q->notes[0].hasRoll);
+}
+
+TEST("sweep-20: templates written before rolls keep loading and saving unchanged") {
+  // Exactly what the old writer produced: tick/length/pitch/velocity only, no roll anywhere.
+  const std::string legacy =
+      "{\"format\":\"core-patterns\",\"version\":1,\"id\":\"old\",\"name\":\"Old groove\",\"bars\":2,"
+      "\"rows\":[{\"part\":\"kick\",\"name\":\"Kick\",\"lengthTicks\":7680,\"notes\":["
+      "{\"tick\":0,\"length\":240,\"pitch\":36,\"velocity\":0.9},"
+      "{\"tick\":960,\"length\":240,\"pitch\":36,\"velocity\":0.7}]}]}";
+  const PatternTemplate t = rackTemplateFromJson(json::parse(legacy));
+  CHECK_EQ(t.rows.size(), (size_t)1);
+  if (t.rows.empty()) return;
+  CHECK_EQ(t.rows[0].notes.size(), (size_t)2);
+  for (const auto& n : t.rows[0].notes) {
+    CHECK(!n.hasRoll);  // absent roll = no roll
+    CHECK_EQ(n.roll.count, 0);
+  }
+  // The writer adds nothing to a roll-less template: the saved form is the old form, key for key.
+  CHECK(rackTemplateToJson(t) == json::parse(legacy));
+  const fs::path dir = freshDir("sweep20-legacy");
+  writeText(dir / ("old" + std::string(kRackTemplateExtension)), legacy);
+  std::vector<std::string> problems;
+  const auto loaded = loadRackTemplates(dir, &problems);
+  CHECK(problems.empty());
+  CHECK_EQ(loaded.size(), (size_t)1);
+  if (loaded.empty()) return;
+  const fs::path saved = saveRackTemplate(dir, loaded[0]);  // a second copy, id old-2
+  json expected = json::parse(legacy);
+  expected["id"] = "old-2";  // saveRackTemplate keeps the existing file and takes the next free id
+  CHECK(json::parse(bytesIn(saved)) == expected);  // the old form, key for key, nothing added
+  CHECK(bytesIn(saved).find("roll") == std::string::npos);  // no roll key written for roll-less notes
+  Document e = newEmptyDocument();
+  const std::string kick = addTrack(e, "kick");
+  CHECK_EQ(applyRackTemplate(e, nullptr, loaded[0], "s1"), 1);
+  const auto slots = rackSlots(e);
+  const PatternSlot* slot = findRackSlot(slots, "s1");
+  CHECK(slot != nullptr);
+  if (!slot) return;
+  const Pattern* q = rackPattern(e, *slot, kick);
+  CHECK(q != nullptr);
+  if (!q) return;
+  CHECK_EQ(q->notes.size(), (size_t)2);
+  for (const auto& n : q->notes) CHECK(!n.hasRoll);
+}
+
 // BUG-SWEEP-16 (work preservation): the preset/template/roles writers answered success with an empty file
 // when the write failed late (after the open, at the flush/close), over what the user had. Each case here
 // failed before the fix: no exception, and an empty file on disk.

@@ -95,7 +95,7 @@ std::vector<PatternTemplate> rackStyleTemplates(const PCoreCatalog& c);
 PatternTemplate rackTemplateFromJson(const json& j);  // throws DocumentError
 json rackTemplateToJson(const PatternTemplate& t);
 std::vector<PatternTemplate> loadRackTemplates(const std::filesystem::path& folder, std::vector<std::string>* problems = nullptr);
-// The slot as a template (its rows: each track's part, name and notes). The song's BPM goes with it.
+// The slot as a template (its rows: each track's part, name and notes, rolls included). The song's BPM goes with it.
 PatternTemplate rackTemplateFromSlot(const Document& doc, const std::string& slotId, const std::string& name);
 // Writes it as <id>.core-patterns.json in the folder (a used id gets -2, -3...). Returns the file.
 // Safe write (read back, .bak on a race); throws DocumentError on a failed write, never leaves an empty file.

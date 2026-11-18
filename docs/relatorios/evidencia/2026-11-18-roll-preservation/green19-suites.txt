@@ -1,0 +1,8 @@
+== midi_tests
+17 testes, 226 verificacoes, 0 falhas
+== domain_tests
+30 testes, 525 verificacoes, 0 falhas
+== bug_tests
+39 testes, 356 verificacoes, 0 falhas
+== legacy_guard_tests
+9 testes, 169 verificacoes, 0 falhas

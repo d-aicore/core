@@ -7,6 +7,7 @@
 #include "edit.hpp"
 #include "groove.hpp"
 #include "midi.hpp"
+#include "pattern_tools.hpp"
 #include "storage.hpp"
 
 using namespace core::doc;
@@ -340,8 +341,8 @@ TEST("MIDI SWEEP-30: Louder and Softer scale a roll's played hit velocities with
 }
 
 TEST("MIDI SWEEP-30: the ordinary-note control and the single-hit velocity contract stay intact") {
-  // Control: the same note with the roll cleared (hasRoll AND the payload: a stale count alone still
-  // expands, BUG-SWEEP-19) is an ordinary note; Louder must keep changing its exported MIDI.
+  // Control: the same note with the roll cleared (hasRoll AND the payload, the BUG-SWEEP-19 contract: a
+  // cleared roll leaves no stale count behind) is an ordinary note; Louder must keep changing its exported MIDI.
   Document d = rollSong();
   Pattern& p = d.tracks[0].patterns[0];
   p.notes[1].hasRoll = false;
@@ -421,6 +422,52 @@ TEST("MIDI export: a successful overwrite reads back the same bytes and keeps th
   CHECK_EQ(bytesIn(backupPath(file)), before);  // before: the previous export was gone, no backup
   CHECK_NEAR(parseMidi(readMidiFile(file)).tempos[0].bpm, 200, 0.01);
   for (const auto& e : fs::directory_iterator(dir)) CHECK(fs::file_size(e.path()) > 0);
+}
+
+// BUG-SWEEP-19 (roll preservation, 2026-11-18): songToMidi read roll.count without hasRoll, and Density's
+// octave/ratchet copies cleared hasRoll but kept the copied roll payload. The stale count still exported the
+// copies as 4-hit rolls, while the serializer writes roll only when hasRoll: after save/reopen the same song
+// exported fewer notes (the export shrank after reopen). The exporter must read the roll only when hasRoll
+// says there is one (as the engine projection does), and a cleared roll must leave no payload behind (the
+// stutter precedent). Valid rolls keep exporting exactly as before.
+TEST("MIDI SWEEP-19: the exporter reads a roll only when hasRoll says there is one") {
+  Document d = rollSong();
+  d.tracks[0].patterns[0].notes[1].hasRoll = false;  // the payload stays stale (count 4)
+  const MidiFile f = songToMidi(d);
+  CHECK_EQ(f.tracks[0].notes.size(), (size_t)4);  // before: 10, the stale count still expanded
+  CHECK_EQ(f.tracks[0].notes[1].length, (int64_t)kPpq);  // the whole note, as the engine plays it
+  d.tracks[0].patterns[0].notes[1].hasRoll = true;  // a valid roll is untouched: the 4 hits return
+  CHECK_EQ(songToMidi(d).tracks[0].notes.size(), (size_t)10);
+}
+
+TEST("MIDI SWEEP-19: density copies carry no stale roll; the export survives save/reopen unchanged") {
+  for (const char* how : {"octave", "ratchet"}) {
+    Document d = rollSong();
+    Pattern& p = d.tracks[0].patterns[0];
+    DensityOptions o;
+    o.mode = "count";
+    o.amount = 2;
+    o.how = how;
+    o.seed = 7;
+    const DensityResult r = changeDensity(p, wholePattern(p), o);
+    CHECK_EQ(r.added, 2);
+    for (const auto& n : p.notes)
+      if (!n.hasRoll) CHECK_EQ(n.roll.count, 0);  // before: the copy kept the copied count 4
+    const size_t before = songToMidi(d).tracks[0].notes.size();
+    const Document reopened = parseDocument(toJson(d));
+    const size_t after = songToMidi(reopened).tracks[0].notes.size();
+    CHECK_EQ(after, before);  // before: 20 exported, 14 after reopen (the stale roll did not survive the save)
+  }
+}
+
+TEST("MIDI SWEEP-19: a preset cut from a rolled pattern carries no stale roll payload") {
+  const Document d = rollSong();
+  const PatternPreset p = presetFromPattern(d.tracks[0].patterns[0], 0, kBar, "rolled");
+  CHECK_EQ(p.notes.size(), (size_t)2);
+  for (const auto& n : p.notes) {
+    CHECK(!n.hasRoll);  // presets stay plain (the existing contract)
+    CHECK_EQ(n.roll.count, 0);  // before: the copied payload kept count 4
+  }
 }
 
 CORE_TEST_MAIN

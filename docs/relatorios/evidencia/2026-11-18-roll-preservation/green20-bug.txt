@@ -1,0 +1,3 @@
+ok   sweep-20: a slot saved as a template keeps its rolls through save, load and apply
+ok   sweep-20: templates written before rolls keep loading and saving unchanged
+2 testes, 38 verificacoes, 0 falhas

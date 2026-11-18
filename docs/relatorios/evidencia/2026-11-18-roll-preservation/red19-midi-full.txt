@@ -1,0 +1,3 @@
+FAIL MIDI SWEEP-19: density copies carry no stale roll; the export survives save/reopen unchanged
+FAIL MIDI SWEEP-19: a preset cut from a rolled pattern carries no stale roll payload
+17 testes, 226 verificacoes, 7 falhas

@@ -1,0 +1,11 @@
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-roll2\tests\midi_tests.cpp:437: f.tracks[0].notes.size() == (size_t)4: medido 10, esperado 4
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-roll2\tests\midi_tests.cpp:438: f.tracks[0].notes[1].length == (int64_t)kPpq: medido 204, esperado 960
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-roll2\tests\midi_tests.cpp:455: n.roll.count == 0: medido 4, esperado 0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-roll2\tests\midi_tests.cpp:459: after == before: medido 14, esperado 20
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-roll2\tests\midi_tests.cpp:455: n.roll.count == 0: medido 4, esperado 0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-roll2\tests\midi_tests.cpp:459: after == before: medido 14, esperado 20
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-roll2\tests\midi_tests.cpp:469: n.roll.count == 0: medido 4, esperado 0
+FAIL MIDI SWEEP-19: the exporter reads a roll only when hasRoll says there is one
+FAIL MIDI SWEEP-19: density copies carry no stale roll; the export survives save/reopen unchanged
+FAIL MIDI SWEEP-19: a preset cut from a rolled pattern carries no stale roll payload
+3 testes, 18 verificacoes, 7 falhas
