@@ -98,6 +98,7 @@ std::vector<PatternTemplate> loadRackTemplates(const std::filesystem::path& fold
 // The slot as a template (its rows: each track's part, name and notes). The song's BPM goes with it.
 PatternTemplate rackTemplateFromSlot(const Document& doc, const std::string& slotId, const std::string& name);
 // Writes it as <id>.core-patterns.json in the folder (a used id gets -2, -3...). Returns the file.
+// Safe write (read back, .bak on a race); throws DocumentError on a failed write, never leaves an empty file.
 std::filesystem::path saveRackTemplate(const std::filesystem::path& folder, PatternTemplate t);
 // How many tracks of the song a template writes into.
 int rackTemplateTracks(const Document& doc, const PatternTemplate& t);

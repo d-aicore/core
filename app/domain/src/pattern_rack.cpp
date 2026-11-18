@@ -7,6 +7,7 @@
 #include <set>
 #include "edit.hpp"
 #include "pattern_tools.hpp"
+#include "storage.hpp"
 
 namespace core::doc {
 namespace {
@@ -492,9 +493,16 @@ std::filesystem::path saveRackTemplate(const std::filesystem::path& folder, Patt
   for (int i = 2; std::filesystem::exists(folder / (id + kRackTemplateExtension)); ++i) id = base + "-" + std::to_string(i);
   t.id = id;
   const auto file = folder / (id + kRackTemplateExtension);
-  std::ofstream out(file, std::ios::binary);
-  out << rackTemplateToJson(t).dump(2);
-  if (!out) throw DocumentError("file", "could not write " + file.string());
+  // The safe write (BUG-SWEEP-16): a late write failure is reported and no empty template is left; a file
+  // already at that path (a race with another window) is kept as .bak, never truncated.
+  const std::string text = rackTemplateToJson(t).dump(2);
+  try {
+    writeFileSafely(text, file, [](const std::string& s) {
+      try { rackTemplateFromJson(json::parse(s)); return true; } catch (const std::exception&) { return false; }
+    });
+  } catch (const SaveError& e) {
+    throw DocumentError("file", "could not write " + file.string() + ": " + e.what());
+  }
   return file;
 }
 

@@ -1,9 +1,12 @@
 // Testes do MIDI (midi.hpp): exportar a musica como toca (rolls expandidos, loops, fim da musica, tempo) e importar
 // .mid para pistas e padroes. Os ficheiros sao gerados nos testes.
 #include <filesystem>
+#include <fstream>
+#include <iterator>
 #include "support/check.hpp"
 #include "edit.hpp"
 #include "midi.hpp"
+#include "storage.hpp"
 
 using namespace core::doc;
 namespace fs = std::filesystem;
@@ -25,6 +28,18 @@ Document rollSong() {
   p.notes = {a, r};
   t.clips = {{"c1", p.id, 0, 2 * kBar, 0, json::object()}};
   return d;
+}
+
+// BUG-SWEEP-16: the disk fails at the final flush, after the file was opened and written. The bytes reach
+// the system and are then lost: what is on disk is an empty file, while the stream itself reports no error.
+void lateFlushFault(std::ostream& out, const fs::path& file) {
+  out.flush();
+  std::ofstream lost(file, std::ios::binary | std::ios::trunc);
+}
+struct WriteFaultAgain { ~WriteFaultAgain() { setWriteFaultForTests(nullptr); } };
+std::string bytesIn(const fs::path& file) {
+  std::ifstream in(file, std::ios::binary);
+  return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
 }
 }  // namespace
 
@@ -221,6 +236,56 @@ TEST("MIDI ler: o cabecalho a prometer mais pistas do que as que o ficheiro tem 
   listed.insert(listed.end(), chunk.begin(), chunk.end());
   const MidiFile both = parseMidi(listed);
   CHECK_EQ(both.tracks.size(), (size_t)2);
+}
+
+// BUG-SWEEP-16 (work preservation): the export answered success with an empty file when the write failed
+// late (after the open, at the flush/close), and replaced the user's previous export without a backup.
+TEST("MIDI export: a late write failure throws and the previous file stays byte-identical") {
+  const fs::path dir = fs::temp_directory_path() / "core-midi-write-safety";
+  fs::remove_all(dir);
+  fs::create_directories(dir);
+  const fs::path file = dir / "song.mid";
+  const std::vector<uint8_t> previous = exportMidi(rollSong());
+  saveMidiFile(previous, file);
+  const std::string before = bytesIn(file);
+  CHECK(!before.empty());
+  Document other = rollSong();
+  other.bpm = 200;  // different bytes: a new export over the same file
+  const std::vector<uint8_t> next = exportMidi(other);
+  CHECK(next != previous);
+  bool threw = false;
+  {
+    WriteFaultAgain restore;
+    setWriteFaultForTests(lateFlushFault);
+    try { saveMidiFile(next, file); } catch (const DocumentError&) { threw = true; }
+  }
+  CHECK(threw);  // before: success, with an empty file in the user's place
+  CHECK_EQ(bytesIn(file), before);  // the previous export, byte for byte
+  CHECK(fs::file_size(file) > 0);
+  CHECK(!fs::exists(fs::path(file.string() + ".tmp")));
+  for (const auto& e : fs::directory_iterator(dir)) {  // no empty or temporary file left behind
+    CHECK(e.is_regular_file());
+    CHECK(fs::file_size(e.path()) > 0);
+  }
+  CHECK_EQ(parseMidi(readMidiFile(file)).tracks[0].notes.size(), (size_t)10);  // still a readable MIDI
+}
+
+TEST("MIDI export: a successful overwrite reads back the same bytes and keeps the previous export as .bak") {
+  const fs::path dir = fs::temp_directory_path() / "core-midi-write-safety-bak";
+  fs::remove_all(dir);
+  fs::create_directories(dir);
+  const fs::path file = dir / "song.mid";
+  const std::vector<uint8_t> previous = exportMidi(rollSong());
+  saveMidiFile(previous, file);
+  const std::string before = bytesIn(file);
+  Document other = rollSong();
+  other.bpm = 200;
+  const std::vector<uint8_t> next = exportMidi(other);
+  saveMidiFile(next, file);
+  CHECK_EQ(bytesIn(file), std::string((const char*)next.data(), next.size()));
+  CHECK_EQ(bytesIn(backupPath(file)), before);  // before: the previous export was gone, no backup
+  CHECK_NEAR(parseMidi(readMidiFile(file)).tempos[0].bpm, 200, 0.01);
+  for (const auto& e : fs::directory_iterator(dir)) CHECK(fs::file_size(e.path()) > 0);
 }
 
 CORE_TEST_MAIN

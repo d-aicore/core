@@ -5,6 +5,7 @@
 #include <map>
 #include <random>
 #include "edit.hpp"
+#include "storage.hpp"
 
 namespace core::doc {
 
@@ -393,10 +394,15 @@ PatternPreset savePatternPreset(const std::filesystem::path& folder, PatternPres
   }
   p.file = folder / (p.id + ".json");
   std::filesystem::create_directories(p.file.parent_path());
-  {
-    std::ofstream out(p.file, std::ios::binary);
-    out << presetToJson(p).dump(2) << "\n";
-    if (!out) throw DocumentError("file", "could not write " + p.file.string());
+  // The safe write (BUG-SWEEP-16): a late write failure is reported, no empty preset is left in the library,
+  // and a file already at that path (a race with another window) is kept as .bak, never truncated.
+  const std::string text = presetToJson(p).dump(2) + "\n";
+  try {
+    writeFileSafely(text, p.file, [](const std::string& s) {
+      try { presetFromJson(json::parse(s)); return true; } catch (const std::exception&) { return false; }
+    });
+  } catch (const SaveError& e) {
+    throw DocumentError("file", "could not write " + p.file.string() + ": " + e.what());
   }
   p.origin = "user";
   return p;

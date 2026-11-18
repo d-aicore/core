@@ -46,7 +46,7 @@ json roleMapToJson(const RoleMap& map);
 RoleMap roleMapFromJson(const json& j);         // throws DocumentError on a malformed file
 // The file: missing = an empty map; unreadable or malformed: an empty map and `problem` set (never throws).
 RoleMap loadRoleMap(const std::filesystem::path& file, std::string* problem = nullptr);
-void saveRoleMap(const RoleMap& map, const std::filesystem::path& file);  // atomically (temp file + rename)
+void saveRoleMap(const RoleMap& map, const std::filesystem::path& file);  // safe write (read back, .bak); throws DocumentError
 
 // A binding for `plugin` on `role`, its macros guessed from the plugin's parameters [{id, name}] (what the engine's
 // "params" answer gives): each macro takes the first parameter whose name holds one of its words. A macro with no

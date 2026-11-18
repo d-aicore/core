@@ -41,6 +41,7 @@ struct MidiExportOptions {
 };
 MidiFile songToMidi(const Document& doc, const MidiExportOptions& options = {});
 std::vector<uint8_t> exportMidi(const Document& doc, const MidiExportOptions& options = {});
+// Safe write (read back byte for byte, previous file kept as .bak); throws DocumentError, never leaves an empty file.
 void saveMidiFile(const std::vector<uint8_t>& bytes, const std::filesystem::path& file);
 std::vector<uint8_t> readMidiFile(const std::filesystem::path& file);  // throws DocumentError
 

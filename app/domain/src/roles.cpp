@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include "edit.hpp"
+#include "storage.hpp"
 
 namespace core::doc {
 
@@ -116,15 +117,16 @@ RoleMap loadRoleMap(const std::filesystem::path& file, std::string* problem) {
 
 void saveRoleMap(const RoleMap& map, const std::filesystem::path& file) {
   std::filesystem::create_directories(file.parent_path());
-  std::filesystem::path tmp = file;
-  tmp += ".tmp";
-  {
-    std::ofstream out(tmp, std::ios::binary | std::ios::trunc);
-    if (!out) throw DocumentError("roles", "cannot write " + tmp.string());
-    out << roleMapToJson(map).dump(2) << '\n';
-    if (!out) throw DocumentError("roles", "cannot write " + tmp.string());
+  // The safe write (BUG-SWEEP-16): a late write failure is reported and the user's roles file stays as it
+  // was; a successful save keeps the previous map as "<file>.bak" before replacing it.
+  const std::string text = roleMapToJson(map).dump(2) + "\n";
+  try {
+    writeFileSafely(text, file, [](const std::string& s) {
+      try { roleMapFromJson(json::parse(s)); return true; } catch (const std::exception&) { return false; }
+    });
+  } catch (const SaveError& e) {
+    throw DocumentError("roles", "cannot write " + file.string() + ": " + e.what());
   }
-  std::filesystem::rename(tmp, file);
 }
 
 namespace {

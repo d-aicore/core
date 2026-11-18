@@ -90,6 +90,7 @@ json presetToJson(const PatternPreset& p);
 // Every valid preset of the roots (the first root that has an id wins), sorted by id; problems: skipped files.
 std::vector<PatternPreset> loadPatternLibrary(const std::vector<PatternRoot>& roots, std::vector<std::string>* problems = nullptr);
 // Writes the preset into folder as a new file, never over one: a used id gets -2, -3... Returns it with id/file.
+// Safe write (read back, .bak on a race); throws DocumentError on a failed write, never leaves an empty file.
 PatternPreset savePatternPreset(const std::filesystem::path& folder, PatternPreset preset, const std::vector<PatternPreset>& existing);
 // The preset from the pattern's notes in [start, end) (ticks from start).
 PatternPreset presetFromPattern(const Pattern& pattern, int64_t start, int64_t end, const std::string& name);

@@ -5,6 +5,7 @@
 #include <fstream>
 #include <map>
 #include "edit.hpp"
+#include "storage.hpp"
 
 namespace core::doc {
 
@@ -263,16 +264,15 @@ MidiFile songToMidi(const Document& doc, const MidiExportOptions& options) {
 std::vector<uint8_t> exportMidi(const Document& doc, const MidiExportOptions& options) { return writeMidi(songToMidi(doc, options)); }
 
 void saveMidiFile(const std::vector<uint8_t>& bytes, const std::filesystem::path& file) {
-  std::filesystem::path tmp = file;
-  tmp += ".tmp";
-  {
-    std::ofstream out(tmp, std::ios::binary | std::ios::trunc);
-    out.write(reinterpret_cast<const char*>(bytes.data()), (std::streamsize)bytes.size());
-    if (!out) throw DocumentError("midi", "cannot write " + file.filename().string());
+  // The same safe write as the document (BUG-SWEEP-16): temporary file, explicit close, flush to disk,
+  // read back byte for byte, then replace; the previous export becomes "<file>.bak". A write that fails
+  // late (at the flush/close) is reported, and the user's file is never left empty or truncated.
+  const std::string text(bytes.begin(), bytes.end());
+  try {
+    writeFileSafely(text, file, [](const std::string&) { return true; });  // byte equality is checked inside
+  } catch (const SaveError& e) {
+    throw DocumentError("midi", "cannot write " + file.filename().string() + ": " + e.what());
   }
-  std::error_code ec;
-  std::filesystem::rename(tmp, file, ec);
-  if (ec) { std::filesystem::remove(tmp, ec); throw DocumentError("midi", "cannot write " + file.filename().string()); }
 }
 
 std::vector<uint8_t> readMidiFile(const std::filesystem::path& file) {
