@@ -410,7 +410,7 @@ static void retimeBass(Track& t, int64_t a, int64_t b, double ratio, std::vector
 }
 
 const std::vector<std::string>& randomizeAxes() {
-  static const std::vector<std::string> axes = {"bass", "gate", "hats", "kick", "roles", "fills", "tempo"};
+  static const std::vector<std::string> axes = {"bass", "gate", "hats", "kick", "roles", "fills", "tempo", "sound"};
   return axes;
 }
 
@@ -811,7 +811,7 @@ std::vector<std::string> randomizeStyle(Document& doc, const RandomizeOptions& o
     for (const auto& [name, line] : lines) changes.insert(changes.begin(), "Sound, " + name + ": " + line);
   }
   json allAxes = json::array();
-  for (const auto& x : randomizeAxes()) if (x != "tempo") allAxes.push_back(x);
+  for (const auto& x : randomizeAxes()) if (x != "tempo" && x != "sound") allAxes.push_back(x);
   json recipe = {{"seed", o.seed}, {"strength", o.strength}, {"style", style}, {"axes", o.axes.empty() ? allAxes : json(o.axes)}};
   if (tempoOn) {
     json map = json::array();
