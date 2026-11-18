@@ -5450,7 +5450,7 @@ juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&) {
     menu.addItem(juce::PopupMenu::Item(u8("Randomize (medium)")).setID(kRandomize + 2).setEnabled(styled));
     menu.addItem(juce::PopupMenu::Item(u8("Randomize (bold)")).setID(kRandomize + 3).setEnabled(styled));
     menu.addItem(juce::PopupMenu::Item(u8("Randomize tempo per section")).setID(kRandomize + 4).setEnabled(styled));
-    menu.addItem(juce::PopupMenu::Item(u8("Randomize sound (built-in instruments)")).setID(kRandomize + 5).setEnabled(styled));
+    menu.addItem(juce::PopupMenu::Item(u8("Randomize sound (built-in instruments)")).setID(kRandomize + 5).setEnabled(styled && doc::soundAxisAvailable(history_.current())));
   }
   // Shortcut hints on the right, as in other Windows programs.
   juce::PopupMenu::MenuItemIterator it(menu);

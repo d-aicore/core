@@ -33,6 +33,13 @@ struct RandomizeOptions {
 // (sections[].energy); a song without it is read from what plays in each section.
 std::vector<std::string> randomizeStyle(Document& doc, const RandomizeOptions& options);
 
+// BUG-SWEEP-11: whether the sound axis (K) has a target in this song. K only changes Core's own built-in
+// instruments (the style's kick/bass/hats); those left the engine (2026-11-16), so a song played by plugins (or
+// audio/samples) has no built-in sound to change. The menu disables the sound axis when this is false (PROD :83:
+// no apparently-active option that does nothing). A legacy built-in song still has the axis. Making it work on
+// plugins is an owner decision (the K contract is built-in-only).
+bool soundAxisAvailable(const Document& doc);
+
 // Changes the song's tempo (its start BPM and its tempo map) and keeps the bass gates in ms (audit
 // 48c9c38 E8/D4, Diogo 2026-11-04: the domain rewrites the notes). In every stretch whose BPM changes, the
 // clips of the bass track (id "bass" or the built-in bass) that start there get a copy of their pattern

@@ -551,6 +551,35 @@ TEST("BUG-SWEEP-10: suggested samples keep a plugin role track's plugin (the bul
   CHECK(!changed.empty());
 }
 
+// BUG-SWEEP-11 (2026-11-18): the Randomize sound menu item was enabled for any styled song, but the sound axis
+// (K) only changes Core's own built-in instruments, which left the engine (2026-11-16). On a plugin-only styled
+// song it threw ("no built-in sound to change") — an apparently-active option that does nothing (PROD :83). The
+// axis is disabled when no built-in target fits (soundAxisAvailable), and asking for it alone is a graceful no-op.
+// Making it work on plugins is an owner decision (the K contract is built-in-only).
+TEST("BUG-SWEEP-11: Randomize sound on a plugin-only styled song is a graceful no-op and the axis is unavailable") {
+  Document d = newTemplateDocument();
+  d.extra["template"] = {{"style", "Dark psycore"}};
+  d.lengthTicks = 32 * 4 * kPpq;
+  for (auto& t : d.tracks) for (auto& c : t.clips) c.lengthTicks = d.lengthTicks;
+  addSection(d, "Intro", 0, 16 * 4 * kPpq);
+  addSection(d, "Drop", 16 * 4 * kPpq, 16 * 4 * kPpq);
+  for (auto& s : d.sections) s.extra["energy"] = 4;
+  const json synth = {{"id", "synth-a"}, {"file", "synth-a.vst3"}, {"name", "Synth A"}};
+  for (auto& t : d.tracks) replaceInstrumentWithPlugin(d, t.id, synth);  // every track played by a plugin
+  CHECK(!soundAxisAvailable(d));  // no built-in target: the menu disables the axis
+  bool threw = false;
+  std::vector<std::string> changes;
+  try { changes = randomizeStyle(d, {2, 2, {"sound"}}); } catch (const std::exception&) { threw = true; }
+  CHECK(!threw);           // before: an error dialog from an enabled menu item
+  CHECK(changes.empty());  // nothing to change, gracefully
+  // A legacy built-in song still has the sound axis (the K contract is preserved for legacy load).
+  Document b = newTemplateDocument();
+  b.extra["template"] = {{"style", "Dark psycore"}};
+  b.tracks[0].instrument.kind = "builtin";  // kick
+  b.tracks[0].instrument.name = "kick";
+  CHECK(soundAxisAvailable(b));
+}
+
 // Data loss (2026-11-18), S5: an undo step is a whole document, plugin states included. Undo put the old state of
 // a plugin that stays alive back into the document while the engine kept the instance and its new sound: the next
 // save without the engine's answer, or an engine restart, brought the old sound.
