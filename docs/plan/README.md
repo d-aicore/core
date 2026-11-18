@@ -35,12 +35,13 @@ domain tests only. The desktop self-test (`ci\gate.ps1 -Desktop`) was not run.
 
 ## The maps (read-only studies of commit e7968c8)
 
-Five studies were delivered in Portuguese and are stored outside the repository, in `D:\CORE\plan\`:
-`perda-de-dados.pt.md`, `hosting-de-plugins.pt.md`, `tempo-real.pt.md`, `codigo-morto.pt.md`, `ux-pulse.pt.md`.
-**First task for the next agent:** translate them to English into this folder (`data-loss-map.md`,
-`plugin-hosting-map.md`, `realtime-map.md`, `dead-code-inventory.md`, `ux-pulse-spec.md`) without losing the
-`path:line` references, the verdict labels (confirmed by reading / measured / not verified) or the owner's quotes,
-which stay verbatim. Line numbers refer to e7968c8 and have drifted since.
+The English maps now live in this folder: `data-loss-map.md`, `plugin-hosting-map.md`, `realtime-map.md`,
+`dead-code-inventory.md`, `ux-pulse-spec.md`. They are full translations of the five Portuguese studies delivered
+by the subagents, which remain stored outside the repository, in `D:\CORE\plan\` (`perda-de-dados.pt.md`,
+`hosting-de-plugins.pt.md`, `tempo-real.pt.md`, `codigo-morto.pt.md`, `ux-pulse.pt.md`), read-only.
+Every `path:line` reference survived exactly as written; the verdict labels (confirmed by reading / measured /
+not verified) keep a 1:1 mapping, with a legend in each file; and the owner's quotes stay verbatim in Portuguese.
+Line numbers refer to e7968c8 and have drifted since; they are not re-anchored to current HEAD.
 
 ## Next work, in the owner's order (data > real time > performance > compatibility)
 
