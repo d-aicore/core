@@ -56,6 +56,7 @@ void EngineSession::setDocument(const doc::Document& document) {
   wantedProjection_ = std::move(projection);
   snap_.documentRevision = ++wantedRevision_;   // monotonic, also across engine sessions and undo
   if (snap_.status == EngineStatus::Diverged) snap_.status = EngineStatus::Syncing;  // a full snapshot reconciles
+  snap_.syncRetriesGaveUp = false;
   retryPending_ = false;  // the edit is sent now
   syncRetry_.reset();
   wake_.notify_all();
@@ -70,6 +71,7 @@ void EngineSession::setAssetRoot(const std::filesystem::path& root, bool send) {
   snap_.documentRevision = ++wantedRevision_;
   wantedDocument_ = document_;
   if (snap_.status == EngineStatus::Diverged) snap_.status = EngineStatus::Syncing;
+  snap_.syncRetriesGaveUp = false;
   retryPending_ = false;
   syncRetry_.reset();
   wake_.notify_all();
@@ -281,6 +283,12 @@ void EngineSession::restart() { std::lock_guard<std::mutex> g(mutex_); restartRe
 
 void EngineSession::killEngineForTest() { std::lock_guard<std::mutex> g(mutex_); if (client_) client_->killForTest(); }
 
+void EngineSession::timeOutSyncForTest(int times) {
+  std::lock_guard<std::mutex> g(mutex_);
+  syncTimeoutsForTest_ = times;
+  syncRetryFastForTest_ = times > 0;
+}
+
 SessionSnapshot EngineSession::snapshot() const { std::lock_guard<std::mutex> g(mutex_); return snap_; }
 
 void EngineSession::run() {
@@ -490,6 +498,8 @@ bool EngineSession::connect() {
     sentRevision_ = 0;  // a new session knows nothing: send the current projection again
     retryPending_ = false;
     syncRetry_.reset();
+    syncTimeoutsForTest_ = 0;  // a new session answers for real
+    syncRetryFastForTest_ = false;
   }
   // The document first (it works without a device), then the device (opening it at another sample
   // rate starts a new audio engine), then the loop and the last known position (stopped).
@@ -561,13 +571,19 @@ void EngineSession::sync(std::unique_lock<std::mutex>& lock) {
   const int64_t revision = wantedRevision_;
   sentRevision_ = revision;
   if (snap_.status == EngineStatus::Ready || snap_.status == EngineStatus::Diverged) snap_.status = EngineStatus::Syncing;
+  snap_.syncRetriesGaveUp = false;  // attempting again: the offer goes until the retries give up once more
+  const int simulateTimeout = syncTimeoutsForTest_;  // tests only: answer with a timeout instead of sending
+  if (simulateTimeout > 0) --syncTimeoutsForTest_;
   client::EngineClient* engine = client_.get();
   lock.unlock();
   try {
+    if (simulateTimeout > 0) throw EngineError(EngineError::Kind::Timeout, "no reply in time (simulated by the self-test)");
     const json result = engine->command("project.load", {{"project", projection}, {"revision", revision}});
     lock.lock();
     if (epoch == documentEpoch_) { acceptedDocument_ = document; snap_.hasAcceptedDocument = true; }
     syncRetry_.succeeded();
+    syncTimeoutsForTest_ = 0;  // a real answer ends the simulation
+    syncRetryFastForTest_ = false;
     snap_.acceptedRevision = std::max(snap_.acceptedRevision, result.value("acceptedRevision", revision));
     snap_.songSamples = result.value("lengthSamples", (int64_t)0);
     // Plugins that could not be loaded: their tracks are silent ("missing").
@@ -592,11 +608,13 @@ void EngineSession::sync(std::unique_lock<std::mutex>& lock) {
       snap_.message = std::string("The document did not reach the engine (your edits are kept): ") + e.what();
       int delayMs = 0;
       if (syncRetry_.failed(e.kind == EngineError::Kind::Timeout, delayMs) == client::SyncRetry::After::Retry) {
+        if (syncRetryFastForTest_) delayMs = std::min(delayMs, 25);  // tests only: a deterministic, quick retry clock
         retryPending_ = true;
         retryAt_ = std::chrono::steady_clock::now() + std::chrono::milliseconds(delayMs);
         snap_.message += " Trying again in " + std::to_string((delayMs + 999) / 1000) + " s.";
       } else {
         retryPending_ = false;
+        snap_.syncRetriesGaveUp = true;  // unresponsive (or refused): only a Restart or a revert brings it back
       }
     }
   }

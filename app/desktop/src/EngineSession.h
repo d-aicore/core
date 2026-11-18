@@ -50,6 +50,9 @@ struct ExportJob {
 struct SessionSnapshot {
   EngineStatus status = EngineStatus::Starting;
   std::string message;           // what happened, for the status line
+  // The document stopped reaching the engine and the automatic retries gave up (SyncRetry WaitForEdit): the
+  // engine is unresponsive or refused it, and only a Restart (or reverting) brings the sound back in step.
+  bool syncRetriesGaveUp = false;
   std::string sessionId;
   std::string engineBuild;       // the engine's version + commit (its hello); Help > About shows it
   int64_t documentRevision = 0;  // the edit the app wants to hear
@@ -152,6 +155,10 @@ public:
   SessionSnapshot snapshot() const;
   std::optional<doc::Document> acceptedDocument() const;
   void killEngineForTest();  // as if the engine process crashed
+  // Tests only: the next `times` project.load sends answer with a timeout instead of reaching the engine, so the
+  // retry-then-give-up path (and the Restart offer it must raise) can be exercised without a hung engine. The
+  // retry clock runs fast while simulating; a real answer or a new session ends the simulation.
+  void timeOutSyncForTest(int times);
   const doc::Document& document() const { return document_; }  // UI thread only
 
 private:
@@ -187,6 +194,8 @@ private:
   uint64_t documentEpoch_ = 0;
   int64_t wantedRevision_ = 1, sentRevision_ = 0;
   client::SyncRetry syncRetry_;  // audit 2, bug 2: a project.load with no answer is sent again by itself
+  int syncTimeoutsForTest_ = 0;       // timeOutSyncForTest: project.load sends left to answer with a timeout
+  bool syncRetryFastForTest_ = false; // while simulating timeouts, the retry delays are shortened (deterministic test)
   bool retryPending_ = false;
   std::chrono::steady_clock::time_point retryAt_{};
   std::deque<Action> actions_;
