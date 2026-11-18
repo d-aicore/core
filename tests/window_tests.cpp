@@ -110,7 +110,7 @@ TEST("layout: a tiny strip of title bar is enough to be reachable") {
   const std::vector<Rect> one = {{0, 0, 1920, 1080}};
   CHECK(reachable({1860, 100, 1200, 800}, one));   // 60 px of its width shows
   CHECK(!reachable({1900, 100, 1200, 800}, one));  // 20 px: not enough to grab
-  CHECK(reachable({100, 1050, 1200, 800}, one));   // 30 px of height... less than 32: not reachable
+  CHECK(!reachable({100, 1050, 1200, 800}, one));  // 30 px of height: less than the 32 px strip
   CHECK(!reachable({100, 1060, 1200, 800}, one));
   CHECK(reachable({100, 1048, 1200, 800}, one));   // exactly 32 px: the title bar strip
   CHECK(reachable({0, 0, 40, 20}, one));           // a window smaller than the strip: fully on = reachable
