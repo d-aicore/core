@@ -182,7 +182,7 @@ velocities above).
 
 1. **Realized factor** (implemented, documented above): the envelope follows the factor the base actually moved
    by (1.14 for Louder on 0.5), not the nominal 1.15. Flagged so the owner can ratify the rule.
-2. **Zero endpoints**: [0,1] is legal for envelope endpoints (`document.cpp:123-124`); proportional scaling keeps
+2. **Zero endpoints**: [0,1] is legal for envelope endpoints (`document.cpp:125-126`); proportional scaling keeps
    a 0 endpoint silent (0 * factor = 0). Accepted default. The base keeps its 0.05 floor on the groove/wheel
    surfaces; an endpoint floor (e.g. 0.05) is UNDECIDED — owner decision.
 3. **Normalize accent/equal on rolled notes**: implemented default scales the envelope proportionally (shape
