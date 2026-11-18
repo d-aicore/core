@@ -1269,6 +1269,14 @@ double riserStartMs(const Document& doc, const Track& t, const LibrarySample& s)
 void setTrackSample(Document& doc, const std::string& trackId, const SampleIndex& index, const LibrarySample& sample) {
   Track& t = trackById(doc, trackId);
   if (!playsPatterns(t)) throw DocumentError("instrument", "an audio track or a bus does not play samples");
+  // BUG-SWEEP-10: a track played by a plugin keeps its plugin. The sampler is a removed built-in (the engine
+  // projects it as "none", silent): installing it here would replace a working plugin with silence and erase its
+  // instrument automation (PROD :113: a missing plugin is explicit, never silently replaced by Core's own sound).
+  // Refuse, as an audio track or a bus is refused above; the working plugin is never destroyed. What a plugin
+  // track should take instead (an audio clip, or an external plugin sampler) is an owner decision.
+  if (t.instrument.kind == "plugin")
+    throw DocumentError("instrument", "this track is played by a plugin: a sample would replace it with the removed "
+                                      "built-in sampler (silent). Keep the plugin, or replace the instrument with a plugin sampler first.");
   std::string role = trackSampleRole(t);
   if (role.empty()) role = sample.info.role == "bass" ? "bass" : sample.info.role;
   // A new sample starts from its own sound: the sampler's defaults plus what suits this sample (how keys play,
@@ -1329,6 +1337,7 @@ std::vector<std::string> applySuggestedSamples(Document& doc, const SampleIndex&
   auto key = [](const LibrarySample& s) { return s.sha256.empty() ? s.file : s.sha256; };
   for (Track* t : order) {
     if (!playsPatterns(*t)) continue;
+    if (t->instrument.kind == "plugin") continue;  // BUG-SWEEP-10: a plugin role track keeps its plugin (setTrackSample refuses it); the bulk flow skips it, never throws
     const std::string role = trackSampleRole(*t);
     if (role.empty()) continue;
     std::vector<SampleSuggestion> pool;

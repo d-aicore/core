@@ -2087,8 +2087,9 @@ void MainComponent::edit(const std::function<void(doc::Document&)>& change, cons
     showError(u8("Could not do that"), u8(e.what()));
     return;
   }
-  // A change that takes a plugin away (a track removed, another instrument, a sample on a plugin track, an effect
-  // removed): what the plugins hold now goes into the document first, or Undo brings them back as last saved.
+  // A change that takes a plugin away (a track removed, another instrument, an effect removed): what the plugins
+  // hold now goes into the document first, or Undo brings them back as last saved. (A sample on a plugin track is
+  // refused outright — BUG-SWEEP-10 — so it never takes the plugin away.)
   if (!capturePluginsBefore(next, &next)) return;
   const doc::Loop before = history_.current().loop;
   if (history_.inGesture()) history_.updateGesture(next);

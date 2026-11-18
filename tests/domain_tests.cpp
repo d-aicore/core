@@ -15,6 +15,7 @@
 #include "pattern_rack.hpp"
 #include "plugin_refs.hpp"
 #include "randomize.hpp"
+#include "samples.hpp"
 #include "score.hpp"
 #include "storage.hpp"
 #include "templates.hpp"
@@ -450,7 +451,8 @@ TEST("plugins: droppedPluginKeys names the plugins a change takes away, and noth
   Document same = before;
   replaceInstrumentWithPlugin(same, b, synth);
   CHECK(droppedPluginKeys(before, same).empty());
-  // A sample on a plugin track (setTrackSample): the track's instrument is no longer the plugin.
+  // A change that replaces the track's instrument (modelled directly here): the plugin is let go. setTrackSample
+  // itself now refuses a plugin track (BUG-SWEEP-10), so this stands for any other instrument change.
   Document sampled = before;
   sampled.tracks[1].instrument.kind = "sampler";
   sampled.tracks[1].instrument.plugin = json();
@@ -497,6 +499,56 @@ TEST("BUG-SWEEP-09 characterization: every built-in catalogue role adds a silent
     CHECK(t->instrument.samples.empty());
     CHECK_EQ(t->name, c.label);  // the catalogue still names the track
   }
+}
+
+// BUG-SWEEP-10 (2026-11-18): setTrackSample installed the removed built-in sampler (kind "builtin", name
+// "sampler"), which the engine projects as "none" (silent). On a track played by a plugin it overwrote the
+// working plugin and erased its instrument automation — a silent replacement of a working sound (PROD :113:
+// "Falta de plugin é explícita; não é substituída silenciosamente por som próprio"). A sample assignment on a
+// plugin track is refused; the plugin and its state survive. A silent "none" track and a legacy built-in track
+// still take a sample (legacy load preserved). The positive target for a plugin track (audio clip vs an external
+// plugin sampler) is an owner decision; the guard ships now.
+TEST("BUG-SWEEP-10: assigning a sample never replaces a working plugin instrument with the removed sampler") {
+  Document d = newEmptyDocument();
+  const json synth = {{"id", "synth-a"}, {"file", "synth-a.vst3"}, {"name", "Synth A"}, {"state", "QQ=="}};
+  const std::string id = addPluginTrack(d, synth);
+  const json pluginBefore = d.findTrack(id)->instrument.plugin;
+  LibrarySample s;
+  s.file = "D:/Samples/kick.wav"; s.path = "kick.wav"; s.name = "kick";
+  s.sha256 = std::string(64, 'a'); s.seconds = 0.3; s.info.role = "kick"; s.inferred.role = "kick";
+  SampleIndex index; index.root = "D:/Samples"; index.samples.push_back(s);
+  // Refused: the working plugin stays, its state intact, no silent built-in sampler installed.
+  CHECK_THROWS(setTrackSample(d, id, index, s));
+  CHECK_EQ(d.findTrack(id)->instrument.kind, std::string("plugin"));
+  CHECK(d.findTrack(id)->instrument.plugin == pluginBefore);
+  CHECK(d.findTrack(id)->instrument.samples.empty());
+  // A silent "none" track still takes the sample (the legacy behaviour, preserved).
+  Document legacy = newEmptyDocument();
+  const std::string lid = addTrack(legacy, "kick");
+  setTrackSample(legacy, lid, index, s);
+  CHECK_EQ(legacy.findTrack(lid)->instrument.kind, std::string("builtin"));
+  CHECK_EQ(legacy.findTrack(lid)->instrument.name, std::string("sampler"));
+}
+
+// The bulk flow (Suggested samples / Shuffle / a new song from a template) assigns samples to every role track.
+// A role track played by a plugin keeps its plugin: the flow skips it instead of throwing or replacing it.
+TEST("BUG-SWEEP-10: suggested samples keep a plugin role track's plugin (the bulk flow never replaces it)") {
+  Document d = newEmptyDocument();
+  d.extra["template"] = {{"style", "Dark psycore"}};
+  const json synth = {{"id", "synth-a"}, {"file", "synth-a.vst3"}, {"name", "Synth A"}};
+  const std::string pid = addPluginTrack(d, synth);
+  renameTrack(d, pid, "Kick");                 // a role track, played by a plugin
+  const std::string nid = addTrack(d, "kick"); // a silent role track
+  LibrarySample s;
+  s.file = "D:/Samples/kick.wav"; s.path = "kick.wav"; s.name = "kick";
+  s.sha256 = std::string(64, 'a'); s.seconds = 0.3; s.info.role = "kick"; s.inferred.role = "kick";
+  SampleIndex index; index.root = "D:/Samples"; index.samples.push_back(s);
+  const std::vector<std::string> changed = applySuggestedSamples(d, index, "Dark psycore", 0);
+  CHECK_EQ(d.findTrack(pid)->instrument.kind, std::string("plugin"));  // kept, never replaced
+  // The silent track takes the sample: proves the sample is good enough, so the plugin track was skipped on
+  // purpose (not because nothing fitted).
+  CHECK_EQ(d.findTrack(nid)->instrument.kind, std::string("builtin"));
+  CHECK(!changed.empty());
 }
 
 // Data loss (2026-11-18), S5: an undo step is a whole document, plugin states included. Undo put the old state of
