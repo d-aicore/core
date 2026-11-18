@@ -10,6 +10,7 @@
 #include "follow.hpp"
 #include "pattern_tools.hpp"
 #include "pcore.hpp"
+#include "samples.hpp"
 #include "stutter.hpp"
 #include "storage.hpp"
 #include "templates.hpp"
@@ -239,6 +240,113 @@ TEST("data loss D4: the error 'the file is not in its place' has a translation")
                "C:\\x\\Song.core.saving-3. Nothing was deleted: give it the name Song.core to open it."));
   CHECK(pt.has("Cannot replace C:\\x\\Song.core: Access is denied (5). The file is not in its place: the previous version is in "
                "C:\\x\\Song.core.bak. Nothing was deleted: give it the name Song.core to open it."));
+}
+
+// ---------------------------------------------------------------- data loss (2026-11-18), D5
+// The user's sample catalogue (%APPDATA%\Core\samples-index.json) was made again from nothing when the index could
+// not be read (another version of Core, a damaged part): the window started with no corrections and wrote the new
+// index over the old file. The corrections made by hand (role, key, BPM, tags, names) were gone.
+namespace {
+const char* const kShaA = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const char* const kShaB = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+const char* const kShaC = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc";
+
+// An index as a newer Core might write it: a version this Core refuses, with the user's corrections in it.
+json futureIndex() {
+  return {{"format", kSampleIndexFormat}, {"version", 99}, {"root", "D:/Samples"}, {"samples", json::array()},
+          {"somethingNew", json{{"a", 1}}},
+          {"overrides", json{{kShaA, json{{"role", "kick"}, {"bpm", 145}, {"key", "F#m"}, {"tags", json::array({"dark", "long"})}, {"name", "My kick"}}},
+                             {kShaB, json{{"role", "bass"}, {"kind", "one-shot"}}}}}};
+}
+}  // namespace
+
+TEST("data loss D5: the corrections of an index of another version are salvaged (the reader gives an error and none)") {
+  const std::string text = futureIndex().dump(1);
+  // What the reader does with this file: an error, so the window had no index and no corrections.
+  CHECK_THROWS(indexFromJson(json::parse(text)));
+  const std::map<std::string, json> saved = salvageOverrides(text);
+  CHECK_EQ(saved.size(), (size_t)2);  // before: 0
+  if (saved.size() == 2) {
+    const json& a = saved.at(kShaA);
+    CHECK_EQ(a.value("role", std::string()), std::string("kick"));
+    CHECK_EQ(a.value("bpm", 0.0), 145.0);
+    CHECK_EQ(a.value("key", std::string()), std::string("F#m"));
+    CHECK_EQ(a.value("tags", json::array()).dump(), std::string(R"(["dark","long"])"));
+    CHECK_EQ(a.value("name", std::string()), std::string("My kick"));
+    CHECK_EQ(saved.at(kShaB).value("role", std::string()), std::string("bass"));
+    CHECK_EQ(saved.at(kShaB).value("kind", std::string()), std::string("one-shot"));
+  }
+  // An index of this version with a damaged sample entry: the same (the reader refuses the whole file).
+  json damaged = futureIndex();
+  damaged["version"] = kSampleIndexVersion;
+  damaged["samples"] = json::array({json{{"path", "kick.wav"}}});  // no "file", no "sha256"
+  CHECK_THROWS(indexFromJson(damaged));
+  CHECK_EQ(salvageOverrides(damaged.dump()).size(), (size_t)2);
+}
+
+TEST("data loss D5: salvaging is tolerant - what cannot be read is left out, and nothing throws") {
+  // Cut short, not JSON, not an index, no corrections in it: none, without an exception.
+  const std::string whole = futureIndex().dump(1);
+  for (const std::string text : {whole.substr(0, whole.size() / 2), std::string("\x01\x02 not json at all"), std::string(), std::string("[1,2,3]"),
+                                 std::string(R"({"format":"core-sample-index","version":99})"),
+                                 std::string(R"({"format":"core-sample-index","version":99,"overrides":[1,2]})"),
+                                 std::string(R"({"format":"core-sample-index","version":99,"overrides":"none"})")}) {
+    bool threw = false;
+    size_t found = 99;
+    try { found = salvageOverrides(text).size(); } catch (...) { threw = true; }
+    CHECK(!threw);
+    CHECK_EQ(found, (size_t)0);
+  }
+  // Field by field: a field this Core does not know, or a value it cannot read, costs only itself.
+  json mixed = futureIndex();
+  mixed["overrides"] = json{{kShaA, json{{"role", "kick"}, {"mood", "angry"}, {"bpm", "fast"}}},  // role stays
+                            {kShaB, json{{"role", "not-a-role"}}},                               // nothing readable
+                            {kShaC, 42}};                                                        // not an object
+  const std::map<std::string, json> saved = salvageOverrides(mixed.dump());
+  CHECK_EQ(saved.size(), (size_t)1);
+  if (saved.size() == 1) CHECK_EQ(saved.begin()->second.dump(), std::string(R"({"role":"kick"})"));
+}
+
+TEST("data loss D5: the index that could not be read is set aside, never written over, and the new one has the corrections") {
+  const fs::path dir = freshDir("d5-set-aside");
+  const fs::path file = dir / "samples-index.json";
+  const std::string old = futureIndex().dump(1);
+  writeText(file, old);
+  // What the window does now when the index is there and cannot be read:
+  const std::map<std::string, json> saved = salvageOverrides(readTextFile(file));
+  const fs::path aside = setUnreadableIndexAside(file, "20261118-022300");
+  CHECK_EQ(aside.filename().string(), std::string("samples-index.unreadable-20261118-022300.json"));
+  CHECK(!fs::exists(file));                 // the name is free for the new index
+  CHECK_EQ(readTextFile(aside), old);       // the old one is whole, byte for byte
+  SampleIndex fresh;                        // (the scan makes it; here an empty library)
+  fresh.root = "D:/Samples";
+  fresh.overrides = saved;
+  writeText(file, indexToJson(fresh).dump(1));
+  CHECK_EQ(indexFromJson(json::parse(readTextFile(file))).overrides.size(), (size_t)2);  // before: 0, and the old file gone
+  CHECK_EQ(readTextFile(aside), old);
+  // It happens again in the same second: the first one set aside is not replaced.
+  writeText(file, "broken again");
+  const fs::path second = setUnreadableIndexAside(file, "20261118-022300");
+  CHECK(!second.empty());
+  CHECK(second != aside);
+  CHECK_EQ(readTextFile(aside), old);
+  CHECK_EQ(readTextFile(second), std::string("broken again"));
+  // No file: nothing to set aside.
+  CHECK(setUnreadableIndexAside(dir / "none.json", "20261118-022300").empty());
+}
+
+TEST("data loss D5: what the window says about an index it could not read has a translation") {
+  const Translation pt = loadTranslation(CORE_LANG_DIR "/pt-PT.json");
+  const std::string kept = pt.translate("Sample index not read (index: made by another version of Core): it is kept as "
+                                        "samples-index.unreadable-20261118-022300.json and a new one is made. 12 correction(s) of yours were read from it.");
+  CHECK(kept.find("fica guardado como samples-index.unreadable-20261118-022300.json") != std::string::npos);
+  CHECK(kept.find("12 corre\xC3\xA7") != std::string::npos);
+  const std::string stuck = pt.translate("Sample index not read (index: damaged: x) and it could not be renamed: it stays as it is and no new "
+                                         "index is written over it. 0 correction(s) of yours were read from it.");
+  CHECK(stuck.find("nenhum \xC3\xADndice novo \xC3\xA9 escrito por cima") != std::string::npos);
+  const std::string notSaved = pt.translate("Sample index not saved: the index that could not be read is still in its place and is not written "
+                                            "over (C:\\Users\\x\\AppData\\Roaming\\Core\\samples-index.json)");
+  CHECK(notSaved.find("continua no s\xC3\xADtio") != std::string::npos);
 }
 
 TEST("sweep: addPattern recusa um padrao de comprimento 0 (dividia por zero na projeccao)") {

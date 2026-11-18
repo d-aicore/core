@@ -178,6 +178,15 @@ SampleIndex scanLibrary(const std::filesystem::path& root, const SampleIndex* pr
 const LibrarySample& addLibraryFile(SampleIndex& index, const std::filesystem::path& file);
 json indexToJson(const SampleIndex& index);
 SampleIndex indexFromJson(const json& value);  // throws DocumentError
+// An index file indexFromJson refuses (made by another version of Core, a damaged part) still holds the user's
+// corrections, and they are by content: the fields of each that Core can still read (sha256 -> fields, as in
+// SampleIndex::overrides). The text of the file goes in; text that is not JSON, or holds none, gives none. Never throws.
+std::map<std::string, json> salvageOverrides(const std::string& indexText);
+// Before a new index is written where one could not be read: the old file gets the name
+// "<name>.unreadable-<stamp><.ext>" next to it (stamp: "YYYYMMDD-HHMMSS"; a number is added when that name is taken).
+// It is never deleted and never written over. Returns the new path; empty when the file could not be renamed (then
+// nothing may be written in its place).
+std::filesystem::path setUnreadableIndexAside(const std::filesystem::path& file, const std::string& stamp);
 
 // ---- suggestions for the tracks of a song (a style template)
 

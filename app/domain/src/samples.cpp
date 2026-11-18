@@ -414,6 +414,45 @@ json indexToJson(const SampleIndex& index) {
   return out;
 }
 
+// Field by field (2026-11-18, D5): a field a newer Core added, or a value this one cannot read, costs only itself.
+std::map<std::string, json> salvageOverrides(const std::string& indexText) {
+  std::map<std::string, json> out;
+  try {
+    const json v = json::parse(indexText, nullptr, false);
+    if (!v.is_object() || !v.contains("overrides") || !v["overrides"].is_object()) return out;
+    const json& overrides = v["overrides"];
+    for (auto it = overrides.begin(); it != overrides.end(); ++it) {
+      if (!it.value().is_object()) continue;
+      json fields = json::object();
+      for (auto f = it.value().begin(); f != it.value().end(); ++f) {
+        try {
+          json field = json::object();
+          field[f.key()] = f.value();
+          const json one = normalizeSampleMetadata(field);
+          if (one.contains(f.key()) && !one[f.key()].is_null()) fields[f.key()] = one[f.key()];
+        } catch (const std::exception&) {}
+      }
+      if (!fields.empty()) out[it.key()] = fields;
+    }
+  } catch (const std::exception&) {  // (nothing above should throw; a salvage never does)
+  }
+  return out;
+}
+
+fs::path setUnreadableIndexAside(const fs::path& file, const std::string& stamp) {
+  std::error_code e;
+  if (!fs::is_regular_file(file, e)) return {};
+  for (int n = 1; n < 100; ++n) {
+    fs::path aside = file.parent_path() / file.stem();
+    aside += ".unreadable-" + stamp + (n > 1 ? "-" + std::to_string(n) : std::string());
+    aside += file.extension();
+    if (fs::exists(aside, e) || e) continue;  // an older one stays as it is
+    fs::rename(file, aside, e);
+    return e ? fs::path() : aside;
+  }
+  return {};
+}
+
 SampleIndex indexFromJson(const json& v) {
   if (!v.is_object() || v.value("format", "") != kSampleIndexFormat) throw DocumentError("index", "not a Core sample index");
   const int version = v.value("version", 0);

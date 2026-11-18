@@ -219,6 +219,10 @@ private:
   void auditionTrack(const std::string& trackId);
   doc::SampleIndex sampleIndex_;
   bool hasSampleIndex_ = false;
+  // The index file could not be read and could not be renamed either: nothing is written over it (saveSampleIndex
+  // tries the rename again first).
+  bool sampleIndexBlocked_ = false;
+  static std::string sampleIndexStamp();
   struct SampleScan {
     std::atomic<int> state{0};  // 0 running, 1 done, 2 failed
     std::atomic<int> done{0}, total{0};

@@ -4033,8 +4033,9 @@ juce::File MainComponent::sampleIndexFile() const {
 void MainComponent::loadSampleIndex() {
   const juce::File f = sampleIndexFile();
   if (!f.existsAsFile()) return;
+  const std::string text = f.loadFileAsString().toStdString();
   try {
-    doc::SampleIndex index = doc::indexFromJson(nlohmann::json::parse(f.loadFileAsString().toStdString()));
+    doc::SampleIndex index = doc::indexFromJson(nlohmann::json::parse(text));
     if (juce::File(u8(index.root)) != sampleLibraryFolder()) {  // another folder was chosen since: its catalogue stays (by content)
       sampleIndex_.overrides = std::move(index.overrides);
       return;
@@ -4043,9 +4044,31 @@ void MainComponent::loadSampleIndex() {
     hasSampleIndex_ = true;
     applySamplerFolders();
   } catch (const std::exception& e) {
-    logLine(u8("Sample index not read (it is made again): ") + u8(e.what()));
+    // The index is there and cannot be read (made by another version of Core, damaged). It used to be made again
+    // from nothing and written over, and the corrections made by hand went with it (2026-11-18, D5). Now the
+    // corrections that can still be read are taken from it, the file gets another name (never deleted, never
+    // written over), and a small index holding them is written at once: closing Core before the scan ends no
+    // longer costs them.
+    sampleIndex_.overrides = doc::salvageOverrides(text);
+    const juce::String kept((int)sampleIndex_.overrides.size());
+    const std::filesystem::path aside = doc::setUnreadableIndexAside(pathOf(f), sampleIndexStamp());
+    sampleIndexBlocked_ = aside.empty();
+    juce::String said;
+    if (aside.empty()) {
+      said = u8("Sample index not read (") + u8(e.what()) + u8(") and it could not be renamed: it stays as it is and no new index is written over it. ") +
+             kept + u8(" correction(s) of yours were read from it.");
+    } else {
+      said = u8("Sample index not read (") + u8(e.what()) + u8("): it is kept as ") + fileOf(aside).getFileName() +
+             u8(" and a new one is made. ") + kept + u8(" correction(s) of yours were read from it.");
+      if (!sampleIndex_.overrides.empty()) saveSampleIndex();
+    }
+    logLine(said);
+    notice_ = said;
   }
 }
+
+// "20261118-022300": for the name of an index set aside (doc::setUnreadableIndexAside).
+std::string MainComponent::sampleIndexStamp() { return juce::Time::getCurrentTime().formatted("%Y%m%d-%H%M%S").toStdString(); }
 
 // Reads the library on a thread of its own (files that did not change keep what the last scan read);
 // the window goes on working and takes the result in collectSampleScan().
@@ -4197,6 +4220,14 @@ void MainComponent::collectSampleAnalysis() {
 
 void MainComponent::saveSampleIndex() {
   try {
+    if (sampleIndexBlocked_) {  // an index that could not be read is still in the way: tried again, never written over
+      if (sampleIndexFile().existsAsFile() && doc::setUnreadableIndexAside(pathOf(sampleIndexFile()), sampleIndexStamp()).empty()) {
+        logLine(u8("Sample index not saved: the index that could not be read is still in its place and is not written over (") +
+                sampleIndexFile().getFullPathName() + u8(")"));
+        return;
+      }
+      sampleIndexBlocked_ = false;
+    }
     sampleIndexFile().getParentDirectory().createDirectory();
     // replaceWithText writes a temporary file and then swaps it in: a failure leaves the old index readable.
     if (!sampleIndexFile().replaceWithText(u8(doc::indexToJson(sampleIndex_).dump(1))))
