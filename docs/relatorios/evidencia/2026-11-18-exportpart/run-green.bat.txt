@@ -1,0 +1,25 @@
+@echo off
+REM Targeted BUG-SWEEP-02 green run: rebuild, run the new cases, then the whole render-touching suites.
+set VSLANG=1033
+chcp 65001 >nul
+call "C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Auxiliary\Build\vcvars64.bat" > "D:\Core-build\flawless-exportpart-evidence\vcvars-green.log" 2>&1 || exit /b 1
+cmake --build "D:/Core-build/flawless-exportpart" --target audit2_tests hunt_tests audit_tests --parallel 6 || exit /b 1
+cd /d "D:\Core-build\flawless-exportpart\tests"
+echo === FILTERED BUG-SWEEP-02 ===
+"D:\Core-build\flawless-exportpart\tests\audit2_tests.exe" "BUG-SWEEP-02"
+set RC1=%ERRORLEVEL%
+echo === FULL audit2_tests ===
+"D:\Core-build\flawless-exportpart\tests\audit2_tests.exe"
+set RC2=%ERRORLEVEL%
+echo === FULL hunt_tests ===
+"D:\Core-build\flawless-exportpart\tests\hunt_tests.exe"
+set RC3=%ERRORLEVEL%
+echo === FULL audit_tests ===
+"D:\Core-build\flawless-exportpart\tests\audit_tests.exe"
+set RC4=%ERRORLEVEL%
+echo RCS=%RC1%,%RC2%,%RC3%,%RC4%
+if not "%RC1%"=="0" exit /b 1
+if not "%RC2%"=="0" exit /b 1
+if not "%RC3%"=="0" exit /b 1
+if not "%RC4%"=="0" exit /b 1
+exit /b 0

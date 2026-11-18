@@ -1,0 +1,106 @@
+-- The CXX compiler identification is MSVC 19.51.36260.0
+-- The C compiler identification is MSVC 19.51.36260.0
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: C:/Program Files (x86)/Microsoft Visual Studio/18/BuildTools/VC/Tools/MSVC/14.51.36231/bin/Hostx64/x64/cl.exe - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: C:/Program Files (x86)/Microsoft Visual Studio/18/BuildTools/VC/Tools/MSVC/14.51.36231/bin/Hostx64/x64/cl.exe - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+CMake Warning (author) at C:/Users/vk_do/AppData/Local/Microsoft/WinGet/Packages/Kitware.CMake_Microsoft.Winget.Source_8wekyb3d8bbwe/cmake-4.4.4-windows-x86_64/share/cmake-4.4/Modules/FetchContent.cmake:1386 (message):
+  The DOWNLOAD_EXTRACT_TIMESTAMP option was not given and policy CMP0135 is
+  not set.  The policy's OLD behavior will be used.  When using a URL
+  download, the timestamps of extracted files should preferably be that of
+  the time of extraction, otherwise code that depends on the extracted
+  contents might not be rebuilt if the URL changes.  The OLD behavior
+  preserves the timestamps from the archive instead, but this is usually not
+  what you want.  Update your project to the NEW behavior or specify the
+  DOWNLOAD_EXTRACT_TIMESTAMP option with a value of true to avoid this
+  robustness issue.
+Call Stack (most recent call first):
+  CMakeLists.txt:64 (FetchContent_Declare)
+This warning is for project developers.  Use -Wno-author to suppress it.
+
+-- Configuring juceaide
+-- Building juceaide
+-- Exporting juceaide
+-- Testing juceaide
+-- Finished setting up juceaide
+-- Configuring done (46.6s)
+-- Generating done (0.7s)
+-- Build files have been written to: D:/Core-build/flawless-exportpart
+[0/2] Re-checking globbed directories...
+[1/48] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\tempo_map.cpp.obj
+[2/48] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\engine.cpp.obj
+[3/48] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\render_job.cpp.obj
+[4/48] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\assets.cpp.obj
+[5/48] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\graph.cpp.obj
+[6/48] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\dsp\instruments.cpp.obj
+[7/48] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\project.cpp.obj
+[8/48] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\dsp\effects.cpp.obj
+[9/48] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\dsp\loudness.cpp.obj
+[10/48] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\server.cpp.obj
+D:\CORE\CORE\.agents\worktrees\flawless-exportpart\engine\src\core\server.cpp(728): warning C4996: 'std::filesystem::u8path': warning STL4021: The std::filesystem::u8path() overloads are deprecated in C++20. The constructors of std::filesystem::path provide equivalent functionality via construction from u8string, u8string_view, or iterators with value_type char8_t. You can define _SILENCE_CXX20_U8PATH_DEPRECATION_WARNING or _SILENCE_ALL_CXX20_DEPRECATION_WARNINGS to suppress this warning.
+[11/48] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\dsp\registry.cpp.obj
+[12/48] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\qualify.cpp.obj
+[13/48] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\dsp\output_guard.cpp.obj
+[14/48] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\dsp\analyzer.cpp.obj
+[15/48] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\io\wav.cpp.obj
+D:\CORE\CORE\.agents\worktrees\flawless-exportpart\engine\src\io\wav.cpp(33): warning C4996: '_wfopen': This function or variable may be unsafe. Consider using _wfopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+D:\CORE\CORE\.agents\worktrees\flawless-exportpart\engine\src\io\wav.cpp(71): warning C4996: 'strerror': This function or variable may be unsafe. Consider using strerror_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+[16/48] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\io\audio_file.cpp.obj
+[17/48] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\history.cpp.obj
+[18/48] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\sha256.cpp.obj
+[19/48] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\storage.cpp.obj
+[20/48] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\assets.cpp.obj
+[21/48] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\autosave.cpp.obj
+[22/48] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\templates.cpp.obj
+[23/48] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\document.cpp.obj
+[24/48] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\edit.cpp.obj
+[25/48] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\samples.cpp.obj
+[26/48] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\groove.cpp.obj
+[27/48] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\sample_analysis.cpp.obj
+[28/48] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\score.cpp.obj
+[29/48] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\stutter.cpp.obj
+[30/48] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\randomize.cpp.obj
+[31/48] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\bounce.cpp.obj
+[32/48] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\pattern_tools.cpp.obj
+[33/48] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\follow.cpp.obj
+[34/48] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\template_sheet.cpp.obj
+[35/48] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\pattern_rack.cpp.obj
+[36/48] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\pcore.cpp.obj
+[37/48] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\plugin_refs.cpp.obj
+[38/48] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\roles.cpp.obj
+[39/48] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\core_plugins.cpp.obj
+[40/48] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\bitwig.cpp.obj
+[41/48] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\role_tools.cpp.obj
+[42/48] Linking CXX static library engine\core_engine_lib.lib
+[43/48] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\midi.cpp.obj
+[44/48] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\translation.cpp.obj
+[45/48] Linking CXX static library app\domain\core_domain.lib
+[46/48] Building CXX object tests\CMakeFiles\audit2_tests.dir\audit2_tests.cpp.obj
+[47/48] Linking CXX executable tests\audit2_tests.exe
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-exportpart\tests\audit2_tests.cpp:269: fs::exists(target + ".part")
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-exportpart\tests\audit2_tests.cpp:270: readFileBytes(target + ".part") == std::string("valuable previous partial export"): medido , esperado valuable previous partial export
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-exportpart\tests\audit2_tests.cpp:273: partNamesIn(dir).size() == (size_t)1: medido 0, esperado 1
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-exportpart\tests\audit2_tests.cpp:296: fs::exists(target + ".part")
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-exportpart\tests\audit2_tests.cpp:297: readFileBytes(target + ".part") == std::string("valuable previous partial export"): medido , esperado valuable previous partial export
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-exportpart\tests\audit2_tests.cpp:298: partNamesIn(dir).size() == (size_t)1: medido 0, esperado 1
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-exportpart\tests\audit2_tests.cpp:318: fs::exists(target + ".part")
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-exportpart\tests\audit2_tests.cpp:319: readFileBytes(target + ".part") == std::string("valuable previous partial export"): medido , esperado valuable previous partial export
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-exportpart\tests\audit2_tests.cpp:320: partNamesIn(dir).size() == (size_t)1: medido 0, esperado 1
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-exportpart\tests\audit2_tests.cpp:333: fs::exists(target + ".part")
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-exportpart\tests\audit2_tests.cpp:334: readFileBytes(target + ".part") == std::string("valuable previous partial export"): medido , esperado valuable previous partial export
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-exportpart\tests\audit2_tests.cpp:335: partNamesIn(dir).size() == (size_t)1: medido 0, esperado 1
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-exportpart\tests\audit2_tests.cpp:367: working(seenA).size() >= (size_t)2
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-exportpart\tests\audit2_tests.cpp:368: working(seenB).size() >= (size_t)2
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-exportpart\tests\audit2_tests.cpp:371: fs::exists(target + ".part")
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-exportpart\tests\audit2_tests.cpp:372: readFileBytes(target + ".part") == std::string("valuable previous partial export"): medido , esperado valuable previous partial export
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-exportpart\tests\audit2_tests.cpp:375: partNamesIn(dir).size() == (size_t)1: medido 0, esperado 1
+FAIL BUG-SWEEP-02: a successful export never consumes a preexisting .part and cleans up only its own working file
+FAIL BUG-SWEEP-02: a failed or cancelled export keeps the preexisting .part and removes only its own working files
+FAIL BUG-SWEEP-02: two concurrent exports of the same target never share a working path
+3 testes, 30 verificacoes, 17 falhas
