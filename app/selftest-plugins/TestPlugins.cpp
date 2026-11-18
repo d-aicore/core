@@ -1,15 +1,18 @@
 // The test plugins (one file, built once per plugin): CORE_TEST_SYNTH (a sine per note), CORE_TEST_GAIN or
 // CORE_TEST_DELAY (a delay that reports it as latency), CORE_TEST_THROW (a gain that throws after 0.1 s, audit 6.4),
 // CORE_TEST_CRASH (an instrument that crashes after 0.1 s), CORE_TEST_FAULT (an effect that crashes on demand in a
-// chosen entry point outside processBlock, or in a parameter getter). All have one parameter, "gain" (0..1, 0.5),
+// chosen entry point outside processBlock, or in a parameter getter, or stalls once inside processBlock with
+// CORE_TEST_FAULT_HANG). All have one parameter, "gain" (0..1, 0.5),
 // saved in their state, and the generic editor. The synth's note 0 plays nothing: it tells the host that its state
 // changed without moving a parameter, as a plugin does when a sample or a wavetable is loaded in its window.
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <array>
 #include <atomic>
+#include <chrono>
 #include <cmath>
 #include <cstdlib>
 #include <stdexcept>
+#include <thread>
 #if CORE_TEST_CRASH_RESTART
 // The VST3 host context (IComponentHandler, kReloadComponent) so the plugin can ask the host to restart it, as a
 // real plugin does from its editor or a background thread. The SDK include dir comes with juce_audio_processors.
@@ -291,7 +294,18 @@ public:
     return l.getMainOutputChannelSet() == juce::AudioChannelSet::stereo() && l.getMainInputChannelSet() == juce::AudioChannelSet::stereo();
   }
   void prepareToPlay(double, int) override {}
-  void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) override { buffer.applyGain(gain_->get()); played_ += buffer.getNumSamples(); faultHasPlayed.store(true); }
+  void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) override {
+    buffer.applyGain(gain_->get());
+    played_ += buffer.getNumSamples();
+    faultHasPlayed.store(true);
+    // CORE_TEST_FAULT_HANG: once it has played, stall inside processBlock for 8 s without crashing (a plugin
+    // stuck on synchronous I/O or an internal lock). JUCE's process lock stays held the whole time: a host
+    // that waits for it in reset() answers nothing until the plugin returns (BUG-STOP-HANG).
+    if (played_ > 0 && !hangDone_ && envSet("CORE_TEST_FAULT_HANG")) {
+      hangDone_ = true;
+      std::this_thread::sleep_for(std::chrono::seconds(8));
+    }
+  }
   void getStateInformation(juce::MemoryBlock& data) override {
     if (played_ > 0 && envSet("CORE_TEST_FAULT_GETSTATE")) crashNow();
     TestPlugin::getStateInformation(data);
@@ -307,6 +321,7 @@ public:
   }
 private:
   int64_t played_ = 0;
+  bool hangDone_ = false;  // the processBlock stall fires once per instance
 };
 juce::AudioProcessor* make() { return new Fault(); }
 #endif

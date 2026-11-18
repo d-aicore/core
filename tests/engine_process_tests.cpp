@@ -387,6 +387,46 @@ TEST("serve: a plugin that crashes in reset is silenced, the engine answers and 
   CHECK_EQ(end.get(), std::string("The engine exited (code 0)."));
 }
 
+TEST("serve: a plugin stuck in processBlock does not hold Stop hostage (bounded reset)") {
+  // BUG-STOP-HANG: a plugin that stalls inside processBlock without crashing (synchronous I/O, a hung internal
+  // lock) keeps JUCE's process lock held. reset() waits for that lock on the message thread and the vendored
+  // acquire only gives up when the host marks the instance crashed — which a mere stall never does. Stop held
+  // the serve lock while it waited, so the engine answered nothing until the plugin returned (8 s here).
+  EnvVar fault("CORE_TEST_FAULT_HANG", "1");
+  const json faultPlugin = scanFirst(CORE_TEST_FAULT_VST3), synth = scanFirst(CORE_TEST_SYNTH_VST3);
+  CHECK(faultPlugin.is_object());
+  CHECK(synth.is_object());
+  if (!faultPlugin.is_object() || !synth.is_object()) return;
+
+  EndReason end;
+  EngineClient engine(engineOptions());
+  end.attach(engine);
+  engine.start();
+  const json loaded = engine.command("project.load", {{"project", song(json::array({pluginTrack("fault", faultPlugin), pluginTrack("synth", synth)}))}}, 30000ms);
+  CHECK(loaded.value("missing", json::array()).empty());
+  engine.command("engine.start", {{"backend", "null"}});
+  engine.command("transport.play");
+  std::this_thread::sleep_for(300ms);  // the stall fires on the block after the first: the audio thread is inside it now
+
+  // Stop must answer within its budget even though the plugin is stuck: the reset watchdog silences it
+  // (markCrashed unblocks the vendored acquire) instead of waiting on the process lock. Before the fix: -1.
+  const double stopMs = answersWithin(engine, "transport.stop", json::object(), 5000ms);
+  CHECK(stopMs >= 0);
+  CHECK(stopMs < 4500);  // the watchdog's per-plugin budget (2 s) plus the fade wait and the healthy resets
+  json failed;
+  CHECK(answersWithin(engine, "plugins.failed", json::object(), 2000ms, &failed) >= 0);
+  CHECK(failedAsCrash(failed, "track:fault"));
+  CHECK(answersWithin(engine, "engine.stats", json::object(), 2000ms) >= 0);
+  // The audio thread stays inside the stuck plugin until it returns (the host cannot interrupt plugin code);
+  // once it does, the song plays on without it. Wait for the 8 s stall to end, bounded.
+  engine.command("transport.play");
+  bool resumed = false;
+  for (int i = 0; i < 40 && !resumed; ++i) { std::this_thread::sleep_for(250ms); resumed = playingOn(engine); }
+  CHECK(resumed);
+  engine.close();
+  CHECK_EQ(end.get(), std::string("The engine exited (code 0)."));
+}
+
 TEST("serve: a plugin that crashes opening its editor is silenced, the engine answers and plays on") {
   EnvVar fault("CORE_TEST_FAULT_EDITOR", "1");
   const json faultPlugin = scanFirst(CORE_TEST_FAULT_VST3), synth = scanFirst(CORE_TEST_SYNTH_VST3);
