@@ -612,12 +612,12 @@ TEST("BUG-SWEEP-10 positive: a sample on a none track becomes a user-sample host
   CHECK_EQ(pd.findTrack(pid)->instrument.kind, std::string("plugin"));
 }
 
-// BUG-SWEEP-11 (2026-11-18): the Randomize sound menu item was enabled for any styled song, but the sound axis
-// (K) only changes Core's own built-in instruments, which left the engine (2026-11-16). On a plugin-only styled
-// song it threw ("no built-in sound to change") — an apparently-active option that does nothing (PROD :83). The
-// axis is disabled when no built-in target fits (soundAxisAvailable), and asking for it alone is a graceful no-op.
-// Making it work on plugins is an owner decision (the K contract is built-in-only).
-TEST("BUG-SWEEP-11: Randomize sound on a plugin-only styled song is a graceful no-op and the axis is unavailable") {
+// BUG-SWEEP-11 (2026-11-18, owner ratified: «randomize sobre parâmetros dos plugins dos papéis (undoável);
+// escondido quando não há plugins.»): the sound axis (K) randomizes the ROLE PLUGINS' PARAMETERS. It is available
+// when a role track is played by a plugin (and for a legacy built-in song, the old K contract preserved); it is
+// HIDDEN when there are no plugins and no legacy built-in. Without the engine's parameter catalog the plugin path
+// is a graceful no-op (nothing known to change), never an error. The positive change + Undo proof is below.
+TEST("BUG-SWEEP-11: the sound axis targets role plugins, is hidden with no plugins, and keeps legacy built-ins") {
   Document d = newTemplateDocument();
   d.extra["template"] = {{"style", "Dark psycore"}};
   d.lengthTicks = 32 * 4 * kPpq;
@@ -627,18 +627,116 @@ TEST("BUG-SWEEP-11: Randomize sound on a plugin-only styled song is a graceful n
   for (auto& s : d.sections) s.extra["energy"] = 4;
   const json synth = {{"id", "synth-a"}, {"file", "synth-a.vst3"}, {"name", "Synth A"}};
   for (auto& t : d.tracks) replaceInstrumentWithPlugin(d, t.id, synth);  // every track played by a plugin
-  CHECK(!soundAxisAvailable(d));  // no built-in target: the menu disables the axis
+  CHECK(soundAxisAvailable(d));  // role plugins: the axis has a target (the menu shows it)
   bool threw = false;
   std::vector<std::string> changes;
   try { changes = randomizeStyle(d, {2, 2, {"sound"}}); } catch (const std::exception&) { threw = true; }
-  CHECK(!threw);           // before: an error dialog from an enabled menu item
-  CHECK(changes.empty());  // nothing to change, gracefully
+  CHECK(!threw);           // no catalog: nothing known to change, gracefully (never an error dialog)
+  CHECK(changes.empty());
   // A legacy built-in song still has the sound axis (the K contract is preserved for legacy load).
   Document b = newTemplateDocument();
   b.extra["template"] = {{"style", "Dark psycore"}};
   b.tracks[0].instrument.kind = "builtin";  // kick
   b.tracks[0].instrument.name = "kick";
   CHECK(soundAxisAvailable(b));
+  // A song with no plugins (the template's silent "none" tracks) and no legacy built-in: the axis is hidden.
+  Document none = newTemplateDocument();
+  none.extra["template"] = {{"style", "Dark psycore"}};
+  CHECK(!soundAxisAvailable(none));
+  CHECK(soundAxisPluginTracks(none).empty());
+  CHECK_EQ(soundAxisPluginTracks(d).size(), d.tracks.size());  // every role track is a plugin target
+}
+
+// BUG-SWEEP-11 positive (owner ratified 2026-11-18): Randomize sound changes the role plugins' parameters within
+// their ranges, as ONE undoable edit (a constant "vst:<id>" curve the engine plays over the plugin). One Undo
+// restores the song exactly. A parameter the user already automated keeps its curve (their work is never taken).
+TEST("BUG-SWEEP-11 positive: Randomize sound changes role plugin parameters, bounded and stepped, one Undo restores") {
+  Document d = newTemplateDocument();
+  d.extra["template"] = {{"style", "Dark psycore"}};
+  d.lengthTicks = 32 * 4 * kPpq;
+  for (auto& t : d.tracks) for (auto& c : t.clips) c.lengthTicks = d.lengthTicks;
+  addSection(d, "Intro", 0, 16 * 4 * kPpq);
+  addSection(d, "Drop", 16 * 4 * kPpq, 16 * 4 * kPpq);
+  for (auto& s : d.sections) s.extra["energy"] = 4;
+  const json synth = {{"id", "synth-a"}, {"file", "synth-a.vst3"}, {"name", "Synth A"}};
+  for (auto& t : d.tracks) replaceInstrumentWithPlugin(d, t.id, synth);
+  // The engine's catalog for each role plugin: a continuous gain and a 3-position mode (steps 3: 0, 0.5, 1).
+  RandomizeOptions o; o.seed = 7; o.strength = 3; o.axes = {"sound"};
+  for (const auto& t : d.tracks) {
+    PluginTrackParams pp; pp.trackId = t.id;
+    pp.params.push_back({"gain", "Gain", 0.5, 0});
+    pp.params.push_back({"mode", "Mode", 0.0, 3});
+    o.pluginParams.push_back(pp);
+  }
+  // A user curve on the kick's gain: randomize must keep it untouched (the user's work).
+  setAutomationPoint(d, "kick", "vst:gain", 0, 0.2);
+  setAutomationPoint(d, "kick", "vst:gain", 4 * kPpq, 0.8);
+  const Document before = d;
+  History h(before);
+  const std::vector<std::string> changes = randomizeStyle(d, o);
+  CHECK(!changes.empty());
+  h.commit(d, "Randomize sound");
+  // Some role plugin parameter changed: a constant "vst:<id>" curve at tick 0, value within 0..1, on its steps.
+  int changed = 0;
+  bool bounded = true, steppedOk = true;
+  for (const auto& t : d.tracks)
+    for (const auto& a : t.automation) {
+      if (a.param.rfind("vst:", 0) != 0) continue;
+      if (t.id == "kick" && a.param == "vst:gain") continue;  // the user's curve, checked below
+      CHECK_EQ(a.points.size(), (size_t)1);
+      CHECK_EQ(a.points[0].tick, (int64_t)0);
+      const double v = a.points[0].value;
+      bounded = bounded && v >= 0 && v <= 1;
+      if (a.param == "vst:mode") steppedOk = steppedOk && std::abs(v * 2 - std::round(v * 2)) < 1e-9;
+      ++changed;
+    }
+  CHECK(changed > 0);
+  CHECK(bounded);
+  CHECK(steppedOk);
+  // The user's kick gain curve is untouched (both points, their values).
+  const Automation* kg = findAutomation(d, "kick", "vst:gain");
+  CHECK(kg != nullptr);
+  if (kg) {
+    CHECK_EQ(kg->points.size(), (size_t)2);
+    CHECK_NEAR(kg->points[0].value, 0.2, 1e-9);
+    CHECK_NEAR(kg->points[1].value, 0.8, 1e-9);
+  }
+  // The projection carries the new curves to the engine (a vst:mode envelope the randomize added).
+  const json proj = toProjection(d);
+  bool hasVst = false;
+  for (const auto& tr : proj["tracks"])
+    for (const auto& e : tr["envelopes"])
+      if (e["param"].get<std::string>() == "vst:mode") hasVst = true;
+  CHECK(hasVst);
+  // One Undo restores the song exactly: the random curves go, the user's curve stays as it was.
+  CHECK(h.canUndo());
+  h.undo();
+  CHECK_EQ(canon(h.current()), canon(before));
+  // The same seed gives the same result (deterministic); a different seed differs.
+  Document d2 = before;
+  randomizeStyle(d2, o);
+  CHECK_EQ(canon(d2), canon(d));
+  Document d3 = before;
+  RandomizeOptions o3 = o; o3.seed = 8;
+  randomizeStyle(d3, o3);
+  CHECK(canon(d3) != canon(d));
+  // "Try again": a second Randomize sound redraws the curves it wrote (they are marked as its own) and still
+  // never takes the user's curve; one Undo brings the first randomize back.
+  Document again = d;
+  History h2(d);
+  RandomizeOptions o2 = o; o2.seed = 9;
+  const std::vector<std::string> changes2 = randomizeStyle(again, o2);
+  CHECK(!changes2.empty());
+  h2.commit(again, "Randomize sound");
+  const Automation* kg2 = findAutomation(again, "kick", "vst:gain");
+  CHECK(kg2 != nullptr);
+  if (kg2) {
+    CHECK_EQ(kg2->points.size(), (size_t)2);
+    CHECK_NEAR(kg2->points[0].value, 0.2, 1e-9);
+    CHECK_NEAR(kg2->points[1].value, 0.8, 1e-9);
+  }
+  h2.undo();
+  CHECK_EQ(canon(h2.current()), canon(d));
 }
 
 // Data loss (2026-11-18), S5: an undo step is a whole document, plugin states included. Undo put the old state of

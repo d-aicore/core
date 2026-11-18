@@ -4351,6 +4351,24 @@ void MainComponent::randomizeSong(int strength, const std::string& axis) {
   o.seed = (uint64_t)(juce::Random::getSystemRandom().nextInt64() & 0x1FFFFFFFFFFFFFLL) | 1;  // fits a JSON number exactly
   o.strength = strength;
   if (!axis.empty()) o.axes = {axis};  // tempo (J) or sound (K) alone: the groove stays
+  // K on the role plugins (BUG-SWEEP-11, owner ratified 2026-11-18): the engine's parameter catalog for each
+  // plugin track, so the sound axis randomizes their parameters. No answer (engine stopped, plugin not loaded):
+  // an empty catalog, and the domain's plugin path is a graceful no-op — never an error.
+  if (axis.empty() || axis == "sound")
+    for (const auto& trackId : doc::soundAxisPluginTracks(next)) {
+      doc::PluginTrackParams pp;
+      pp.trackId = trackId;
+      for (const auto& p : session_->pluginParams(doc::pluginKey(trackId), 1500)) {
+        if (!p.is_object()) continue;
+        doc::PluginParamInfo pi;
+        pi.id = p.value("id", std::string());
+        pi.name = p.value("name", std::string());
+        pi.value = p.value("value", 0.5);
+        pi.steps = p.value("steps", 0);
+        if (!pi.id.empty()) pp.params.push_back(std::move(pi));
+      }
+      if (!pp.params.empty()) o.pluginParams.push_back(std::move(pp));
+    }
   std::vector<std::string> changes;
   try {
     changes = doc::randomizeStyle(next, o);
@@ -5450,7 +5468,10 @@ juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&) {
     menu.addItem(juce::PopupMenu::Item(u8("Randomize (medium)")).setID(kRandomize + 2).setEnabled(styled));
     menu.addItem(juce::PopupMenu::Item(u8("Randomize (bold)")).setID(kRandomize + 3).setEnabled(styled));
     menu.addItem(juce::PopupMenu::Item(u8("Randomize tempo per section")).setID(kRandomize + 4).setEnabled(styled));
-    menu.addItem(juce::PopupMenu::Item(u8("Randomize sound (built-in instruments)")).setID(kRandomize + 5).setEnabled(styled && doc::soundAxisAvailable(history_.current())));
+    // Randomize sound (K): the role plugins' parameters (owner ratified 2026-11-18), or a legacy built-in song's
+    // instruments. HIDDEN when the song has neither — no apparently-active option that does nothing (PROD :83).
+    if (styled && doc::soundAxisAvailable(history_.current()))
+      menu.addItem(juce::PopupMenu::Item(u8("Randomize sound")).setID(kRandomize + 5));
   }
   // Shortcut hints on the right, as in other Windows programs.
   juce::PopupMenu::MenuItemIterator it(menu);

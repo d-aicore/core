@@ -1326,7 +1326,7 @@
   "Randomize (seed {}": "Baralhar (semente {}",
   "Randomize (subtle)": "Baralhar (subtil)",
   "Randomize changed nothing this time: try again or a stronger one.": "O Baralhar não mudou nada desta vez: tenta outra vez ou um mais forte.",
-  "Randomize sound (built-in instruments)": "Baralhar o som (instrumentos do Core)",
+  "Randomize sound": "Baralhar o som",
   "Randomize tempo per section": "Baralhar o andamento por secção",
   "Randomize {}": "Baralhar {}",
   "Randomized (Undo to go back): {}": "Baralhado (Anular para voltar atrás): {}",
