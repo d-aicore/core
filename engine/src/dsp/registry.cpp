@@ -14,7 +14,6 @@ NativeRegistry& nativePlugins() {
   static NativeRegistry reg = [] {
     NativeRegistry r;
     registerNativeInstruments(r);
-    registerNativeEffects(r);
     return r;
   }();
   return reg;

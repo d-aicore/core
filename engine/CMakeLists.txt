@@ -15,7 +15,7 @@ endif()
 # Engine core: no audio device, no OS calls. Used by the app, the tests and the measurements.
 add_library(core_engine_lib STATIC
   src/core/project.cpp src/core/tempo_map.cpp src/core/graph.cpp src/core/engine.cpp src/core/server.cpp src/core/render_job.cpp src/core/assets.cpp src/core/qualify.cpp
-  src/dsp/instruments.cpp src/dsp/effects.cpp src/dsp/registry.cpp src/dsp/loudness.cpp src/dsp/output_guard.cpp src/dsp/analyzer.cpp src/io/wav.cpp src/io/audio_file.cpp)
+  src/dsp/instruments.cpp src/dsp/registry.cpp src/dsp/loudness.cpp src/dsp/output_guard.cpp src/dsp/analyzer.cpp src/io/wav.cpp src/io/audio_file.cpp)
 target_include_directories(core_engine_lib PUBLIC src third_party)
 
 # miniaudio in its own unit (big header, compiled once).

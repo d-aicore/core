@@ -26,7 +26,7 @@ void registerNativeInstruments(NativeRegistry& reg) {
   // A placeholder spec keeps them "known" to validation; the graph gives them a silent instrument.
   const std::vector<ParamSpec> none{{"_", 0, 0, 0, ""}};
   const std::function<std::unique_ptr<Instrument>(double)> silent = [](double sr) { return std::make_unique<Silent>(sr); };
-  for (const char* id : {"plugin", "audio", "bus", "none"}) reg.add({id, NativeKind::Instrument, 1, true, none, silent, nullptr});
+  for (const char* id : {"plugin", "audio", "bus", "none"}) reg.add({id, NativeKind::Instrument, 1, true, none, silent});
 }
 
 std::unique_ptr<Instrument> makeInstrument(const std::string& name, double sampleRate) {
