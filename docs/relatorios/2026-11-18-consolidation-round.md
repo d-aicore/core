@@ -1,5 +1,10 @@
 # Report — 2026-11-18 — Consolidation round: 14 fix branches integrated and gated
 
+> **FINALIZED (same day, later session):** the 3 newer branches (`flawless-crash` D @`075b6dd`,
+> `flawless-writesafety` @`b035584`, `flawless-deadcode2` @`3542bba`) were merged on top and the FINAL
+> integrated tip re-gated VERDE in both modes — **202 cases / 3059 verifications / 0 failures**.
+> See "Finalization round" at the end of this report; the 14-branch record below is kept as measured.
+
 ## What was done
 
 Consolidated the PM "flawless" team's 14 ready fix branches into one integration branch and gated the
@@ -250,3 +255,230 @@ running writesafety16 / deadcode2 streams integrate in a later round.
 Documentation only: this report and one index row in `docs/relatorios/README.md` (committed in the
 integration worktree). The 14 merge commits carry the product/test changes. No `ESTADO.md` edit, no push,
 no `git stash`, no edit to the main checkout or to `D:/Core-deps`.
+
+---
+
+# Finalization round — 3 newer branches merged, FINAL integrated tip re-gated
+
+## What was done (finalization)
+
+The consolidation above was done and gated at `29ec5e0` (report commit `56e173f`). Three branches landed
+afterwards; this session merged their HEADs into `integration/flawless-round` and re-gated the FINAL
+integrated tip. The PM verifies and pushes (nothing was pushed here).
+
+- Worktree `D:/CORE/CORE/.agents/worktrees/integration`, branch `integration/flawless-round`,
+  started at `56e173f` (clean). Base `ed4642e`. The main checkout `D:/CORE/CORE` was never edited
+  (the scribe's uncommitted `ESTADO.md` / `docs/relatorios/README.md` and untracked scratch left untouched).
+- **Integrated code tip: `fcf38e0ec61f367e4db1709a4e5c57fda3d52baf` (`fcf38e0`)**. The FINAL HEAD is the
+  commit carrying this updated report (docs-only on top of `fcf38e0`); it was re-gated VERDE in both modes
+  with `version == HEAD`, no `.modified` (evidence `head-sha-finaltip2.txt`, `version-finaltip2.txt`,
+  `gate-resumo-*-finaltip2.txt`).
+- Build `D:/Core-build/integration` (MSVC Release / Ninja, patched JUCE 9.0.5 from `D:/Core-deps/JUCE-9.0.5`).
+  Evidence `D:/Core-build/integration-evidence/` (files suffixed `-final2` = code tip `fcf38e0`,
+  `-finaltip2` = the report commit).
+- Method: 3 sequential `git merge --no-ff` commits, conflicts resolved preserving every fix and test;
+  no `git stash`; no push; `D:/Core-deps` not modified (read-only verification only).
+
+## The 3 newer branches merged (order, branch HEAD, merge commit)
+
+| # | Branch | HEAD merged | Merge commit | Scope |
+| --- | --- | --- | --- | --- |
+| 15 | `flawless-crash` (D follow-up) | `075b6dd` | `7b33bfe` | item 1-D: `cc5b874` Core `markCrashed()`→`getVST3Client()->markCrashedByHost()`; `CORE_TEST_CRASH_RESTART` selftest plugin + CMake; engine_process D serve test; REGENERATED 10-hunk `ci/patches/juce-failed-plugin-restart.patch` (crash-aware acquire `enterProcessMutexUnlessCrashed`); report update. A/B/C were already in via `c61bcd1` |
+| 16 | `flawless-writesafety` | `b035584` | `f5f55c7` | BUG-SWEEP-16: `storage.cpp/hpp` `writeFileSafely` routing + test-only `setWriteFaultForTests` seam; `midi.cpp` export, `pattern_tools.cpp` preset, `pattern_rack.cpp` template, `roles.cpp` writes; 5 new tests (bug 3 + midi 2); report + evidence |
+| 17 | `flawless-deadcode2` | `3542bba` | `fcf38e0` | CLEAN-07: `app/previews/` + `core_previews` target deleted, `PatternWaves`/`patternWaves_`/`paintClipWave` removed (clips draw their notes unconditionally), CoreApp links `core_engine_lib` explicitly; BUG-LEGACY-RISE: `scoreRises` removed (score.hpp/cpp + SCorePanel); self-test steps 19/35 characterize note drawing + audio-clip waveform; domain score test (1/53); hunt U-5 removed-feature case out (−1/−2); tidy_scope delinked; report + evidence |
+
+All 16 distinct branch HEADs (14 + these 3, crash counted once at its newer HEAD) are ancestors of the
+integrated tip (`git merge-base --is-ancestor` verified for each).
+
+## Conflict resolutions (finalization, per hotspot)
+
+Every conflict was an adjacent append, a disjoint region, or a newer fix of the same region superseding an
+older formulation — no genuine semantic overlap required stopping.
+
+- **`ci/patches/juce-failed-plugin-restart.patch`**: took the REGENERATED 10-hunk D version from
+  `flawless-crash@075b6dd` (auto-merge; byte-identical to the branch version, `git diff --quiet` confirmed).
+  10 hunks, `markCrashedByHost` + `enterProcessMutexUnlessCrashed` present. The old inert patch is gone.
+- **`engine/src/plugins/juce_host.cpp`**: B crash guards (parameter getter, window, state/reset/editor)
+  AND D `markCrashed()`→`markCrashedByHost()` wiring both present (auto-merged; D adds the atomic call at
+  `:135`, guards unchanged).
+- **`tests/engine_process_tests.cpp`**: A crash tests + B fault tests + D restart test combined (append;
+  10 TESTs, D test under `#ifdef CORE_TEST_CRASH_RESTART_VST3`).
+- **`app/selftest-plugins/TestPlugins.cpp` + `CMakeLists.txt`**: `CORE_TEST_CRASH_RESTART` variant +
+  `CoreTestCrashRestart` target/registration added (auto-merged).
+- **`app/desktop/src/MainComponent.cpp`**: kept ALL regions — menu32's `MenuIds.h` routing (4582–4761),
+  crash C's Restart offer + self-test steps 112–114, deadcode2's `paintClipWave` removal (call site now
+  `paintClipNotes` unconditionally), step 19 note-drawing characterization, step 35 audio-clip waveform
+  characterization. The one conflict: crash C's steps 112–114 sit immediately before `case 35`, which
+  deadcode2 rewrote from the pattern-preview check to the audio-clip check. Resolved by keeping 112–114
+  and taking deadcode2's `case 35: { … }` block (the shared autosave tail and the block's closing brace
+  auto-merged). Verified: diff vs HEAD = exactly deadcode2's changes; diff vs deadcode2 = exactly
+  menu32 + crash regions.
+- **`app/previews/src/pattern_sound.hpp` (modify/delete)**: HEAD's only change was deadcode L1's comment
+  update (`9289b19`, no code); deadcode2 deletes the whole module (CLEAN-07). Resolved by deletion
+  (`git rm`); the comment update is moot with the file. `app/previews/` gone; zero references to
+  `core_previews` / `pattern_sound` / `PatternWaves` / `patternWaves_` / `paintClipWave` remain in
+  app/, CMake or tidy_scope.
+- **`app/desktop/src/Waveforms.h/.cpp`**: `PatternWaves` removed (deadcode2); `WaveformCache`,
+  `drawWaveColumn`, `drawWaveform` kept (byte-identical to deadcode2).
+- **`app/domain/src/score.hpp/.cpp` + `SCorePanel`**: `scoreRises` removed; live `setScoreShape` /
+  `scoreArrange` / `scoreSetPlays` kept; BuildupPanel's `rise_` namesake untouched (byte-identical to
+  deadcode2).
+- **`app/domain/src/storage.cpp/hpp`**: union — writesafety16's `writeFileSafely` fault seam
+  (`setWriteFaultForTests` / `writeFaultForTests`) inside batch-01's stronger exclusive-create
+  `.saving-N` loop (`createNew`, BUG-01/D4 recovery copies never truncated); D4 `setReplaceStepForTests`
+  kept. The 3 lines of writesafety's simpler temp naming are superseded by batch-01's loop (verified by
+  diff: the merged `writeFileSafely` = batch-01 body + the fault-seam call).
+- **`app/domain/src/midi.cpp`**: preservation18's `cleanName` full UTF-8 validation (overlong / surrogate /
+  above-U+10FFFF) kept; writesafety16's `saveMidiFile` → `writeFileSafely` (read-back + `.bak`) replaces the
+  old tmp+rename path (the 9 replaced lines are the old write path, intentional).
+- **`app/domain/src/pattern_rack.cpp` / `pattern_tools.cpp`**: pattern26-28 (type-checked slot defaults,
+  part-first `matchRows`, swing re-apply) and roll30 (`setNoteVelocity` envelope scaling) kept — they are
+  the newer fixes of the same regions writesafety's base still had in the old form; writesafety16's
+  template/preset `writeFileSafely` routing added. Verified by diff against both parents.
+- **`app/domain/src/roles.cpp/hpp`**: writesafety16's safe write replaces the old tmp+rename (intentional).
+- **`tests/CMakeLists.txt`**: ALL registrations combined — `menu_tests`, `cli_package_stale` (RUN_SERIAL),
+  `legacy_guard_tests`, `CoreTestCrashRestart` wiring, crash/fault plugin blocks, `engine_process_tests`,
+  desktop — AND deadcode2's `core_previews` delink (hunt_tests no longer links/includes previews).
+- **`app/desktop/CMakeLists.txt`**: union — deadcode2's `core_previews` → `core_engine_lib` CoreApp link
+  + packaging14's `remove_directory` before lang/patterns/pcore copies.
+- **`tests/bug_tests.cpp` / `tests/midi_tests.cpp` / `tests/domain_tests.cpp`**: trailing-`}` append
+  pattern; each branch's block closed before the next. Final: bug 39 TESTs (36 + 3 ws16), midi 14
+  (12 + 2 ws16), domain 30 (29 + 1 score). Line-superset verified vs both parents (0 missing; the only
+  delta vs writesafety's bug_tests is the old PT `duplicateSection` test that timeline translated +
+  extended with BUG-SWEEP-22 — the newer fix of that same test, documented in the 14-branch round, no
+  test lost).
+- **`tests/hunt_tests.cpp`**: U-5 removed-feature case out with `core::preview::Sound` (−1 case / −2
+  checks, documented legitimate); byte-identical to deadcode2.
+- **`docs/relatorios/README.md`**: union of ALL index rows (33 dated rows; 36 report links, 0 missing).
+  The crash A–D row was updated in place by its own branch (D now fixed) — the newer row of the same
+  report supersedes the stale one; the consolidation row kept.
+- **`ci/gate.ps1`**: all sides carry the same unique-bat content; byte-identical to `ci/gate-unique-bat`.
+
+**Union proof (whole tree, finalization):** of the files touched by the 3 newer branches, 53 are
+single-owner and byte-identical to their branch's version (`git diff --quiet <branch> HEAD -- <file>`,
+0 mismatches); 14 are multi-owner hotspots (each verified above to contain every branch's additions);
+3 are the intentional `app/previews/` deletions. No conflict marker remains anywhere in the tree.
+
+## Gate (FINAL integrated tip, Windows, under GATE-LOCK)
+
+GATE-LOCK was free on arrival; acquired atomically at **08:12:12Z** (stream `integration-finalization`,
+head `fcf38e0`), both modes run, lock deleted afterwards (confirmed absent). The unique-bat fix makes
+concurrent gates collision-independent regardless.
+
+Both modes **VERDE** on the clean committed tree (`git status --porcelain` = 0 lines) at code tip `fcf38e0`:
+
+| Mode | Command | Verdict | Tests | Time |
+| --- | --- | --- | --- | --- |
+| merge | `powershell -ExecutionPolicy Bypass -File ci/gate.ps1 -Build D:/Core-build/integration -Jobs 6` | VERDE | **20/20** | 120 s |
+| desktop (full) | same + `-Desktop` | VERDE | **21/21** | 43 s |
+
+- **Version == HEAD sha, no `.modified`:** `core-engine --version` = `0.7.0+fcf38e0ec6`; self-test report
+  `build=0.7.0+fcf38e0ec6 engine=0.7.0+fcf38e0ec6`; resumo `Codigo: ...integration @ fcf38e0` with no dirty
+  flag. Code tip = `fcf38e0ec61f367e4db1709a4e5c57fda3d52baf`. The report commit (FINAL HEAD, docs-only)
+  was then re-gated VERDE in both modes with version == its own sha (evidence `-finaltip2`).
+- Desktop self-test: **ok, 52 steps**, `document=68 accepted=68 applied=68`, `loudest=0.735`, null device
+  48000 Hz block 128 — identical to the 14-branch tip. Step 19 now also proves the bass clip's MIDI notes
+  draw (≥4 `kClipNote` pixels), step 35 proves the audio clip's real waveform (peak ≥ 0.05); crash C's
+  "timeouts simulated / restart offered / restarted after timeouts" steps all pass.
+
+### Per-suite counts (ctest -L merge -V at fcf38e0, exit 0)
+
+| Suite | 14-branch tip 29ec5e0 | FINAL fcf38e0 | delta |
+| --- | --- | --- | --- |
+| engine_tests | 25 / 130 | 25 / 130 | 0 / 0 |
+| domain_tests | 29 / 472 | 30 / 525 | +1 / +53 (deadcode2 score) |
+| legacy_guard_tests | 9 / 169 | 9 / 169 | 0 / 0 |
+| role_tests | 21 / 216 | 21 / 216 | 0 / 0 |
+| midi_tests | 12 / 194 | 14 / 208 | +2 / +14 (writesafety16) |
+| bug_tests | 36 / 326 | 39 / 356 | +3 / +30 (writesafety16) |
+| bitwig_tests | 2 / 25 | 2 / 25 | 0 / 0 |
+| audit_tests | 7 / 65 | 7 / 65 | 0 / 0 |
+| audit2_tests | 6 / 80 | 6 / 80 | 0 / 0 |
+| hunt_tests | 14 / 649 | 13 / 647 | −1 / −2 (U-5 removed feature) |
+| round3_tests | 7 / 82 | 7 / 82 | 0 / 0 |
+| calls_tests | 12 / 69 | 12 / 69 | 0 / 0 |
+| menu_tests | 7 / 366 | 7 / 366 | 0 / 0 |
+| engine_process_tests | 9 / 104 | 10 / 121 | +1 / +17 (crash D) |
+| **Counting total** | **196 / 2947** | **202 / 3059** | **+6 / +112** |
+
+0 failures everywhere; the 6 `cli_*` tests print no case counts (by design). **Nothing shrunk except the
+documented U-5 removed-feature case.** Every branch's tests present: menu 7/366; roll 2/44 (midi);
+preservation 4/50 (bug 2/15 + midi 2/35); pattern 8/63 (bug); timeline 4/110 (bug); tempo 7/42 (domain);
+randomize 1/20 (domain); batch 4/287 (domain 2/262 + calls 2/25); writesafety16 5/44 (bug 3/30 + midi 2/14);
+deadcode legacy_guard 9/169 + domain score 1/53; crash engine_process 10/121 (A +4/+44, B +1/+11, D +1/+17);
+packaging cli_package_stale (+1 ctest test, passes); deadcode2 hunt −1/−2 (U-5, removed feature).
+
+## Sound check (finalization)
+
+No unexpected sound change. Self-test `loudest=0.735` and `document=68 accepted=68 applied=68` identical
+to the 14-branch tip; all render/null tests pass (`cli_demo_render`, `cli_plugin_crash_render`,
+`cli_measure`, engine null-render cases, desktop audio steps). The timeline fixes' intentional
+tempo-timing deltas remain as documented in the 14-branch round. deadcode2's own branch measured
+null-render BEFORE == AFTER (sha256 `49f83b81…`, `cmp` clean) and the pattern-preview removal is
+sound-neutral by construction (the retired preview rendered silence since 2026-11-16). writesafety16
+changes only the write path (read-back + `.bak`), not audio. Crash D's vendored gate is a default no-op
+for healthy instances (audio hot path, lock type and SEH untouched).
+
+## What is NOT included (after finalization)
+
+- **SUR engine-improvements (SUR-01 etc.)** — the SUR stream's shas live in its own clones; not integrated
+  here. `engine_tests` stays at the 25/130 baseline (SUR-01's +1/+30 is not in this round).
+- Everything else from the 14-branch round's "not included" list is now IN: writesafety16, deadcode2
+  preview/Rise, and the D Core wiring (`cc5b874` via `075b6dd`).
+
+## Vendored JUCE (runtime condition, finalization)
+
+`D:/Core-deps/JUCE-9.0.5` is already patched with the corrected 10-hunk D fix (`markCrashedByHost` in
+`juce_AudioPluginExtensions.h` + `juce_VST3PluginFormatImpl.h`, `enterProcessMutexUnlessCrashed` present —
+read-only grep verified). The integrated build compiles against it; the D serve test passes (10/121).
+**This session did not modify `D:/Core-deps`.** The patch is tracked in-repo as the regenerated
+`ci/patches/juce-failed-plugin-restart.patch` (10 hunks) with a re-application note.
+
+## Verification (finalization commands and exit codes)
+
+| Command | Exit | Result |
+| --- | --- | --- |
+| `git merge --no-ff flawless-crash / flawless-writesafety / flawless-deadcode2` | 0 | 3 merge commits (`7b33bfe`, `f5f55c7`, `fcf38e0`), all HEADs ancestors |
+| single-owner union check (53 files, `git diff --quiet <branch> HEAD -- <file>`) | 0 | 0 mismatches |
+| `powershell ... ci/gate.ps1 -Build D:/Core-build/integration -Jobs 6` | 0 | VERDE merge 20/20, 120 s @ fcf38e0 |
+| `powershell ... ci/gate.ps1 -Build D:/Core-build/integration -Jobs 6 -Desktop` | 0 | VERDE full 21/21, 43 s @ fcf38e0 |
+| `ctest --test-dir D:/Core-build/integration -L merge -V --output-on-failure` | 0 | 202 cases / 3059 verifs / 0 fails |
+| `ctest --test-dir D:/Core-build/integration -L desktop -V --output-on-failure` | 0 | 1/1, self-test ok 52 steps |
+| `ctest --test-dir D:/Core-build/integration --output-on-failure` | 0 | 21/21 |
+| `core-engine --version` | 0 | 0.7.0+fcf38e0ec6 (== code tip, no .modified) |
+| `git status --porcelain` (integration worktree) | 0 | 0 lines (clean) |
+| final-tip re-gate (report commit, both modes) | 0 | VERDE, version == FINAL HEAD (evidence `-finaltip2`) |
+
+Evidence: `D:/Core-build/integration-evidence/` — `gate-resumo-merge-final2.txt`,
+`gate-resumo-desktop-final2.txt`, `gate-merge-final2-stdout.txt`, `gate-desktop-final2-stdout.txt`,
+`merge-verbose-final2.txt`, `desktop-verbose-final2.txt`, `full-set-final2.txt`,
+`per-suite-counts-final2.txt`, `self-test-report-final2.txt`, `version-final2.txt`, `head-sha-final2.txt`,
+`worktree-status-final2.txt`, and the `-finaltip2` set for the report commit.
+
+## PROPOSED ESTADO.md lines (finalization; scribe only — D72/D80; not written here)
+
+For "Estado medido" (citation + source per line):
+
+1. `Consolidation FINALIZED @ integration/flawless-round (Windows MSVC Release): the 3 newer branches merged
+   on the 14-branch tip — flawless-crash D 075b6dd (cc5b874 markCrashedByHost wiring + CORE_TEST_CRASH_RESTART
+   + regenerated 10-hunk vendored patch), flawless-writesafety b035584 (BUG-SWEEP-16 safe writes + 5 tests),
+   flawless-deadcode2 3542bba (CLEAN-07 previews removed + BUG-LEGACY-RISE scoreRises removed + score test).
+   Code tip fcf38e0; gate VERDE merge 20/20 + full 21/21; 202 cases / 3059 verifications / 0 failures
+   (14-branch tip 196/2947; +D 1/17, +ws16 5/44, +score 1/53, −U-5 1/2 removed feature; nothing else shrunk);
+   version 0.7.0+fcf38e0ec6 == tip, no .modified; self-test ok 52 steps document=68 loudest=0.735. The report
+   commit (FINAL HEAD) re-gated VERDE both modes, version==sha. Source:
+   docs/relatorios/2026-11-18-consolidation-round.md (Finalization round) + D:/Core-build/integration-evidence/.`
+2. `Vendored JUCE D fix APPLIED (owner «sim» 18/11): D:/Core-deps/JUCE-9.0.5 carries markCrashedByHost +
+   enterProcessMutexUnlessCrashed (10-hunk patch tracked at ci/patches/juce-failed-plugin-restart.patch);
+   healthy hosting unchanged (default no-op); D serve test green 1/17, engine_process 10/121. Not integrated:
+   SUR-01 (its shas live in the SUR clones). Source: docs/relatorios/2026-11-18-plugin-crash-followups.md
+   (D update) + consolidation report Finalization round.`
+
+Pendência (owner = Diogo): ledger scribe to transcribe the lines above; PM to verify and push
+`integration/flawless-round` to origin/main (this session did not push).
+
+## Changes (finalization)
+
+Documentation only: this report's finalization section and the updated consolidation index row in
+`docs/relatorios/README.md`. The 3 merge commits carry the product/test changes. No `ESTADO.md` edit,
+no push, no `git stash`, no edit to the main checkout or to `D:/Core-deps`.
