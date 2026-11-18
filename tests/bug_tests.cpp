@@ -1,6 +1,7 @@
 // Testes dos bugs medios e pequenos corrigidos a 2026-11-16 (lista do sweep antigo revista contra o main 06e0882).
 // Cada teste falhava antes da correcao.
 #include <algorithm>
+#include <cctype>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
@@ -9,6 +10,7 @@
 #include "assets.hpp"
 #include "edit.hpp"
 #include "follow.hpp"
+#include "history.hpp"
 #include "pattern_rack.hpp"
 #include "pattern_tools.hpp"
 #include "pcore.hpp"
@@ -1424,6 +1426,286 @@ TEST("write safety BUG-SWEEP-16: a late write failure on the roles file throws a
   CHECK_EQ(loadRoleMap(file).roles.size(), (size_t)2);
   CHECK_EQ(bytesIn(backupPath(file)), before);
   CHECK(noEmptyFileUnder(dir));
+}
+
+// ---------------------------------------------------------------- BUG-SWEEP-21 (ratified 2026-11-18)
+// Owner, verbatim: «split em clip congelado = recusa com mensagem + oferta de unfreeze (um Undo); nunca meio-congelado.»
+// A frozen clip (freezeSeconds > 0) holds a piece of the file from offsetSeconds for its whole length
+// (engine clip_grains.hpp). The old split re-anchored the second piece's offset (offsetSeconds += cut) and
+// kept freezeSeconds: the second piece held a DIFFERENT piece of the file — a half-frozen state. The split
+// is refused with an unfreeze offer; unfreeze (one Undo) then split plays exactly the unsplit file.
+
+namespace {
+// One audio track with one clip (no file needed: the split is document math). 150 bpm, so tick 480 = 0.2 s.
+Document clipSong(double freezeSeconds, double offsetSeconds = 0.1, double duration = 1.0) {
+  Document d = newEmptyDocument();
+  d.bpm = 150;
+  const std::string tid = addAudioTrack(d, "take");
+  AudioClip c;
+  c.id = "x1";
+  c.assetId = "a1";
+  c.startTick = 0;
+  c.offsetSeconds = offsetSeconds;
+  c.durationSeconds = duration;
+  c.fadeInSeconds = 0.02;
+  c.fadeOutSeconds = 0.03;
+  c.freezeSeconds = freezeSeconds;
+  trackById(d, tid).audioClips.push_back(c);
+  return d;
+}
+bool mentionsUnfreeze(const std::string& message) {
+  std::string lower;
+  for (char ch : message) lower += (char)std::tolower((unsigned char)ch);
+  return lower.find("unfreeze") != std::string::npos;
+}
+}  // namespace
+
+TEST("freeze split BUG-SWEEP-21: a frozen clip refuses the split with an unfreeze offer and stays whole") {
+  Document d = clipSong(0.05);
+  const std::string tid = d.tracks.back().id;
+  const AudioClip before = trackById(d, tid).audioClips[0];
+  bool refused = false;
+  std::string message;
+  try { (void)splitAudioClip(d, tid, "x1", 480); } catch (const DocumentError& e) { refused = true; message = e.what(); }
+  CHECK(refused);  // before: the split went through, the second piece holding a different part of the file
+  CHECK(mentionsUnfreeze(message));  // the refusal carries the offer
+  const auto& clips = trackById(d, tid).audioClips;
+  CHECK_EQ(clips.size(), (size_t)1);  // never half-frozen: no second piece
+  CHECK_NEAR(clips[0].freezeSeconds, before.freezeSeconds, 0);
+  CHECK_NEAR(clips[0].offsetSeconds, before.offsetSeconds, 0);
+  CHECK_NEAR(clips[0].durationSeconds, before.durationSeconds, 0);
+  CHECK_NEAR(clips[0].fadeInSeconds, before.fadeInSeconds, 0);
+  CHECK_NEAR(clips[0].fadeOutSeconds, before.fadeOutSeconds, 0);
+  // Every split-based cut refuses the same way: slice and range removal never leave half-frozen pieces.
+  Document s = clipSong(0.05);
+  CHECK_THROWS(sliceAudioClip(s, tid, "x1", 240));
+  CHECK_EQ(trackById(s, tid).audioClips.size(), (size_t)1);
+  CHECK_NEAR(trackById(s, tid).audioClips[0].freezeSeconds, 0.05, 0);
+  Document r = clipSong(0.05);
+  CHECK_THROWS(removeAudioRange(r, tid, "x1", 240, 720));
+  CHECK_EQ(trackById(r, tid).audioClips.size(), (size_t)1);
+  CHECK_NEAR(trackById(r, tid).audioClips[0].freezeSeconds, 0.05, 0);
+  // Control: an unfrozen clip splits normally (the refusal is only for the frozen hold).
+  Document u = clipSong(0);
+  const std::string second = splitAudioClip(u, tid, "x1", 480);
+  CHECK(!second.empty());
+  CHECK_EQ(trackById(u, tid).audioClips.size(), (size_t)2);
+}
+
+TEST("freeze split BUG-SWEEP-21: unfreeze is one Undo step, then the split succeeds normally") {
+  Document d = clipSong(0.05);
+  const std::string tid = d.tracks.back().id;
+  History h(d);
+  auto held = [&]() -> const AudioClip& { return h.current().findTrack(tid)->audioClips[0]; };
+  Document next = h.current();
+  unfreezeAudioClip(next, tid, "x1");
+  h.commit(next, "Unfreeze audio clip");
+  CHECK_NEAR(held().freezeSeconds, 0.0, 0);
+  CHECK(h.canUndo());
+  CHECK_EQ(h.undoLabel(), std::string("Unfreeze audio clip"));
+  CHECK(h.undo());  // one Undo brings the frozen hold back, whole
+  CHECK_NEAR(held().freezeSeconds, 0.05, 0);
+  CHECK_EQ(h.current().findTrack(tid)->audioClips.size(), (size_t)1);
+  CHECK(h.redo());
+  // Unfrozen, the split works normally: two plain pieces that play the file sample for sample
+  // (the null proof is engine_tests' "freeze split BUG-SWEEP-21").
+  Document s = h.current();
+  const std::string second = splitAudioClip(s, tid, "x1", 480);
+  CHECK(!second.empty());
+  const auto& clips = trackById(s, tid).audioClips;
+  CHECK_EQ(clips.size(), (size_t)2);
+  CHECK_NEAR(clips[0].durationSeconds, 0.2, 1e-9);
+  CHECK_NEAR(clips[0].freezeSeconds, 0.0, 0);
+  CHECK_EQ(clips[1].id, second);
+  CHECK_EQ(clips[1].startTick, (int64_t)480);
+  CHECK_NEAR(clips[1].offsetSeconds, 0.3, 1e-9);  // 0.1 + 0.2: the file continues where the first piece stopped
+  CHECK_NEAR(clips[1].durationSeconds, 0.8, 1e-9);
+  CHECK_NEAR(clips[1].freezeSeconds, 0.0, 0);
+  // Unfreeze of a plain clip alters nothing: History adds no step for it.
+  History p(clipSong(0));
+  const std::string ptid = p.current().tracks.back().id;
+  Document q = p.current();
+  unfreezeAudioClip(q, ptid, "x1");
+  p.commit(q, "Unfreeze audio clip");
+  CHECK(!p.canUndo());
+}
+
+// ---------------------------------------------------------------- BUG-SWEEP-26 adjust (ratified 2026-11-18)
+// Owner, verbatim: «preservar swing ao guardar; unswing só em opção explícita de export.» The shipped 26 fix
+// made load apply the slot's swing fresh; but save stripped the rackSwingBase records (and had no swing
+// metadata), so a swung slot saved as a template lost its swing state: loading into a different swing kept
+// the old rendering and the next setRackSwing drifted the notes off the grid; with style jitter a small
+// swing was even doubled. Save now carries the swing (metadata + rendered ticks + base records); load
+// reconciles once; unswing is an explicit export option. Legacy templates (no metadata) load as before.
+
+namespace {
+// The swing delay of an odd 1/16 (the same math as pattern_rack.cpp's swingTicks).
+int64_t delayOf(double swing) { return (int64_t)std::llround(std::clamp(swing, 0.0, 0.75) * (kPpq / 4) / 2.0); }
+// A song with one kick track: four 1/16 notes a bar, slot s1 swung by `swing` (records written). Returns the track id.
+std::string swungSlotSong(Document& d, double swing) {
+  d = newEmptyDocument();
+  d.bpm = 150;
+  d.lengthTicks = 4 * kBar;
+  const std::string tid = addTrack(d, "kick", "Kick");
+  Track& t = trackById(d, tid);
+  Pattern& p = t.patterns[0];
+  p.lengthTicks = kBar;
+  p.notes.clear();
+  for (int i = 0; i < 4; ++i) {
+    Note n;
+    n.id = "n" + std::to_string(i + 1);
+    n.tick = i * (kPpq / 4);
+    n.length = kPpq / 8;
+    n.pitch = 36;
+    n.velocity = 0.8;
+    p.notes.push_back(n);
+  }
+  t.clips = {{"c1", p.id, 0, 4 * kBar, 0, json::object()}};
+  ensureRackSlots(d, 0);
+  setRackBars(d, "s1", 4);  // a 4-bar slot: the pattern repeats its four 1/16s over the four bars
+  if (swing > 0) setRackSwing(d, "s1", swing);
+  return tid;
+}
+std::vector<int64_t> ticksOf(const Pattern& p) {
+  std::vector<int64_t> v;
+  for (const auto& n : p.notes) v.push_back(n.tick);
+  std::sort(v.begin(), v.end());
+  return v;
+}
+// The slot's pattern ticks on a track (empty when missing: the comparison fails loudly, never a crash).
+std::vector<int64_t> slotTicks(const Document& doc, const std::string& slotId, const std::string& tid) {
+  const auto slots = rackSlots(doc);  // kept alive: findRackSlot points into this vector
+  const PatternSlot* s = findRackSlot(slots, slotId);
+  const Pattern* p = s ? rackPattern(doc, *s, tid) : nullptr;
+  return p ? ticksOf(*p) : std::vector<int64_t>{};
+}
+// The four 1/16 bases of each bar, the odd ones delayed by the swing: what the slot's pattern must play.
+std::vector<int64_t> gridTicks(double swing, int bars) {
+  std::vector<int64_t> v;
+  for (int b = 0; b < bars; ++b)
+    for (int i = 0; i < 4; ++i)
+      v.push_back(b * kBar + i * (kPpq / 4) + (i % 2 == 1 ? delayOf(swing) : 0));
+  std::sort(v.begin(), v.end());
+  return v;
+}
+}  // namespace
+
+TEST("swing save BUG-SWEEP-26: saving a swung slot preserves its swing state, never strips it") {
+  Document d;
+  swungSlotSong(d, 0.5);
+  const PatternTemplate t = rackTemplateFromSlot(d, "s1", "Mine");
+  const json j = rackTemplateToJson(t);
+  CHECK_NEAR(j.value("swing", 0.0), 0.5, 1e-9);  // before: the swing was dropped on save
+  // The rendered ticks stay AND the base records travel with them (load reconciles without double swing).
+  bool found = false;
+  for (const auto& n : t.rows[0].notes)
+    if (n.tick == 240 + delayOf(0.5)) {  // the odd 1/16 at base 240, rendered later
+      found = true;
+      CHECK(n.extra.contains("rackSwingBase"));  // before: extra wiped, the base lost
+      if (n.extra.contains("rackSwingBase") && n.extra["rackSwingBase"].is_object())
+        CHECK_EQ(n.extra["rackSwingBase"].value("tick", (int64_t)-1), (int64_t)240);
+    }
+  CHECK(found);
+  // The on-disk form carries both: save, load back, same swing and records.
+  const fs::path dir = freshDir("swing26-save");
+  saveRackTemplate(dir, t);
+  std::vector<std::string> problems;
+  const auto loaded = loadRackTemplates(dir, &problems);
+  CHECK(problems.empty());
+  CHECK_EQ(loaded.size(), (size_t)1);
+  if (!loaded.empty()) {
+    CHECK_NEAR(rackTemplateToJson(loaded[0]).value("swing", 0.0), 0.5, 1e-9);
+    bool rec = false;
+    for (const auto& n : loaded[0].rows[0].notes)
+      if (n.tick == 240 + delayOf(0.5) && n.extra.contains("rackSwingBase")) rec = true;
+    CHECK(rec);
+  }
+}
+
+TEST("swing save BUG-SWEEP-26: load applies the saved swing once — same-swing round trip exact, other swing reconciles without drift") {
+  Document d;
+  const std::string tid = swungSlotSong(d, 0.5);
+  const PatternTemplate t = rackTemplateFromSlot(d, "s1", "Mine");
+  // Round trip into the same slot: the notes play exactly as saved (no double swing)...
+  Document a = d;
+  CHECK(applyRackTemplate(a, nullptr, t, "s1", 1) > 0);
+  CHECK(slotTicks(a, "s1", tid) == gridTicks(0.5, 4));
+  // ...and the swing state stays consistent: turning the slot's swing off brings the true grid back.
+  setRackSwing(a, "s1", 0.0);
+  CHECK(slotTicks(a, "s1", tid) == gridTicks(0.0, 4));
+  // Load into a slot with a DIFFERENT swing: the notes reconcile from the saved base to the slot's swing.
+  Document b = d;
+  const std::string s2 = addRackSlot(b, "Other", 4);
+  setRackSwing(b, s2, 0.75);
+  CHECK(applyRackTemplate(b, nullptr, t, s2, 1) > 0);
+  CHECK(slotTicks(b, s2, tid) == gridTicks(0.75, 4));  // before: kept the template's 0.5 rendering
+  setRackSwing(b, s2, 0.0);
+  CHECK(slotTicks(b, s2, tid) == gridTicks(0.0, 4));  // before: drifted off the grid (base 210, not 240)
+}
+
+TEST("swing save BUG-SWEEP-26: a small swing with style jitter is never doubled on load") {
+  Document d;
+  const std::string tid = swungSlotSong(d, 0.1);  // 12 ticks of delay
+  PatternTemplate t = rackTemplateFromSlot(d, "s1", "Mine");
+  t.style = "human";
+  PCoreCatalog c;
+  PCoreStyle st;
+  st.id = "human"; st.name = "Human"; st.humanize = 0.5;  // jitter 12 >= the 12-tick delay: the old load re-swung
+  c.styles.push_back(st);
+  Document a = d;
+  CHECK(applyRackTemplate(a, &c, t, "s1", 1) > 0);
+  CHECK(slotTicks(a, "s1", tid) == gridTicks(0.1, 4));  // before: 252 -> 264, doubled
+  setRackSwing(a, "s1", 0.0);
+  CHECK(slotTicks(a, "s1", tid) == gridTicks(0.0, 4));
+}
+
+TEST("swing save BUG-SWEEP-26: legacy templates (no swing metadata) load exactly as before") {
+  // (a) A straight legacy template into a swung slot: the fresh-apply swing goes on once (the shipped 26 fix).
+  Document d;
+  swungSlotSong(d, 0.0);
+  const json j = rackTemplateToJson(rackTemplateFromSlot(d, "s1", "Legacy"));
+  CHECK(!j.contains("swing"));  // the old form: no swing key
+  Document a;
+  const std::string atid = swungSlotSong(a, 0.5);
+  CHECK(applyRackTemplate(a, nullptr, rackTemplateFromJson(j), "s1", 1) > 0);
+  CHECK(slotTicks(a, "s1", atid) == gridTicks(0.5, 4));
+  // (b) An old-save swung template (rendered ticks, records stripped by the old save): the off-grid guard
+  // keeps the rendered ticks, as before — no metadata to reconcile, no new behavior forced on it.
+  Document old;
+  swungSlotSong(old, 0.5);
+  PatternTemplate ot = rackTemplateFromSlot(old, "s1", "OldSwung");
+  for (auto& row : ot.rows)
+    for (auto& n : row.notes) n.extra = json::object();  // what the pre-fix save produced
+  json oj = rackTemplateToJson(ot);
+  oj.erase("swing");
+  Document b;
+  const std::string btid = swungSlotSong(b, 0.5);
+  CHECK(applyRackTemplate(b, nullptr, rackTemplateFromJson(oj), "s1", 1) > 0);
+  CHECK(slotTicks(b, "s1", btid) == gridTicks(0.5, 4));
+}
+
+TEST("swing save BUG-SWEEP-26: the explicit unswing export option strips the swing; the default keeps it") {
+  Document d;
+  swungSlotSong(d, 0.5);
+  const PatternTemplate kept = rackTemplateFromSlot(d, "s1", "Kept");
+  CHECK_NEAR(kept.swing, 0.5, 1e-9);  // the default save preserves the swing
+  const PatternTemplate straight = rackTemplateFromSlot(d, "s1", "Straight", true);
+  CHECK_NEAR(straight.swing, 0.0, 0);
+  CHECK(!rackTemplateToJson(straight).contains("swing"));  // the old form: nothing to reconcile
+  std::vector<int64_t> ticks;
+  for (const auto& n : straight.rows[0].notes) {
+    ticks.push_back(n.tick);
+    CHECK(!n.extra.contains("rackSwingBase"));  // rendered straight at the bases, records gone
+  }
+  std::sort(ticks.begin(), ticks.end());
+  CHECK(ticks == gridTicks(0.0, 4));
+  // The straight export loads into a swung slot and takes its swing once (the fresh-apply path).
+  Document a;
+  const std::string atid = swungSlotSong(a, 0.5);
+  CHECK(applyRackTemplate(a, nullptr, straight, "s1", 1) > 0);
+  CHECK(slotTicks(a, "s1", atid) == gridTicks(0.5, 4));
+  setRackSwing(a, "s1", 0.0);
+  CHECK(slotTicks(a, "s1", atid) == gridTicks(0.0, 4));
 }
 
 CORE_TEST_MAIN

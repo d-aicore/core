@@ -975,19 +975,24 @@ void PatternsPanel::saveTemplate() {
   auto* w = new juce::AlertWindow(lang::tr("Save as template"), lang::tr("This pattern, all its rows, goes into Templates > Mine."),
                                   juce::MessageBoxIconType::NoIcon, this);
   w->addTextEditor("name", u8(s->name), lang::tr("Name:"));
+  // BUG-SWEEP-26 (owner ratified 2026-11-18): «preservar swing ao guardar; unswing só em opção explícita de
+  // export.» The save keeps the slot's swing by default; straightening it is this explicit option, off by default.
+  auto* unswing = new juce::ToggleButton(lang::tr("Unswing (export straight 1/16s)"));
+  unswing->setToggleState(false, juce::dontSendNotification);
+  w->addCustomComponent(unswing);  // the window owns it; it lives as long as the safe pointer below
   w->addButton(lang::tr("Save"), 1, juce::KeyPress(juce::KeyPress::returnKey));
   w->addButton(lang::tr("Cancel"), 0, juce::KeyPress(juce::KeyPress::escapeKey));
   juce::Component::SafePointer<juce::AlertWindow> win(w);
   juce::Component::SafePointer<PatternsPanel> self(this);
   const std::string sid = slotId_;
-  w->enterModalState(true, juce::ModalCallbackFunction::create([win, self, sid](int ok) {
+  w->enterModalState(true, juce::ModalCallbackFunction::create([win, self, sid, unswing](int ok) {
     if (ok != 1 || !win || !self) return;
     const std::string name = str(win->getTextEditorContents("name").trim().substring(0, 60));
     if (name.empty()) return;
     try {
       doc::Document d = self->host_.document();
       doc::ensureRackSlots(d, self->openTick_);
-      doc::PatternTemplate t = doc::rackTemplateFromSlot(d, sid, name);
+      doc::PatternTemplate t = doc::rackTemplateFromSlot(d, sid, name, unswing->getToggleState());
       t.style = self->styleId();
       doc::saveRackTemplate(self->host_.templatesFolder.getFullPathName().toStdString(), t);
       self->filter_ = 2;

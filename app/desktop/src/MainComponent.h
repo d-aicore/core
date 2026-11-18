@@ -182,6 +182,9 @@ private:
   void edit(const std::function<void(doc::Document&)>& change, const juce::String& label);
   void beginGesture(const juce::String& label);
   void endGesture();
+  // BUG-SWEEP-21 (ratified): the split of a frozen clip is refused; this is the offer the refusal names —
+  // unfreeze (one Undo step) then split (its own step). Never a half-frozen clip.
+  void offerUnfreezeSplit(const std::string& trackId, const std::string& clipId, int64_t atTick);
   void documentChanged(bool rebuildRows);  // after undo/redo/open: controls follow the document
   void undo();
   void redo();

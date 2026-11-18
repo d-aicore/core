@@ -262,7 +262,7 @@ int makeBuildup(Pattern& pattern, const BuildupOptions& o) {
     n.tick = t;
     const double x = (double)(t - o.start) / (double)std::max<int64_t>(1, playEnd - o.start);
     n.pitch = std::clamp(o.pitch + (int)std::lround(o.riseFrom + (o.riseTo - o.riseFrom) * x), 0, 127);
-    n.velocity = vel(o.velocityFrom + (o.velocityTo - o.velocityFrom) * x);
+    setNoteVelocity(n, vel(o.velocityFrom + (o.velocityTo - o.velocityFrom) * x));  // BUG-SWEEP-30 follow-up: the shared helper (a new note: the ramp is its base, no envelope)
     n.length = std::max<int64_t>(1, std::min({gap * 3 / 4, playEnd - t, pattern.lengthTicks - t}));
     pattern.notes.push_back(n);
     ++written;

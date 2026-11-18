@@ -249,8 +249,13 @@ void moveAudioClip(Document& doc, const std::string& trackId, const std::string&
 // changes the duration. Both are limited to the file.
 void trimAudioClipStart(Document& doc, const std::string& trackId, const std::string& clipId, int64_t startTick);
 void trimAudioClipEnd(Document& doc, const std::string& trackId, const std::string& clipId, double durationSeconds);
-// Two clips that play exactly what the one did. Returns the id of the second.
+// Two clips that play exactly what the one did. Returns the id of the second. A FROZEN clip
+// (freezeSeconds > 0) is refused with an unfreeze offer (BUG-SWEEP-21, ratified): the split's offset
+// re-anchor would make the second piece hold a different part of the file — never a half-frozen state.
 std::string splitAudioClip(Document& doc, const std::string& trackId, const std::string& clipId, int64_t atTick);
+// Lets the frozen hold go: the clip plays its file normally again (the unfreeze the split refusal offers,
+// one Undo step in the app). A clip without a freeze is unchanged.
+void unfreezeAudioClip(Document& doc, const std::string& trackId, const std::string& clipId);
 void removeAudioClip(Document& doc, const std::string& trackId, const std::string& clipId);
 // The audio editor's selection (song ticks): keep only that part of the clip, or remove it (the clip
 // becomes two, with a gap; at an edge, the clip just gets shorter).
