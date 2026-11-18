@@ -3,7 +3,6 @@
 // The index is rebuilt by a scan; files whose size and time did not change keep what was read before.
 // What the user says about a sample (its role, BPM, key, styles, tags) is kept in the index by content and
 // survives every scan; the WAV files are never written.
-// Contract: docs/contracts/core-samples.md.
 #pragma once
 #include <cstdint>
 #include <filesystem>

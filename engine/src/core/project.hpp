@@ -78,16 +78,6 @@ struct AudioClip {
   double pitchSemitones = 0, freezeSeconds = 0;
 };
 
-// A file played by the sampler on the keys loKey..hiKey; rootKey is the note it was recorded at.
-struct SampleZone {
-  std::string path;            // UTF-8, absolute (the app resolves it)
-  int rootKey = 60, loKey = 0, hiKey = 127;
-  // A sustain loop in the file's seconds: while the note is held the voice plays [loopStart, loopEnd) again and
-  // again (a short crossfade at the seam), then the release ends it. loopEnd 0 = no loop (the default).
-  double loopStart = 0, loopEnd = 0;
-};
-constexpr double kMinLoopSeconds = 0.002;
-
 // M7a: a copy of a track's signal into a bus. Post-fader (after gain and pan) unless pre: then right
 // after the inserts, before the fader. A muted track sends nothing.
 struct Send {
@@ -130,7 +120,7 @@ const std::vector<std::string>& modulatorShapes();
 struct Track {
   std::string id;
   std::string name;
-  std::string instrument;               // "kick" | "wave" (W-Core) | "hats" | "drums" (kick 36 + hats 42/44/46, ride 51, shaker 70) | "sampler" | "plugin" (VST3, for A/B checks) | "audio" | "bus"
+  std::string instrument;               // "none" (waits for a plugin) | "plugin" (VST3) | "audio" | "bus"; an older song's kick/wave/hats/drums/sampler loads as "none" with a load note
   std::map<std::string, double> params; // instrument parameters (unknown keys rejected)
   // Version of the built-in instrument's sound. An update that changes the sound gets a new number and
   // keeps the old one playable, so old songs never change silently. (Same rule as plugin.version.)
@@ -147,7 +137,6 @@ struct Track {
   // pattern looping from the song start). The native app always sends clips.
   std::vector<Clip> clips;
   std::vector<AudioClip> audioClips;    // instrument == "audio"; overlapping clips add up
-  std::vector<SampleZone> samples;      // instrument == "sampler": the first zone that holds the key plays
   // instrument == "plugin": which plugin plays this track and its saved state. Kept as data, so a
   // project opens even when the plugin is not installed ("missing instrument"): notes stay, sound is silent.
   // {format: "vst3" | "clap" | "core", id: "<class id>", name, vendor, version: "<x.y.z used when saved>",
@@ -162,9 +151,6 @@ struct Track {
   std::string output;
   std::vector<Send> sends;
   std::vector<Modulator> modulators;  // M8a
-  // instrument == "wave" (W-Core, version 2): its modulation, {"layers": [{"lfos": [...], "links": [...]}]}
-  // (dsp/wave_mod.hpp). null = none.
-  json synth;
   // What loading had to change and could not carry over (a version-1 W-Core automation on a knob that is a link now).
   std::vector<std::string> loadNotes;
 };
@@ -194,11 +180,9 @@ int currentInstrumentVersion(const std::string& instrument);  // built-in DSP ve
 // Built-in effects: their parameters (in the order Effect::params uses) and DSP versions.
 const std::vector<ParamSpec>& effectParams(const std::string& effect);
 int currentEffectVersion(const std::string& effect);
-std::vector<std::string> effectNames();
 // One effect chain validated: known built-in names, parameters filled and clamped, plugins checked.
 json effectsFromJson(const json& value);
 bool isMixParam(const std::string& param); // gainDb, pan
-std::vector<std::string> instrumentNames();
 // Plugin, audio and bus tracks have no built-in instrument parameters.
 bool hasNoInstrumentParams(const std::string& instrument);
 // M7a: every output and send goes to a bus of this project, never to itself, and nothing loops. Throws.

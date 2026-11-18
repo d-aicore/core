@@ -22,7 +22,6 @@
 // (F-Core · FX: intent, style, mode, knobs, preset) and "rcore"/"dcore" (a shared reverb or echo place by preset). Each
 // changes the one already on the track when there is one. P-Core · Patterns and S-Core · Stages join the same list
 // through the same signature: nothing per plugin. Core has no VST (2026-11-08).
-// Contract: docs/contracts/core-calls.md.
 #pragma once
 #include <functional>
 #include <map>

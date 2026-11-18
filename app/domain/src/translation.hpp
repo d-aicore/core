@@ -2,7 +2,7 @@
 // help and the racks is written in English, and a language file (lang/<code>.json next to Core.exe) gives each
 // English text its words in that language. The app asks for the words when it draws them, so a text with no
 // entry simply stays in English. Texts built at run time ("Rises on bars 5-8") match a pattern with "{}" holes.
-// No GUI here. Contract: docs/contracts/core-language.md.
+// No GUI here.
 #pragma once
 #include <cstddef>
 #include <filesystem>

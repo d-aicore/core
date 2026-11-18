@@ -1,5 +1,5 @@
 // core-engine: the Core audio engine as a separate process.
-//   core-engine serve [--backend wasapi|null]   JSON lines on stdin/stdout (used by Electron)
+//   core-engine serve [--backend wasapi|null]   JSON lines on stdin/stdout (used by the desktop app)
 //   core-engine render <project.json> <out.wav> [--stems] [--mono] [--bits 24|32] [--sr 48000] [--start-tick N --end-tick N --tail-ms MS]
 //   core-engine measure [--out dir] [--realtime] [--backend null] [--block 128] [--seconds 10] [--exclusive]
 //   core-engine demo [bpm]                      prints the demo project

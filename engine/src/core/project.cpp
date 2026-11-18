@@ -108,9 +108,7 @@ const std::vector<ParamSpec>& effectParams(const std::string& effect) {
 
 int currentEffectVersion(const std::string& effect) { return nativeEffectVersion(effect); }
 
-std::vector<std::string> effectNames() { return nativeEffectNames(); }
 bool isMixParam(const std::string& p) { return p == "gainDb" || p == "pan"; }
-std::vector<std::string> instrumentNames() { return nativeInstrumentNames(); }
 const std::vector<std::string>& modulatorShapes() {
   static const std::vector<std::string> shapes = {"sine", "triangle", "square", "saw", "ramp", "random", "envelope", "rise", "steps"};
   return shapes;
@@ -610,8 +608,8 @@ Track trackFromJson(const json& input) {
   if (tv.contains("samples") && tv["samples"].is_array() && !tv["samples"].empty())
     t.loadNotes.push_back("the sampler's sounds are not played any more (Core's sound comes from plugins)");
   if (t.instrument == "audio" && (!t.notes.empty() || !t.clips.empty())) throw std::runtime_error("an audio track has audio clips, not notes.");
-  if (t.instrument == "bus" && (!t.notes.empty() || !t.clips.empty() || !t.audioClips.empty() || !t.samples.empty()))
-    throw std::runtime_error("a bus plays what is routed to it: no notes, clips or samples.");
+  if (t.instrument == "bus" && (!t.notes.empty() || !t.clips.empty() || !t.audioClips.empty()))
+    throw std::runtime_error("a bus plays what is routed to it: no notes, clips or audio clips.");
   // M7a routing (the targets are checked against the whole project by validateRouting).
   if (tv.contains("output") && !tv["output"].is_null()) {
     if (!tv["output"].is_string()) throw std::runtime_error("output must be a bus id (or \"\" for the master).");

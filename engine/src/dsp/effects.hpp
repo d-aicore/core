@@ -12,7 +12,6 @@
 #include <string_view>
 #include <vector>
 #include "instruments.hpp"
-#include "song_clock.hpp"
 
 namespace core {
 

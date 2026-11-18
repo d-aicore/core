@@ -7,7 +7,7 @@
 // It writes plain notes into several tracks at once (the selected tracks, a rule for every plugin), one undo step
 // for the caller; afterwards each track can be changed alone ("alter"). The style only puts its choices first:
 // every shape and scale works in every style. Rules and seeds only: no AI, no GUI, no audio, no engine code.
-// Catalogue: pcore/styles.json (beside Core.exe). Contract: docs/contracts/core-pcore.md.
+// Catalogue: pcore/styles.json (beside Core.exe).
 #pragma once
 #include <cstdint>
 #include <filesystem>
@@ -55,7 +55,7 @@ struct PCoreShape {
 //   hats: onto their grid, with `swing` and `pushMs` (late +, early -); a closed hat on a kick at most `hatsOnKick`
 //         of the others (0: it goes); off the offbeat 1/8 at most 1 - `hatsAccent` of the offbeat hats
 //   cymbals: onto their grid with the same swing and push
-// Applied twice gives the same notes. Sources: docs/contracts/core-pcore.md (alignment).
+// Applied twice gives the same notes.
 struct PCoreAlign {
   std::string id, name, about;
   int bassClearSteps = 0;              // 0 or 1: 1/16 steps after the kick kept free of bass (offbeat bass)
@@ -178,7 +178,7 @@ std::vector<PCoreResult> pcoreApplyToSong(Document& doc, const PCoreCatalog& c, 
 // The pattern a track plays at a song tick: the clip's there, else the track's first; "" when it has none.
 std::string patternAt(const Track& track, int64_t songTick);
 
-// JSON forms for the function call (docs/contracts/core-pcore.md).
+// JSON forms for the function call.
 PCoreLayers pcoreLayersFromJson(const json& j);  // throws DocumentError
 json pcoreLayersToJson(const PCoreLayers& l);
 

@@ -4601,8 +4601,8 @@ void MainComponent::deleteTemplate(const std::string& templateId) {
       });
 }
 
-// New tracks are played by Core's own instruments (CORE-ONLY, Diogo 2026-11-05): the kick, the bass (W-Core with its
-// start bass), W-Core, the hats, the snare and the sampler.
+// New tracks are played by plugins (Diogo 2026-11-16: the sound comes from plugins); a track without one
+// waits in silence ("none"). Core's own instruments left the engine.
 void MainComponent::showAddTrackMenu() {
   juce::PopupMenu menu;
   // The plugins of this PC first (Diogo 2026-11-16: the sound comes from plugins), by maker.

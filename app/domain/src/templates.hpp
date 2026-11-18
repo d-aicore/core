@@ -4,7 +4,6 @@
 // a version. Everything in it is ordinary document content, so a song made from it is edited like any other.
 // Built-in templates ship as files in the app's "templates" folder; the user's own (or an edited copy of a
 // built-in one, same id) live in the user's templates folder and take its place in the list.
-// Contract: docs/contracts/core-template.md.
 #pragma once
 #include <filesystem>
 #include <string>

@@ -1293,23 +1293,6 @@ const EffectInfo* findEffect(const std::string& name) {
   return nullptr;
 }
 
-void upgradeOldVersions(Document& d) {
-  auto chain = [](json& effects) {
-    for (auto& fx : effects) {
-      if (!fx.is_object() || fx.value("type", std::string("builtin")) != "builtin") continue;
-      const EffectInfo* info = findEffect(effectName(fx));
-      if (!info) continue;
-      const int version = fx.contains("version") && fx["version"].is_number_integer() ? fx["version"].get<int>() : 1;
-      if (version >= 1 && version < info->version) fx["version"] = info->version;
-    }
-  };
-  for (auto& t : d.tracks) {
-    chain(t.effects);
-    if (t.instrument.kind == "builtin" && t.instrument.name == "sampler" && t.instrument.version < kSamplerVersion) t.instrument.version = kSamplerVersion;
-  }
-  chain(d.masterEffects);
-}
-
 std::string effectName(const json& fx) { return fx.is_object() && fx.contains("name") && fx["name"].is_string() ? fx["name"].get<std::string>() : std::string(); }
 bool effectBypassed(const json& fx) { return fx.is_object() && fx.contains("bypass") && fx["bypass"].is_boolean() && fx["bypass"].get<bool>(); }
 double effectParam(const json& fx, const std::string& param, double fallback) {

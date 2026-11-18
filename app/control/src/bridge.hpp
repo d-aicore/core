@@ -9,7 +9,6 @@
 //                        an AI model (the AICORE button's dot: green only when both, and the file is fresh)
 //   aicore-command.json  written by Core: asks an AICORE that is already running to show a page (the chat)
 // Every write is atomic (a temporary file, then a rename), so neither side ever reads half a file.
-// Contract: docs/contracts/core-calls.md.
 #pragma once
 #include <chrono>
 #include <filesystem>

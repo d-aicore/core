@@ -1,7 +1,7 @@
 // The language Core speaks (Settings > General > Language): English, or a language file in lang/ next to
 // Core.exe (lang/pt-PT.json: Portuguese). The words are looked up when they are drawn: buttons, labels, menus,
 // tooltips, dialogs and the plugin help go through tr() in the LookAndFeel, so most code keeps writing English.
-// Custom painting calls tr() itself. Contract: docs/contracts/core-language.md.
+// Custom painting calls tr() itself.
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <vector>

@@ -137,8 +137,9 @@ private:
   juce::Rectangle<int> rowLabel(int pitch) const;  // the row's name, left of the grid
   std::map<std::string, std::set<int>> addedRows_;
   juce::TextButton addSound_;
-  // No knobs card under the notes: every built-in instrument has its editor on the right (the Kick Designer, the
-  // W-Core Synth), so a second copy here was redundant (Diogo 2026-11-09).
+  // No knobs card under the notes (Diogo 2026-11-09): the instrument's editor is on the right, so a second
+  // copy here was redundant. Core's own editors (Kick Designer, W-Core Synth) left with the instruments
+  // on 2026-11-16; a plugin is edited in its own window.
   // Build-up and Attachments, docked at the right (ToolDock.h): open while the song plays, Space plays.
   // `reopen` builds it again for another track (P-Core, Build-up); without it another track closes it (Attachments:
   // the notes it was opened on).

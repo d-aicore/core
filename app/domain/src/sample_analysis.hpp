@@ -1,7 +1,6 @@
 // What a sample sounds like, measured from its audio (plan A1, "physical descriptors"): where the sound
 // starts and ends, how fast it hits, how long its tail is, how bright it is and how much sub it has.
 // Measurements only: no guess of role, BPM or style. Offline, never in the audio callback. No GUI.
-// Contract: docs/contracts/core-samples.md ("Análise").
 #pragma once
 #include <atomic>
 #include <filesystem>

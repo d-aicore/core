@@ -13,12 +13,6 @@
 
 namespace core {
 
-namespace {
-// An instrument parameter that jumps instead of gliding. Core's own instruments left (2026-11-16): a plugin's
-// parameters are its own, so none here.
-bool steppedInstrumentParam(std::string_view) { return false; }
-}  // namespace
-
 double Automation::valueAt(double tick) const {
   if (points.empty()) return 0;
   if (tick <= points.front().tick) return points.front().value;
@@ -355,7 +349,6 @@ Graph::Graph(const Project& p, double sampleRate, AssetStore* assets, PluginProv
       rt.baseParams[i] = t.params.at(specs[i].name);
       rt.paramMin[i] = specs[i].min; rt.paramMax[i] = specs[i].max;
       rt.instrument->params[i] = rt.baseParams[i];
-      if (steppedInstrumentParam(specs[i].name)) rt.stepped.set((size_t)i);
     }
     rt.gainDb = t.gainDb; rt.pan = t.pan; rt.mute = t.mute; rt.solo = t.solo;
     rt.anyEffect = buildChain(t.effects, rt.effects, t.id);
@@ -1227,7 +1220,7 @@ void Graph::runTrack(int i, const Step& st, float* buf, float* bufR, EventLog* l
     std::fill(buf, buf + n, 0.0f);
     if (stereoInstrument) std::fill(bufR, bufR + n, 0.0f);
     if (!t.instrument->failed()) {  // a failed native instrument is silent from then on (its track mutes)
-      t.instrument->setPosition(pos >= 0 ? st.beat : -1.0, st.bpm);  // slow movements follow the song (SongClock)
+      t.instrument->setPosition(pos >= 0 ? st.beat : -1.0, st.bpm);  // slow movements follow the song
       renderTrack(i, t, buf, bufR, n, pos, log);
       if (protectNative_ && nativeOutputBad(buf, stereoInstrument ? bufR : buf, n)) {
         if (t.instrument->markFailed()) noteFailed(t.id, t.instrument->name());
