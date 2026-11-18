@@ -128,6 +128,11 @@ public:
   void markCrashed() {
     crashed_.store(true, std::memory_order_release);
     markFailed(Failure::Crash);
+    // Tell JUCE's wrapper this instance crashed, so its internal restart path (restartComponentOnMessageThread)
+    // skips it instead of calling reset()/releaseResources() on the processMutex the SEH catch left held forever
+    // (D restart deadlock). Only an atomic store: no plugin code, no lock, safe on the audio thread (quality bar 3).
+    // Null for a non-VST3 instance; the vendored patch adds the default-no-op markCrashedByHost() to VST3Client.
+    if (auto* c = instance_->getVST3Client()) c->markCrashedByHost();
   }
   bool crashed() const { return crashed_.load(std::memory_order_acquire); }
 

@@ -56,7 +56,7 @@ double answersWithin(EngineClient& engine, const std::string& cmd, const json& a
   return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
 }
 
-#if defined(CORE_TEST_CRASH_VST3) || defined(CORE_TEST_FAULT_VST3)
+#if defined(CORE_TEST_CRASH_VST3) || defined(CORE_TEST_FAULT_VST3) || defined(CORE_TEST_CRASH_RESTART_VST3)
 // The first plugin of a file as the engine describes it (core-engine scan): what a song's track carries.
 json scanFirst(const std::string& file) {
   const std::string command = "\"\"" + std::string(CORE_ENGINE_EXE) + "\" scan \"" + file + "\"\"";
@@ -182,6 +182,67 @@ TEST("serve: a plugin change that is not a parameter is reported as pluginsChang
   CHECK_EQ(changes.load(), 1);
   engine.command("note.off", {{"trackId", "synth"}, {"pitch", 0}});
   engine.close();
+}
+#endif
+
+#ifdef CORE_TEST_CRASH_RESTART_VST3
+// D (restart deadlock, 2026-11-18): a crashed plugin that asks the host to restart the component
+// (restartComponent(kReloadComponent)) must not deadlock the message thread. The host's SEH catch runs no destructor,
+// so JUCE's processMutex stays held; without the vendored gate + Core's markCrashedByHost() wiring, JUCE's internal
+// restart path (reset()/releaseResources()) spins on it forever and the engine answers nothing. The measured red
+// (D-restart-red.txt): plugins.states no reply 5000 ms, engine.stats no reply 2000 ms, engine exit 1, 4 failures.
+// With the fix the engine answers within bounded budgets (these FAIL on hang, never an infinite wait), the song plays
+// on, retry/rebuild works and the engine exits by itself (quality bar 2: a failing plugin never takes the song down).
+TEST("serve: a crashed plugin that asks to restart the component does not deadlock the message thread") {
+  const json crash = scanFirst(CORE_TEST_CRASH_RESTART_VST3), synth = scanFirst(CORE_TEST_SYNTH_VST3);
+  CHECK(crash.is_object());
+  CHECK(synth.is_object());
+  if (!crash.is_object() || !synth.is_object()) return;
+
+  EndReason end;
+  EngineClient engine(engineOptions());
+  end.attach(engine);
+  engine.start();
+  const json loaded = engine.command("project.load", {{"project", song(json::array({pluginTrack("crash", crash), pluginTrack("synth", synth)}))}}, 30000ms);
+  CHECK(loaded.value("missing", json::array()).empty());  // both test plugins loaded, or nothing is tested
+  engine.command("engine.start", {{"backend", "null"}});
+  engine.command("transport.play");
+
+  // The plugin asks to restart and crashes 0.1 s into the song; the engine reports it crashed and plays on.
+  json failed = json::array();
+  for (int i = 0; i < 100 && failed.empty(); ++i) {
+    std::this_thread::sleep_for(100ms);
+    failed = engine.command("plugins.failed");
+  }
+  CHECK_EQ(failed.size(), (size_t)1);
+  if (failed.size() == 1) {
+    CHECK_EQ(failed[0].value("key", std::string()), std::string("track:crash"));
+    CHECK_EQ(failed[0].value("why", std::string()), std::string("crash"));
+  }
+
+  // The message thread still answers (the red deadlocked here): plugins.states <= 5000 ms, the healthy state captured.
+  json states;
+  CHECK(answersWithin(engine, "plugins.states", json::object(), 5000ms, &states) >= 0);
+  CHECK(states.contains("track:synth"));   // the healthy plugin's state is still there to save
+  CHECK(!states.contains("track:crash"));  // the crashed one is never asked again
+
+  // The song plays on: the audio thread advances between two engine.stats answers (each <= 2000 ms; the red timed out).
+  json sa, sb;
+  CHECK(answersWithin(engine, "engine.stats", json::object(), 2000ms, &sa) >= 0);
+  std::this_thread::sleep_for(200ms);
+  CHECK(answersWithin(engine, "engine.stats", json::object(), 2000ms, &sb) >= 0);
+  CHECK(sb.value("callbacks", (uint64_t)0) > sa.value("callbacks", (uint64_t)0));
+
+  // Retry/rebuild: a new instance from the document's state, the crashed one let go; the engine keeps answering.
+  json retry;
+  CHECK(answersWithin(engine, "plugin.retry", {{"key", "track:crash"}}, 10000ms, &retry) >= 0);
+  CHECK(retry.value("retried", false));
+  CHECK(retry.value("loaded", false));
+  CHECK(answersWithin(engine, "engine.stats", json::object(), 2000ms) >= 0);
+
+  // Closing stdin ends the session: the engine exits by itself (code 0), it is not terminated (the red exited 1).
+  engine.close();
+  CHECK_EQ(end.get(), std::string("The engine exited (code 0)."));
 }
 #endif
 

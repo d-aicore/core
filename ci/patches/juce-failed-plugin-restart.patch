@@ -29,7 +29,57 @@ diff --git a/modules/juce_audio_processors_headless/format_types/juce_VST3Plugin
      Steinberg::Vst::IComponent* getIComponentPtr() const noexcept override
      {
          return holder->component.get();
-@@ -3022,6 +3026,11 @@
+@@ -2274,10 +2278,14 @@
+     {
+         // MIDI mappings will always be updated on the main thread, but we need to ensure
+         // that we're not simultaneously reading them on the audio thread.
+-        const SpinLock::ScopedLockType processLock (processMutex);
++        // [Core vendored patch - D restart deadlock] crash-aware acquire (see enterProcessMutexUnlessCrashed).
++        if (! enterProcessMutexUnlessCrashed())
++            return;
+ 
+         if (midiMapping != nullptr)
+             storedMidiMapping.storeMappings (*midiMapping);
++
++        processMutex.exit();
+     }
+ 
+     //==============================================================================
+@@ -2390,8 +2398,11 @@
+ 
+     void releaseResources() override
+     {
+-        const SpinLock::ScopedLockType lock (processMutex);
++        // [Core vendored patch - D restart deadlock] crash-aware acquire (see enterProcessMutexUnlessCrashed).
++        if (! enterProcessMutexUnlessCrashed())
++            return;
+         deactivate();
++        processMutex.exit();
+     }
+ 
+     bool supportsDoublePrecisionProcessing() const override
+@@ -2808,7 +2819,10 @@
+     //==============================================================================
+     void reset() override
+     {
+-        const SpinLock::ScopedLockType lock (processMutex);
++        // [Core vendored patch - D restart deadlock] crash-aware acquire: skip a crashed instance instead of
++        // spinning forever on the processMutex its SEH-caught frame left held (healthy: identical to a lock).
++        if (! enterProcessMutexUnlessCrashed())
++            return;
+ 
+         if (holder->component != nullptr && processor != nullptr)
+         {
+@@ -2818,6 +2832,8 @@
+             holder->component->setActive (true);
+             processor->setProcessing (true);
+         }
++
++        processMutex.exit();
+     }
+ 
+     //==============================================================================
+@@ -3022,6 +3038,29 @@
      */
      SpinLock processMutex;
  
@@ -38,20 +88,62 @@ diff --git a/modules/juce_audio_processors_headless/format_types/juce_VST3Plugin
 +    // of spinning on that lock forever on the message thread. A healthy instance never sets this.
 +    std::atomic<bool> hostCrashed { false };
 +
++    // [Core vendored patch - D restart deadlock] Acquire processMutex for a control-path call (reset,
++    // releaseResources, updateMidiMappings) without deadlocking on a crashed instance. The host's SEH catch
++    // leaves processMutex held forever, and the host may mark the crash AFTER the call was dispatched (the
++    // plugin asks to restart, then crashes in the same frame), so a blocking enter would spin forever on the
++    // message thread. Retry tryEnter until acquired or the host marks it crashed. A healthy instance never sets
++    // hostCrashed and acquires as soon as processBlock releases the lock — the same outcome as a blocking enter
++    // (the audio hot path and the lock type are untouched). Returns false only for a crashed instance.
++    bool enterProcessMutexUnlessCrashed() noexcept
++    {
++        while (! processMutex.tryEnter())
++        {
++            if (hostCrashed.load (std::memory_order_acquire))
++                return false;
++            Thread::yield();
++        }
++        return true;
++    }
++
      //==============================================================================
      template <typename Type>
      static void appendStateFrom (XmlElement& head, VSTComSmartPtr<Type>& object, const String& identifier)
-@@ -3533,6 +3542,13 @@
+@@ -3533,6 +3572,15 @@
          return;
      }
  
 +    // [Core vendored patch - D restart deadlock] A crashed instance holds processMutex forever (the host's
-+    // SEH catch runs no C++ destructors under /EHsc). reset()/releaseResources()/updateMidiMappings() below
-+    // would spin on that held lock and deadlock the message thread, so the engine answers nothing. Skip the
-+    // restart for an instance the host has marked crashed; a healthy instance never sets the flag.
++    // SEH catch runs no C++ destructors under /EHsc). The lock-taking restart calls below would spin on that
++    // held lock and deadlock the message thread, so the engine answers nothing. Skip the restart for an
++    // instance the host has already marked crashed; a healthy instance never sets the flag. The host may mark
++    // the crash AFTER this restart was dispatched (the plugin asks to restart, then crashes in the same frame),
++    // so the lock-taking calls also acquire crash-aware (enterProcessMutexUnlessCrashed) to close that race.
 +    if (plugin->hostCrashed.load (std::memory_order_acquire))
 +        return;
 +
      if (hasFlag (flags, Vst::kReloadComponent))
          plugin->reset();
  
+@@ -3543,8 +3591,9 @@
+ 
+         // Have to deactivate here, otherwise prepareToPlay might not pick up the new bus layouts
+         plugin->releaseResources();
+-        plugin->prepareToPlay (sampleRate >= 8000 ? sampleRate : 44100.0,
+-        blockSize > 0 ? blockSize : 1024);
++        if (! plugin->hostCrashed.load (std::memory_order_acquire))  // [Core vendored patch] skip if crashed mid-restart
++            plugin->prepareToPlay (sampleRate >= 8000 ? sampleRate : 44100.0,
++            blockSize > 0 ? blockSize : 1024);
+     }
+ 
+     if (hasFlag (flags, Vst::kLatencyChanged))
+@@ -3555,7 +3604,8 @@
+         plugin->updateMidiMappings();
+ 
+     if (hasFlag (flags, Vst::kParamValuesChanged))
+-        plugin->resetParameters();
++        if (! plugin->hostCrashed.load (std::memory_order_acquire))  // [Core vendored patch] skip if crashed mid-restart
++            plugin->resetParameters();
+ 
+     if (hasFlag (flags, Vst::kParamTitlesChanged))
+         plugin->updateParameterInfo();
