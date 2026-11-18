@@ -77,6 +77,12 @@ target_include_directories(calls_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(calls_tests PRIVATE core_control core_domain)
 add_test(NAME calls_tests COMMAND calls_tests)
 
+# BUG-SWEEP-32 (2026-11-18): the plugin catalog menu ids must never collide with the fixed action ids,
+# at any catalog size (the routing extracted from MainComponent.cpp's two menus into MenuIds.h).
+add_executable(menu_tests menu_tests.cpp)
+target_include_directories(menu_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/app/desktop/src)
+add_test(NAME menu_tests COMMAND menu_tests)
+
 # The command line: what the app and the scripts call.
 add_test(NAME cli_version COMMAND core-engine --version)
 set_tests_properties(cli_version PROPERTIES PASS_REGULAR_EXPRESSION "core-engine ${CORE_VERSION}")
@@ -88,7 +94,7 @@ add_test(NAME cli_measure COMMAND ${CMAKE_COMMAND} -DENGINE=$<TARGET_FILE:core-e
 add_test(NAME cli_unicode COMMAND ${CMAKE_COMMAND} -DENGINE=$<TARGET_FILE:core-engine> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli
                                   -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_unicode.cmake)
 
-set_tests_properties(engine_tests domain_tests role_tests midi_tests bug_tests audit_tests audit2_tests hunt_tests round3_tests calls_tests bitwig_tests cli_version cli_demo_render cli_measure cli_unicode
+set_tests_properties(engine_tests domain_tests role_tests midi_tests bug_tests audit_tests audit2_tests hunt_tests round3_tests calls_tests bitwig_tests menu_tests cli_version cli_demo_render cli_measure cli_unicode
                      PROPERTIES LABELS merge TIMEOUT 300)
 
 # The engine process driven through the app's client (core-engine serve, null audio backend): messages larger than
