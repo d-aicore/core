@@ -443,6 +443,7 @@ std::vector<std::string> randomizeStyle(Document& doc, const RandomizeOptions& o
   auto named = [&](const char* axis) { return std::find(o.axes.begin(), o.axes.end(), axis) != o.axes.end(); };
   auto on = [&](const char* axis) { return o.axes.empty() || named(axis); };
   const bool tempoOn = named("tempo");  // J only when asked for: it changes the song's length in time
+  const bool soundOn = named("sound");  // K only when asked for: it randomizes the role plugins' parameters
   const double p = o.strength == 1 ? 0.35 : o.strength == 2 ? 0.65 : 0.9;  // a section leaves the template's choice
   if (doc.sections.empty() || doc.bpm <= 0) return {};
   const std::vector<int> energy = energies(doc);
