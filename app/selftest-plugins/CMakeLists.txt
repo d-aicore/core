@@ -46,3 +46,35 @@ juce_add_plugin(CoreTestCrash
 target_sources(CoreTestCrash PRIVATE TestPlugins.cpp)
 target_compile_definitions(CoreTestCrash PUBLIC CORE_TEST_CRASH=1 JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0)
 target_link_libraries(CoreTestCrash PRIVATE juce::juce_audio_utils PUBLIC juce::juce_recommended_config_flags)
+
+# A gain that throws a C++ exception in processBlock after 0.1 s (CORE_TEST_THROW, audit 6.4): the engine must
+# silence its track and play the others on. Built for the tests; never shipped.
+juce_add_plugin(CoreTestThrow
+  PRODUCT_NAME "Core Test Throw"
+  COMPANY_NAME "Core"
+  VERSION 1.0.0
+  PLUGIN_MANUFACTURER_CODE Core
+  PLUGIN_CODE CTth
+  IS_SYNTH FALSE
+  FORMATS VST3
+  COPY_PLUGIN_AFTER_BUILD FALSE
+  VST3_AUTO_MANIFEST TRUE)
+target_sources(CoreTestThrow PRIVATE TestPlugins.cpp)
+target_compile_definitions(CoreTestThrow PUBLIC CORE_TEST_THROW=1 JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0)
+target_link_libraries(CoreTestThrow PRIVATE juce::juce_audio_utils PUBLIC juce::juce_recommended_config_flags)
+
+# A gain that crashes on demand in an entry point outside processBlock (state, reset, editor) or in a parameter
+# getter, chosen by an environment variable (CORE_TEST_FAULT_*): the crash tests for the host's guards. Never shipped.
+juce_add_plugin(CoreTestFault
+  PRODUCT_NAME "Core Test Fault"
+  COMPANY_NAME "Core"
+  VERSION 1.0.0
+  PLUGIN_MANUFACTURER_CODE Core
+  PLUGIN_CODE CTfl
+  IS_SYNTH FALSE
+  FORMATS VST3
+  COPY_PLUGIN_AFTER_BUILD FALSE
+  VST3_AUTO_MANIFEST TRUE)
+target_sources(CoreTestFault PRIVATE TestPlugins.cpp)
+target_compile_definitions(CoreTestFault PUBLIC CORE_TEST_FAULT=1 JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0)
+target_link_libraries(CoreTestFault PRIVATE juce::juce_audio_utils PUBLIC juce::juce_recommended_config_flags)

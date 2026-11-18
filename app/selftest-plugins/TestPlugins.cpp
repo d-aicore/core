@@ -1,14 +1,36 @@
 // The test plugins (one file, built once per plugin): CORE_TEST_SYNTH (a sine per note), CORE_TEST_GAIN or
 // CORE_TEST_DELAY (a delay that reports it as latency), CORE_TEST_THROW (a gain that throws after 0.1 s, audit 6.4),
-// CORE_TEST_CRASH (an instrument that crashes after 0.1 s). All have one parameter, "gain" (0..1, 0.5), saved in
-// their state, and the generic editor. The synth's note 0 plays nothing: it tells the host that its state changed
-// without moving a parameter, as a plugin does when a sample or a wavetable is loaded in its window.
+// CORE_TEST_CRASH (an instrument that crashes after 0.1 s), CORE_TEST_FAULT (an effect that crashes on demand in a
+// chosen entry point outside processBlock, or in a parameter getter). All have one parameter, "gain" (0..1, 0.5),
+// saved in their state, and the generic editor. The synth's note 0 plays nothing: it tells the host that its state
+// changed without moving a parameter, as a plugin does when a sample or a wavetable is loaded in its window.
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <array>
 #include <cmath>
+#include <cstdlib>
 #include <stdexcept>
 
 namespace {
+
+// True when the environment variable is set to a non-empty, non-"0" value (the fault plugins read it once per call).
+bool envSet(const char* name) {
+#ifdef _MSC_VER
+  char* buf = nullptr;
+  size_t len = 0;
+  if (_dupenv_s(&buf, &len, name) == 0 && buf) { const bool set = buf[0] != '\0' && buf[0] != '0'; free(buf); return set; }
+  return false;
+#else
+  const char* v = std::getenv(name);
+  return v != nullptr && v[0] != '\0' && v[0] != '0';
+#endif
+}
+
+// An access violation on purpose (a write through a null pointer), as CORE_TEST_CRASH does: volatile so the
+// compiler cannot prove the write invalid and drop it. The host catches it with structured exception handling.
+void crashNow() {
+  static volatile int* volatile nowhere = nullptr;
+  *nowhere = 1;
+}
 
 class TestPlugin : public juce::AudioProcessor {
 public:
@@ -174,6 +196,53 @@ private:
   volatile int* volatile nowhere_ = nullptr;  // volatile: the compiler cannot prove the write is invalid and drop it
 };
 juce::AudioProcessor* make() { return new Crash(); }
+#endif
+
+#if CORE_TEST_FAULT
+// A gain effect that crashes on demand in one entry point, chosen by an environment variable (the engine process
+// inherits it): CORE_TEST_FAULT_GETSTATE (getStateInformation, once it has played, so the crash lands when the host
+// captures state and not while JUCE reads the default state at load), CORE_TEST_FAULT_SETSTATE (setStateInformation,
+// at load), CORE_TEST_FAULT_RESET (reset), CORE_TEST_FAULT_EDITOR (createEditor), CORE_TEST_FAULT_PARAM (a parameter's
+// getValue, as the host reads it for plugin.params). With none set it is an ordinary gain. The host must catch the
+// crash, silence this plugin and play the others on, never taking the engine down (quality bar 2).
+class FaultParam final : public juce::AudioParameterFloat {
+public:
+  FaultParam() : juce::AudioParameterFloat(juce::ParameterID{"fault", 1}, "Fault", 0.0f, 1.0f, 0.5f) {}
+  float getValue() const override {
+    if (envSet("CORE_TEST_FAULT_PARAM")) crashNow();
+    return get();  // the range is 0..1, so the plain value is already normalized
+  }
+};
+
+class Fault final : public TestPlugin {
+public:
+  Fault() : TestPlugin(BusesProperties().withInput("Input", juce::AudioChannelSet::stereo(), true).withOutput("Output", juce::AudioChannelSet::stereo(), true)) {
+    addParameter(new FaultParam());
+  }
+  bool acceptsMidi() const override { return false; }
+  bool producesMidi() const override { return false; }
+  bool isBusesLayoutSupported(const BusesLayout& l) const override {
+    return l.getMainOutputChannelSet() == juce::AudioChannelSet::stereo() && l.getMainInputChannelSet() == juce::AudioChannelSet::stereo();
+  }
+  void prepareToPlay(double, int) override {}
+  void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) override { buffer.applyGain(gain_->get()); played_ += buffer.getNumSamples(); }
+  void getStateInformation(juce::MemoryBlock& data) override {
+    if (played_ > 0 && envSet("CORE_TEST_FAULT_GETSTATE")) crashNow();
+    TestPlugin::getStateInformation(data);
+  }
+  void setStateInformation(const void* data, int size) override {
+    if (envSet("CORE_TEST_FAULT_SETSTATE")) crashNow();
+    TestPlugin::setStateInformation(data, size);
+  }
+  void reset() override { if (envSet("CORE_TEST_FAULT_RESET")) crashNow(); }
+  juce::AudioProcessorEditor* createEditor() override {
+    if (envSet("CORE_TEST_FAULT_EDITOR")) crashNow();
+    return TestPlugin::createEditor();
+  }
+private:
+  int64_t played_ = 0;
+};
+juce::AudioProcessor* make() { return new Fault(); }
 #endif
 
 }  // namespace
