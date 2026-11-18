@@ -250,7 +250,8 @@ std::vector<CoreFunction> buildFunctions() {
   open.id = "open";
   open.family = "open";
   open.name = "Open";
-  open.description = "after Apply, opens a window: \"what\": \"instrument\" (the track's plugin window), \"patterns\" (P-Core on the track, \"pcore\" too), "
+  open.description = "after Apply, opens a window: \"what\": \"instrument\" (the track's plugin window, \"wcore\" too), "
+                     "\"patterns\" (Pattern Maker on the track, \"pcore\" too), "
                      "\"mixer\", \"score\" (Stage Core, the song's parts), or an effect's id or name (a plugin effect's window). Changes nothing";
   open.tags = {"open", "window", "plugin", "abrir"};
   out.push_back(std::move(open));
@@ -357,8 +358,9 @@ json functionsJson(const std::vector<CoreFunction>& functions) {
 }
 
 namespace {
-// The Core effects of a chain as they are now, for "set" ({id, fn, args: every knob's value, ranges, on}); a rack's
-// own effects and F-Core's are left out (their knobs belong to the rack or to F-Core: "set" would be overwritten).
+// The Core effects of a chain as they are now, for "set" ({id, fn, args: every knob's value, ranges, on}); effects
+// tagged by the old intent FX (the legacy "fcore" mark) are left out: their knobs belong to the tool that wrote
+// them, and "set" would be overwritten.
 // ranges: every knob's [min, max, default], so an AI moves a knob inside what it takes instead of guessing (audit
 // 2026-11-05).
 json chainJson(const json& effects) {
@@ -562,9 +564,12 @@ Proposal validateProposal(const json& raw, const std::vector<CoreFunction>& func
     }
     if (f->family == "open") {
       call.open = str(c, "what").empty() ? std::string("effects") : str(c, "what");
-      // A Core plugin by any of its names opens the window that shows it (doc::corePlugins: "wcore" -> "instrument",
-      // "stage" -> "score", "stutter" -> "patterns": Edit > STUTTER is in the piano roll).
+      // A Core tool by any of its names opens the window that shows it (doc::corePlugins: "wcore" -> "instrument",
+      // "pcore"/"stutter" -> "patterns", "stage" -> "score": Edit > STUTTER is in the piano roll). The old module
+      // ids are lookup aliases (2026-11-18); the tool-only ids (fcore, rcore, dcore) have no window and are refused
+      // below with the reason, like any unknown name.
       if (call.open == "pcore" || call.open == "stutter") call.open = "patterns";
+      if (call.open == "wcore") call.open = "instrument";
       if (call.open == "stage") call.open = "score";
       if (call.open == "score" && call.trackId.empty()) { call.trackId = "master"; call.trackName = "the song"; }  // no track needed
       if (call.open != "effects" && call.open != "instrument" && call.open != "patterns" && call.open != "mixer" && call.open != "score") {
@@ -608,7 +613,7 @@ Proposal validateProposal(const json& raw, const std::vector<CoreFunction>& func
         const std::string want = v.is_string() ? v.get<std::string>() : std::string();
         std::string found;
         for (const auto& o : opt->second) if (sameName(o, want)) found = o;
-        // F-Core's style: the song's style words are accepted too ("Dark psycore" -> darkpsycore).
+        // A style choice: the song's style words are accepted too ("Dark psycore" -> darkpsycore).
         if (found.empty() && key == "style" && !want.empty()) {
           const std::string k = styleKey(want);
           for (const auto& o : opt->second) if (o == k) found = o;

@@ -59,7 +59,9 @@ bool wellFormedUtf8(const std::string& s) {
 } // namespace
 
 const std::vector<InstrumentChoice>& builtinInstruments() {
-  static const std::vector<InstrumentChoice> list = {{"kick", "Kick"}, {"bass", "Bass"}, {"wave", "W-Core"}, {"hats", "Hats"}, {"snare", "Snare + clap"}, {"drums", "Drums (kick + hats)"},
+  // The legacy built-in list (menus and old track names): "wave" is the catalogue's "Synth" — the W-Core
+  // module title left with the module cleanup (2026-11-18); the engine identifier "wave" stays for old songs.
+  static const std::vector<InstrumentChoice> list = {{"kick", "Kick"}, {"bass", "Bass"}, {"wave", "Synth"}, {"hats", "Hats"}, {"snare", "Snare + clap"}, {"drums", "Drums (kick + hats)"},
                                                               {"sampler", "Sampler"}, {"samplepath", "Core Glitch"}};
   return list;
 }
