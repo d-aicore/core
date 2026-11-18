@@ -676,4 +676,80 @@ TEST("BUG-SWEEP-23: swapping sections moves the tempo with the music") {
   CHECK_NEAR(e.bpm, base, 1e-9);
 }
 
+TEST("BUG-SWEEP-24: inserted empty bars hold the tempo, the ramp keeps its shape on both sides") {
+  using namespace tempo_sweep;
+  // The probe's song: the whole ramp used to re-interpolate (150 -> 140 at bar 1, 1.78515 s -> 1.84981 s).
+  Document d = newEmptyDocument();
+  d.bpm = 120;
+  setTempoMap(d, {{4 * kBar, 240, json::object(), true}});
+  const Document original = d;
+  insertTime(d, 2 * kBar, 2 * kBar);
+  for (int64_t t : {(int64_t)0, (int64_t)kBar, (int64_t)(2 * kBar - 1)})
+    CHECK_NEAR(bpmAt(d, t), bpmAt(original, t), 1e-6);              // the music before the cut is untouched
+  CHECK_NEAR(bpmAt(d, kBar), 150, 1e-6);                            // before the fix: 140
+  for (int64_t t : {(int64_t)(2 * kBar), (int64_t)(3 * kBar), (int64_t)(4 * kBar - 1)})
+    CHECK_NEAR(bpmAt(d, t), 180, 1e-9);                             // the empty bars hold the cut's tempo
+  for (int64_t t : {(int64_t)(4 * kBar), (int64_t)(5 * kBar), (int64_t)(6 * kBar)})
+    CHECK_NEAR(bpmAt(d, t), bpmAt(original, t - 2 * kBar), 1e-6);   // the moved music keeps its curve (210 at 5 bars)
+  CHECK_NEAR(engineSeconds(d, kBar), engineSeconds(original, kBar), 1e-4);
+  CHECK_NEAR(engineSeconds(d, 6 * kBar) - engineSeconds(d, 4 * kBar),
+             engineSeconds(original, 4 * kBar) - engineSeconds(original, 2 * kBar), 1e-4);
+  CHECK(validSavedForm(d));
+  // Inverse edit: deleting the same bars restores the music's tempo (Undo is the byte-exact restore path;
+  // the boundary pins the insert added remain, so the JSON is not byte-identical).
+  deleteTime(d, 2 * kBar, 2 * kBar);
+  CHECK_EQ(d.lengthTicks, original.lengthTicks);
+  for (int64_t t : {(int64_t)0, (int64_t)kBar, (int64_t)(2 * kBar), (int64_t)(3 * kBar), (int64_t)(4 * kBar)})
+    CHECK_NEAR(bpmAt(d, t), bpmAt(original, t), 1e-6);              // before the fix: 140 at bar 1
+  CHECK(validSavedForm(d));
+
+  // Step control: no interpolation, the earlier music keeps its tempo (this already held).
+  Document s = newEmptyDocument();
+  s.bpm = 120;
+  setTempoMap(s, {{4 * kBar, 240, json::object(), false}});
+  insertTime(s, 2 * kBar, 2 * kBar);
+  CHECK_NEAR(bpmAt(s, kBar), 120, 1e-9);
+  CHECK_NEAR(bpmAt(s, 3 * kBar), 120, 1e-9);
+  CHECK_NEAR(bpmAt(s, 6 * kBar), 240, 1e-9);
+  CHECK(validSavedForm(s));
+
+  // A step exactly at the cut: the hold keeps the new value, and the inverse edit stays a valid document.
+  Document c = newEmptyDocument();
+  c.bpm = 120;
+  setTempoMap(c, {{2 * kBar, 200, json::object(), false}});
+  const Document cOrig = c;
+  insertTime(c, 2 * kBar, 2 * kBar);
+  CHECK_NEAR(bpmAt(c, kBar), 120, 1e-9);
+  CHECK_NEAR(bpmAt(c, 3 * kBar), 200, 1e-9);                        // before the fix: 120 (the step moved away)
+  CHECK_NEAR(bpmAt(c, 4 * kBar), 200, 1e-9);
+  CHECK(validSavedForm(c));
+  deleteTime(c, 2 * kBar, 2 * kBar);
+  CHECK(validSavedForm(c));                                         // no two changes on one tick
+  CHECK_NEAR(bpmAt(c, 2 * kBar), 200, 1e-9);
+  CHECK_EQ(toJson(c).dump(), toJson(cOrig).dump());
+
+  // Inserting at the very start: the empty bars hold the song's start tempo, the ramp resumes after them.
+  Document z = newEmptyDocument();
+  z.bpm = 120;
+  setTempoMap(z, {{4 * kBar, 240, json::object(), true}});
+  const Document zOrig = z;
+  insertTime(z, 0, 2 * kBar);
+  CHECK_NEAR(bpmAt(z, kBar), 120, 1e-9);                            // before the fix: 140
+  CHECK_NEAR(bpmAt(z, 3 * kBar), bpmAt(zOrig, kBar), 1e-6);
+  CHECK_NEAR(bpmAt(z, 6 * kBar), 240, 1e-6);
+  CHECK_NEAR(engineSeconds(z, 6 * kBar) - engineSeconds(z, 2 * kBar), engineSeconds(zOrig, 4 * kBar), 1e-4);
+  CHECK(validSavedForm(z));
+
+  // The 64-point cap: the boundary pins count, and a map over the cap throws with the song untouched.
+  Document full = newEmptyDocument();
+  full.bpm = 120;
+  full.lengthTicks = 100 * kBar;
+  std::vector<TempoPoint> many;
+  for (int i = 1; i <= 64; ++i) many.push_back({(int64_t)i * kBar, 120.0 + (i % 5), json::object(), i == 33});
+  setTempoMap(full, many);
+  CHECK_THROWS(insertTime(full, 32 * kBar + kBar / 2, kBar));
+  CHECK_EQ(full.tempoMap.size(), (size_t)64);
+  CHECK_EQ(full.lengthTicks, 100 * kBar);
+}
+
 CORE_TEST_MAIN
