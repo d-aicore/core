@@ -146,6 +146,7 @@ public:
     if (count_ < kMax) {
       notes_[count_++] = MidiNote{offset, on, pitch, (float)velocity};
       held_[pitch] = on;
+      if (on) heldVel_[pitch] = (float)velocity;  // the velocity a swap re-triggers the pitch with (adopt)
       return;
     }
     // Full: the note-off still reaches the plugin; a note-on cannot be played.
@@ -186,16 +187,26 @@ public:
     count_ = 0;
   }
   void adopt(const Instrument& previous) override {
-    // The same plugin instance plays on: the pitches it holds and the note-offs that did not fit in the
-    // last block's queue (audit 2026-11-17 item 13: only held_ came over, and what was waiting in the
-    // reserve was never sent — a pitch started twice in a dense block stayed sounding in the plugin
-    // until Stop or a seek silenced it).
-    if (auto* p = dynamic_cast<const PluginInstrument*>(&previous)) {
+    auto* p = dynamic_cast<const PluginInstrument*>(&previous);
+    if (!p) return;
+    if (p->processor_ == processor_) {
+      // The same plugin instance plays on: the pitches it holds and the note-offs that did not fit in the
+      // last block's queue (audit 2026-11-17 item 13: only held_ came over, and what was waiting in the
+      // reserve was never sent — a pitch started twice in a dense block stayed sounding in the plugin
+      // until Stop or a seek silenced it).
       std::copy(p->held_, p->held_ + 128, held_);
+      std::copy(p->heldVel_, p->heldVel_ + 128, heldVel_);
       std::copy(p->pendingOffs_, p->pendingOffs_ + 128, pendingOffs_);
       std::copy(p->pendingAt_, p->pendingAt_ + 128, pendingAt_);
       panic_ = p->panic_;
+      return;
     }
+    // A-004: a different instance (Retry, plugin change). Copying held_ would be phantom state — the fresh
+    // instance never got those note-ons, and reconcile() skips a track whose held pitches did not change,
+    // so the note stayed silent until the next note-on or seek. Re-trigger what the old wrapper held, at
+    // the start of this block, with the velocity it was held at; the fresh instance sounds from here on.
+    for (int pitch = 0; pitch < 128; ++pitch)
+      if (p->held_[pitch]) queueNote(0, true, pitch, p->heldVel_[pitch]);
   }
   // At most kCapacity events reach the plugin per block: the JUCE host prepares its MIDI buffer for
   // kMaxPluginEvents (plugins.hpp), so it never allocates on the audio thread.
@@ -217,6 +228,7 @@ private:
   int pendingAt_[128] = {};    // and the sample of the first of them
   bool panic_ = false;         // an All Notes Off that did not fit
   bool held_[128] = {};
+  float heldVel_[128] = {};    // the velocity of each held pitch (a swap re-triggers with it, see adopt)
 };
 
 // A plugin in an effect chain.

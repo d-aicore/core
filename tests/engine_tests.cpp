@@ -2,12 +2,14 @@
 // Correr: engine_tests [parte-do-nome]
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <memory>
 #include <new>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <vector>
 #include "support/check.hpp"
 #include "support/signals.hpp"
@@ -717,6 +719,154 @@ TEST("protocol: a song with more than 8 MB of plugin state is read, loaded and a
   CHECK(answer.size() > (size_t)(8u << 20));               // the answer that ended the engine
   CHECK(answer.size() <= Server::kMaxMessageBytes);
   CHECK(answer.rfind("{\"id\":2,", 0) == 0);               // an answer starts with its id: the client relies on it
+}
+
+// --- M5 re-arm: one late worker must not mean serial for the Engine's whole life --------------------------------
+// engine.cpp set liveFallback_ on the first stall recovery and never stored false again: the Engine played
+// serial until it was rebuilt (only a rate/thread-count change rebuilds it, server.cpp engine.start). A single
+// OS-scheduling hiccup cost multicore for the rest of the session. The fix re-arms the live workers on the
+// first publish after a cooldown, within a stall budget (a plugin that keeps stalling stays serial for good).
+
+namespace {
+// A plugin that only adds a constant level: no shared state, safe to play from a worker thread (the provider
+// gives one instance per track, as the real host does).
+struct LevelProc final : PluginProcessor {
+  void process(float* left, float* right, int frames, const MidiNote*, int) override {
+    for (int i = 0; i < frames; ++i) { left[i] += 0.25f; right[i] += 0.25f; }
+  }
+  bool isInstrument() const override { return true; }
+  int latencySamples() const override { return 0; }
+};
+struct LevelProvider final : PluginProvider {
+  std::shared_ptr<PluginProcessor> get(const std::string&, const json&, double, bool, std::string* why) override {
+    if (why) why->clear();
+    return std::make_shared<LevelProc>();
+  }
+  void keepOnly(const std::vector<std::string>&) override {}
+};
+// Two plugin tracks: the live path plays only with at least two (Graph::processLive).
+json twoTrackSong() {
+  json tracks = json::array();
+  for (const char* id : {"a", "b"})
+    tracks.push_back({{"id", id}, {"name", id}, {"instrument", "plugin"},
+                      {"plugin", {{"format", "vst3"}, {"id", "fake"}}}, {"patternTicks", 4 * kPpq}, {"notes", json::array()}});
+  return {{"format", kProjectFormat}, {"version", 2}, {"name", "m5"}, {"bpm", 120.0},
+          {"lengthTicks", 16LL * 4 * kPpq}, {"masterGainDb", 0.0}, {"tracks", tracks}};
+}
+}  // namespace
+
+TEST("M5: a worker that was late once is re-armed after the cooldown; a stalling plugin stays serial (budget)") {
+  Engine e(kSr, 1);  // one live worker (opt-in; the default stays 0, FL-1/D51)
+  e.setLiveDeadline(0.05);  // a fraction of the buffer's time: the delayed worker misses it for sure
+  LevelProvider provider;
+  const Project song = fromJson(twoTrackSong());
+  std::vector<float> L(256), R(256);
+  auto publish = [&] { e.publish(std::make_unique<Graph>(song, kSr, nullptr, &provider)); };
+  auto block = [&] { e.process(L.data(), R.data(), 256); };
+  auto drain = [&] {  // the silence-until-idle guard: silent blocks while the late worker finishes
+    for (int i = 0; i < 500 && !e.livePool()->idle(); ++i) { block(); std::this_thread::sleep_for(std::chrono::milliseconds(1)); }
+    block();  // the recovery block: the pool is idle, the engine plays on (serial until re-armed)
+  };
+  publish();
+  e.play();
+  // The worker sleeps 50 ms before its job: the deadline (a fraction of 256/48000 s) passes, the block is
+  // silence and the engine falls back to serial.
+  e.livePool()->testDelayNs = 50000000;
+  block();
+  CHECK_EQ(e.stats().liveStalls.load(), (uint64_t)1);
+  drain();
+  CHECK(e.liveFallback());  // the recovery block marks the fallback (engine.cpp: stalled_ -> idle -> serial)
+  CHECK(e.stats().liveStallBlocks.load() > (uint64_t)0);  // the guard held: silence until the worker was done
+  CHECK_EQ(e.stats().liveStalls.load(), (uint64_t)1);
+  // Re-arm: the first publish after the cooldown (2 s) uses the live workers again.
+  e.livePool()->testDelayNs = 0;
+  std::this_thread::sleep_for(std::chrono::milliseconds(2100));
+  publish();
+  CHECK(!e.liveFallback());  // before the fix: true for the Engine's whole life
+  // Proof the new graph really plays on the workers: delay them again and it stalls again.
+  e.livePool()->testDelayNs = 50000000;
+  block();
+  CHECK_EQ(e.stats().liveStalls.load(), (uint64_t)2);  // before the fix: still 1 (a serial graph never stalls)
+  drain();
+  // The budget: after the third stall the engine stays serial for good, cooldown elapsed or not.
+  e.livePool()->testDelayNs = 0;
+  std::this_thread::sleep_for(std::chrono::milliseconds(2100));
+  publish();
+  CHECK(!e.liveFallback());  // the second stall is still within the budget
+  e.livePool()->testDelayNs = 50000000;
+  block();
+  CHECK_EQ(e.stats().liveStalls.load(), (uint64_t)3);
+  drain();
+  e.livePool()->testDelayNs = 0;
+  std::this_thread::sleep_for(std::chrono::milliseconds(2100));
+  publish();
+  CHECK(e.liveFallback());  // the budget is spent: serial from here on, no thrash
+  e.livePool()->testDelayNs = 50000000;
+  block();
+  CHECK_EQ(e.stats().liveStalls.load(), (uint64_t)3);  // a serial graph never stalls
+  e.livePool()->testDelayNs = 0;
+}
+
+// --- A-004: a live plugin swap must re-chase the held notes into the fresh instance ------------------------------
+// adopt() copied held_ from the old wrapper unconditionally, and reconcile() skips a track whose held pitches
+// did not change: a fresh instance (Retry, plugin change) got the phantom held bits but no note-on, so the
+// held note went silent until the next note-on or seek. The fix matches the processor identity: the same
+// instance keeps its state; a different one is re-triggered with the notes the old wrapper held.
+
+namespace {
+// A plugin that sounds only while a note is held (a constant-level fake cannot prove audibility).
+struct HeldSynth final : PluginProcessor {
+  std::vector<MidiNote> seen;
+  bool held[128] = {};
+  void process(float* left, float* right, int frames, const MidiNote* notes, int count) override {
+    for (int i = 0; i < count; ++i) { seen.push_back(notes[i]); held[notes[i].pitch & 127] = notes[i].on; }
+    bool any = false;
+    for (int p = 0; p < 128; ++p) if (held[p]) { any = true; break; }
+    if (any) for (int i = 0; i < frames; ++i) { left[i] += 0.5f; right[i] += 0.5f; }
+  }
+  bool isInstrument() const override { return true; }
+  int latencySamples() const override { return 0; }
+};
+struct SwapProvider final : PluginProvider {
+  std::shared_ptr<HeldSynth> proc = std::make_shared<HeldSynth>();
+  std::shared_ptr<PluginProcessor> get(const std::string&, const json&, double, bool, std::string* why) override {
+    if (why) why->clear();
+    return proc;
+  }
+  void keepOnly(const std::vector<std::string>&) override {}
+};
+}  // namespace
+
+TEST("A-004: swapping a plugin instance keeps the held note sounding (re-chased into the fresh instance)") {
+  const json notes = json::array({{{"tick", 0}, {"length", 4 * kPpq}, {"pitch", 60}, {"velocity", 0.8}}});
+  SwapProvider provider;
+  const Project song = fromJson(pluginSong(120, notes, json::array()));
+  Engine e(kSr);  // serial: the swap edge is the same on both paths
+  std::vector<float> L(256), R(256);
+  auto publish = [&] { e.publish(std::make_unique<Graph>(song, kSr, nullptr, &provider)); };
+  auto peakOfBlocks = [&](int blocks) {
+    float peak = 0;
+    for (int b = 0; b < blocks; ++b) {
+      e.process(L.data(), R.data(), 256);
+      for (int i = 0; i < 256; ++i) peak = std::max(peak, std::max(std::fabs(L[i]), std::fabs(R[i])));
+    }
+    return peak;
+  };
+  publish();
+  e.play();
+  CHECK(peakOfBlocks(8) > 0.2f);  // the held note sounds in the first instance
+  // Live swap: the provider hands out a fresh instance (Retry / plugin change); the song is unchanged.
+  auto fresh = std::make_shared<HeldSynth>();
+  provider.proc = fresh;
+  publish();
+  const float after = peakOfBlocks(8);
+  CHECK(after > 0.2f);  // before the fix: silence — the fresh instance never got the held note
+  bool on = false;
+  float vel = 0;
+  for (const auto& ev : fresh->seen) if (ev.on && ev.pitch == 60) { on = true; vel = ev.velocity; }
+  CHECK(on);  // the held note was re-chased into the fresh instance
+  CHECK_NEAR(vel, 0.8, 1e-6);  // with the velocity it was held at
+  CHECK(after <= 0.5f + 1e-3f);  // one voice, not doubled
 }
 
 CORE_TEST_MAIN

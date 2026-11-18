@@ -61,8 +61,8 @@ struct EngineStats {
   // How much faster the device's clock runs than the computer's, in parts per million (after a minute of
   // playing). Tens of ppm are normal (two crystals); the starvation count follows it without counting it.
   std::atomic<double> deviceDriftPpm{0};
-  // M5: calls where a live worker missed the deadline (that block was silence; then serial), and the
-  // silent blocks while that worker finished.
+  // M5: calls where a live worker missed the deadline (that block was silence; then serial until a
+  // publish re-arms the workers), and the silent blocks while that worker finished.
   std::atomic<uint64_t> liveStalls{0}, liveStallBlocks{0};
   double loadPercentile(double p) const;       // % of the buffer's time, from loadBands (upper edge of the band)
   void reset();
@@ -146,7 +146,8 @@ public:
   double sampleRate() const { return sampleRate_; }
   EngineStats& stats() { return stats_; }
   int liveThreads() const { return pool_ ? pool_->threads() : 0; }
-  // A live worker was late once: the engine plays serial from then on (until a new Engine).
+  // A live worker was late: the engine plays serial until the first publish after kLiveRearmCooldownS
+  // re-arms the workers, within kLiveRearmBudget stalls (a plugin that keeps stalling stays serial for good).
   bool liveFallback() const { return liveFallback_.load(std::memory_order_relaxed); }
   RtWorkerPool* livePool() { return pool_.get(); }  // tests
   // How long the callback waits for the live workers, in buffers' time (2 by default). Tests on slow
@@ -226,6 +227,12 @@ private:
   double liveDeadline_ = 2.0;
   bool stalled_ = false;                // audio thread: a worker still holds a track of current_
   std::atomic<bool> liveFallback_{false};
+  // M5 re-arm: one late worker (an OS scheduling hiccup) must not mean serial for the Engine's whole life.
+  // The first publish at least kLiveRearmCooldownS after the recovery uses the live workers again, while
+  // fewer than kLiveRearmBudget stalls happened: a plugin that keeps stalling stays serial for good.
+  static constexpr double kLiveRearmCooldownS = 2.0;
+  static constexpr uint64_t kLiveRearmBudget = 3;
+  std::atomic<uint64_t> liveRecoveredNs_{0};  // audio thread: when the last stall recovery happened
 };
 
 uint64_t nowNs();
