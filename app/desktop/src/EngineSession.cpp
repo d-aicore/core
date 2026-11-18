@@ -174,6 +174,12 @@ void EngineSession::openPluginEditor(const std::string& key) {
   queue(a);
 }
 
+void EngineSession::retryPlugin(const std::string& key) {
+  Action a{Action::RetryPlugin};
+  a.text = key;
+  queue(a);
+}
+
 void EngineSession::newSong() {
   std::lock_guard<std::mutex> g(mutex_);
   ++documentEpoch_;
@@ -322,7 +328,7 @@ void EngineSession::run() {
       // plugin's window or reading its parameters: a plugin just added is only in the engine once its edit is sent
       // (audit R05: the editor was asked for a plugin the engine did not have yet).
       const bool needsDocument = action.kind == Action::Export || action.kind == Action::PluginEditor || action.kind == Action::PluginParams ||
-                                 action.kind == Action::PluginParam || action.kind == Action::PluginPreset;
+                                 action.kind == Action::PluginParam || action.kind == Action::PluginPreset || action.kind == Action::RetryPlugin;
       if (needsDocument && wantedRevision_ > sentRevision_ && snap_.status != EngineStatus::Diverged) sync(lock);
       if (action.kind == Action::Export && (snap_.status == EngineStatus::Diverged || snap_.acceptedRevision != wantedRevision_)) {
         snap_.exportJob.state = "failed";
@@ -406,6 +412,9 @@ void EngineSession::run() {
             break;
           case Action::PluginEditor:
             client_->command("plugin.editor", {{"key", action.text}, {"open", true}});
+            break;
+          case Action::RetryPlugin:
+            client_->command("plugin.retry", {{"key", action.text}});
             break;
           case Action::ReleasePlugins:
             client_->command("plugins.release");
@@ -668,8 +677,13 @@ void EngineSession::onEvent(const json& event) {
   }
   snap_.failedUnits.clear();
   for (const json& u : event.value("failedUnits", json::array())) if (u.is_string()) snap_.failedUnits.push_back(u.get<std::string>());
+  snap_.failedPlugins.clear();
   for (const json& p : event.value("failedPlugins", json::array()))
-    if (p.is_object()) snap_.failedUnits.push_back(p.value("plugin", std::string("plugin")) + ": " + p.value("why", std::string("failed")));
+    if (p.is_object()) {
+      const std::string why = p.value("plugin", std::string("plugin")) + ": " + p.value("why", std::string("failed"));
+      snap_.failedUnits.push_back(why);
+      if (p.contains("key") && p["key"].is_string()) snap_.failedPlugins[p["key"].get<std::string>()] = why;
+    }
   // The engine names each peak with the ids of the graph that produced it (the applied revision).
   snap_.trackPeaks.clear();
   if (tracks.is_object())
