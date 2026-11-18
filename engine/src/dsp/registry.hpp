@@ -1,7 +1,8 @@
-// The registry of the built-in ("core") plugins: every internal instrument and effect describes itself
+// The registry of the built-in ("core") plugins: every internal instrument describes itself
 // here once — its id, kind, sound version, parameter catalogue and how to build it — so there is a single
 // source of truth instead of the id, the parameters, the version and the factory being spread over
-// project.cpp, instruments.cpp and effects.cpp. Adding a native plugin is one entry next to its class.
+// project.cpp and instruments.cpp. Adding a native instrument is one entry next to its class.
+// No effect is registered any more (plugins only, 2026-11-16): the effect queries below answer empty.
 //
 // Layering: this lives in the DSP layer and depends only on the DSP headers, so the core (project.cpp,
 // graph.cpp) can query it without the DSP ever depending back on the core. It is consulted only on the
@@ -26,10 +27,8 @@ struct NativePluginDesc {
   int version = 1;                // the current sound/DSP version (a song keeps the version it was saved with)
   bool noParams = false;          // plugin / audio / bus: a track with no built-in instrument parameters
   std::vector<ParamSpec> params;  // ordered; the position is the runtime params[] slot
-  // How to build it. makeInstrument is null for the sampler (the graph builds it, it needs the zones);
-  // makeEffect takes (sampleRate, bpm, version). Only the matching one is set for a kind.
+  // How to build it. makeInstrument is null for the sampler (the graph builds it, it needs the zones).
   std::function<std::unique_ptr<Instrument>(double sampleRate)> makeInstrument;
-  std::function<std::unique_ptr<Effect>(double sampleRate, double bpm, int version)> makeEffect;
 };
 
 class NativeRegistry {
@@ -44,7 +43,6 @@ private:
 // static; no static-initialisation order to get wrong).
 NativeRegistry& nativePlugins();
 void registerNativeInstruments(NativeRegistry&);  // defined in instruments.cpp
-void registerNativeEffects(NativeRegistry&);      // defined in effects.cpp
 
 // Catalogue queries. project.cpp's public accessors (instrumentParams, effectParams, ...) delegate here,
 // so the whole codebase keeps one source of truth.

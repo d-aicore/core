@@ -287,7 +287,6 @@ Graph::Graph(const Project& p, double sampleRate, AssetStore* assets, PluginProv
     else missingPlugins_.push_back({{"key", key}, {"plugin", pluginName(plugin)}, {"why", why}});
     return processor;
   };
-  std::vector<std::pair<Effect*, std::string>> sidechains;  // M7c: compressors and the track that keys each
   auto buildChain = [&](const json& list, std::vector<std::unique_ptr<Effect>>& chain, const std::string& owner) {
     bool any = false;
     for (const auto& fx : list) {
@@ -301,26 +300,8 @@ Graph::Graph(const Project& p, double sampleRate, AssetStore* assets, PluginProv
         chain.push_back(std::move(e));
         continue;
       }
-      if (fx.value("type", "") != "builtin" || fx.value("unsupported", false)) continue;
-      const std::string name = fx.value("name", "");
-      // A tempo-synced effect holds enough for the slowest tempo of the song, and starts at the first.
-      auto e = makeEffect(name, sampleRate, tempo_.slowestBpm(), fx.value("version", 1));
-      if (!e) continue;
-      e->setTempo(p.bpm);
-      const auto& specs = effectParams(name);
-      const json params = fx.value("params", json::object());
-      for (size_t i = 0; i < specs.size() && i < (size_t)kMaxEffectParams; ++i) {
-        e->params[i] = e->knob[i] = e->glide[i] = params.value(specs[i].name, specs[i].def);
-        const std::string_view knob = specs[i].name;
-        if (steppedKnob(knob)) e->stepped.set(i);  // switches jump
-      }
-      e->knobCount = (int)std::min(specs.size(), (size_t)kMaxEffectParams);
-      if (fx.contains("sidechain") && fx["sidechain"].is_string()) sidechains.push_back({e.get(), fx["sidechain"].get<std::string>()});
-      e->id = fx.value("id", "");
-      e->watchKey = fxWatchKey(owner, e->id);
-      e->bypass = fx.value("bypass", false);
-      any = any || !e->bypass;
-      chain.push_back(std::move(e));
+      // Built-in effects left the engine (Diogo 2026-11-16): fromJson keeps a legacy entry as data
+      // (unsupported, silent) and nothing is built for it here. Only plugin effects play.
     }
     return any;
   };
@@ -509,7 +490,6 @@ Graph::Graph(const Project& p, double sampleRate, AssetStore* assets, PluginProv
   {
     std::map<std::string, int> index;
     for (size_t i = 0; i < tracks_.size(); ++i) index[tracks_[i].id] = (int)i;
-    for (auto& [effect, from] : sidechains) effect->sidechain = index.at(from);  // validated by fromJson
     for (size_t i = 0; i < tracks_.size(); ++i) {
       TrackRt& rt = tracks_[i];
       const Track& t = p.tracks[i];
