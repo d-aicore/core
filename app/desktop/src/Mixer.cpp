@@ -339,7 +339,7 @@ private:
           doc::setEffectBypass(d, self->id_, at, !doc::effectBypassed(doc::effectChain(d, self->id_)[(size_t)at]));
         }, what + u8("Effect on/off"));
       } else {
-        self->owner_.host_.capturePluginStates();  // Undo brings the plugin back as it sounded, not as last saved
+        // (the edit asks the engine for the plugin's state first: Undo brings it back as it sounded)
         self->edit([self, at](doc::Document& d) { doc::removeEffect(d, self->id_, at); }, what + u8("Remove effect"));
       }
     });

@@ -111,7 +111,6 @@ private:
   void finishGesture() override { endGesture(); }
   double playheadTick() const override { return playTick_; }
   void movePlayhead(int64_t songTick) override { moveShownPosition(songTick); }
-  void capturePluginStates() override { fetchPluginStates(); }  // the mixer's Remove asks like the menus do
   void selectTrack(const std::string& trackId);
   // Several tracks at once (a rule for every plugin, Diogo 2026-11-05): a plain click on a track header selects that
   // track alone; Ctrl+click adds or takes away one more; Shift+click adds every track between the shown one and it.
@@ -287,6 +286,10 @@ private:
   void scanPlugins();
   bool fetchPluginStates();  // the engine's plugin states into the document (false: no answer)
   void adoptPluginStates(const json& states);  // states the engine gave: into the document (no undo step) and the session
+  bool takePluginStates(json* taken = nullptr);  // the same, for a change that needs them (false: no answer, the user was told)
+  bool capturePluginsBefore(const doc::Document& target, doc::Document* editable);  // when `target` takes plugins away
+  void stepHistory(bool back);  // Undo (true) or Redo
+  void duplicateTrack(const std::string& trackId);
   void selectDevice(const std::string& name);
   // SavedWithoutPlugins: the song is in the file but the plugins' current settings are not (the engine gave no
   // answer): the song stays unsaved and Close does not go on (audit R01).
@@ -545,6 +548,7 @@ private:
     juce::String log;
     nlohmann::json synth;  // the self-test's own test synth (app/selftest-plugins), as the scan found it
     std::string gainId;    // the test synth's "Gain" parameter, as the engine names it
+    std::string copyTrack; // the plugin track the self-test duplicated
     uint64_t pluginEditsSeen = 0;  // snap_.pluginEdits before the self-test moved a plugin's parameter
   };
   std::unique_ptr<SelfTest> test_;

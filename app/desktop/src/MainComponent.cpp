@@ -2106,6 +2106,9 @@ void MainComponent::edit(const std::function<void(doc::Document&)>& change, cons
     showError(u8("Could not do that"), u8(e.what()));
     return;
   }
+  // A change that takes a plugin away (a track removed, another instrument, a sample on a plugin track, an effect
+  // removed): what the plugins hold now goes into the document first, or Undo brings them back as last saved.
+  if (!capturePluginsBefore(next, &next)) return;
   const doc::Loop before = history_.current().loop;
   if (history_.inGesture()) history_.updateGesture(next);
   else history_.commit(next, label.toStdString());
@@ -2126,6 +2129,49 @@ void MainComponent::edit(const std::function<void(doc::Document&)>& change, cons
   showEditorForSelection();
   repaint(timelineArea());
   if (patternsWindow_) patternsWindow_->panel().documentChanged();
+}
+
+// What the plugins hold now, from the engine into the document, for a change that must not be made without it.
+// True when it is there, or when there is nothing to ask (no plugins; no engine running: its plugins went with
+// it). False, after telling the user, when the engine runs and gave no answer: the caller makes no change.
+bool MainComponent::takePluginStates(json* taken) {
+  if (!doc::hasPlugins(history_.current())) return true;
+  if (session_->snapshot().status == EngineStatus::Stopped) return true;
+  json states = session_->pluginStates(5000);
+  if (!states.is_object()) {
+    showError(u8("Plugins"), u8("The engine did not give the plugins' current settings in time, so nothing was changed: "
+                                "a plugin taken away now would come back with Undo as it was last saved. Try again."));
+    return false;
+  }
+  adoptPluginStates(states);
+  if (taken) *taken = std::move(states);
+  return true;
+}
+
+// Before the document becomes `target`: if that takes plugins away (doc::droppedPluginKeys), their states are taken
+// first. `editable` (the changed document, not yet in the history) gets the states of the plugins that stay, so
+// it does not fall back to older ones. False: no answer, the change must not be made.
+bool MainComponent::capturePluginsBefore(const doc::Document& target, doc::Document* editable) {
+  const std::vector<std::string> dropped = doc::droppedPluginKeys(history_.current(), target);
+  if (dropped.empty()) return true;
+  json states;
+  if (!takePluginStates(&states)) return false;
+  if (editable && states.is_object()) {
+    for (const auto& key : dropped) states.erase(key);
+    // (and not what the change itself put under a key: the engine's plugin there is another one)
+    for (const auto& key : doc::droppedPluginKeys(*editable, history_.current())) states.erase(key);
+    doc::applyPluginStates(*editable, states);
+  }
+  return true;
+}
+
+// The copy is made from the document, so the track's plugins go into it as they sound now, not as last saved.
+void MainComponent::duplicateTrack(const std::string& trackId) {
+  const doc::Track* t = history_.current().findTrack(trackId);
+  if (!t) return;
+  const juce::String label = "Duplicate " + u8(t->name);
+  if (!takePluginStates()) return;
+  edit([&](doc::Document& d) { doc::duplicateTrack(d, trackId); }, label);
 }
 
 void MainComponent::beginGesture(const juce::String& label) { history_.beginGesture(label.toStdString()); }
@@ -2431,7 +2477,6 @@ void MainComponent::showVendorPlugins(const doc::PluginVendorGroup& group, juce:
       if (t && doc::playsPatterns(*t))
         one.addItem(juce::PopupMenu::Item(u8("Replace the instrument") + on).setAction([safe, p, trackId] {
           if (!safe) return;
-          safe->fetchPluginStates();
           safe->edit([&](doc::Document& d) { doc::replaceInstrumentWithPlugin(d, trackId, p); },
                      u8("Instrument: ") + u8(p.value("name", std::string("plugin"))));
           safe->session_->openPluginEditor(doc::pluginKey(trackId));
@@ -3478,8 +3523,18 @@ void MainComponent::showSectionMenu(int64_t tick) {
   });
 }
 
-void MainComponent::undo() { if (history_.undo()) documentChanged(false); }
-void MainComponent::redo() { if (history_.redo()) documentChanged(false); }
+void MainComponent::undo() { stepHistory(true); }
+void MainComponent::redo() { stepHistory(false); }
+
+// Undo or Redo. A state that is left may have plugins the other one does not (Undo of "add a plugin", Redo of
+// "remove a track"): what they hold goes into the state being left first, so coming back to it brings them as they
+// sound now. No answer from a running engine: the step is not made.
+void MainComponent::stepHistory(bool back) {
+  if (history_.inGesture()) endGesture();
+  const doc::Document* target = back ? history_.undoTarget() : history_.redoTarget();
+  if (!target || !capturePluginsBefore(*target, nullptr)) return;
+  if (back ? history_.undo() : history_.redo()) documentChanged(false);
+}
 
 void MainComponent::buildRows() {
   if (!selectedTrack_.empty() && !history_.current().findTrack(selectedTrack_)) {
@@ -4658,7 +4713,6 @@ void MainComponent::showTrackMenu(const std::string& trackId) {
     if (!t) return;
     const juce::String name = u8(t->name);
     if (chosen >= 300 && chosen - 300 < (int)instruments.size()) {
-      fetchPluginStates();  // Undo brings a replaced plugin back as it sounded, not as last saved
       const nlohmann::json plugin = instruments[(size_t)chosen - 300];
       edit([&](doc::Document& d) { doc::replaceInstrumentWithPlugin(d, trackId, plugin); },
            u8("Instrument: ") + u8(plugin.value("name", std::string("plugin"))));
@@ -4678,7 +4732,7 @@ void MainComponent::showTrackMenu(const std::string& trackId) {
       if (i >= (int)t->effects.size()) return;
       const std::string fxId = t->effects[(size_t)i].value("id", std::string());
       if (chosen < 920) session_->openPluginEditor(doc::pluginKey(trackId, fxId));
-      else if (chosen < 940) { fetchPluginStates(); edit([&](doc::Document& d) { doc::removeEffect(d, trackId, i); }, u8("Remove effect")); }
+      else if (chosen < 940) edit([&](doc::Document& d) { doc::removeEffect(d, trackId, i); }, u8("Remove effect"));
       else edit([&](doc::Document& d) { doc::setEffectBypass(d, trackId, i, !doc::effectBypassed(d.findTrack(trackId)->effects[(size_t)i])); }, u8("Effect on/off"));
       return;
     }
@@ -4689,7 +4743,7 @@ void MainComponent::showTrackMenu(const std::string& trackId) {
       return;
     }
     if (chosen == 1) askTrackName(trackId);
-    if (chosen == 2) edit([&](doc::Document& d) { doc::duplicateTrack(d, trackId); }, "Duplicate " + name);
+    if (chosen == 2) duplicateTrack(trackId);
     if (chosen == 3) edit([&](doc::Document& d) { doc::removeTrack(d, trackId); }, "Remove " + name);  // undo brings it back
     if (chosen == 4) openAutomation(trackId, "gainDb");
   });
@@ -5469,7 +5523,7 @@ void MainComponent::menuItemSelected(int id, int) {
         if (i >= (int)chain.size()) break;
         const std::string fxId = chain[(size_t)i].value("id", std::string());
         if (id < kMasterFx + 20) session_->openPluginEditor(doc::pluginKey("", fxId));
-        else if (id < kMasterFx + 40) { fetchPluginStates(); edit([&](doc::Document& d) { doc::removeEffect(d, "", i); }, u8("Master: remove effect")); }
+        else if (id < kMasterFx + 40) edit([&](doc::Document& d) { doc::removeEffect(d, "", i); }, u8("Master: remove effect"));
         else edit([&](doc::Document& d) { doc::setEffectBypass(d, "", i, !doc::effectBypassed(d.masterEffects[(size_t)i])); }, u8("Master: effect on/off"));
       } else if (id >= kMidiDevice && id < kMidiDevicesEnd) {
         const auto inputs = juce::MidiInput::getAvailableDevices();
@@ -7108,11 +7162,70 @@ void MainComponent::selfTestStep() {
       if (snap_.status == EngineStatus::Ready && applied && inStep > 1200) {
         const double gain = gainOf("track:bass");
         if (std::abs(gain - 0.9) > 0.01) return finish(false, "plugin state lost in the engine crash: gain " + juce::String(gain) + ", expected 0.9");
-        t.log << "plugin state kept across the crash; ";
-        t.step = 35;
-        t.stepStarted = now;
+        next("plugin state kept across the crash");
       } else if (inStep > 8000) {
         return finish(false, "second restart");
+      }
+      break;
+    // Data loss (2026-11-18), S2: a change that takes a plugin away asks the engine for its state first, so Undo
+    // brings it back as it sounded; a duplicated track's plugin sounds as the original does now.
+    case 105:  // another gain in the live plugin only
+      t.pluginEditsSeen = snap_.pluginEdits;
+      if (!session_->setPluginParam("track:bass", t.gainId, 0.3, 3000)) return finish(false, "plugin parameter not set (remove)");
+      next("plugin gain moved again");
+      break;
+    case 106:  // its track is removed
+      if (snap_.pluginEdits != t.pluginEditsSeen) {
+        edit([](doc::Document& d) { doc::removeTrack(d, "bass"); }, "Remove");
+        if (history_.current().findTrack("bass")) return finish(false, "plugin track not removed");
+        next("plugin track removed");
+      } else if (inStep > 3000) {
+        return finish(false, "the plugin's change was not reported (remove)");
+      }
+      break;
+    case 107:  // the engine let the plugin go; Undo brings the track back
+      if (applied && inStep > 400) {
+        undo();
+        if (!history_.current().findTrack("bass")) return finish(false, "undo of the removed plugin track");
+        next("undo remove");
+      } else if (inStep > 5000) {
+        return finish(false, "removal not applied");
+      }
+      break;
+    case 108:  // with the plugin as it sounded when it was removed, not as the document had it before
+      if (applied && inStep > 400) {
+        const double gain = gainOf("track:bass");
+        if (std::abs(gain - 0.3) > 0.01) return finish(false, "plugin state lost by remove and undo: gain " + juce::String(gain) + ", expected 0.3");
+        t.pluginEditsSeen = snap_.pluginEdits;
+        if (!session_->setPluginParam("track:bass", t.gainId, 0.6, 3000)) return finish(false, "plugin parameter not set (duplicate)");
+        next("removed plugin back as it sounded");
+      } else if (inStep > 5000) {
+        return finish(false, "undo of the removal not applied");
+      }
+      break;
+    case 109:  // moved again, then duplicated
+      if (snap_.pluginEdits != t.pluginEditsSeen) {
+        duplicateTrack("bass");
+        const auto& tracks = history_.current().tracks;
+        const auto bass = std::find_if(tracks.begin(), tracks.end(), [](const doc::Track& x) { return x.id == "bass"; });
+        if (bass == tracks.end() || bass + 1 == tracks.end() || (bass + 1)->instrument.kind != "plugin") return finish(false, "plugin track not duplicated");
+        t.copyTrack = (bass + 1)->id;
+        next("plugin track duplicated");
+      } else if (inStep > 3000) {
+        return finish(false, "the plugin's change was not reported (duplicate)");
+      }
+      break;
+    case 110:  // the copy's plugin holds what the original held when it was copied
+      if (applied && inStep > 400) {
+        const double gain = gainOf(doc::pluginKey(t.copyTrack));
+        if (std::abs(gain - 0.6) > 0.01) return finish(false, "the duplicated plugin does not sound as the original: gain " + juce::String(gain) + ", expected 0.6");
+        undo();  // the copy goes again
+        if (history_.current().findTrack(t.copyTrack)) return finish(false, "undo of the duplicated plugin track");
+        t.log << "copy sounds as the original; ";
+        t.step = 35;
+        t.stepStarted = now;
+      } else if (inStep > 5000) {
+        return finish(false, "duplicate not applied");
       }
       break;
     case 35:  // the picture shows the waveforms once they are computed

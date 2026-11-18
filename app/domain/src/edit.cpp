@@ -5,6 +5,7 @@
 #include <cmath>
 #include <deque>
 #include <cstdlib>
+#include <map>
 #include <regex>
 #include <set>
 #include <sstream>
@@ -1456,6 +1457,34 @@ int applyPluginStates(Document& doc, const json& states) {
     chain(t.effects, t.id);
   }
   return changed;
+}
+
+std::vector<std::string> droppedPluginKeys(const Document& before, const Document& after) {
+  // key -> which plugin it is (file and id; the state and the name are not what makes it another plugin)
+  auto plugins = [](const Document& doc) {
+    std::map<std::string, std::string> found;
+    auto add = [&](const std::string& key, const json& plugin) {
+      if (plugin.is_object()) found[key] = plugin.value("file", json()).dump() + "|" + plugin.value("id", json()).dump();
+    };
+    auto chain = [&](const json& list, const std::string& trackId) {
+      for (const auto& fx : list)
+        if (fx.is_object() && fx.value("type", "") == "plugin" && fx.contains("id") && fx["id"].is_string() && fx.contains("plugin"))
+          add(pluginKey(trackId, fx["id"].get<std::string>()), fx["plugin"]);
+    };
+    chain(doc.masterEffects, "");
+    for (const auto& t : doc.tracks) {
+      if (t.instrument.kind == "plugin") add(pluginKey(t.id), t.instrument.plugin);
+      chain(t.effects, t.id);
+    }
+    return found;
+  };
+  const auto was = plugins(before), now = plugins(after);
+  std::vector<std::string> dropped;
+  for (const auto& [key, plugin] : was) {
+    const auto it = now.find(key);
+    if (it == now.end() || it->second != plugin) dropped.push_back(key);
+  }
+  return dropped;
 }
 
 int addEffect(Document& doc, const std::string& trackId, const std::string& name) {

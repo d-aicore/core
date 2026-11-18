@@ -219,6 +219,11 @@ std::string pluginKey(const std::string& trackId, const std::string& effectId = 
 bool hasPlugins(const Document& doc);
 // The states the engine gave ({key: base64}) written into the document; returns how many changed.
 int applyPluginStates(Document& doc, const json& states);
+// The plugins (instruments and effects, by pluginKey) that `before` has and `after` no longer has in the same
+// place: gone, or another plugin (file or id) under the same key. The engine lets their instances go when it
+// gets `after`, and what they hold is only there: it must be in the document first, or Undo brings them back
+// as last saved.
+std::vector<std::string> droppedPluginKeys(const Document& before, const Document& after);
 // Takes away what an instrument's mood put on the track (the W-Core mood effects, their curves, and the
 // record of the knobs a mood moved), for when the track changes instrument. The user's own effects stay.
 void dropInstrumentMoods(Document& doc, const std::string& trackId);

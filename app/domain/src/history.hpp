@@ -36,6 +36,9 @@ public:
   const std::string& redoLabel() const;
   bool undo();
   bool redo();
+  // The state Undo or Redo would bring back (null: none). Not during a gesture; valid until the history changes.
+  const Document* undoTarget() const { return undo_.empty() ? nullptr : &undo_.back().document; }
+  const Document* redoTarget() const { return redo_.empty() ? nullptr : &redo_.back().document; }
 
   // The "modified" flag compares the content with the last saved state, so undoing back to it
   // clears the flag. The window asks every frame (title, menus, autosave), so the answer is kept

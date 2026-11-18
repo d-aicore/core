@@ -343,6 +343,63 @@ TEST("undo/redo: beyond the minimum number of steps the byte budget still drops 
   CHECK_EQ(steps, History::kMinSteps);
 }
 
+// Data loss (2026-11-18): what a plugin holds is only in the engine. A change that takes a plugin away must be
+// known before it is made, so the app can ask the engine for the states first (Undo then brings the sound back).
+TEST("plugins: droppedPluginKeys names the plugins a change takes away, and nothing for other changes") {
+  const json synth = {{"id", "synth-a"}, {"file", "synth-a.vst3"}, {"name", "Synth A"}};
+  const json other = {{"id", "synth-b"}, {"file", "synth-b.vst3"}, {"name", "Synth B"}};
+  const json effect = {{"id", "effect-a"}, {"file", "effect-a.vst3"}, {"name", "Effect A"}};
+  Document before = newEmptyDocument();
+  const std::string a = addPluginTrack(before, synth), b = addPluginTrack(before, synth);
+  addPluginEffect(before, a, effect);
+  addPluginEffect(before, "", effect);
+  const std::string fxKey = pluginKey(a, before.tracks[0].effects[0]["id"].get<std::string>());
+  const std::string masterKey = pluginKey("", before.masterEffects[0]["id"].get<std::string>());
+  using Keys = std::vector<std::string>;
+  auto sorted = [](Keys keys) { std::sort(keys.begin(), keys.end()); return keys; };
+
+  // Removing a track: its instrument and its effects.
+  Document removed = before;
+  removeTrack(removed, a);
+  CHECK(sorted(droppedPluginKeys(before, removed)) == sorted(Keys{pluginKey(a), fxKey}));
+  // Another instrument on the track: the old one is let go; the same plugin again is not a change.
+  Document replaced = before;
+  replaceInstrumentWithPlugin(replaced, b, other);
+  CHECK(droppedPluginKeys(before, replaced) == Keys{pluginKey(b)});
+  Document same = before;
+  replaceInstrumentWithPlugin(same, b, synth);
+  CHECK(droppedPluginKeys(before, same).empty());
+  // A sample on a plugin track (setTrackSample): the track's instrument is no longer the plugin.
+  Document sampled = before;
+  sampled.tracks[1].instrument.kind = "sampler";
+  sampled.tracks[1].instrument.plugin = json();
+  CHECK(droppedPluginKeys(before, sampled) == Keys{pluginKey(b)});
+  // An effect removed, on a track and on the master.
+  Document noEffect = before;
+  removeEffect(noEffect, a, 0);
+  removeEffect(noEffect, "", 0);
+  CHECK(sorted(droppedPluginKeys(before, noEffect)) == sorted(Keys{fxKey, masterKey}));
+
+  // Nothing is taken away by notes, the mixer, a new plugin, a duplicated track or a new state.
+  Document notes = before;
+  notes.tracks[0].patterns[0].notes.push_back(Note{});
+  notes.tracks[0].mix.gainDb = -6;
+  notes.bpm = 150;
+  CHECK(droppedPluginKeys(before, notes).empty());
+  Document more = before;
+  addPluginTrack(more, other);
+  addPluginEffect(more, b, effect);
+  duplicateTrack(more, a);
+  CHECK(droppedPluginKeys(before, more).empty());
+  Document state = before;
+  CHECK_EQ(applyPluginStates(state, {{pluginKey(a), "QQ=="}, {fxKey, "Qg=="}}), 2);
+  CHECK(droppedPluginKeys(before, state).empty());
+  CHECK(droppedPluginKeys(before, before).empty());
+  // The other way round (Undo of a change that added plugins takes them away again).
+  CHECK(sorted(droppedPluginKeys(removed, before)).empty());
+  CHECK(droppedPluginKeys(more, before).size() == (size_t)4);  // the new track, its copy's instrument and effect, b's effect
+}
+
 // Todos os templates que vao com a app abrem, viram projecto do motor, e o motor aceita-os e renderiza sem NaN.
 TEST("templates: todos abrem e o motor toca-os sem erro") {
   TemplateLibrary lib = loadTemplates(CORE_TEMPLATES_DIR, tempDir() / "user-templates-vazia", true);

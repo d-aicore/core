@@ -1694,6 +1694,7 @@
   "The echo is held down in the drops and opens up in the breaks.": "O eco fica em baixo nos drops e abre nos breaks.",
   "The engine did not accept the current document; nothing was exported.": "O motor não aceitou o documento atual; nada foi exportado.",
   "The engine did not start the render.": "O motor não começou a gravação.",
+  "The engine did not give the plugins' current settings in time, so nothing was changed: a plugin taken away now would come back with Undo as it was last saved. Try again.": "O motor não deu a tempo as definições actuais dos plugins, por isso nada foi alterado: um plugin retirado agora voltaria com o Anular como estava quando foi guardado. Tenta outra vez.",
   "The engine did not start: {}": "O motor não arrancou: {}",
   "The engine refused the document (your edits are kept): {}": "O motor recusou o documento (as tuas alterações ficam guardadas): {}",
   "The engine stopped: {}": "O motor parou: {}",
