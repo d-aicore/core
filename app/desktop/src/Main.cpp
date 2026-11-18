@@ -1,5 +1,5 @@
 // Core desktop app (M1a).
-//   Core.exe                          opens the demo next to the executable (Ctrl+O opens a song)
+//   Core.exe                          opens an empty song (Ctrl+O opens a song; the demo is the self-test fixture)
 //   Core.exe --backend null           no audio device (the engine still runs)
 //   Core.exe --self-test picture.png  plays, changes the BPM, saves a picture of the window, exits 0/1
 #include <fstream>
@@ -8,6 +8,7 @@
 #include "Diagnostics.h"
 #include "MainComponent.h"
 #include "Theme.h"
+#include "edit.hpp"  // core::doc::newEmptyDocument(): the app opens empty (L10, 2026-11-18)
 
 namespace {
 
@@ -94,13 +95,19 @@ public:
 
     core::doc::Document document;
     juce::String problem;
-    const juce::File demo = here.getChildFile("demo.core-document.json");
-    try {
-      std::ifstream in(demo.getFullPathName().toStdString());
-      if (!in) throw std::runtime_error("not found");
-      document = core::doc::parseDocument(nlohmann::json::parse(in));
-    } catch (const std::exception& e) {
-      problem = juce::String::fromUTF8("Could not open the demo (") + demo.getFullPathName() + "): " + e.what();
+    if (selfTest.isNotEmpty()) {
+      // The self-test's fixture song: its note tracks are played by the test synth (selfTestSynth). The app
+      // itself opens empty (L10, 2026-11-18): no dead builtin demo autoload, sound comes from plugins/audio.
+      const juce::File demo = here.getChildFile("demo.core-document.json");
+      try {
+        std::ifstream in(demo.getFullPathName().toStdString());
+        if (!in) throw std::runtime_error("not found");
+        document = core::doc::parseDocument(nlohmann::json::parse(in));
+      } catch (const std::exception& e) {
+        problem = juce::String::fromUTF8("Could not open the self-test fixture (") + demo.getFullPathName() + "): " + e.what();
+      }
+    } else {
+      document = core::doc::newEmptyDocument();
     }
     auto* content = new MainComponent(options, document, problem);
     content_ = content;

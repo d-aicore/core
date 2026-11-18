@@ -38,8 +38,9 @@ if(TARGET CoreTestSynth_VST3)
     CORE_TEST_THROW_VST3="$<GENEX_EVAL:$<TARGET_PROPERTY:CoreTestThrow_VST3,JUCE_PLUGIN_ARTEFACT_FILE>>")
 endif()
 
-# A runnable folder: Core.exe, core-engine.exe, the demo and the style templates side by side. The demo is the psy demo
-# without its kick roll (8 kicks in one beat sound like clicks at fast tempos).
+# A runnable folder: Core.exe, core-engine.exe and the demo side by side. The shipped style templates were
+# removed (owner «remove templates com efeitos», 2026-11-18): every one carried builtin effects and projected
+# to silence. The demo document stays as the self-test's fixture song (its note tracks play via the test synth).
 add_dependencies(CoreApp core-engine)
 add_custom_command(TARGET CoreApp POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:core-engine> $<TARGET_FILE_DIR:CoreApp>
@@ -48,18 +49,17 @@ add_custom_command(TARGET CoreApp POST_BUILD
           $<TARGET_FILE_DIR:CoreApp>/demo.core-document.json)
 
 # Resources that ship beside the app (audit 29): the copies used to live in POST_BUILD, so they only refreshed
-# when the .exe relinked — a templates/lang/patterns/pcore edit alone left a stale app folder, package and zip.
+# when the .exe relinked — a lang/patterns/pcore edit alone left a stale app folder, package and zip.
 # Now one stamped step depends on the files themselves (CONFIGURE_DEPENDS re-globs on any add/remove), and both
 # CoreApp and core-package depend on it. The folders are removed before copying, so a file deleted from the repo
-# leaves the app too (the shipped templates are exactly the repo's — also lang, patterns and pcore now).
+# leaves the app too (the shipped resources are exactly the repo's). The templates folder left the package with
+# the builtin-effect templates (2026-11-18); the app's templates folder is now only the user's own.
 file(GLOB_RECURSE CORE_APP_RESOURCES CONFIGURE_DEPENDS
-  ${CMAKE_CURRENT_SOURCE_DIR}/../../templates/*
   ${CMAKE_CURRENT_SOURCE_DIR}/../../lang/*
   ${CMAKE_CURRENT_SOURCE_DIR}/../../patterns/*
   ${CMAKE_CURRENT_SOURCE_DIR}/../../pcore/*)
 add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/core_resources.stamp
   COMMAND ${CMAKE_COMMAND} -E remove_directory $<TARGET_FILE_DIR:CoreApp>/templates
-  COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/../../templates $<TARGET_FILE_DIR:CoreApp>/templates
   COMMAND ${CMAKE_COMMAND} -E remove_directory $<TARGET_FILE_DIR:CoreApp>/lang
   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/../../lang $<TARGET_FILE_DIR:CoreApp>/lang
   COMMAND ${CMAKE_COMMAND} -E remove_directory $<TARGET_FILE_DIR:CoreApp>/patterns
@@ -68,7 +68,7 @@ add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/core_resources.stamp
   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/../../pcore $<TARGET_FILE_DIR:CoreApp>/pcore
   COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_BINARY_DIR}/core_resources.stamp
   DEPENDS ${CORE_APP_RESOURCES}
-  COMMENT "Copying the app's resources (templates, lang, patterns, pcore)")
+  COMMENT "Copying the app's resources (lang, patterns, pcore)")
 add_custom_target(core_resources DEPENDS ${CMAKE_BINARY_DIR}/core_resources.stamp)
 add_dependencies(CoreApp core_resources)
 
@@ -84,7 +84,6 @@ add_custom_target(core-package
           $<TARGET_FILE_DIR:CoreApp>/demo.core-document.json ${CMAKE_CURRENT_SOURCE_DIR}/../README.md
           ${CMAKE_BINARY_DIR}/package/Core
   COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/package/Core/templates
-  COMMAND ${CMAKE_COMMAND} -E copy_directory $<TARGET_FILE_DIR:CoreApp>/templates ${CMAKE_BINARY_DIR}/package/Core/templates
   COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/package/Core/lang
   COMMAND ${CMAKE_COMMAND} -E copy_directory $<TARGET_FILE_DIR:CoreApp>/lang ${CMAKE_BINARY_DIR}/package/Core/lang
   COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/package/Core/patterns

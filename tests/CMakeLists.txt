@@ -17,15 +17,15 @@ add_test(NAME engine_tests COMMAND engine_tests)
 add_executable(domain_tests domain_tests.cpp)
 target_include_directories(domain_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(domain_tests PRIVATE core_domain core_engine_lib)
-target_compile_definitions(domain_tests PRIVATE CORE_TEMPLATES_DIR="${CMAKE_SOURCE_DIR}/templates")
 add_test(NAME domain_tests COMMAND domain_tests)
 
 # Characterization guards for the L1/L2 dead-code removal (2026-11-18): the live legacy behavior
-# (old songs, stored built-in data, the five visible templates, legacy engine renders) stays green.
+# (old songs, stored built-in data, legacy engine renders) stays green. The shipped templates were
+# removed (owner «remove templates com efeitos»); the template->engine path is guarded in domain_tests.
 add_executable(legacy_guard_tests legacy_guard_tests.cpp)
 target_include_directories(legacy_guard_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(legacy_guard_tests PRIVATE core_domain core_engine_lib)
-target_compile_definitions(legacy_guard_tests PRIVATE CORE_TEMPLATES_DIR="${CMAKE_SOURCE_DIR}/templates" CORE_PCORE_CATALOG="${CMAKE_SOURCE_DIR}/pcore/styles.json")
+target_compile_definitions(legacy_guard_tests PRIVATE CORE_PCORE_CATALOG="${CMAKE_SOURCE_DIR}/pcore/styles.json")
 add_test(NAME legacy_guard_tests COMMAND legacy_guard_tests)
 
 # The role map (Settings > Roles) and the tools that play through it (SUCK, PUM, build-up effects).
@@ -69,7 +69,7 @@ add_test(NAME audit2_tests COMMAND audit2_tests)
 add_executable(hunt_tests hunt_tests.cpp)
 target_include_directories(hunt_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/engine/src ${CMAKE_SOURCE_DIR}/app/engine-client/src)
 target_link_libraries(hunt_tests PRIVATE core_domain core_engine_lib core_sampling)
-target_compile_definitions(hunt_tests PRIVATE CORE_TEMPLATES_DIR="${CMAKE_SOURCE_DIR}/templates" CORE_LANG_DIR="${CMAKE_SOURCE_DIR}/lang")
+target_compile_definitions(hunt_tests PRIVATE CORE_LANG_DIR="${CMAKE_SOURCE_DIR}/lang")
 add_test(NAME hunt_tests COMMAND hunt_tests)
 
 # Ronda 3 do audit (R3-A a R3-G).

@@ -1,21 +1,21 @@
 # Core Setup.exe (M6): one file that installs Core for the current user (no administrator rights).
-# The package (Core.exe, core-engine.exe, the demo, the templates, the languages, the patterns, PCore's styles) is built here and carried inside it.
+# The package (Core.exe, core-engine.exe, the demo, the languages, the patterns, PCore's styles) is built here and carried inside it.
 #   cmake --build build --target CoreSetup   ->  build/app/installer/CoreSetup_artefacts/Release/Core Setup.exe
 set(CORE_STAGE ${CMAKE_CURRENT_BINARY_DIR}/stage)
 set(CORE_PACKAGE_ZIP ${CMAKE_CURRENT_BINARY_DIR}/CorePackage.zip)
 # Audit 29: the zip carries the repo's resources, so it rebuilds when they change, not only when the .exe does.
+# The templates folder left the package with the builtin-effect templates (owner «remove templates com efeitos», 2026-11-18).
 file(GLOB_RECURSE CORE_PACKAGE_RESOURCES CONFIGURE_DEPENDS
-  ${CMAKE_SOURCE_DIR}/templates/* ${CMAKE_SOURCE_DIR}/lang/* ${CMAKE_SOURCE_DIR}/patterns/* ${CMAKE_SOURCE_DIR}/pcore/*)
+  ${CMAKE_SOURCE_DIR}/lang/* ${CMAKE_SOURCE_DIR}/patterns/* ${CMAKE_SOURCE_DIR}/pcore/*)
 add_custom_command(OUTPUT ${CORE_PACKAGE_ZIP}
   COMMAND ${CMAKE_COMMAND} -E rm -rf ${CORE_STAGE}
   COMMAND ${CMAKE_COMMAND} -E make_directory ${CORE_STAGE}
   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:CoreApp> $<TARGET_FILE:core-engine> $<TARGET_FILE_DIR:CoreApp>/demo.core-document.json ${CORE_STAGE}
-  COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/templates ${CORE_STAGE}/templates
   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/lang ${CORE_STAGE}/lang
   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/patterns ${CORE_STAGE}/patterns
   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/pcore ${CORE_STAGE}/pcore
   COMMAND ${CMAKE_COMMAND} -E chdir ${CORE_STAGE} ${CMAKE_COMMAND} -E tar cf ${CORE_PACKAGE_ZIP} --format=zip
-          Core.exe core-engine.exe demo.core-document.json templates lang patterns pcore
+          Core.exe core-engine.exe demo.core-document.json lang patterns pcore
   DEPENDS CoreApp core-engine ${CMAKE_SOURCE_DIR}/app/desktop/demo.core-document.json
           ${CORE_PACKAGE_RESOURCES}
   COMMENT "Packing the Core package for the installer")

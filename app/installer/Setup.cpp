@@ -3,7 +3,7 @@
 //   Core Setup.exe --install <folder> [--no-shortcuts] [--samples <library> | --no-samples]   silent (tests); exit 0 when installed
 //   Core Setup.exe --uninstall <folder> [--no-shortcuts]  silent
 // Layout of <folder> (default %LOCALAPPDATA%\Programs\Core):
-//   app-<version>\  Core.exe, core-engine.exe, demo, templates, racks (from the package inside this program)
+//   app-<version>\  Core.exe, core-engine.exe, demo, lang, patterns, pcore (from the package inside this program)
 //   current.txt     the version the shortcuts start; previous.txt: the one before (kept for going back)
 //   Uninstall.exe   a copy of this program
 //   Samples\        the sample library, part of Core (copied, not packed: ~7 GB does not fit in an .exe). It sits

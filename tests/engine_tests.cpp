@@ -212,20 +212,32 @@ TEST("projecto: entrada invalida e recusada") {
   CHECK_THROWS(fromJson(noInstrument));
 }
 
-// Regressao (2026-11-16): com a saida dos instrumentos proprios, uma musica antiga com automacao num parametro do
-// W-Core ("tone") deixava de abrir ("envelope on unknown parameter 'tone'"). Abre, a automacao sai com uma nota.
-TEST("projecto: musica antiga com automacao num instrumento proprio abre") {
-  Project p;
-  CHECK_EQ((p = fromJson(demoProject(145)), (int)p.tracks.size()), 3);
+// Regression (2026-11-16): when Core's own instruments left, an old song with automation on a W-Core ("tone")
+// parameter stopped opening ("envelope on unknown parameter 'tone'"). It opens; the automation leaves with a note.
+// The demo is now generated audio (L10), so this guards the live legacy load on an explicit old builtin song.
+TEST("project: an old song with automation on a built-in instrument opens") {
+  auto legacySong = [] {
+    const json bass = {{"id", "bass"}, {"name", "Bass"}, {"instrument", "wave"}, {"instrumentVersion", 2}, {"patternTicks", 4 * kPpq},
+                       {"notes", json::array()},
+                       {"envelopes", json::array({{{"param", "tone"}, {"points", json::array({{{"tick", 0}, {"value", 160}}, {{"tick", 8 * 4 * kPpq}, {"value", 1400}}})}}})}};
+    return json{{"format", kProjectFormat}, {"version", 2}, {"name", "old"}, {"bpm", 145.0},
+                {"lengthTicks", 8 * 4 * kPpq}, {"masterGainDb", -8},
+                {"tracks", json::array({
+                    {{"id", "kick"}, {"instrument", "kick"}, {"patternTicks", 4 * kPpq}, {"notes", json::array()}},
+                    bass,
+                    {{"id", "hats"}, {"instrument", "hats"}, {"patternTicks", kPpq}, {"notes", json::array()}}})}};
+  };
+  Project p = fromJson(legacySong());
+  CHECK_EQ((int)p.tracks.size(), 3);
   bool noted = false;
   for (const auto& t : p.tracks) {
     CHECK_EQ(t.instrument, std::string("none"));
     for (const auto& n : t.loadNotes) noted = noted || n.find("tone") != std::string::npos;
   }
   CHECK(noted);
-  // A automacao de mistura (gainDb) de uma pista antiga continua.
-  json song = demoProject(145);
-  song["tracks"][1]["envelopes"].push_back({{"param", "gainDb"}, {"points", {{{"tick", 0}, {"value", -6}}}}});
+  // An old track's mix automation (gainDb) stays.
+  json song = legacySong();
+  song["tracks"][1]["envelopes"].push_back({{"param", "gainDb"}, {"points", json::array({{{"tick", 0}, {"value", -6}}})}});
   Project q = fromJson(song);
   CHECK_EQ((int)q.tracks[1].envelopes.size(), 1);
   CHECK_EQ(q.tracks[1].envelopes[0].param, std::string("gainDb"));
@@ -233,8 +245,14 @@ TEST("projecto: musica antiga com automacao num instrumento proprio abre") {
 
 // --- Render ----------------------------------------------------------------------------------------------------
 
-TEST("render: musica sem som da silencio finito com a duracao certa") {
-  Project p = fromJson(demoProject(145));
+// A song with no sound (a track waiting for a plugin) renders finite silence with the right duration. The demo
+// now sounds from generated audio (L10), so this uses an explicit silent legacy track, not the demo.
+TEST("render: a silent song gives finite silence with the right duration") {
+  const json silent = {{"format", kProjectFormat}, {"version", 2}, {"name", "silent"}, {"bpm", 145.0},
+                       {"lengthTicks", 8 * 4 * kPpq}, {"masterGainDb", 0.0},
+                       {"tracks", json::array({{{"id", "kick"}, {"instrument", "kick"}, {"patternTicks", 4 * kPpq},
+                           {"notes", json::array({{{"tick", 0}, {"length", 240}, {"pitch", 36}, {"velocity", 0.9}}})}}})}};
+  Project p = fromJson(silent);  // kick -> "none": silent, waits for a plugin
   RenderResult r = renderProject(p, kSr, 512, false, 1.0, nullptr, nullptr, nullptr, 0);
   CHECK(allFinite(r.L) && allFinite(r.R));
   CHECK_NEAR(r.peak, 0, 0);
@@ -406,6 +424,61 @@ TEST("sample host: a missing file is silent and reported, the song plays on") {
   g.process(L.data(), R.data(), 512, 0, false);
   CHECK(allFinite(L));
   CHECK_NEAR(peakOf(L), 0, 0);
+}
+
+// --- L10 amplitude (2026-11-18): a render must actually sound --------------------------------------------------
+// The old builtin demo projected to silent "none" tracks (peak 0) and no test caught it: the gate compared
+// silence with silence. These close that gap. The demo test is RED on the silent builtin demo and GREEN once
+// the demo is rebuilt on generated audio; the generated-audio/test-synth test is a general sound-out check.
+
+TEST("render: the demo sounds (amplitude > 0), not silence-by-conversion") {
+  Project p = fromJson(demoProject(190));
+  AssetStore assets;
+  RenderResult r = renderProject(p, kSr, 512, false, 0.2, nullptr, &assets, nullptr, 0);
+  CHECK(allFinite(r.L) && allFinite(r.R));
+  // A song whose every track was silenced by conversion (instrument -> "none" with a load note) must not pass
+  // as "rendered": that is the silent-by-construction gap. The rebuilt demo sounds from generated audio.
+  bool allSilencedByConversion = !p.tracks.empty();
+  for (const auto& t : p.tracks)
+    allSilencedByConversion = allSilencedByConversion && t.instrument == "none" && !t.loadNotes.empty();
+  CHECK(!allSilencedByConversion);
+  CHECK(r.peak > 0.0f);  // the demo really sounds
+  if (r.peak <= 0.0f) coretest::fail(__FILE__, __LINE__, "the demo rendered silence (peak 0)");
+}
+
+TEST("render: generated audio and the test synth sound out (amplitude > 0)") {
+  // Generated audio (tests/support/signals.hpp): a sine clip renders non-silent at its own level.
+  const std::string path = writeSine("amplitude-sine.wav", 440, 1.0, 0.5f);
+  AssetStore assets;
+  RenderResult ra = renderProject(fromJson(audioSong(path, 1.0)), kSr, 512, false, 0.1, nullptr, &assets, nullptr, 0);
+  CHECK(allFinite(ra.L));
+  CHECK(ra.peak > 0.0f);
+  // The test synth (app/selftest-plugins) stand-in: a plugin instrument track renders non-silent. The real
+  // VST3 test synth's sound-out is asserted by cli_plugin_crash_render and cli_demo_render in the gate.
+  FakeProvider provider;
+  const json notes = json::array({{{"tick", 0}, {"length", 960}, {"pitch", 60}, {"velocity", 0.8}}});
+  RenderResult rs = renderProject(fromJson(pluginSong(120, notes, json::array())), kSr, 512, false, 0.1, nullptr, nullptr, &provider, 0);
+  CHECK(allFinite(rs.L));
+  CHECK(rs.peak > 0.0f);
+}
+
+// L10: the demo is now generated audio (no note-ons), so the grid-scheduling accuracy the demo sweep used to
+// measure is guarded here on a plugin note track: every note-on lands on the exact fractional grid position,
+// rounded once, never a whole sample late (the same criterion cli_measure applies to the sweep).
+TEST("render: note-ons land on the exact grid (scheduling accuracy)") {
+  FakeProvider provider;
+  json notes = json::array();
+  for (int beat = 0; beat < 16; ++beat)
+    notes.push_back({{"tick", beat * kPpq}, {"length", 240}, {"pitch", 36}, {"velocity", 0.9}});
+  Project p = fromJson(pluginSong(190, notes, json::array(), 4 * 4 * kPpq));
+  EventLog log;
+  renderProject(p, kSr, 512, false, 0.1, &log, nullptr, &provider, 0);
+  const double spt = samplesPerTick(190, kSr);
+  double maxErr = 0;
+  for (const auto& e : log.entries) maxErr = std::max(maxErr, std::fabs((double)e.sample - e.tick * spt));
+  CHECK(log.entries.size() >= 16);
+  CHECK(maxErr < 1.0);
+  if (maxErr >= 1.0) coretest::fail(__FILE__, __LINE__, coretest::pair(maxErr, 1.0));
 }
 
 // --- Loop e mudanca de tempo (sweep: o loop era convertido duas vezes) ------------------------------------------
