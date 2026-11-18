@@ -527,9 +527,20 @@ TEST("plugins: keepLivePluginStates never takes back the state of a plugin that 
   CHECK_EQ(stateOf(kept, a), std::string("QQ=="));
 }
 
-// Todos os templates que vao com a app abrem, viram projecto do motor, e o motor aceita-os e renderiza sem NaN.
-TEST("templates: todos abrem e o motor toca-os sem erro") {
-  TemplateLibrary lib = loadTemplates(CORE_TEMPLATES_DIR, tempDir() / "user-templates-vazia", true);
+// A template made from a song opens, becomes an engine project, and the engine accepts and renders it without NaN.
+// The shipped builtin templates were removed (owner «remove templates com efeitos», 2026-11-18): every one carried
+// builtin effects and projected to silent "none" tracks. The live template path (save a song as a template, load it
+// back, project, render) is what this guards now, on a user template written through the real save/load API.
+TEST("templates: a saved template opens, projects and the engine renders it finite") {
+  const fs::path user = tempDir() / "user-templates-roundtrip";
+  fs::remove_all(user);
+  fs::create_directories(user);
+  TemplateInfo info;
+  info.id = "roundtrip";
+  info.name = "Roundtrip";
+  const SongTemplate made = templateFromDocument(newTemplateDocument(), info);
+  saveTemplate(made, TemplateLibrary{}, user);
+  TemplateLibrary lib = loadTemplates(fs::path{}, user, true);  // no builtin folder: only the user's template
   for (const auto& p : lib.problems) coretest::fail(p.file.string().c_str(), 0, p.message);
   CHECK(lib.templates.size() >= 1);
   for (const auto& e : lib.templates) {
@@ -538,10 +549,10 @@ TEST("templates: todos abrem e o motor toca-os sem erro") {
     try {
       p = core::fromJson(toProjection(d));
     } catch (const std::exception& ex) {
-      coretest::fail(e.file.string().c_str(), 0, std::string("o motor recusou: ") + ex.what());
+      coretest::fail(e.file.string().c_str(), 0, std::string("the engine refused it: ") + ex.what());
       continue;
     }
-    p.lengthTicks = std::min<int64_t>(p.lengthTicks, 4 * 4 * core::kPpq);  // 4 compassos chegam
+    p.lengthTicks = std::min<int64_t>(p.lengthTicks, 4 * 4 * core::kPpq);  // 4 bars are enough
     core::RenderResult r = core::renderProject(p, 48000, 512, false, 0.1, nullptr, nullptr, nullptr, 0);
     bool finite = true;
     for (float s : r.L) finite = finite && std::isfinite(s);
