@@ -118,14 +118,19 @@ PatternEditor::PatternEditor(Host& host) : host_(host) {
   octaveDown_.setTooltip(u8("One octave down (wheel: one key; Alt+wheel: bigger or smaller keys)"));
   octaveUp_.onClick = [this] { lowPitch_ = std::min(128 - keysShown(), lowPitch_ + 12); repaint(); };
   octaveDown_.onClick = [this] { lowPitch_ = std::max(0, lowPitch_ - 12); repaint(); };
-  for (auto [b, icon, tip, t] : {std::tuple<juce::TextButton*, const char*, const char*, Tool>{&drawTool_, "cursor", "Draw: a click adds a note, a drag moves it; right-click deletes", Tool::Draw},
-                                 {&selectTool_, "select", "Select: drag a box around notes (Ctrl adds to the selection)", Tool::Select},
-                                 {&eraseTool_, "erase", "Erase: click or drag over notes (with any tool: right-click)", Tool::Erase}}) {
-    b->getProperties().set(theme::kIconProperty, icon);
-    b->setTooltip(tip);
-    b->setClickingTogglesState(false);
-    b->onClick = [this, t] { setTool(t); };
-  }
+  // The tool dropdown (Draw / Select / Erase): one choice instead of three buttons.
+  toolBox_.addItem(u8("Draw"), 1);
+  toolBox_.addItem(u8("Select"), 2);
+  toolBox_.addItem(u8("Erase"), 3);
+  toolBox_.setTooltip(u8("The mouse's tool. Draw: a click adds a note, a drag moves it. Select: drag a box around notes (Ctrl adds). Erase: click or drag over notes. With any tool: right-click deletes."));
+  toolBox_.onChange = [this] { setTool(static_cast<Tool>(toolBox_.getSelectedId() - 1)); };
+  // The window controls: detach / dock and close (Core's line icons).
+  detach_.getProperties().set(theme::kIconProperty, "detach");
+  detach_.setTooltip(u8("Detach the piano roll into its own window (dock it back with the same button)"));
+  detach_.onClick = [this] { if (onToggleWindow) onToggleWindow(); };
+  closePanel_.getProperties().set(theme::kIconProperty, "close");
+  closePanel_.setTooltip(u8("Close the piano roll (View > Piano roll brings it back)"));
+  closePanel_.onClick = [this] { if (onClosePanel) onClosePanel(); };
   // One Edit menu for every note tool (Diogo, 2026-11-05): Timing, Notes, Variation, Randomize, More/Fewer notes,
   // Build-up, each a submenu; the windows (P-Core, Build-up) and Save at the end.
   edit_.setButtonText(u8("Edit ▾"));
@@ -170,7 +175,7 @@ PatternEditor::PatternEditor(Host& host) : host_(host) {
   zoomIn_.onClick = [this] { zoom(0.5, shownStart() + shownLength() / 2); };
   zoomOut_.onClick = [this] { zoom(2.0, shownStart() + shownLength() / 2); };
   for (auto* c : std::initializer_list<juce::Component*>{&zoomIn_, &zoomOut_, &patternBox_, &newPattern_, &clearPattern_, &removePattern_, &snap_, &length_, &octaveUp_, &octaveDown_, &title_, &hint_, &addSound_, &pagePrev_, &pageNext_,
-                                                                &drawTool_, &selectTool_, &eraseTool_, &edit_, &editInfo_}) {
+                                                                &toolBox_, &edit_, &editInfo_, &detach_, &closePanel_}) {
     c->setWantsKeyboardFocus(false);
     addAndMakeVisible(c);
   }
@@ -188,9 +193,7 @@ void PatternEditor::setTool(Tool tool) {
   tool_ = tool;
   if (!overlay_.area().isEmpty()) repaint(overlay_.area().expanded(2));
   overlay_ = {};  // the ghost is the draw tool's
-  drawTool_.setToggleState(tool == Tool::Draw, juce::dontSendNotification);
-  selectTool_.setToggleState(tool == Tool::Select, juce::dontSendNotification);
-  eraseTool_.setToggleState(tool == Tool::Erase, juce::dontSendNotification);
+  toolBox_.setSelectedId(static_cast<int>(tool) + 1, juce::dontSendNotification);
   setMouseCursor(tool == Tool::Draw ? juce::MouseCursor::NormalCursor : tool == Tool::Select ? juce::MouseCursor::CrosshairCursor
                                                                                             : juce::MouseCursor::PointingHandCursor);
 }
@@ -506,7 +509,8 @@ void PatternEditor::documentChanged() {
   setTooltip(!editable ? juce::String()
              : drums() ? u8("Click: step on/off · Drag: move, also to another sound (Shift: off the grid) · Wheel over a step or the velocity lane: how loud")
                        : u8("Click: note · Drag: move (Shift: off the grid) · Right edge: length · Wheel or velocity lane: velocity · Del · Ctrl+D duplicate"));
-  for (auto* b : {&drawTool_, &selectTool_, &eraseTool_, &edit_}) b->setEnabled(editable);
+  for (auto* b : {&edit_}) b->setEnabled(editable);
+  toolBox_.setEnabled(editable);
   placeAddSound();
   hint_.setText(!editable ? juce::String()
                 : drums() ? u8("Click: step on/off · Drag: move (Shift: off the grid) · Wheel over a note: velocity")
@@ -527,6 +531,13 @@ juce::String PatternEditor::trackLabel() const {
 void PatternEditor::resized() {
   dock_.setBounds(dock_.hasTool() ? getLocalBounds().reduced(8).removeFromRight(dockWidth() - 8) : juce::Rectangle<int>());
   auto header = area().reduced(8, 4).removeFromTop(kHeader - 4);
+  // The window buttons at the far right (detach / dock, close), then the zoom and the rest.
+  const bool detached = isDetached && isDetached();
+  detach_.getProperties().set(theme::kIconProperty, detached ? "dock" : "detach");
+  detach_.setTooltip(detached ? u8("Dock the piano roll back into the main window") : u8("Detach the piano roll into its own window"));
+  closePanel_.setBounds(header.removeFromRight(28).reduced(2));
+  detach_.setBounds(header.removeFromRight(28).reduced(2));
+  header.removeFromRight(6);
   // Right side first (grid, length, octave), then the left from the start; the title takes what is left.
   zoomIn_.setBounds(header.removeFromRight(30).reduced(2));
   zoomOut_.setBounds(header.removeFromRight(30).reduced(2));
@@ -539,7 +550,7 @@ void PatternEditor::resized() {
   editInfo_.setBounds(header.removeFromRight(theme::InfoDot::kSlot).withSizeKeepingCentre(theme::InfoDot::kSlot, theme::InfoDot::kSlot));
   edit_.setBounds(header.removeFromRight(66).reduced(2));
   header.removeFromRight(8);
-  for (auto* b : {&eraseTool_, &selectTool_, &drawTool_}) b->setBounds(header.removeFromRight(30).reduced(2));
+  toolBox_.setBounds(header.removeFromRight(88).reduced(2));
   header.removeFromRight(8);
   removePattern_.setBounds(header.removeFromRight(56).reduced(2));
   clearPattern_.setBounds(header.removeFromRight(52).reduced(2));

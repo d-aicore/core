@@ -94,6 +94,9 @@ public:
   juce::String buildupTake(const doc::PCoreSettings& settings, int64_t from, int64_t to, double tempoTo, bool again, int effects = 0);
   // The Patterns window (P-Core's channel rack, a window of its own): the menus' "Patterns…" open it.
   std::function<void()> onOpenPatterns;
+  // The window controls (UX detachable-windows slice): the main window sets these; ⧉ detaches / docks, × hides.
+  std::function<void()> onToggleWindow, onClosePanel;
+  std::function<bool()> isDetached;
   std::function<const doc::PCoreCatalog*()> pcoreCatalog;  // pcore/styles.json beside Core.exe (nullptr: missing)
   std::function<std::string()> songStyle;                  // the song's style name ("Hi-tech"), "" when none
 
@@ -181,7 +184,12 @@ private:
   juce::TextButton newPattern_, clearPattern_, removePattern_;
   juce::TextButton octaveUp_, octaveDown_, zoomIn_, zoomOut_;
   void zoom(double factor, double at);
-  juce::TextButton drawTool_, selectTool_, eraseTool_;
+  // The mouse's tool: one dropdown, not a row of buttons (the owner: «usem dropdowns em vez de muitos botoes
+  // para escolhar»). Draw / Select / Erase, the same three tools as before.
+  juce::ComboBox toolBox_;
+  // The window controls (UX detachable-windows slice): ⧉ pops the piano roll out into an OS window / docks it
+  // back, × hides it (View > Piano roll brings it back). The main window sets these.
+  juce::TextButton detach_, closePanel_;
   juce::TextButton edit_;        // Edit ▾: every note tool (showTools)
   theme::InfoDot editInfo_;
   std::set<std::string> editIds() const;  // the notes an Edit tool works on (bars shown; the selected ones among them)

@@ -17,6 +17,7 @@ if(WIN32)
 endif()
 target_sources(CoreApp PRIVATE src/Main.cpp src/MainComponent.cpp src/EngineSession.cpp src/PatternEditor.cpp src/Waveforms.cpp src/Stretch.cpp src/Plugins.cpp src/Autosave.cpp src/Diagnostics.cpp src/Theme.cpp src/LibraryPanel.cpp src/InspectorPanel.cpp src/Settings.cpp src/Keymap.cpp src/Mixer.cpp src/SCorePanel.cpp src/ChoiceDialog.cpp src/BuildupPanel.cpp src/PatternsWindow.cpp src/ToolDock.cpp src/ProposalsPanel.cpp src/Language.cpp)
 target_sources(CoreApp PRIVATE src/GlobalKeys.cpp)  # Space plays / stops in every window
+target_sources(CoreApp PRIVATE src/WindowLayout.cpp src/PanelWindows.cpp)  # detachable windows: the layout model and the OS window shell
 target_compile_definitions(CoreApp PRIVATE
   JUCE_WEB_BROWSER=0
   JUCE_USE_CURL=0

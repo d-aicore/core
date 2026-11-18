@@ -44,6 +44,9 @@ public:
   // A sound dragged out of the list: this text, then the sample's sha256 (the window finds it in the index).
   static constexpr const char* kSampleDrag = "core-sample:";
   std::function<void()> onMinimise;  // ‹ in its header: the Library steps aside (the rail brings it back)
+  // The window control (UX detachable-windows slice): ⧉ pops the Browser out into an OS window / docks it back.
+  std::function<void()> onDetach;
+  std::function<bool()> isDetached;
   std::function<void(const doc::LibrarySample&)> onUseSample;  // on the selected track (one undo step), then heard
   // Heard once, whatever track is selected (the song does not change); role "" = the sample's own role.
   std::function<bool(const doc::LibrarySample&, const std::string& role)> onPreviewSample;
@@ -114,7 +117,7 @@ private:
 
   Tab tab_ = Tab::Sounds;
   juce::TextEditor search_;
-  juce::TextButton minimise_;
+  juce::TextButton minimise_, detach_;
   juce::TextButton sounds_, presetsTab_, grooves_, projectTab_, removeUnused_;
   juce::TextButton newSong_{"New song"}, saveTemplate_, deleteTemplate_;  // Templates tab
   theme::InfoDot templatesInfo_;

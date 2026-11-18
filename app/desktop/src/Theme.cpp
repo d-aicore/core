@@ -147,6 +147,21 @@ void drawIcon(juce::Graphics& g, const juce::String& name, juce::Rectangle<float
       g.drawLine(x, c.y - s * 0.6f, x, c.y + s * 0.6f, 1.2f);
       g.fillRoundedRectangle(juce::Rectangle<float>(s * 0.34f, s * 0.2f).withCentre({x, cap}), 1.0f);
     }
+  } else if (name == "detach") {  // a window popping out: two overlapping squares (as the restore mark)
+    g.drawRoundedRectangle(c.x - s * 0.55f, c.y - s * 0.35f, s * 0.9f, s * 0.9f, 1.5f, 1.2f);
+    g.drawLine(c.x - s * 0.25f, c.y - s * 0.55f, c.x + s * 0.55f, c.y - s * 0.55f, 1.2f);
+    g.drawLine(c.x + s * 0.55f, c.y - s * 0.55f, c.x + s * 0.55f, c.y + s * 0.25f, 1.2f);
+  } else if (name == "dock") {  // a window going back in: an arrow down into a tray
+    g.drawLine(c.x, c.y - s * 0.6f, c.x, c.y + s * 0.15f, 1.4f);
+    juce::Path head;
+    head.addTriangle(c.x - s * 0.3f, c.y - s * 0.05f, c.x + s * 0.3f, c.y - s * 0.05f, c.x, c.y + s * 0.3f);
+    g.fillPath(head);
+    g.drawLine(c.x - s * 0.55f, c.y + s * 0.55f, c.x + s * 0.55f, c.y + s * 0.55f, 1.4f);
+    g.drawLine(c.x - s * 0.55f, c.y + s * 0.3f, c.x - s * 0.55f, c.y + s * 0.55f, 1.2f);
+    g.drawLine(c.x + s * 0.55f, c.y + s * 0.3f, c.x + s * 0.55f, c.y + s * 0.55f, 1.2f);
+  } else if (name == "close") {  // the × of a sub-window's header (as the main window's close button)
+    g.drawLine(c.x - s * 0.45f, c.y - s * 0.45f, c.x + s * 0.45f, c.y + s * 0.45f, 1.3f);
+    g.drawLine(c.x - s * 0.45f, c.y + s * 0.45f, c.x + s * 0.45f, c.y - s * 0.45f, 1.3f);
   }
 }
 

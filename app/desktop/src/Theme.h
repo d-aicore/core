@@ -80,7 +80,7 @@ inline const juce::Colour kError{0xffe0504a};
 inline const juce::Identifier kIconProperty{"coreIcon"};
 
 // Small line icons in the current colour: play, stop, home, loop, pencil, select, erase, folder, star,
-// starOn, wave, down, right, search, library, inspector.
+// starOn, wave, down, right, search, library, inspector, detach, dock, close.
 void drawIcon(juce::Graphics& g, const juce::String& name, juce::Rectangle<float> area);
 
 // The segmented C (three pieces and the diamond at its core), scaled to fit the area.

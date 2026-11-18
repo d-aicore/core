@@ -416,7 +416,10 @@ MixerPanel::MixerPanel(PatternEditor::Host& host) : host_(host) {
   close_.setButtonText(u8("✕"));
   close_.setTooltip(u8("Close the mixer (back to the piano roll)"));
   close_.onClick = [this] { if (onClose) onClose(); };
-  for (auto* b : {&addBus_, &close_}) {
+  detach_.getProperties().set(theme::kIconProperty, "detach");
+  detach_.setTooltip(u8("Detach the Mixer into its own window (dock it back with the same button)"));
+  detach_.onClick = [this] { if (onToggleWindow) onToggleWindow(); };
+  for (auto* b : {&addBus_, &detach_, &close_}) {
     b->setWantsKeyboardFocus(false);
     addAndMakeVisible(b);
   }
@@ -484,7 +487,11 @@ void MixerPanel::paint(juce::Graphics& g) {
 void MixerPanel::resized() {
   auto r = getLocalBounds().reduced(8, 6);
   auto head = r.removeFromTop(24);
+  const bool detached = isDetached && isDetached();
+  detach_.getProperties().set(theme::kIconProperty, detached ? "dock" : "detach");
+  detach_.setTooltip(detached ? u8("Dock the Mixer back into the main window") : u8("Detach the Mixer into its own window"));
   close_.setBounds(head.removeFromRight(28).reduced(2));
+  detach_.setBounds(head.removeFromRight(28).reduced(2));
   title_.setBounds(head.removeFromLeft(90));
   addBus_.setBounds(head.removeFromLeft(70).reduced(2));
   r.removeFromTop(4);
