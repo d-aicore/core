@@ -8043,9 +8043,11 @@ void MainComponent::selfTestStep() {
         // cards (no legacy *-Core title left on them) and the score open and show. The piano roll and the Mixer
         // were exercised above (steps 16-19 and 36-37). No extra logged transition: the checks ride in this step.
         openPatterns();
-        if (!patternsWindow_ || !patternsWindow_->isVisible() || patternsWindow_->panel().patternOf("kick") == nullptr)
+        // The rack is a docked panel since the detachable-windows slice (it becomes a native PatternsWindow only
+        // while it is detached), so this probe reads the panel and its state, not a DocumentWindow.
+        if (!panelShown("channelRack") || !patternsPanel_ || patternsPanel_->patternOf("kick") == nullptr)
           return finish(false, "patterns window");
-        patternsWindow_->closeButtonPressed();
+        hidePanel("channelRack");
         togglePlugins();
         if (!pluginCards_.isVisible()) return finish(false, "tools panel not shown");
         const std::vector<std::string> titles = pluginCards_.cardTitles();
@@ -8054,8 +8056,9 @@ void MainComponent::selfTestStep() {
           if (title.find("Core") != std::string::npos) return finish(false, "legacy card title: " + u8(title));
         // The Pattern Maker card opens its window (the card handler's wiring).
         if (pluginCards_.onOpen) pluginCards_.onOpen(doc::corePlugins()[0], pluginCards_);
-        if (!patternsWindow_ || !patternsWindow_->isVisible()) return finish(false, "pattern maker card did not open the window");
-        patternsWindow_->closeButtonPressed();
+        if (!panelShown("channelRack") || !patternsPanel_ || !patternsPanel_->isVisible())
+          return finish(false, "pattern maker card did not open the rack");
+        hidePanel("channelRack");
         togglePlugins();
         openCoreWindow("score", "");
         if (!score_.isVisible()) return finish(false, "score not shown");
@@ -8067,7 +8070,8 @@ void MainComponent::selfTestStep() {
       }
       break;
     case 39: {  // piano roll, Pulse gestures (UX slice): drag-to-size create with the last used length, Shift+drag
-      // clones, Alt bypasses snap, Ctrl+drag lassos in any tool, Alt+wheel velocity (Ctrl+Alt fine), Ctrl+wheel = Keys+.
+      // clones, Alt bypasses snap, Ctrl+drag lassos in any tool, Alt+wheel velocity (Ctrl+Alt fine), Shift+wheel =
+      // Keys+ and Ctrl+wheel = the time zoom (the owner's latest modifier mapping).
       if (applied && inStep > 300) {
         selectTrack("bass");
         std::string p3;
@@ -8128,13 +8132,21 @@ void MainComponent::selfTestStep() {
         const auto fine = juce::ModifierKeys(juce::ModifierKeys::altModifier | juce::ModifierKeys::ctrlModifier);
         ed.mouseWheelMove(mouse(ed.cellGrabPoint(notes()[0].tick, notes()[0].pitch), ed.cellGrabPoint(notes()[0].tick, notes()[0].pitch), fine), up);
         if (std::abs(notes()[0].velocity - (v0 + 0.06)) > 1e-9) return finish(false, "ctrl alt fine velocity");
-        // 7. Ctrl+wheel expands the key range (Keys+): a key far above the view comes into it.
+        // 7. Shift+wheel expands the key range (Keys+): a key far above the view comes into it. Ctrl+wheel is the
+        // time zoom now, so it must leave the key count alone; that notch is zoomed straight back out so the steps
+        // that follow keep the same view.
         if (ed.cellGrabPoint(0, 100).y != 0) return finish(false, "keys view precondition");
-        for (int i = 0; i < 20; ++i) ed.mouseWheelMove(mouse(a, a, ctrl), up);
+        const int keysBeforeCtrl = ed.keysShown();
+        auto zoomBack = up;
+        zoomBack.deltaY = -up.deltaY;
+        ed.mouseWheelMove(mouse(a, a, ctrl), up);
+        if (ed.keysShown() != keysBeforeCtrl) return finish(false, "ctrl wheel changed the key range");
+        ed.mouseWheelMove(mouse(a, a, ctrl), zoomBack);
+        for (int i = 0; i < 20; ++i) ed.mouseWheelMove(mouse(a, a, shift), up);
         if (ed.cellGrabPoint(0, 100).y <= 0) {
           juce::String ys;
           for (int p : {0, 23, 50, 90, 95, 99, 100, 105, 115, 127}) ys += juce::String(p) + ":" + juce::String(ed.cellGrabPoint(0, p).y) + " ";
-          return finish(false, "ctrl wheel keys+ keys=" + juce::String(ed.keysShown()) + " " + ys);
+          return finish(false, "shift wheel keys+ keys=" + juce::String(ed.keysShown()) + " " + ys);
         }
         ed.deleteSelection();
         next("piano gestures");

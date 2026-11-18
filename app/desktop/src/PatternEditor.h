@@ -53,8 +53,10 @@ public:
   // Drawing help (File > Settings > Piano roll, both on by default): a faint note where a click would put one,
   // and thin guides when that note (or a dragged one) lines up with another: same key across, same time down.
   void setDrawingHelp(bool ghost, bool guides);
-  // Expandable key range (owner, 2026-11-18: «piano deve conseguir expandir», «no piano ctrl+scroll keys+ e keys»):
-  // Keys+/Keys- grow or shrink the visible range, Fit keys shows all 128. Ctrl+wheel is Keys+/Keys-.
+  // Expandable key range (owner, 2026-11-18: «piano deve conseguir expandir»): Keys+/Keys- grow or shrink the
+  // visible range, Fit keys shows all 128. The modifier followed «no piano ctrl+scroll keys+ e keys» and was then
+  // superseded by the owner's latest instruction in the adoption plan: Shift+wheel is Keys+/Keys- and Ctrl+wheel is
+  // the horizontal/time zoom.
   void fitKeys();
   void keysMore();
   void keysLess();
@@ -206,14 +208,19 @@ private:
   juce::TextButton newPattern_, clearPattern_, removePattern_;
   juce::TextButton octaveUp_, octaveDown_, zoomIn_, zoomOut_;
   void zoom(double factor, double at);
-  // The second toolbar row (pitched tracks): the key range and the scale guide, as dropdowns where there is a choice.
+  // The key range, the scale guide and the time navigation: reached from the View menu and from the wheel gestures,
+  // not from a second permanent button row (plan §3: one compact row). The controls still exist, so the menu, the
+  // gestures and the self-test drive the same code path.
   juce::TextButton keysMinus_, keysPlus_, fitKeys_;
   juce::ComboBox scaleBox_, rootBox_;
+  juce::TextButton view_;  // View ▾: key range, scale/root, zoom
+  void showViewMenu();
+  void runViewItem(int id);
   juce::TextButton noteTools_;  // opens the Note tools window (Quantize/Humanize/Groove + the kick/bass tools)
   std::unique_ptr<juce::DocumentWindow> noteToolsWin_;
-  int headerHeight() const;  // one row for drums, two for pitched tracks
+  int headerHeight() const;  // the single compact toolbar row
   void updateKeysHint();
-  void keysWheel(float deltaY, int y);  // Ctrl+wheel: Keys+/Keys- around the key under the mouse
+  void keysWheel(float deltaY, int y);  // Shift+wheel: Keys+/Keys-, the key under the mouse kept in place
   // The mouse's tool: one dropdown, not a row of buttons (the owner: «usem dropdowns em vez de muitos botoes
   // para escolhar»). Draw / Paint / Select / Erase — the four tools of the piano-roll gesture slice.
   juce::ComboBox toolBox_;

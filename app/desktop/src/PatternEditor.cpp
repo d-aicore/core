@@ -25,7 +25,6 @@ const juce::Colour kGridDark = theme::kField, kGridLine = theme::kGrid.brighter(
     kNote = theme::kAccent, kSelected = theme::kAccentBright;
 constexpr int kKeys = 30;  // the keyboard at the grid's left edge (not for drums)
 constexpr int kHeader = 34, kRuler = 20, kLabels = 70, kVelocity = 56;
-constexpr int kRow2 = 26;  // the pitched tracks' second toolbar row: Keys±, Fit keys, the scale dropdowns
 constexpr int kKeysMin = 8, kKeysMax = 128;  // the visible key range (Fit keys shows all 128)
 // By menu id (1..7); the menu lists them finest first. 1/64 and 1/128 came later (ids 6, 7): saved choices keep their meaning.
 const int64_t kSnaps[] = {120, 240, 320, 480, 960, 60, 30};
@@ -202,8 +201,8 @@ PatternEditor::PatternEditor(Host& host) : host_(host) {
   hint_.setJustificationType(juce::Justification::centredRight);
   pagePrev_.getProperties().set(theme::kIconProperty, "left");  // clean chevrons, not the ‹ › characters
   pageNext_.getProperties().set(theme::kIconProperty, "right");
-  pagePrev_.setTooltip(u8("Previous bars (Shift+wheel scrolls; Ctrl+Shift+wheel, or −, shows more)"));
-  pageNext_.setTooltip(u8("Next bars (Shift+wheel scrolls; Ctrl+Shift+wheel, or −, shows more)"));
+  pagePrev_.setTooltip(u8("Previous bars (a sideways swipe scrolls; Ctrl+wheel, or −, shows more)"));
+  pageNext_.setTooltip(u8("Next bars (a sideways swipe scrolls; Ctrl+wheel, or −, shows more)"));
   pagePrev_.onClick = [this] { viewStart_ = shownStart() - shownLength(); placePaging(); repaint(); };
   pageNext_.onClick = [this] { viewStart_ = shownStart() + shownLength(); placePaging(); repaint(); };
   addSound_.setButtonText(u8("+ Sound"));
@@ -220,16 +219,16 @@ PatternEditor::PatternEditor(Host& host) : host_(host) {
   };
   zoomIn_.setButtonText("+");
   zoomOut_.setButtonText(u8("−"));
-  zoomIn_.setTooltip(u8("Zoom in: fewer bars across the grid (Ctrl+Shift+wheel up). Ctrl+wheel is Keys+/Keys− on the piano roll."));
-  zoomOut_.setTooltip(u8("Zoom out: more bars across the grid (Ctrl+Shift+wheel down). Ctrl+wheel is Keys+/Keys− on the piano roll."));
+  zoomIn_.setTooltip(u8("Zoom in: fewer bars across the grid (Ctrl+wheel up)"));
+  zoomOut_.setTooltip(u8("Zoom out: more bars across the grid (Ctrl+wheel down)"));
   zoomIn_.onClick = [this] { zoom(0.5, shownStart() + shownLength() / 2); };
   zoomOut_.onClick = [this] { zoom(2.0, shownStart() + shownLength() / 2); };
   // The key range (owner, 2026-11-18: «piano deve conseguir expandir», «no piano ctrl+scroll keys+ e keys»).
   keysMinus_.setButtonText(u8("Keys −"));
-  keysMinus_.setTooltip(u8("Keys −: four fewer keys, taller rows (Ctrl+wheel down)"));
+  keysMinus_.setTooltip(u8("Keys −: four fewer keys, taller rows (Shift+wheel down)"));
   keysMinus_.onClick = [this] { keysLess(); };
   keysPlus_.setButtonText(u8("Keys +"));
-  keysPlus_.setTooltip(u8("Keys +: four more keys, shorter rows (Ctrl+wheel up)"));
+  keysPlus_.setTooltip(u8("Keys +: four more keys, shorter rows (Shift+wheel up)"));
   keysPlus_.onClick = [this] { keysMore(); };
   fitKeys_.setButtonText(u8("Fit keys"));
   fitKeys_.setTooltip(u8("Fit keys: show all 128 keys at once"));
@@ -250,10 +249,19 @@ PatternEditor::PatternEditor(Host& host) : host_(host) {
   noteTools_.setButtonText(u8("Note tools"));
   noteTools_.setTooltip(u8("Note tools window: Quantize (grid, strength, swing), Humanize, Groove, and the kick/bass tools. Each choice is one Ctrl+Z."));
   noteTools_.onClick = [this] { openNoteTools(); };
-  for (auto* c : std::initializer_list<juce::Component*>{&zoomIn_, &zoomOut_, &patternBox_, &newPattern_, &clearPattern_, &removePattern_, &snap_, &length_, &octaveUp_, &octaveDown_, &title_, &hint_, &addSound_, &pagePrev_, &pageNext_,
-                                                                &toolBox_, &edit_, &editInfo_, &keysMinus_, &keysPlus_, &fitKeys_, &scaleBox_, &rootBox_, &noteTools_, &detach_, &closePanel_}) {
+  // View ▾: the key range, the scale guide and the zoom, so the toolbar stays one compact row.
+  view_.setButtonText(u8("View ▾"));
+  view_.setTooltip(u8("View: Keys+/Keys− (Shift+wheel), all 128 keys, the scale guide and its root, the zoom (Ctrl+wheel)"));
+  view_.onClick = [this] { showViewMenu(); };
+  for (auto* c : std::initializer_list<juce::Component*>{&patternBox_, &newPattern_, &clearPattern_, &removePattern_, &snap_, &length_, &title_, &hint_, &addSound_, &pagePrev_, &pageNext_,
+                                                                &toolBox_, &edit_, &editInfo_, &noteTools_, &view_, &detach_, &closePanel_}) {
     c->setWantsKeyboardFocus(false);
     addAndMakeVisible(c);
+  }
+  // The View menu's own controls: children, but not permanent toolbar residents (one compact row).
+  for (auto* c : std::initializer_list<juce::Component*>{&zoomIn_, &zoomOut_, &octaveUp_, &octaveDown_, &keysMinus_, &keysPlus_, &fitKeys_, &scaleBox_, &rootBox_}) {
+    c->setWantsKeyboardFocus(false);
+    addChildComponent(c);
   }
   overflowMore_.setWantsKeyboardFocus(false);
   addChildComponent(overflowMore_);  // shown only when a toolbar row does not fit
@@ -591,7 +599,7 @@ void PatternEditor::documentChanged() {
   applyToolbarVisibility();
   setTooltip(!editable ? juce::String()
              : drums() ? u8("Click: step on/off · Drag: move, also to another sound (Shift: off the grid) · Wheel over a step or the velocity lane: how loud")
-                       : u8("Click: note (last length), drag sizes it · Drag body: move (Alt: off the grid, Shift: clone) · Right edge: length · Ctrl+drag: select · Alt+wheel: velocity · Del · Ctrl+D duplicate"));
+                       : u8("Click: note (last length), drag sizes it · Drag body: move (Alt: off the grid, Shift: clone) · Right edge: length · Ctrl+drag: select · Shift+wheel: Keys± · Ctrl+wheel: zoom · Alt+wheel: velocity · Del · Ctrl+D duplicate"));
   edit_.setEnabled(editable);
   toolBox_.setEnabled(editable);
   placeAddSound();
@@ -612,12 +620,11 @@ juce::String PatternEditor::trackLabel() const {
 
 void PatternEditor::resized() {
   dock_.setBounds(dock_.hasTool() ? getLocalBounds().reduced(8).removeFromRight(dockWidth() - 8) : juce::Rectangle<int>());
-  auto headAll = area().reduced(8, 4);
-  auto header = headAll.removeFromTop(kHeader - 4);
+  auto header = area().reduced(8, 4).removeFromTop(kHeader - 4);
   applyToolbarVisibility();  // the document state first, so the overflow below starts from a known visibility
   overflowed_.clear();
-  // The dedicated header area: the window buttons at the far right (detach / dock, close). They never overflow,
-  // so a narrow window can always dock or hide the panel again.
+  // The dedicated header area: the window buttons at the far right (detach / dock, close). They never overflow, so
+  // a narrow window can always dock or hide the panel again.
   const bool detached = isDetached && isDetached();
   detach_.getProperties().set(theme::kIconProperty, detached ? "dock" : "detach");
   detach_.setTooltip(detached ? u8("Dock the piano roll back into the main window") : u8("Detach the piano roll into its own window"));
@@ -625,65 +632,57 @@ void PatternEditor::resized() {
   detach_.setBounds(header.removeFromRight(28).reduced(2));
   header.removeFromRight(6);
 
-  // First row: the context (pattern, title), the Tool dropdown, Snap, Note tools and Edit. The zoom and the key
-  // range live on the second row for pitched tracks and stay here for drums, which have only one row.
+  // One compact row: the context (pattern, title), the Tool dropdown, Snap, Note tools, View and Edit. The key
+  // range, the scale guide and the zoom are in the View menu and on the wheel gestures, so there is no second
+  // permanent button row; a row that is too narrow overflows into "More" before anything is clipped.
   const bool pitched = currentTrack() && !drums();
   // The pattern's whole name when there is room (up to 260 px), never under 112; the title keeps at least 60.
   const int nameW = juce::GlyphArrangement::getStringWidthInt(juce::Font(juce::FontOptions(theme::kFontStrong)), patternBox_.getText()) + 44;
-  std::vector<ToolbarSlot> row1;
-  if (!pitched) row1.insert(row1.end(), {{&zoomIn_, 30}, {&zoomOut_, 30}, {nullptr, 6}});
-  row1.insert(row1.end(), {{&editInfo_, theme::InfoDot::kSlot + 4, true}, {&edit_, 66}, {nullptr, 8},
-                           {&noteTools_, 78}, {&snap_, 88}, {&toolBox_, 96}, {nullptr, 8},
-                           {&length_, 84}, {&removePattern_, 56}, {&clearPattern_, 52}, {&newPattern_, 48},
-                           {&patternBox_, std::clamp(nameW, 112, 260)}});
-  // Second row (pitched tracks): the key range, Fit keys, the scale guide and the time navigation.
-  std::vector<ToolbarSlot> row2;
-  if (pitched)
-    row2 = {{&keysMinus_, 56}, {&keysPlus_, 56}, {&fitKeys_, 62}, {nullptr, 6},
-            {&octaveDown_, 50}, {&octaveUp_, 50}, {nullptr, 6},
-            {&scaleBox_, 130}, {&rootBox_, 52}, {nullptr, 6}, {&zoomOut_, 30}, {&zoomIn_, 30}};
-
+  const std::vector<ToolbarSlot> row = {{&editInfo_, theme::InfoDot::kSlot + 4, true}, {&edit_, 66}, {nullptr, 8},
+                                        {&view_, 62}, {&noteTools_, 78}, {&snap_, 88}, {&toolBox_, 96}, {nullptr, 8},
+                                        {&length_, 84}, {&removePattern_, 56}, {&clearPattern_, 52}, {&newPattern_, 48},
+                                        {&patternBox_, std::clamp(nameW, 112, 260)}};
   auto work = header;
-  work.removeFromLeft(60);  // the title's floor: the rows are laid out in what is left of it
-  auto row2Area = pitched ? headAll.removeFromTop(kRow2) : juce::Rectangle<int>();
-  auto row2Work = row2Area;
-  row2Work.removeFromRight(180);  // the hint's floor on the second row
-  const bool overflows = wantedWidth(row1) > work.getWidth() || wantedWidth(row2) > row2Work.getWidth();
-  overflowMore_.setVisible(overflows);
-  if (overflows) {
+  work.removeFromLeft(60);  // the title's floor: the row is laid out in what is left of it
+  if (wantedWidth(row) > work.getWidth()) {
+    overflowMore_.setVisible(true);
     overflowMore_.setBounds(work.removeFromRight(64).reduced(2));
     work.removeFromRight(4);
+  } else {
+    overflowMore_.setVisible(false);
   }
-  placeToolbarRow(work, row1, true);
-  placeToolbarRow(row2Work, row2, false);
+  placeToolbarRow(work, row, true);
   work.removeFromRight(8);
-  const auto titleRect = header.withWidth(std::max(0, work.getRight() - header.getX()));
-  title_.setBounds(titleRect.withSizeKeepingCentre(titleRect.getWidth(), 18));  // one line: a long name ends in "..."
-  // A narrow header drops the "PIANO ROLL" / "STEPS" prefix so the track's name is what stays readable.
-  if (const doc::Track* t = currentTrack()) {
-    const juce::String full = editorName() + u8(" — ") + u8(t->name);
-    const bool fits = juce::GlyphArrangement::getStringWidthInt(title_.getFont(), full) + 8 <= titleRect.getWidth();
-    title_.setText(fits ? full : u8(t->name), juce::dontSendNotification);
-  }
-  if (pitched) {
-    hint_.setBounds(row2Work.reduced(4, 0));
+  // What the row leaves is the context: the title, plus the key-range hint while there is room for both.
+  auto left = header.withWidth(std::max(0, work.getRight() - header.getX()));
+  const int hintW = juce::GlyphArrangement::getStringWidthInt(hint_.getFont(), hint_.getText()) + 16;
+  if (pitched && left.getWidth() >= hintW + 60) {
+    hint_.setBounds(left.removeFromRight(hintW).reduced(4, 0));
     hint_.setVisible(true);
   } else {
     hint_.setBounds({});
-    hint_.setVisible(false);  // drums: the hint is the editor's tooltip
+    hint_.setVisible(false);  // drums: the hint is the editor's tooltip; a narrow row: the View tooltip carries it
+  }
+  title_.setBounds(left.withSizeKeepingCentre(left.getWidth(), 18));  // one line: a long name ends in "..."
+  // A narrow header drops the "PIANO ROLL" / "STEPS" prefix so the track's name is what stays readable.
+  if (const doc::Track* t = currentTrack()) {
+    const juce::String full = editorName() + u8(" — ") + u8(t->name);
+    const bool fits = juce::GlyphArrangement::getStringWidthInt(title_.getFont(), full) + 8 <= left.getWidth();
+    title_.setText(fits ? full : u8(t->name), juce::dontSendNotification);
   }
   placeAddSound();
   placePaging();
 }
 
-// What the document state shows on the toolbar (independent of the width, so the overflow can hide and restore
-// controls on every layout without losing these rules).
+// What the document state shows on the compact row. The key-range, scale and zoom controls are not row residents:
+// they live in the View menu, so they stay hidden here and the toolbar never grows a second line.
 void PatternEditor::applyToolbarVisibility() {
   const bool editable = currentTrack() != nullptr;
-  const bool pitched = editable && !drums();
-  for (auto* b : {&octaveUp_, &octaveDown_, &keysMinus_, &keysPlus_, &fitKeys_, &noteTools_}) b->setVisible(pitched);
-  scaleBox_.setVisible(pitched);
-  rootBox_.setVisible(pitched && scaleGuideOn());
+  noteTools_.setVisible(editable && !drums());
+  view_.setVisible(editable);
+  for (auto* b : {&octaveUp_, &octaveDown_, &keysMinus_, &keysPlus_, &fitKeys_, &zoomIn_, &zoomOut_}) b->setVisible(false);
+  scaleBox_.setVisible(false);
+  rootBox_.setVisible(false);
 }
 
 // The width a row wants: the visible slots only (a hidden control is not part of the row).
@@ -723,13 +722,13 @@ void PatternEditor::buildOverflowMenu() {
       for (int i = 0; i < box->getNumItems(); ++i) {
         const int itemId = box->getItemId(i);
         if (itemId <= 0) continue;
-        sub.addItem(id, box->getItemText(i), true, itemId == box->getSelectedId());
+        sub.addItem(id, box->getItemText(i), box->isEnabled(), itemId == box->getSelectedId());
         overflowItems_[id] = {box, itemId};
         ++id;
       }
       overflowMenu_.addSubMenu(box == &toolBox_ ? u8("Tool") : box->getText(), sub);
     } else if (auto* b = dynamic_cast<juce::Button*>(c)) {
-      overflowMenu_.addItem(id, b->getButtonText());
+      overflowMenu_.addItem(id, b->getButtonText(), b->isEnabled());
       overflowItems_[id] = {b, 0};
       ++id;
     }
@@ -740,17 +739,63 @@ void PatternEditor::runOverflowItem(int menuId) {
   const auto it = overflowItems_.find(menuId);
   if (it == overflowItems_.end()) return;
   if (auto* box = dynamic_cast<juce::ComboBox*>(it->second.first)) {
-    if (it->second.second > 0) box->setSelectedId(it->second.second, juce::sendNotification);
+    if (it->second.second > 0 && box->isEnabled()) box->setSelectedId(it->second.second, juce::sendNotification);
   } else if (auto* b = dynamic_cast<juce::Button*>(it->second.first)) {
-    b->triggerClick();
+    // Synchronous, as the self-test's programmatic clicks: Button::triggerClick() only posts a message.
+    if (b->isEnabled() && b->onClick) b->onClick();
   }
 }
 
-// One toolbar row for drums, two for pitched tracks (the key range and the scale live on the second).
-int PatternEditor::headerHeight() const { return currentTrack() && !drums() ? kHeader + kRow2 : kHeader; }
+// View menu: the key range, the scale guide and the time navigation, so the toolbar stays one compact row. It
+// drives the very functions the wheel gestures and the self-test drive, so docked, detached and menu all send the
+// same command.
+void PatternEditor::showViewMenu() {
+  juce::PopupMenu m;
+  if (currentTrack() && !drums()) {
+    m.addItem(1, u8("Keys +  (Shift+wheel up): four more keys"));
+    m.addItem(2, u8("Keys −  (Shift+wheel down): four fewer keys"));
+    m.addItem(3, u8("All 128 keys"));
+    m.addItem(4, u8("One octave up"));
+    m.addItem(5, u8("One octave down"));
+    m.addSeparator();
+    juce::PopupMenu scales;
+    scales.addItem(100, u8("Scale: off"), true, !scaleGuideOn());
+    for (int i = 0; i < kScaleCount; ++i) scales.addItem(101 + i, u8(kScales[i].name), true, scaleName_ == kScales[i].name);
+    m.addSubMenu(u8("Scale guide"), scales);
+    juce::PopupMenu roots;
+    for (int pc = 0; pc < 12; ++pc) roots.addItem(200 + pc, u8(pitchClassName(pc)), true, scaleRoot_ == pc);
+    m.addSubMenu(u8("Root"), roots);
+    m.addSeparator();
+  }
+  m.addItem(300, u8("Zoom in  (Ctrl+wheel up): fewer bars"));
+  m.addItem(301, u8("Zoom out  (Ctrl+wheel down): more bars"));
+  m.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&view_),
+                  [safe = juce::Component::SafePointer<PatternEditor>(this)](int r) {
+                    if (!safe || r <= 0) return;
+                    safe->runViewItem(r);
+                  });
+}
+
+void PatternEditor::runViewItem(int id) {
+  switch (id) {
+    case 1: keysMore(); return;
+    case 2: keysLess(); return;
+    case 3: fitKeys(); return;
+    case 4: lowPitch_ = std::min(128 - keysShown(), lowPitch_ + 12); repaint(); return;
+    case 5: lowPitch_ = std::max(0, lowPitch_ - 12); repaint(); return;
+    case 300: zoom(0.5, shownStart() + shownLength() / 2); return;
+    case 301: zoom(2.0, shownStart() + shownLength() / 2); return;
+    default: break;
+  }
+  if (id >= 100 && id <= 100 + kScaleCount) { setScaleGuide(scaleRoot_, id == 100 ? std::string() : kScales[id - 101].name); return; }
+  if (id >= 200 && id < 212) setScaleGuide(id - 200, scaleName_);
+}
+
+// One compact toolbar row for every track: the key range and the scale live in the View menu, not on a second row.
+int PatternEditor::headerHeight() const { return kHeader; }
 
 void PatternEditor::updateKeysHint() {
-  hint_.setText(juce::String(keysShown()) + u8(" keys · Ctrl+wheel: Keys± · Alt+wheel: velocity"), juce::dontSendNotification);
+  hint_.setText(juce::String(keysShown()) + u8(" keys · Shift+wheel: Keys± · Ctrl+wheel: zoom · Alt+wheel: velocity"), juce::dontSendNotification);
 }
 
 void PatternEditor::fitKeys() {
@@ -777,9 +822,13 @@ void PatternEditor::keysLess() {
 // Ctrl+wheel: Keys+ / Keys- (the owner's «no piano ctrl+scroll keys+ e keys»). The range grows up from the lowest
 // key shown and shrinks from the top, so expanding never hides what you were looking at.
 void PatternEditor::keysWheel(float deltaY, int y) {
-  juce::ignoreUnused(y);
-  rowsWanted_ = std::clamp(keysShown() + (deltaY > 0 ? 4 : -4), kKeysMin, kKeysMax);
-  lowPitch_ = std::clamp(lowPitch_, 0, 128 - keysShown());
+  const int under = pitchAtY(y), before = keysShown();
+  rowsWanted_ = std::clamp(before + (deltaY > 0 ? 4 : -4), kKeysMin, kKeysMax);
+  // The key under the mouse stays where it was: the range grows or shrinks around what is being looked at instead
+  // of jumping to another octave.
+  lowPitch_ = under >= 0
+                ? std::clamp((int)std::lround(under - (under - lowPitch_) * (double)keysShown() / std::max(1, before)), 0, 128 - keysShown())
+                : std::clamp(lowPitch_, 0, 128 - keysShown());
   updateKeysHint();
   repaint();
 }
@@ -858,7 +907,7 @@ juce::Rectangle<int> PatternEditor::velocityLane() const {
   return area().reduced(8).removeFromBottom(kVelocity).withTrimmedLeft(kLabels);
 }
 
-// The part of the pattern shown (zoom): all of it, or viewLength_ ticks from viewStart_ (Ctrl+Shift+wheel, +/−).
+// The part of the pattern shown (zoom): all of it, or viewLength_ ticks from viewStart_ (Ctrl+wheel, View ▾).
 double PatternEditor::shownLength() const {
   const double len = currentTrack() ? (double)pattern()->lengthTicks : 1.0;
   if (viewLength_ > 0) return std::min(viewLength_, len);
@@ -2491,15 +2540,16 @@ void PatternEditor::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseW
     if (hit) wheelVelocityAt(e.x, wheel.deltaY > 0 ? 0.01 : -0.01);
     return;
   }
-  // Ctrl+Shift+wheel: zoom in or out around the mouse (down to a beat across the grid). Shift+wheel (or a sideways
-  // swipe) while zoomed: move along the pattern.
-  if (currentTrack() && ctrl && e.mods.isShiftDown()) {
-    zoom(std::pow(2.0, -wheel.deltaY * 2.0), shownStart() + std::clamp((e.x - grid().getX()) / (double)std::max(1, grid().getWidth()), 0.0, 1.0) * shownLength());
-    return;
-  }
-  // Ctrl+wheel on the piano roll: Keys+ / Keys- (the owner's expand); drums keep the horizontal zoom.
+  // Ctrl+wheel: the horizontal/time zoom (down to a beat across the grid) - the owner's latest mapping; it was the
+  // key range before. Ctrl+Shift+wheel while zoomed moves along the pattern: the horizontal navigation the old
+  // Shift+wheel binding did, reassigned so one gesture never has two jobs.
   if (currentTrack() && ctrl) {
-    if (!drums()) { keysWheel(wheel.deltaY, e.y); return; }
+    if (e.mods.isShiftDown() && shownLength() < (double)pattern()->lengthTicks - 1) {
+      viewStart_ = shownStart() - wheel.deltaY * shownLength() * 0.5;
+      placePaging();
+      repaint();
+      return;
+    }
     zoom(std::pow(2.0, -wheel.deltaY * 2.0), shownStart() + std::clamp((e.x - grid().getX()) / (double)std::max(1, grid().getWidth()), 0.0, 1.0) * shownLength());
     return;
   }
@@ -2520,8 +2570,20 @@ void PatternEditor::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseW
     }
     return;
   }
-  if (currentTrack() && shownLength() < (double)pattern()->lengthTicks && (e.mods.isShiftDown() || std::abs(wheel.deltaX) > std::abs(wheel.deltaY))) {
-    const double delta = std::abs(wheel.deltaX) > std::abs(wheel.deltaY) ? -wheel.deltaX : wheel.deltaY;
+  // Shift+wheel on the piano roll: Keys+ / Keys-, the key under the mouse kept in place (the owner's latest:
+  // Shift+wheel for more/fewer keys). Drums have no key range, so they keep the horizontal move there.
+  if (currentTrack() && e.mods.isShiftDown() && !e.mods.isAltDown()) {
+    if (!drums()) { keysWheel(wheel.deltaY, e.y); return; }
+    if (shownLength() < (double)pattern()->lengthTicks - 1) {
+      viewStart_ = shownStart() - wheel.deltaY * shownLength() * 0.5;
+      placePaging();
+      repaint();
+    }
+    return;
+  }
+  // A sideways swipe while zoomed: move along the pattern (the vertical wheel no longer does this).
+  if (currentTrack() && shownLength() < (double)pattern()->lengthTicks && std::abs(wheel.deltaX) > std::abs(wheel.deltaY)) {
+    const double delta = -wheel.deltaX;
     viewStart_ = shownStart() - delta * shownLength() * 0.5;
     placePaging();
     repaint();
