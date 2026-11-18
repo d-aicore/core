@@ -807,4 +807,66 @@ TEST("M5: a worker that was late once is re-armed after the cooldown; a stalling
   e.livePool()->testDelayNs = 0;
 }
 
+// --- A-004: a live plugin swap must re-chase the held notes into the fresh instance ------------------------------
+// adopt() copied held_ from the old wrapper unconditionally, and reconcile() skips a track whose held pitches
+// did not change: a fresh instance (Retry, plugin change) got the phantom held bits but no note-on, so the
+// held note went silent until the next note-on or seek. The fix matches the processor identity: the same
+// instance keeps its state; a different one is re-triggered with the notes the old wrapper held.
+
+namespace {
+// A plugin that sounds only while a note is held (a constant-level fake cannot prove audibility).
+struct HeldSynth final : PluginProcessor {
+  std::vector<MidiNote> seen;
+  bool held[128] = {};
+  void process(float* left, float* right, int frames, const MidiNote* notes, int count) override {
+    for (int i = 0; i < count; ++i) { seen.push_back(notes[i]); held[notes[i].pitch & 127] = notes[i].on; }
+    bool any = false;
+    for (int p = 0; p < 128; ++p) if (held[p]) { any = true; break; }
+    if (any) for (int i = 0; i < frames; ++i) { left[i] += 0.5f; right[i] += 0.5f; }
+  }
+  bool isInstrument() const override { return true; }
+  int latencySamples() const override { return 0; }
+};
+struct SwapProvider final : PluginProvider {
+  std::shared_ptr<HeldSynth> proc = std::make_shared<HeldSynth>();
+  std::shared_ptr<PluginProcessor> get(const std::string&, const json&, double, bool, std::string* why) override {
+    if (why) why->clear();
+    return proc;
+  }
+  void keepOnly(const std::vector<std::string>&) override {}
+};
+}  // namespace
+
+TEST("A-004: swapping a plugin instance keeps the held note sounding (re-chased into the fresh instance)") {
+  const json notes = json::array({{{"tick", 0}, {"length", 4 * kPpq}, {"pitch", 60}, {"velocity", 0.8}}});
+  SwapProvider provider;
+  const Project song = fromJson(pluginSong(120, notes, json::array()));
+  Engine e(kSr);  // serial: the swap edge is the same on both paths
+  std::vector<float> L(256), R(256);
+  auto publish = [&] { e.publish(std::make_unique<Graph>(song, kSr, nullptr, &provider)); };
+  auto peakOfBlocks = [&](int blocks) {
+    float peak = 0;
+    for (int b = 0; b < blocks; ++b) {
+      e.process(L.data(), R.data(), 256);
+      for (int i = 0; i < 256; ++i) peak = std::max(peak, std::max(std::fabs(L[i]), std::fabs(R[i])));
+    }
+    return peak;
+  };
+  publish();
+  e.play();
+  CHECK(peakOfBlocks(8) > 0.2f);  // the held note sounds in the first instance
+  // Live swap: the provider hands out a fresh instance (Retry / plugin change); the song is unchanged.
+  auto fresh = std::make_shared<HeldSynth>();
+  provider.proc = fresh;
+  publish();
+  const float after = peakOfBlocks(8);
+  CHECK(after > 0.2f);  // before the fix: silence — the fresh instance never got the held note
+  bool on = false;
+  float vel = 0;
+  for (const auto& ev : fresh->seen) if (ev.on && ev.pitch == 60) { on = true; vel = ev.velocity; }
+  CHECK(on);  // the held note was re-chased into the fresh instance
+  CHECK_NEAR(vel, 0.8, 1e-6);  // with the velocity it was held at
+  CHECK(after <= 0.5f + 1e-3f);  // one voice, not doubled
+}
+
 CORE_TEST_MAIN
