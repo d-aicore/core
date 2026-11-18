@@ -1,0 +1,29 @@
+ok   documento: novo documento vazio e valido e estavel
+ok   documento: o template basico tem kick, bass e hats a espera de plugin
+ok   guardar/reabrir: o ficheiro reaberto e igual ao guardado
+ok   guardar/reabrir: ficheiro estragado da erro e nao apaga nada
+ok   dados D3: o Save ve que o ficheiro mudou em disco desde que esta janela o abriu ou gravou
+ok   data loss D4: ReplaceFileW fails half way (1177) and neither version is lost; the file opens
+ok   data loss D4: 1177 and the new file cannot be moved in either -> the error says where each version is, the temporary file stays
+ok   data loss D4: the normal path is as it was (new in place, previous in the .bak, no temporary files)
+     (message: Cannot replace C:\Users\vk_do\AppData\Local\Temp\core-domain-tests\d4-bak-locked.core: Não foi possível remover o ficheiro a ser substituído (1175))
+ok   data loss D4: locked .bak -> refused with an error, the previous file intact, no temporary file left, the error has words
+ok   undo/redo: adicionar e remover pistas volta exactamente atras
+ok   undo/redo: um gesto (arrastar) e um so passo
+ok   modificado: guardar limpa, editar suja, undo ate ao guardado limpa
+ok   undo/redo: a large plugin state does not shrink the history below the minimum number of steps
+ok   undo/redo: beyond the minimum number of steps the byte budget still drops the oldest
+ok   undo/redo: above the hard ceiling the oldest steps go even below the minimum, but one undo always stays
+ok   plugins: droppedPluginKeys names the plugins a change takes away, and nothing for other changes
+ok   plugins: keepLivePluginStates never takes back the state of a plugin that stays alive
+ok   templates: todos abrem e o motor toca-os sem erro
+ok   plugins por fabricante: todos entram num grupo, sem fabricante vai para Other, ordem alfabetica
+     (round-trip: length=3500 patterns=1 equal=1)
+ok   tempo round-trip BUG-SWEEP-07: separate edits 145 -> 300 -> 145 restore the song exactly
+ok   tempo round-trip BUG-SWEEP-07: a single drag with the baseline reset restores the song
+ok   tempo round-trip BUG-SWEEP-07: a walk 145 -> 300 -> 400 -> 145 still restores the original gates
+ok   tempo round-trip BUG-SWEEP-07: an edited copy is retimed, never taken back to the source
+ok   tempo round-trip BUG-SWEEP-07: an edited source is never restored over the copy
+ok   tempo round-trip BUG-SWEEP-07: short gates keep their ms one way and come back exactly
+ok   tempo round-trip BUG-SWEEP-07: a saved tempo copy reopens and still restores exactly
+26 testes, 190 verificacoes, 0 falhas

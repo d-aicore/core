@@ -1,0 +1,9 @@
+     (round-trip: length=3500 patterns=1 equal=1)
+ok   tempo round-trip BUG-SWEEP-07: separate edits 145 -> 300 -> 145 restore the song exactly
+ok   tempo round-trip BUG-SWEEP-07: a single drag with the baseline reset restores the song
+ok   tempo round-trip BUG-SWEEP-07: a walk 145 -> 300 -> 400 -> 145 still restores the original gates
+ok   tempo round-trip BUG-SWEEP-07: an edited copy is retimed, never taken back to the source
+ok   tempo round-trip BUG-SWEEP-07: an edited source is never restored over the copy
+ok   tempo round-trip BUG-SWEEP-07: short gates keep their ms one way and come back exactly
+ok   tempo round-trip BUG-SWEEP-07: a saved tempo copy reopens and still restores exactly
+7 testes, 42 verificacoes, 0 falhas

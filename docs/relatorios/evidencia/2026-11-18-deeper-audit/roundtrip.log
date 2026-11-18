@@ -1,0 +1,16 @@
+two scalar changes: equal=1 modified=0 undo=0 redo=0
+one scalar drag: equal=1 modified=0 undo=0 redo=0
+three scalar changes: equal=1 modified=0 undo=1 redo=0
+undo after roundtrip BPM=160
+tempo 145 to 300 to 145: equal=0 modified=1 undo=1 redo=0
+pattern counts before=1 after=3 activeLength=1692 active=p3
+tempo same drag baseline reset: equal=1 modified=0 undo=0 redo=0
+assign sample: documentKind=builtin engineInstrument="none"
+menu instrument kick -> none
+menu instrument bass -> none
+menu instrument wave -> none
+menu instrument hats -> none
+menu instrument snare -> none
+menu instrument drums -> none
+menu instrument sampler -> none
+menu instrument samplepath -> none

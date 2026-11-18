@@ -297,8 +297,48 @@ std::string fmt(double v, const char* unit) {
 
 }  // namespace
 
+// The canonical saved form of a note list (document.cpp's noteJson, reached through toJson): what the
+// tempo-copy metadata below stores and compares, so it never drifts from the format the reader takes back.
+static json notesJson(const std::vector<Note>& notes) {
+  Document d;
+  Track t;
+  Pattern p;
+  p.notes = notes;
+  t.patterns.push_back(std::move(p));
+  d.tracks.push_back(std::move(t));
+  return toJson(d)["tracks"][0]["patterns"][0]["notes"];
+}
+
+// BUG-SWEEP-07: put a clip back on the pattern its gates came from when the tempo moves exactly back
+// (fromBpm -> toBpm -> fromBpm). The speed-up clamp (below) keeps a long gate at its original length, so
+// scaling the copy by the inverse ratio would shorten it (3500 -> 1692 ticks at 145 -> 300 -> 145) and
+// leave the copies orphaned. Restoring the source pattern brings the exact original gates, name and ids
+// back, and sameContent collapses the round trip in the history. Only when neither the source nor the
+// copy was edited since the copy was made: an edit on either side keeps the normal retiming, so no work
+// is ever taken back. Returns true when the clip was put back on its source.
+static bool revertTempoCopy(Track& t, Clip& c, double fromBpm, double toBpm) {
+  const Pattern* copy = t.findPattern(c.patternId);
+  if (!copy || !copy->extra.is_object()) return false;
+  const auto it = copy->extra.find("tempoGate");
+  if (it == copy->extra.end() || !it->is_object()) return false;
+  const json& m = *it;
+  if (!m.contains("source") || !m["source"].is_string() || !m.contains("fromBpm") || !m["fromBpm"].is_number() ||
+      !m.contains("toBpm") || !m["toBpm"].is_number() || !m.contains("sourceNotes") || !m["sourceNotes"].is_array() ||
+      !m.contains("createdNotes") || !m["createdNotes"].is_array())
+    return false;
+  if (std::abs(m["fromBpm"].get<double>() - toBpm) > 1e-9 || std::abs(m["toBpm"].get<double>() - fromBpm) > 1e-9) return false;
+  const std::string sourceId = m["source"].get<std::string>();
+  if (sourceId == copy->id) return false;
+  Pattern* source = t.findPattern(sourceId);
+  if (!source) return false;
+  if (notesJson(source->notes) != m["sourceNotes"] || notesJson(copy->notes) != m["createdNotes"]) return false;
+  c.patternId = sourceId;
+  return true;
+}
+
 // The bass notes of [a, b) at a new tempo: the same length in ms (ratio = new BPM / old BPM), never reaching
-// the next note. Shared patterns get a copy for the section.
+// the next note. Shared patterns get a copy for the section. An exact inverse movement restores the original
+// pattern instead (revertTempoCopy); each copy remembers its source so a later inverse can restore it too.
 // K: the sound of the built-in instruments, per style (the study's §8.5: the generator's values per style and
 // variant, with room around them). One value per song: the instrument's fixed parameter.
 struct SoundRange { const char* track; const char* instrument; const char* param; double lo, hi; };
@@ -322,11 +362,20 @@ static const std::vector<SoundRange>& soundRanges(const std::string& style) {
   return style == "Dark psycore" ? dark : style == "Hi-tech" ? hitech : style == "Slambient" ? slam : none;
 }
 
-static void retimeBass(Track& t, int64_t a, int64_t b, double ratio, std::vector<std::string>& did, double oldMs, double newMs) {
+static void retimeBass(Track& t, int64_t a, int64_t b, double ratio, std::vector<std::string>& did, double fromBpm, double toBpm) {
+  const double newMs = 60000.0 / (toBpm * kPpq);
   std::map<std::string, std::string> copies;
   int64_t shown = -1;
   for (auto& c : t.clips) {
     if (c.startTick < a || c.startTick >= b) continue;
+    // BUG-SWEEP-07: an exact inverse tempo movement restores the original pattern and its gates.
+    if (revertTempoCopy(t, c, fromBpm, toBpm)) {
+      if (shown < 0) {
+        const Pattern* src = t.findPattern(c.patternId);
+        if (src && !src->notes.empty()) shown = src->notes.front().length;
+      }
+      continue;
+    }
     auto it = copies.find(c.patternId);
     if (it == copies.end()) {
       Pattern src = patternById(t, c.patternId);
@@ -347,11 +396,32 @@ static void retimeBass(Track& t, int64_t a, int64_t b, double ratio, std::vector
       const size_t at = name.rfind(" @ ");
       if (at != std::string::npos && name.size() > 4 && name.compare(name.size() - 4, 4, " BPM") == 0) name.erase(at);
       const std::string id = newPattern(t, name, " @ " + fmt(60000.0 / (newMs * kPpq), "BPM"), src.lengthTicks, notes);
+      // BUG-SWEEP-07: remember where the gates came from (the ultimate source when this is a copy of a
+      // copy), the BPMs of the movement, and the notes of both sides as they are now. A later exact
+      // inverse restores the source only while both stay untouched (revertTempoCopy).
+      const json origin = src.extra.is_object() && src.extra.contains("tempoGate") && src.extra["tempoGate"].is_object()
+                              ? src.extra["tempoGate"]
+                              : json::object();
+      const auto take = [&origin](const char* key, const json& fallback) -> json {
+        if (!origin.contains(key)) return fallback;
+        const json& v = origin[key];
+        if (v.is_string() && fallback.is_string()) return v;
+        if (v.is_number() && fallback.is_number()) return v;
+        if (v.is_array() && fallback.is_array()) return v;
+        return fallback;  // a hand-edited file with the wrong type: start a fresh chain, never throw
+      };
+      Pattern& made = patternById(t, id);
+      json meta;
+      meta["source"] = take("source", json(c.patternId));
+      meta["fromBpm"] = take("fromBpm", json(fromBpm));
+      meta["toBpm"] = toBpm;
+      meta["sourceNotes"] = take("sourceNotes", notesJson(src.notes));
+      meta["createdNotes"] = notesJson(made.notes);
+      made.extra["tempoGate"] = std::move(meta);
       it = copies.emplace(c.patternId, id).first;
     }
     c.patternId = it->second;
   }
-  (void)oldMs;
   if (shown >= 0) did.push_back("bass gate kept at " + fmt(shown * newMs, "ms"));
 }
 
@@ -740,12 +810,21 @@ std::vector<std::string> setTempo(Document& doc, double bpm, std::vector<TempoPo
     else stretches.push_back({a, b, from, to});
   }
   std::vector<std::string> did;
-  const auto msPerTickAt = [](double b) { return 60000.0 / (b * kPpq); };
   for (auto& t : next.tracks) {
     const bool bass = t.id == "bass" || t.name.find("Bass") != std::string::npos || t.name.find("bass") != std::string::npos;
     if (!bass) continue;
     for (const auto& s : stretches)
-      if (s.to != s.from) retimeBass(t, s.a, s.b, s.to / s.from, did, msPerTickAt(s.from), msPerTickAt(s.to));
+      if (s.to != s.from) retimeBass(t, s.a, s.b, s.to / s.from, did, s.from, s.to);
+    // BUG-SWEEP-07: drop the tempo copies no clip plays any more (a round trip puts the clips back on the
+    // original pattern, and a second retime orphans the first copy). Only the marked copies go: a pattern
+    // without the mark stays even when no clip plays it - the catalogue is the user's, not ours to clean.
+    if (t.patterns.size() > 1) {
+      std::vector<Pattern> kept;
+      for (auto& p : t.patterns)
+        if (!(p.extra.is_object() && p.extra.contains("tempoGate") && t.clipsUsing(p.id) == 0)) kept.push_back(std::move(p));
+      if (kept.empty()) kept.push_back(std::move(t.patterns.front()));  // a track keeps at least one pattern
+      t.patterns = std::move(kept);
+    }
   }
   doc = std::move(next);
   return did;
