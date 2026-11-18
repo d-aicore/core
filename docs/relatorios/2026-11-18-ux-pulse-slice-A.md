@@ -146,6 +146,60 @@ tick=1942.6, loudest=0.735, status=Ready, `Output: Null NULL Playback Device · 
 Compile success alone was not accepted as proof: the step list above is the measured log of the same run that produced
 the gate numbers, and the two reds in the previous section show the chain can fail and did.
 
+## Visual proof (the coordinator's UI-proof requirement)
+
+Method and its limits, stated plainly. Images in `evidencia/2026-11-18-ux-pulse-A/ui/`, capture harness in the same
+folder (`shot.ps1`, `drive2.ps1`, `ui-shot.ps1`, `load-song.ps1`, `burst.ps1`).
+
+- **`ui/self-test-main-window.png`** — the app's own render (`createComponentSnapshot` of the live `MainComponent`)
+  from the green desktop gate run at the delivered tip. Shows the loaded demo song: arrangement with sections and clip
+  lanes, the **STEPS — Hats** rack/steps surface with its **single compact toolbar row** and, at that row's right end,
+  the **View ▾ menu button and the dedicated detach/close header area**, the velocity lane, the Master meter, the
+  Inspector, and the status bar `TEST BUILD (Release) 0.7.0+1b54ca5fc9 · Ready`.
+  *Visually verified:* one compact row (no second button row), the View menu control, the detach/close header area,
+  the rack/steps surface, the arrangement, the master strip.
+- **`ui/live-desktop-song-and-rack.png`** — a real screen capture (not an app render) of the running app on the
+  owner's desktop during a self-test run, window topmost: the demo song's clip lanes and the **STEPS — Kick** rack with
+  its step grid, its View ▾ / detach / close controls, the Inspector and the master strip.
+  *Visually verified:* the reconciled build runs on the real desktop with the rack live.
+- **`ui/live-desktop-empty-wasapi.png`** — a real screen capture of the interactive instance with an empty song; its
+  status bar reads `Output: WASAPI Auscultadores (USB-C Audio) · 48000 Hz · block 480`, i.e. the **real audio device**,
+  not the null backend. *Visually verified:* the app opens and runs on real WASAPI.
+- **`ui/burst-contact-sheet.png`** — 44 timed screen captures across one self-test run. It documents why more live
+  captures were not shipped: the owner works on this machine live, and his Chrome/Pulse windows repeatedly took the
+  foreground over the app mid-run, so the late-run frames (the piano and detach cases) are obscured. The burst is
+  evidence of the attempt and of its limit, not of those surfaces.
+
+**Only self-test-proven (green at the delivered tip), NOT visually verified:** the Tool dropdown's open item list
+(Draw/Paint/Select/Erase), the View menu's open contents, the Note tools window, the piano roll with notes on screen,
+a panel detached as its own OS window and docked back (cases 41-47 prove the state/parent/geometry transitions), and
+save/undo/transport by hand in a detached editor.
+
+**Need a real monitor or a real plugin, not exercisable headless:** mixed-DPI and negative-coordinate placement, an
+unplugged monitor and the bring-back cascade on real hardware, maximisation on a second screen, a real external
+plugin's editor inside a detached panel and its focus as a separate case, and the revised plan's performance and
+Core-visual-identity comparisons.
+
+**Incident, disclosed:** while attempting live input, two early unguarded keystroke batches were sent before the
+foreground guard existed and landed in the owner's browser (a tab showing the fixture's JSON and a stray new tab are
+visible in the intermediate captures, kept outside the repo). No file of his was modified. Since then every input
+script refuses to send keys unless the app's own window is verified foreground, and the song-load path aborts unless a
+native open-dialog of my own process is verified open; the interactive instance was killed when finished.
+
+## Self-test step IDs this slice contributes (for the removal stream's sequencing)
+
+No step numbers of my own invention: the slice keeps ux-piano's **39 and 40** as they were and renumbers ux-windows'
+39-45 to **41-47**, with a single final exit at 47. Two existing steps were modified, not added: **38** (its rack probe
+reads the docked panel state instead of a `PatternsWindow`) and **39** (its key-range check is Shift+wheel, with a
+Ctrl+wheel no-op control and a shrink/restore both-ways check). Generic-plugin-host independence: cases 39-47 never
+touch built-in instruments or templates — 39/40 create their own pattern on the fixture's `bass` track with
+`doc::addPattern` and assert only note, undo, velocity and view state; 41-47 only move panels and assert parent,
+geometry and settings state; 38's card check uses `doc::corePlugins()` (the Tools cards) and
+`patternsPanel_->patternOf("kick")` from the fixture, never `builtinInstruments()` or `instrument.kind == "builtin"`.
+The fixture `demo.core-document.json` still supplies the track ids; if the removal stream replaces it, cases 38-40 need
+only a note track and a grid, which this report flags for the sequencer. The whole chain lives in
+`MainComponent::selfTestStep`, which the coordinator sequences.
+
 ## Classification
 
 - **Confirmed in code:** the five resolutions, the compact row + View menu, the overflow mechanism, the Shift/Ctrl
