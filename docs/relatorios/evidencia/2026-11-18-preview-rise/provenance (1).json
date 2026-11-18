@@ -1,0 +1,11 @@
+{
+  "generatedBy": "CodeRabbit Coding Agent",
+  "taskId": "029b227d-329c-40fe-90ee-220e16fc877c",
+  "files": {
+    "source-hashes.json": "d4355fc69fc0f750d28864a6a4d581906b3196a45cd4bfc980525478fc486761",
+    "build.log": "2e6e5ae56112f7f847d39914543ec0d1bd315327496353dc089ee77843b4de9a",
+    "merge.log": "5c6dd319c2cbb2c4b9e8a86b1aaac7530fad301922048b0a28c2052be88a9e87",
+    "before-probe.cpp": "7f95a69e45424ce8e8bc13b1d452d42ae94fd9cc4c14259f8888e6ee4a25d816",
+    "report.md": "8b6e39c82830eff8e9d1bcf4a098b9664101c252841e7a70db848018514ca9a9"
+  }
+}

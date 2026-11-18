@@ -1,0 +1,6 @@
+Stale GATE-LOCK recovery by flawless-deadcode2 at 2026-11-18T07:46:49Z
+Found lock: flawless-crash D-restart full gate (merge+desktop) acquired 2026-11-18T07:35:46Z
+Holder gate COMPLETED: D:/Core-build/flawless-crash/gate-resumo.txt written 07:37:47Z, VERDE 18/18 @ cc5b874 (41 s).
+Verified 0 ninja/cmake/ctest/cl/link/MSBuild processes belonging to flawless-crash (scans 07:38-07:46Z);
+no file writes in the flawless-crash worktree after 07:38Z; only a leftover core-engine serve (not a builder, left alone).
+Lock not released after pass -> stale per the documented turn-cap pattern. Cleared and re-acquired below.

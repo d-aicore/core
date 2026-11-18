@@ -1,0 +1,62 @@
+{
+  "CMakeLists.txt": {
+    "before": "4f9657ae6869fb0acc6dea4b8549793d6f0f434f37fd20c59258d0bbcbb449d0",
+    "after": "8b0556d9991a5960f3d7b5f0fbdf38b9c7ea350e2c3dbe65e3aa82a863d29f67"
+  },
+  "app/desktop/CMakeLists.txt": {
+    "before": "64af76760a93e05c2fe26454016de68e5f142a9e5a6ba255d4ec2e6cdef8cee8",
+    "after": "c3d3ee1a1a199a72d10cbfc1d449a6fb6668248f591652e8b1ea484d44cc74be"
+  },
+  "app/desktop/src/MainComponent.cpp": {
+    "before": "140d0f4be631dfc7f1b53d4dcfbf86912c453c5b974663c5c8b1efeb39458e9e",
+    "after": "61765058fade4640367ede577cffc2219f98fdceda4e9b120dc11fa65078f9de"
+  },
+  "app/desktop/src/MainComponent.h": {
+    "before": "fd1f45df90dc611189c406386987285f0d11e383962fa1e641494ecb5b05a007",
+    "after": "5b8916a34a611100c6cdf3f9f91087f4e04bec7c0a5ed363ff00821506274c5d"
+  },
+  "app/desktop/src/SCorePanel.cpp": {
+    "before": "4400219b22abd8a1474eb66e957020a3acfae7c8029a0fd5e3ce9623e2b885b1",
+    "after": "33f7af0d1075c75c1b152ef4f37b64b569a62b72cb5aabb55498740bdb5ebc39"
+  },
+  "app/desktop/src/SCorePanel.h": {
+    "before": "9003e1779edb12efb2235a641ade3e1dde2dc78201f1255c0d245d945a536d14",
+    "after": "d67409510df6ad753eab2446acc22b49d386402f01d15422d693ec1188909d96"
+  },
+  "app/desktop/src/Waveforms.cpp": {
+    "before": "a14864ad1db501b2898649b7186dbe23274769b10374e93f2d126377813a1e3a",
+    "after": "64cdb65893bc67816a2626c3e1c167804aa1f37a7d0d6eae0ebb8ef102e50b96"
+  },
+  "app/desktop/src/Waveforms.h": {
+    "before": "7501b3b2c56b2223217bc5216e0a85edbe5bb0175b750aed8e58795cb2b4369f",
+    "after": "d684018265477ca55b0696e2825b7cdc5f7c631cbd2db11e6bb6452b49eb55fc"
+  },
+  "app/domain/src/score.cpp": {
+    "before": "e08a2e6e8a785f5c0c24326dc7dcdfcbc1dff47cdfe55df69c96c0206edf0370",
+    "after": "1f259f5c6b97a0fd1d44c814f54806d5f3f3958d2506df2668cb9a976e5b05bc"
+  },
+  "app/domain/src/score.hpp": {
+    "before": "0f1f703c6c016e891f5ea056acc7925810112e7d2ff96c2e4a96b7538770aa0e",
+    "after": "c66317a35ff87ef6c177b6844d355f82407dad369a81897a50d79e3bfa20ae00"
+  },
+  "app/previews/CMakeLists.txt": {
+    "before": "4234bf07eebd506bd13ac49ee4115c09844ee8605d40292058044833d31ca0f4",
+    "after": "deleted"
+  },
+  "app/previews/src/pattern_sound.cpp": {
+    "before": "2d743516002142b59034115f0e27f2e836c55927bf4dfd2ebb93abf642ba818e",
+    "after": "deleted"
+  },
+  "app/previews/src/pattern_sound.hpp": {
+    "before": "e9f56436ee452b6036cf300c067958b1e9cf38f2398c053ba6fd33b2349fc06d",
+    "after": "deleted"
+  },
+  "tests/CMakeLists.txt": {
+    "before": "afff718721a6adbed64665bfeb13d44950836c325b67b923af277c31a1e9d55d",
+    "after": "19779382921711cca0ddee0451faa336fc2d5e26e31817e524cd9eb64f456023"
+  },
+  "tests/hunt_tests.cpp": {
+    "before": "21f48cf74ba4e21fc7864e010192fb93dc97eb96e6c6569aec14f79bec7f269c",
+    "after": "dcd0b6f1154f48763fee0167ba4db89413d0edff061f71e08b907477ab5653eb"
+  }
+}

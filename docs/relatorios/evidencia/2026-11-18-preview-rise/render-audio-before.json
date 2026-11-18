@@ -1,0 +1,16 @@
+{
+  "ok": true,
+  "result": {
+    "channels": 2,
+    "denseEventBlocks": 0,
+    "missing": [],
+    "missingAssets": [],
+    "path": "before-audio.wav",
+    "peak": 0.5526193380355835,
+    "realtimeFactor": 716.7003117646357,
+    "renderMs": 8.371699999999999,
+    "sampleRate": 48000.0,
+    "seconds": 6.0,
+    "stems": []
+  }
+}
