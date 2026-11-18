@@ -376,8 +376,9 @@ Both modes **VERDE** on the clean committed tree (`git status --porcelain` = 0 l
   `build=0.7.0+fcf38e0ec6 engine=0.7.0+fcf38e0ec6`; resumo `Codigo: ...integration @ fcf38e0` with no dirty
   flag. Code tip = `fcf38e0ec61f367e4db1709a4e5c57fda3d52baf`. The report commit (FINAL HEAD, docs-only)
   was then re-gated VERDE in both modes with version == its own sha (evidence `-finaltip2`).
-- Desktop self-test: **ok, 52 steps**, `document=68 accepted=68 applied=68`, `loudest=0.735`, null device
-  48000 Hz block 128 — identical to the 14-branch tip. Step 19 now also proves the bass clip's MIDI notes
+- Desktop self-test: **ok, 52 steps** (step 0 start + 51 logged `next()` transitions; the step log is
+  byte-identical to the 14-branch tip's), `document=68 accepted=68 applied=68`, `loudest=0.735`, null device
+  48000 Hz block 128. Step 19 now also proves the bass clip's MIDI notes
   draw (≥4 `kClipNote` pixels), step 35 proves the audio clip's real waveform (peak ≥ 0.05); crash C's
   "timeouts simulated / restart offered / restarted after timeouts" steps all pass.
 
