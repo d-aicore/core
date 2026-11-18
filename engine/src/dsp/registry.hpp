@@ -36,7 +36,6 @@ class NativeRegistry {
 public:
   void add(NativePluginDesc desc) { items_.push_back(std::move(desc)); }
   const NativePluginDesc* find(NativeKind kind, const std::string& id) const;
-  std::vector<std::string> names(NativeKind kind) const;  // in registration order
 private:
   std::vector<NativePluginDesc> items_;  // built once, never modified after: find() pointers stay valid
 };
@@ -47,15 +46,12 @@ NativeRegistry& nativePlugins();
 void registerNativeInstruments(NativeRegistry&);  // defined in instruments.cpp
 void registerNativeEffects(NativeRegistry&);      // defined in effects.cpp
 
-// Catalogue queries. project.cpp's public accessors (instrumentParams, effectNames, ...) delegate here,
+// Catalogue queries. project.cpp's public accessors (instrumentParams, effectParams, ...) delegate here,
 // so the whole codebase keeps one source of truth.
 const std::vector<ParamSpec>& nativeInstrumentParams(const std::string& id);  // empty: not a known instrument
 const std::vector<ParamSpec>& nativeEffectParams(const std::string& id);      // empty: not a known effect
 int nativeInstrumentVersion(const std::string& id);                           // 1 when unknown
 int nativeEffectVersion(const std::string& id);                               // 1 when unknown
-bool nativeIsInstrument(const std::string& id);
 bool nativeInstrumentHasNoParams(const std::string& id);
-std::vector<std::string> nativeInstrumentNames();
-std::vector<std::string> nativeEffectNames();
 
 } // namespace core

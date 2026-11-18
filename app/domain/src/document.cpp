@@ -287,11 +287,7 @@ Track parseTrack(const json& v, const std::string& path, const std::set<std::str
   } else if (t.instrument.kind != "audio" && t.instrument.kind != "bus" && t.instrument.kind != "none") {
     throw DocumentError(ir.at("kind"), "must be plugin, none, audio, bus or builtin");
   }
-  {
-    const bool fromVst = t.instrument.extra.is_object() && t.instrument.extra.contains("fromVst");
-    t.instrument.extra = ir.rest();
-    if (fromVst) t.instrument.extra["fromVst"] = true;
-  }
+  t.instrument.extra = ir.rest();
 
   Reader mr(r.object("mix"), r.at("mix"));
   t.mix.gainDb = mr.number("gainDb", 0, -60, 12);

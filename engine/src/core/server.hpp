@@ -1,4 +1,4 @@
-// Command layer of the C++ engine; see docs/contracts/engine-protocol-v1.md.
+// Command layer of the C++ engine.
 // Undo/redo and the complete document belong to the application domain.
 // Pure: no stdio, no audio device (those are injected), so tests drive it directly.
 #pragma once

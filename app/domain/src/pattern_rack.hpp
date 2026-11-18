@@ -5,7 +5,7 @@
 // patterns are the tracks' own, so a clip of them on the timeline plays what the window shows.
 // Pattern templates: the grooves of the window's left side, the P-Core styles written onto the tracks or the user's
 // own (Save as Template, %APPDATA%\Core\PatternTemplates\*.core-patterns.json).
-// Rules and data only: no GUI, no audio, no engine code. Contract: docs/contracts/core-pcore.md (Patterns window).
+// Rules and data only: no GUI, no audio, no engine code.
 #pragma once
 #include <cstdint>
 #include <filesystem>

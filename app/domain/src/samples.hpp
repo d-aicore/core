@@ -3,7 +3,6 @@
 // The index is rebuilt by a scan; files whose size and time did not change keep what was read before.
 // What the user says about a sample (its role, BPM, key, styles, tags) is kept in the index by content and
 // survives every scan; the WAV files are never written.
-// Contract: docs/contracts/core-samples.md.
 #pragma once
 #include <cstdint>
 #include <filesystem>
@@ -225,9 +224,6 @@ std::vector<SampleSuggestion> suggestSamples(const SampleIndex& index, const std
                                              int limit = 5, const std::string& pack = "");
 // The track roles a sampler plays (trackSampleRole), in the order the settings show them.
 const std::vector<std::string>& samplerRoles();
-// The kinds a plain Sampler track (no role in its name) offers, one submenu each: samplerRoles, then fx,
-// synth, pad and vox (loops welcome there).
-const std::vector<std::string>& browseSampleRoles();
 // Whether a sample is in one of the folders the user gave this role (a folder of its own path or of a duplicate's).
 // false when the role has none.
 bool inRoleFolders(const SampleIndex& index, const LibrarySample& sample, const std::string& role);
@@ -237,22 +233,6 @@ std::string libraryRelativeFolder(const SampleIndex& index, const std::string& f
 constexpr double kSamePackBonus = 8;
 // The pack of the library sample the song's bass track plays ("" when the bass is not a library sample).
 std::string anchorPack(const Document& doc, const SampleIndex& index);
-
-// ---- the real notes of a region: does a one-shot of this track end before the next note it must leave room for
-
-struct RegionFit {
-  bool known = false;      // false: not measured, no notes, or nothing to check against (why says which)
-  bool fits = false;       // no hit of the track runs into the next note of the tracks it leaves room for
-  int hits = 0;            // the track's notes in the region
-  int overlaps = 0;        // of which run into the next note
-  double worstGapMs = -1;  // the shortest room a hit had (ms), -1 when none
-  double soundMs = -1;     // how long the sample sounds (attack + tail)
-  std::string against;     // the tracks it was checked against ("bass")
-  std::string why;
-};
-// For a kick (or kickbass) track: each kick note in [startTick, endTick) against the next note of the bass tracks
-// (trackSampleRole "bass"), at the tempo where it plays (the tempo map). Other roles: known = false.
-RegionFit sampleFitInRegion(const Document& doc, const std::string& trackId, const LibrarySample& sample, int64_t startTick, int64_t endTick);
 
 // ---- hearing a sample without putting it on a track
 

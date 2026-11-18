@@ -9,9 +9,6 @@
 
 namespace core {
 
-struct AudioData;
-namespace wmod { struct Patch; }
-
 constexpr int kMaxParams = 8;  // no built-in instrument has parameters any more (a plugin's are its own)
 
 class Instrument {
@@ -35,8 +32,8 @@ public:
   virtual void queueNote(int /*offset*/, bool /*on*/, int /*pitch*/, double /*velocity*/) {}
   virtual void renderStereo(float* /*left*/, float* /*right*/, int /*frames*/) {}
   // The song position (beats) and tempo at the first sample of the next render: the graph calls it before
-  // every sub-block (beat < 0 while stopped). An instrument with a slow movement (W-Core Drift) follows it
-  // (see SongClock), so every pass of a loop sounds the same.
+  // every sub-block (beat < 0 while stopped). An instrument with a slow movement follows it, so every
+  // pass of a loop sounds the same.
   virtual void setPosition(double /*beat*/, double /*bpm*/) {}
   // A note caught already sounding (a seek or a loop jump into it) that started `age` samples ago. The
   // built-in instruments pick it up where it would be (envelope, sample position) with a 3 ms fade-in;

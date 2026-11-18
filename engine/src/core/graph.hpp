@@ -136,8 +136,6 @@ public:
   // head. Without it an adopted voice kept the old pitch: a lead edited while playing stayed on its high
   // note until stop (2026-11-10). Unchanged tracks are untouched. Audio thread, no allocation.
   void reconcile(const Graph& previous, int64_t previousPosition, int64_t position);
-  // For tests: an instrument parameter as the instrument hears it now (after its glide).
-  double heardParam(int track, int param) const { return tracks_[(size_t)track].smooth[param]; }
   void pitchOff(int pitch);  // this pitch released on every track (last resort, see Engine::liveNote)
   // This pitch released on the track whose id hashes to trackHash (a live note-off that did not fit in
   // the queue): the same pitch on other tracks plays on. Audio thread, no allocation.
@@ -185,11 +183,6 @@ public:
   // measure its cost (Phase 5).
   void setNativeProtection(bool on) { protectNative_ = on; }
   bool nativeProtection() const { return protectNative_; }
-  // Tests: mark a track's native instrument failed, to exercise the isolation end to end. A real failure is
-  // set by the guard in runTrack when a unit's output is non-finite or runaway.
-  void failInstrumentForTest(int track) {
-    if (track >= 0 && track < (int)tracks_.size() && tracks_[(size_t)track].instrument) tracks_[(size_t)track].instrument->markFailed();
-  }
 
   // Per-track/per-effect CPU metering (M0b) reads the clock twice per track and once per effect on every
   // sub-block: measured at ~4-5 % of the audio thread's DSP time (though <0.05 % of the real-time budget).

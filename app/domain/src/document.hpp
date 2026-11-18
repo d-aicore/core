@@ -1,7 +1,6 @@
 // The app document ("core-document", schema 1): everything the app opens, edits and saves.
 // The engine never sees it; it receives a projection (core-project v2) made by toProjection().
 // No GUI, no audio device, no engine code here: the domain is plain data, validation and conversion.
-// Contract: docs/contracts/core-document.md.
 #pragma once
 #include <cstdlib>
 #include <algorithm>
@@ -67,7 +66,7 @@ struct Automation {
 // A file of the user's sample library played by the Core Sampler on loKey..hiKey (rootKey: the note it
 // was recorded at). The file stays in the library: `file` is its absolute
 // path and `sha256` identifies it, so a moved library is found again by content, never replaced by
-// another sound. Contract: docs/contracts/core-document.md ("Sampler").
+// another sound.
 struct SampleRef {
   std::string file;        // absolute, UTF-8
   std::string sha256;      // of the file's bytes (64 hex), "" if not known
@@ -256,15 +255,6 @@ struct Document {
 // Validates; throws DocumentError / FutureVersionError. Older schemas are migrated; 
 // (optional) receives the schema the file had, or 0 if it was current.
 Document parseDocument(const json& value, int* migratedFrom = nullptr);
-// A track of B-Core or of the older "bass" synth (both removed) becomes W-Core: the closest B-Core preset's W-Core
-// copy, Octave and Volume kept (parseDocument does it).
-void migrateLegacyBCore(Track& t);
-// A W-Core of version 1 becomes version 2: its fixed movements are links of its modulation (the engine's
-// wave_legacy.hpp, the same conversion as for project files), so it plays the same. parseDocument does it.
-void migrateLegacyWave(Track& t);
-// One version of each built-in effect and of the sampler (2026-11-09, Diogo: "não existem versões agora, só 1"): an
-// older one, or none written, becomes the current one, so the song plays and shows the newest sound. parseDocument does it.
-void upgradeOldVersions(Document& d);
 json toJson(const Document& doc);            // the saved form (sorted keys, so dumps are canonical)
 // What the engine plays (core-project v2). Names, colors and ui are left out: changing them
 // never needs a new projection.

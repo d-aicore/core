@@ -1,7 +1,7 @@
 // Randomize (style randomizer, phase 1 + axis J): re-rolls the groove and the arrangement of a song made from a
 // style template, inside what is normal for its style, from a seed. Plan: core-improvements randomizer
 // study (Astra, 2026-11-03), axes A-F. No GUI, no audio, no engine code: a pure function on the document,
-// one Undo step for the caller. Contract: docs/contracts/core-randomize.md.
+// one Undo step for the caller.
 #pragma once
 #include <cstdint>
 #include <string>

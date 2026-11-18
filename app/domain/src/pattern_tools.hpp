@@ -2,7 +2,7 @@
 // per beat...), build-ups with a roll, and a library of saved patterns ("core-pattern" v1) that any track can use,
 // stretched or cut to the bars wanted. Rules and seeds only: no AI, no GUI, no audio, no engine code. Each call is
 // one change of one pattern; the caller makes it one undo step. Plan: core-improvements
-// planos/piano-roll/PLANO-CRIACAO-PADROES-E-ESTILOS.md. Contract of the files: docs/contracts/core-pattern.md.
+// planos/piano-roll/PLANO-CRIACAO-PADROES-E-ESTILOS.md.
 #pragma once
 #include <cstdint>
 #include <filesystem>

@@ -2,7 +2,6 @@
 // pipes, and reports every failure as an EngineError. No GUI and no DSP here.
 // Threads: one reader (stdout), one for stderr, one writer. Nothing blocks the caller except
 // command(), which waits for its own reply with a timeout; send() returns a future instead.
-// Protocol: docs/contracts/engine-protocol-v1.md.
 #pragma once
 #include <atomic>
 #include <chrono>

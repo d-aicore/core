@@ -291,30 +291,6 @@ void setInstrumentParam(Document& doc, const std::string& trackId, const std::st
   t.instrument.params[param] = p->step >= 1 ? std::round(value) : std::clamp(value, p->min, p->max);
 }
 
-int resetInstrumentParams(Document& doc, const std::string& trackId) {
-  Track& t = find(doc, trackId);
-  if (t.instrument.kind != "builtin") throw DocumentError("instrument", "only a built-in instrument has these parameters");
-  const InstrumentInfo* info = findInstrumentInfo(t.instrument.name);
-  if (!info) throw DocumentError("instrument", "unknown instrument '" + t.instrument.name + "'");
-  int changed = 0;
-  for (const auto& p : info->params) {
-    auto it = t.instrument.params.find(p.name);
-    if (it == t.instrument.params.end()) continue;
-    if (std::abs(it->second - p.def) > 1e-12) ++changed;
-    t.instrument.params.erase(it);
-  }
-  return changed;
-}
-
-bool instrumentAtDefaults(const Track& track) {
-  if (track.instrument.kind != "builtin") return true;
-  const InstrumentInfo* info = findInstrumentInfo(track.instrument.name);
-  if (!info) return true;
-  for (const auto& p : info->params)
-    if (std::abs(instrumentParamValue(track, p) - p.def) > 1e-12) return false;
-  return true;
-}
-
 std::string uniqueTrackId(const Document& doc, const std::string& base) {
   const std::string root = slug(base);
   std::string id = root;
@@ -1310,23 +1286,6 @@ const EffectInfo* findEffect(const std::string& name) {
   return nullptr;
 }
 
-void upgradeOldVersions(Document& d) {
-  auto chain = [](json& effects) {
-    for (auto& fx : effects) {
-      if (!fx.is_object() || fx.value("type", std::string("builtin")) != "builtin") continue;
-      const EffectInfo* info = findEffect(effectName(fx));
-      if (!info) continue;
-      const int version = fx.contains("version") && fx["version"].is_number_integer() ? fx["version"].get<int>() : 1;
-      if (version >= 1 && version < info->version) fx["version"] = info->version;
-    }
-  };
-  for (auto& t : d.tracks) {
-    chain(t.effects);
-    if (t.instrument.kind == "builtin" && t.instrument.name == "sampler" && t.instrument.version < kSamplerVersion) t.instrument.version = kSamplerVersion;
-  }
-  chain(d.masterEffects);
-}
-
 std::string effectName(const json& fx) { return fx.is_object() && fx.contains("name") && fx["name"].is_string() ? fx["name"].get<std::string>() : std::string(); }
 bool effectBypassed(const json& fx) { return fx.is_object() && fx.contains("bypass") && fx["bypass"].is_boolean() && fx["bypass"].get<bool>(); }
 double effectParam(const json& fx, const std::string& param, double fallback) {
@@ -1556,13 +1515,6 @@ int addEffect(Document& doc, const std::string& trackId, const std::string& name
   return (int)chain.size() - 1;
 }
 
-int addEffectWith(Document& doc, const std::string& trackId, const std::string& name, const json& params) {
-  const int at = addEffect(doc, trackId, name);
-  if (params.is_object())
-    for (const auto& [k, v] : params.items()) if (v.is_number()) setEffectParam(doc, trackId, at, k, v.get<double>());
-  return at;
-}
-
 int songRoot(const Document& doc) {
   // The bass tracks say the key; without one, every melodic track (drums never do).
   auto lower = [](std::string s) {
@@ -1622,31 +1574,6 @@ void presetValues(const Document& doc, const EffectPreset& preset, json& params)
 int addEffect(Document& doc, const std::string& trackId, const EffectPreset& preset) {
   const int at = addEffect(doc, trackId, preset.effect);
   presetValues(doc, preset, effectChain(doc, trackId)[(size_t)at]["params"]);
-  return at;
-}
-
-int addPhraseEndComb(Document& doc, const std::string& trackId, int phraseBars) {
-  if (phraseBars < 1 || phraseBars > 64) throw DocumentError("comb", "a phrase is 1-64 bars");
-  const int at = addEffect(doc, trackId, "filter");
-  setEffectParam(doc, trackId, at, "mode", 8);         // Comb
-  setEffectParam(doc, trackId, at, "resonance", 8.5);  // a long, ringing comb
-  setEffectParam(doc, trackId, at, "cutoff", 1200);
-  setEffectParam(doc, trackId, at, "mix", 0);
-  const std::string id = effectChain(doc, trackId)[(size_t)at].value("id", std::string());
-  const std::string mixKey = effectParamKey(id, "mix"), cutKey = effectParamKey(id, "cutoff");
-  const int64_t bar = 4 * kPpq, phrase = (int64_t)phraseBars * bar;
-  setAutomationPoint(doc, trackId, mixKey, 0, 0);
-  setAutomationPoint(doc, trackId, cutKey, 0, 1200);
-  for (int64_t end = phrase; end <= doc.lengthTicks; end += phrase) {
-    const int64_t from = end - bar;
-    setAutomationPoint(doc, trackId, mixKey, from, 0);
-    setAutomationPoint(doc, trackId, mixKey, from + bar / 4, 0.7);
-    setAutomationPoint(doc, trackId, mixKey, end - 1, 0.7);
-    setAutomationPoint(doc, trackId, mixKey, end, 0);
-    setAutomationPoint(doc, trackId, cutKey, from, 1200);
-    setAutomationPoint(doc, trackId, cutKey, end - 1, 180);
-    setAutomationPoint(doc, trackId, cutKey, end, 1200);
-  }
   return at;
 }
 
@@ -1739,14 +1666,6 @@ void setEffectParam(Document& doc, const std::string& trackId, int index, const 
 }
 
 void setEffectBypass(Document& doc, const std::string& trackId, int index, bool bypass) { effectAt(doc, trackId, index)["bypass"] = bypass; }
-
-void setEffectSidechain(Document& doc, const std::string& trackId, int index, const std::string& sourceTrackId) {
-  json& fx = effectAt(doc, trackId, index);
-  const json before = fx;
-  if (sourceTrackId.empty()) fx.erase("sidechain");
-  else fx["sidechain"] = sourceTrackId;
-  try { checkRouting(doc); } catch (...) { fx = before; throw; }
-}
 
 // ---- automation
 
@@ -2006,19 +1925,6 @@ std::string addAudioClip(Document& doc, const std::string& trackId, const std::s
 
 void moveAudioClip(Document& doc, const std::string& trackId, const std::string& clipId, int64_t startTick) {
   audioClipById(trackById(doc, trackId), clipId).startTick = std::max<int64_t>(0, startTick);
-}
-
-void setSampleLoop(Document& doc, const std::string& trackId, size_t zone, double loopStart, double loopEnd, double fileSeconds) {
-  Track& t = trackById(doc, trackId);
-  if (t.instrument.kind != "builtin" || t.instrument.name != "sampler") throw DocumentError("track", "is not a sampler");
-  if (zone >= t.instrument.samples.size()) throw DocumentError("zone", "no such zone");
-  if (!std::isfinite(loopStart) || !std::isfinite(loopEnd) || loopStart < 0 || loopEnd < 0) throw DocumentError("loop", "must be seconds, 0 or more");
-  SampleRef& z = t.instrument.samples[zone];
-  if (loopEnd <= 0) { z.loopStart = z.loopEnd = 0; return; }
-  if (fileSeconds > 0 && loopEnd > fileSeconds + 1e-6) throw DocumentError("loopEnd", "is past the end of the sample");
-  if (loopEnd < loopStart + kMinSampleLoopSeconds) throw DocumentError("loopEnd", "must be at least 2 ms after loopStart");
-  z.loopStart = loopStart;
-  z.loopEnd = loopEnd;
 }
 
 void trimAudioClipStart(Document& doc, const std::string& trackId, const std::string& clipId, int64_t startTick) {
@@ -2294,210 +2200,10 @@ void setSend(Document& doc, const std::string& trackId, const std::string& sendI
   s.pre = pre;
 }
 
-std::string setModulator(Document& doc, const std::string& trackId, const std::string& id, const std::string& param,
-                         const std::string& shape, double rateBeats, double depth, double phase) {
-  static const std::set<std::string> shapes = {"sine", "triangle", "square", "saw", "ramp", "random"};
-  if (!shapes.count(shape)) throw DocumentError("shape", "must be sine, triangle, square, saw, ramp or random");
-  if (param.empty()) throw DocumentError("param", "is required");
-  Track& t = trackById(doc, trackId);
-  json* found = nullptr;
-  for (auto& m : t.modulators) if (m.value("id", "") == id) found = &m;
-  std::string useId = id;
-  if (!found) {
-    if (t.modulators.size() >= (size_t)kMaxModulators) throw DocumentError("modulators", "the track has the maximum of " + std::to_string(kMaxModulators) + " modulators");
-    for (int n = 1; useId.empty(); ++n) {
-      const std::string candidate = "m" + std::to_string(n);
-      if (std::none_of(t.modulators.begin(), t.modulators.end(), [&](const json& m) { return m.value("id", "") == candidate; })) useId = candidate;
-    }
-    t.modulators.push_back(json::object());
-    found = &t.modulators.back();
-  }
-  const bool off = found->value("on", true) == false;  // a modulator turned off stays off
-  *found = {{"id", useId}, {"param", param}, {"shape", shape}, {"rateBeats", std::clamp(rateBeats, 1.0 / 64, 64.0)},
-            {"depth", depth}, {"phase", std::clamp(phase, 0.0, 1.0)}};
-  if (off) (*found)["on"] = false;
-  return useId;
-}
-
-void setModulatorOn(Document& doc, const std::string& trackId, const std::string& id, bool on) {
-  for (auto& m : trackById(doc, trackId).modulators)
-    if (m.value("id", "") == id) {
-      if (on) m.erase("on"); else m["on"] = false;
-      return;
-    }
-  throw DocumentError("modulator", "not found");
-}
-
-std::string setEnvelopeModulator(Document& doc, const std::string& trackId, const std::string& id, const std::string& param,
-                                 double attackMs, double decayMs, double depth) {
-  const std::string useId = setModulator(doc, trackId, id, param, "sine", 1, depth, 0);
-  for (auto& m : trackById(doc, trackId).modulators)
-    if (m.value("id", "") == useId) {
-      m["shape"] = "envelope";
-      m["attackMs"] = std::clamp(attackMs, 0.0, 2000.0);
-      m["decayMs"] = std::clamp(decayMs, 1.0, 10000.0);
-    }
-  return useId;
-}
-
-std::string setStepModulator(Document& doc, const std::string& trackId, const std::string& id, const std::string& param,
-                             double stepBeats, const std::vector<double>& steps, double depth) {
-  if (steps.empty() || steps.size() > (size_t)kMaxModSteps) throw DocumentError("steps", "must be 1 to " + std::to_string(kMaxModSteps) + " values");
-  double phase = 0;
-  for (const auto& m : trackById(doc, trackId).modulators) if (m.value("id", "") == id) phase = m.value("phase", 0.0);
-  const std::string useId = setModulator(doc, trackId, id, param, "sine", stepBeats, depth, phase);
-  json values = json::array();
-  for (double v : steps) values.push_back(std::clamp(v, -1.0, 1.0));
-  for (auto& m : trackById(doc, trackId).modulators)
-    if (m.value("id", "") == useId) {
-      m["shape"] = "steps";
-      m["steps"] = values;
-    }
-  return useId;
-}
-
-void setModulatorSource(Document& doc, const std::string& trackId, const std::string& id, const std::string& sourceTrackId) {
-  if (!sourceTrackId.empty()) {
-    if (sourceTrackId == trackId) throw DocumentError("source", "leave it empty for the track's own notes");
-    if (!playsPatterns(trackById(doc, sourceTrackId))) throw DocumentError("source", "that track plays no notes");
-  }
-  for (auto& m : trackById(doc, trackId).modulators)
-    if (m.value("id", "") == id) {
-      if (m.value("shape", "") != "envelope" && m.value("shape", "") != "rise") throw DocumentError("source", "only an envelope starts from another track's notes");
-      if (sourceTrackId.empty()) m.erase("source"); else m["source"] = sourceTrackId;
-      return;
-    }
-  throw DocumentError("modulator", "not found");
-}
-
-const std::vector<DuckPreset>& duckPresets() {
-  static const std::vector<DuckPreset> presets = {
-      {"tight", "Tight", "Dips 4 dB at each hit and is back by the next sixteenth: room for the kick, no pumping", 4, 2, 0.25},
-      {"pump", "Pump", "Dips 8 dB and comes back over an eighth: you hear it breathe with the kick", 8, 2, 0.5},
-      {"soft", "Soft", "A gentle 3 dB dip over a quarter: only makes space", 3, 10, 1}};
-  return presets;
-}
-
-void setDucking(Document& doc, const std::string& trackId, const std::string& sourceTrackId, double depthDb, double attackMs, double releaseMs) {
-  Track& t = trackById(doc, trackId);
-  const Track& src = trackById(doc, sourceTrackId);
-  if (sourceTrackId == trackId) throw DocumentError("duck", "a track cannot dip from its own notes");
-  if (!playsPatterns(src)) throw DocumentError("duck", "'" + src.name + "' plays no notes");
-  bool has = false;
-  for (const auto& m : t.modulators) has = has || m.value("id", "") == "duck";
-  const std::string id = has ? "duck" : setEnvelopeModulator(doc, trackId, "duck", "gainDb", attackMs, releaseMs, -std::clamp(depthDb, 0.0, 48.0));
-  for (auto& m : trackById(doc, trackId).modulators)
-    if (m.value("id", "") == id) {
-      m["param"] = "gainDb";
-      m["shape"] = "envelope";
-      m["depth"] = -std::clamp(depthDb, 0.0, 48.0);
-      m["attackMs"] = std::clamp(attackMs, 0.0, 2000.0);
-      m["decayMs"] = std::clamp(releaseMs, 1.0, 10000.0);
-      m["source"] = sourceTrackId;
-    }
-}
-
-void setDuckingPreset(Document& doc, const std::string& trackId, const std::string& sourceTrackId, const std::string& preset) {
-  for (const auto& p : duckPresets())
-    if (preset == p.id) {
-      const double beatMs = 60000.0 / std::max(1.0, doc.bpm);
-      setDucking(doc, trackId, sourceTrackId, p.depthDb, p.attackMs, p.releaseBeats * beatMs);
-      return;
-    }
-  throw DocumentError("duck", "no preset '" + preset + "'");
-}
-
-void removeDucking(Document& doc, const std::string& trackId) { removeModulator(doc, trackId, "duck"); }
-
-std::optional<std::string> duckingSource(const Track& track) {
-  for (const auto& m : track.modulators)
-    if (m.value("id", "") == "duck" && m.contains("source") && m["source"].is_string()) return m["source"].get<std::string>();
-  return std::nullopt;
-}
-
-void removeModulator(Document& doc, const std::string& trackId, const std::string& id) {
-  Track& t = trackById(doc, trackId);
-  const auto before = t.modulators.size();
-  t.modulators.erase(std::remove_if(t.modulators.begin(), t.modulators.end(), [&](const json& m) { return m.value("id", "") == id; }), t.modulators.end());
-  if (t.modulators.size() == before) throw DocumentError("modulators", "no modulator '" + id + "' on track '" + trackId + "'");
-}
-
 void removeSend(Document& doc, const std::string& trackId, const std::string& sendId) {
   Track& t = trackById(doc, trackId);
   sendById(t, sendId);
   t.mix.sends.erase(std::remove_if(t.mix.sends.begin(), t.mix.sends.end(), [&](const Send& s) { return s.id == sendId; }), t.mix.sends.end());
-}
-
-namespace {
-// The records in a track's extra that are part of its sound.
-bool soundKey(const std::string& k) {
-  return k == "racks" || k == "fcore" || (k.size() > 9 && k.compare(k.size() - 9, 9, "MoodKnobs") == 0);
-}
-json soundExtra(const json& extra) {
-  json out = json::object();
-  if (extra.is_object())
-    for (auto it = extra.begin(); it != extra.end(); ++it) if (soundKey(it.key())) out[it.key()] = it.value();
-  return out;
-}
-json instrumentJson(const Instrument& i) {
-  json zones = json::array();
-  for (const auto& z : i.samples)
-    zones.push_back({{"file", z.file}, {"sha256", z.sha256}, {"name", z.name}, {"root", z.rootKey}, {"lo", z.loKey},
-                     {"hi", z.hiKey}, {"loopStart", z.loopStart}, {"loopEnd", z.loopEnd}, {"extra", z.extra}});
-  return {{"kind", i.kind}, {"name", i.name}, {"version", i.version}, {"params", i.params},
-          {"samples", zones}, {"extra", i.extra}};
-}
-}  // namespace
-
-TrackSound trackSoundOf(const Document& doc, const std::string& trackId) {
-  TrackSound s;
-  if (trackId.empty()) { s.effects = doc.masterEffects; return s; }
-  const Track* t = doc.findTrack(trackId);
-  if (!t) throw DocumentError("tracks", "no track '" + trackId + "'");
-  s.instrument = t->instrument;
-  s.effects = t->effects;
-  s.modulators = t->modulators;
-  s.extra = soundExtra(t->extra);
-  return s;
-}
-
-std::string trackSoundKind(const TrackSound& sound, const std::string& trackId) {
-  if (trackId.empty()) return "master";
-  const Instrument& i = sound.instrument;
-  return i.kind + ":" + i.name;
-}
-
-void setTrackSound(Document& doc, const std::string& trackId, const TrackSound& sound) {
-  if (!sound.effects.is_array() || (int)sound.effects.size() > kMaxEffectsPerChain) throw DocumentError("effects", "not a chain");
-  if (!trackId.empty()) {
-    Track& t = trackById(doc, trackId);
-    if (trackSoundKind(trackSoundOf(doc, trackId), trackId) != trackSoundKind(sound, trackId))
-      throw DocumentError("instrument", "the track has another instrument now");
-    if (!sound.modulators.is_array() || (int)sound.modulators.size() > kMaxModulators) throw DocumentError("modulators", "too many");
-    t.instrument = sound.instrument;
-    t.effects = sound.effects;
-    t.modulators = sound.modulators;
-    if (!t.extra.is_object()) t.extra = json::object();
-    for (auto it = t.extra.begin(); it != t.extra.end();) it = soundKey(it.key()) ? t.extra.erase(it) : std::next(it);
-    for (auto it = sound.extra.begin(); it != sound.extra.end(); ++it) t.extra[it.key()] = it.value();
-  } else {
-    doc.masterEffects = sound.effects;
-  }
-  // Curves of effects that are not in this chain go (they would point at nothing).
-  std::set<std::string> ids;
-  for (const auto& fx : sound.effects)
-    if (fx.is_object() && fx.contains("id") && fx["id"].is_string()) ids.insert(fx["id"].get<std::string>());
-  auto& list = automationOf(doc, trackId);
-  list.erase(std::remove_if(list.begin(), list.end(), [&](const Automation& a) {
-    if (a.param.rfind("fx:", 0) != 0) return false;
-    const auto end = a.param.find(':', 3);
-    return end == std::string::npos || ids.count(a.param.substr(3, end - 3)) == 0;
-  }), list.end());
-}
-
-bool sameTrackSound(const TrackSound& a, const TrackSound& b) {
-  return instrumentJson(a.instrument) == instrumentJson(b.instrument) && a.effects == b.effects &&
-         a.modulators == b.modulators && soundExtra(a.extra) == soundExtra(b.extra);
 }
 
 } // namespace core::doc

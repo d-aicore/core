@@ -1,9 +1,9 @@
 // The sound of one pattern of a track, for the waveform drawn inside its clips on the arrangement.
-// The engine's own instruments and effects play the pattern offline (the sampler with its files, the built-in
-// synths, the track's effects and the buses it feeds), so the picture is the real shape and level of the sound,
-// not a guess. The fader is left out (the window draws it as a gain, so moving it never renders again), and so
-// are the song-position automation curves and other tracks (a sidechain hears silence). A plugin instrument
-// cannot play here: its pattern has no sound and the clip keeps its notes.
+// The pattern is rendered offline through the engine projection, with the track's effects and the buses it
+// feeds. Core's own instruments left on 2026-11-16: a builtin track projects to "none", so its pattern
+// preview is silent; a plugin instrument cannot play here either (its pattern keeps its notes). The fader is
+// left out (the window draws it as a gain, so moving it never renders again), and so are the song-position
+// automation curves and other tracks (a sidechain hears silence).
 #pragma once
 #include <atomic>
 #include <cstdint>
