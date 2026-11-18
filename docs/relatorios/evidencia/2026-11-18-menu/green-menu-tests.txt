@@ -1,0 +1,8 @@
+ok   track menu: action ids route to their action at every boundary catalog size
+ok   track menu: plugin item ids never share an action id, at any boundary catalog size
+ok   track menu: the effect chain ids keep the cap-16 wrap semantics
+ok   track menu: unknown ids do nothing
+ok   add track menu: action ids route to their action at every boundary catalog size
+ok   add track menu: plugin item ids never share an action id, at any boundary catalog size
+ok   add track menu: unknown ids do nothing
+7 testes, 366 verificacoes, 0 falhas

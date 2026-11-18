@@ -1,0 +1,5 @@
+catalog=500 action=native instrument chosen=800 replaceInstrumentBranch=False index=500
+catalog=501 action=native instrument chosen=800 replaceInstrumentBranch=True index=500
+catalog=600 action=open effect 0 chosen=900 replaceInstrumentBranch=False index=600
+catalog=601 action=open effect 0 chosen=900 replaceInstrumentBranch=True index=600
+catalog=641 action=toggle effect 0 chosen=940 replaceInstrumentBranch=True index=640
