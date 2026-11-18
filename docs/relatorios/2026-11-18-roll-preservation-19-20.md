@@ -136,8 +136,13 @@ powershell -ExecutionPolicy Bypass -File ci/gate.ps1 -Build D:/Core-build/flawle
 - `core-engine --version`: `0.7.0+c26dc085c0` == HEAD `c26dc085c040663e5654ad586272420f0bd42895`,
   no `.modified` (the version header ignores untracked files, `--untracked-files=no`).
 - This first gate run had the untracked report present, so the resumo notes "com alteracoes por commitar";
-  the binary is exactly `c26dc08`. A clean-tree re-gate at the report commit is recorded in the follow-up
-  docs commit (resumo archived alongside).
+  the binary is exactly `c26dc08`.
+
+Clean-tree re-gate at the report commit `6cc1d60` (same command, lock still held): **VERDE**,
+`100% tests passed out of 20`, 48 s, resumo with no uncommitted-changes note
+(`evidencia/2026-11-18-roll-preservation/gate-resumo-clean.txt`); `core-engine --version` =
+`0.7.0+6cc1d60fed` == HEAD `6cc1d60fed73186c324fa6987d5f54fb0e606242`, no `.modified`. The suite counts
+are the same 207/3115/0 (docs-only commit on top of the code tip `c26dc08`).
 
 ## Changes
 
@@ -188,7 +193,8 @@ Under Estado medido / bugs (BUG namespace, D75):
 - Gate line: `Gate merge VERDE 20/20 @ c26dc08 (337 s), 207 casos / 3115 verificações / 0 falhas (base
   f6b86dc 202/3059; +3/+18 midi_tests, +2/+38 bug_tests, nada reduzido), versão 0.7.0+c26dc085c0 == HEAD
   sem .modified; renders do gate byte-idênticos à base (demo.wav 77507ee8…, plugin-crash.wav cfb52d1a…,
-  0.00 dB). Relatório: docs/relatorios/2026-11-18-roll-preservation-19-20.md.`
+  0.00 dB). Re-gate de árvore limpa no commit do relatório @6cc1d60: VERDE 20/20, 48 s, versão
+  0.7.0+6cc1d60fed == HEAD. Relatório: docs/relatorios/2026-11-18-roll-preservation-19-20.md.`
 - Pendência (owner = Diogo): integração do branch `flawless-roll2` (2 commits + relatório) sobre o main
   integrado; as regiões tocadas (midi.cpp songToMidi, pattern_tools.cpp density/preset, pattern_rack.cpp
   template save/schema) são distintas das de pattern26-28 e roll30, já presentes na base f6b86dc.
