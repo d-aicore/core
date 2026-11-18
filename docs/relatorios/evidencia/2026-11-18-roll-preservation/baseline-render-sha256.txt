@@ -1,0 +1,2 @@
+77507ee8682b963b913bed7f5f683b994125b3aca6649424fd6020bdcb4d7912 *D:/Core-build/integration/tests/cli/demo.wav
+cfb52d1a58e61c08655d2d6e8bc953266af972397530a47421e973d2c980d523 *D:/Core-build/integration/tests/cli/plugin-crash.wav

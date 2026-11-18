@@ -1,0 +1,4 @@
+ok   MIDI SWEEP-19: the exporter reads a roll only when hasRoll says there is one
+ok   MIDI SWEEP-19: density copies carry no stale roll; the export survives save/reopen unchanged
+ok   MIDI SWEEP-19: a preset cut from a rolled pattern carries no stale roll payload
+3 testes, 18 verificacoes, 0 falhas

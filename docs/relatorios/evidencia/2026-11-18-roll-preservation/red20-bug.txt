@@ -1,0 +1,10 @@
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-roll2\tests\bug_tests.cpp:1242: saved.hasRoll
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-roll2\tests\bug_tests.cpp:1254: read.hasRoll
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-roll2\tests\bug_tests.cpp:1255: read.roll.count == 4: medido 0, esperado 4
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-roll2\tests\bug_tests.cpp:1256: read.roll.velocityFrom ~ 0.25: medido 1, esperado 0.25 (tol 0.000000)
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-roll2\tests\bug_tests.cpp:1269: q->notes[1].hasRoll
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-roll2\tests\bug_tests.cpp:1270: q->notes[1].roll.count == 4: medido 0, esperado 4
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-roll2\tests\bug_tests.cpp:1271: q->notes[1].roll.velocityFrom ~ 0.25: medido 1, esperado 0.25 (tol 0.000000)
+FAIL sweep-20: a slot saved as a template keeps its rolls through save, load and apply
+ok   sweep-20: templates written before rolls keep loading and saving unchanged
+2 testes, 38 verificacoes, 7 falhas
