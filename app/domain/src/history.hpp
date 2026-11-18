@@ -11,10 +11,18 @@ namespace core::doc {
 
 class History {
 public:
-  // The newest kMinSteps undo steps stay whatever they weigh; older ones go when the byte budget is exceeded.
-  // Every snapshot carries the plugin states (base64): with 12 MB of state the budget alone left 5 steps.
+  // How much history is kept. Every step is a whole document, plugin states (base64) included, so three limits:
+  // - maxBytes (64 MB): below it nothing is dropped.
+  // - kMinSteps: above the budget the oldest steps go, but the newest kMinSteps stay. With 12 MB of plugin state
+  //   the budget alone left 5 undo steps (measured), which is not an undo history.
+  // - kHardMaxBytes: the minimum has a ceiling. 32 plugins with 4 MB of state each are 128 MB a step, 6.4 GB for
+  //   50 steps: running out of memory loses the whole song, a shorter undo loses nothing. Above the ceiling the
+  //   oldest steps go even below kMinSteps, down to kFloorSteps: the current state and one undo always remain.
   static constexpr int kMinSteps = 50;
-  explicit History(Document initial, size_t maxBytes = 64u << 20);
+  static constexpr int kFloorSteps = 1;
+  static constexpr size_t kHardMaxBytes = (size_t)1 << 30;  // 1 GB
+  // (hardMaxBytes is a parameter so the tests reach the ceiling without allocating gigabytes)
+  explicit History(Document initial, size_t maxBytes = 64u << 20, size_t hardMaxBytes = kHardMaxBytes);
 
   const Document& current() const { return current_; }
   // Grows with every change of current() (an edit, undo, redo, another file): a cache of something made from the
@@ -69,7 +77,7 @@ private:
   Document gestureStart_;
   std::string gestureLabel_;
   json saved_;
-  size_t maxBytes_, bytes_ = 0;
+  size_t maxBytes_, hardMaxBytes_, bytes_ = 0;
   // Counts every change to current_; modified() recomputes only when it moved.
   unsigned long long revision_ = 0;
   mutable unsigned long long checkedRevision_ = ~0ull;

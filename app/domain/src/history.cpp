@@ -1,4 +1,5 @@
 #include "history.hpp"
+#include <algorithm>
 
 namespace core::doc {
 
@@ -7,7 +8,8 @@ const std::string kNone;
 size_t sizeOf(const Document& d) { return toJson(d).dump().size(); }
 }
 
-History::History(Document initial, size_t maxBytes) : current_(std::move(initial)), maxBytes_(maxBytes) { markSaved(); }
+History::History(Document initial, size_t maxBytes, size_t hardMaxBytes)
+    : current_(std::move(initial)), maxBytes_(maxBytes), hardMaxBytes_(std::max(maxBytes, hardMaxBytes)) { markSaved(); }
 
 void History::push(std::deque<Step>& stack, Document document, const std::string& label) {
   const size_t bytes = sizeOf(document);
@@ -15,12 +17,15 @@ void History::push(std::deque<Step>& stack, Document document, const std::string
   stack.push_back({std::move(document), label, bytes});
 }
 
-// Oldest undo steps go first; the newest kMinSteps always stay.
+// Oldest undo steps go first. Above the budget the newest kMinSteps stay; above the hard ceiling only
+// kFloorSteps are safe (see history.hpp).
 void History::trim() {
-  while (bytes_ > maxBytes_ && undo_.size() > (size_t)kMinSteps) {
+  auto dropOldest = [this] {
     bytes_ -= undo_.front().bytes;
     undo_.pop_front();
-  }
+  };
+  while (bytes_ > maxBytes_ && undo_.size() > (size_t)kMinSteps) dropOldest();
+  while (bytes_ > hardMaxBytes_ && undo_.size() > (size_t)kFloorSteps) dropOldest();
 }
 
 // A change that only brings back what was there before the last step of the same kind (a value moved, then moved

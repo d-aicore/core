@@ -343,6 +343,32 @@ TEST("undo/redo: beyond the minimum number of steps the byte budget still drops 
   CHECK_EQ(steps, History::kMinSteps);
 }
 
+// The minimum number of steps has a ceiling of its own: 32 plugins with 4 MB of state each are 128 MB a step, and
+// 50 of them would be 6.4 GB. Running out of memory loses more than a shorter undo does.
+TEST("undo/redo: above the hard ceiling the oldest steps go even below the minimum, but one undo always stays") {
+  Document start = newEmptyDocument();
+  addPluginTrack(start, {{"id", "big-state"}, {"file", "big-state.vst3"}, {"state", std::string(1u << 20, 'A')}});
+  auto stepsAfter = [&](int edits, size_t maxBytes, size_t hardMaxBytes) {
+    History h(start, maxBytes, hardMaxBytes);
+    for (int i = 0; i < edits; ++i) {
+      Document d = h.current();
+      d.bpm = 100 + i;
+      h.commit(d, "bpm " + std::to_string(i));
+    }
+    int steps = 0;
+    while (h.undo()) ++steps;
+    CHECK_NEAR(h.current().bpm, steps == edits ? start.bpm : 100 + edits - 1 - steps, 0);  // the newest steps are the ones kept
+    return steps;
+  };
+  // Below the budget nothing goes; between the budget and the ceiling the minimum stays (each step is 1 MB and a bit).
+  CHECK_EQ(stepsAfter(5, 8u << 20, 20u << 20), 5);
+  CHECK_EQ(stepsAfter(15, 8u << 20, 20u << 20), 15);
+  // Above the ceiling: what fits in it, fewer than the minimum.
+  CHECK_EQ(stepsAfter(30, 8u << 20, 20u << 20), 19);
+  // A single step heavier than the ceiling: the current state and one undo, never less.
+  CHECK_EQ(stepsAfter(6, 256u << 10, 512u << 10), 1);
+}
+
 // Data loss (2026-11-18): what a plugin holds is only in the engine. A change that takes a plugin away must be
 // known before it is made, so the app can ask the engine for the states first (Undo then brings the sound back).
 TEST("plugins: droppedPluginKeys names the plugins a change takes away, and nothing for other changes") {
