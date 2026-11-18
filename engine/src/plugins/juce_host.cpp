@@ -475,7 +475,7 @@ bool JuceHost::showEditor(const std::string& key, bool open, std::string* why) {
 
 bool JuceHost::takeChanged() { return impl_->changed.exchange(false); }
 
-bool JuceHost::setParameter(const std::string& key, int index, float normalized) {
+bool JuceHost::setParameter(const std::string& key, const std::string& id, float normalized) {
   std::shared_ptr<JuceProcessor> p;
   {
     std::lock_guard<std::mutex> g(impl_->mutex);
@@ -485,10 +485,16 @@ bool JuceHost::setParameter(const std::string& key, int index, float normalized)
   if (!p || p->failed()) return false;  // a failed plugin is not called any more
   bool ok = false;
   runSync([&] {
-    auto params = p->instance().getParameters();
-    if (index < 0 || index >= params.size()) return;
-    params[index]->setValueNotifyingHost(normalized);
-    ok = true;
+    for (auto* param : p->instance().getParameters()) {
+      if (JuceProcessor::parameterId(*param) != id) continue;
+      if (!guarded([&] { param->setValueNotifyingHost(std::clamp(normalized, 0.0f, 1.0f)); })) {
+        trace("the plugin of " + key + " crashed while a parameter was set: it is silenced (Retry loads it again)");
+        p->markCrashed();
+        return;
+      }
+      ok = true;
+      return;
+    }
   });
   return ok;
 }

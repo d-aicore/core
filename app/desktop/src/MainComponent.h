@@ -286,6 +286,7 @@ private:
   uint64_t pluginEditsSeen_ = 0;
   void scanPlugins();
   bool fetchPluginStates();  // the engine's plugin states into the document (false: no answer)
+  void adoptPluginStates(const json& states);  // states the engine gave: into the document (no undo step) and the session
   void selectDevice(const std::string& name);
   // SavedWithoutPlugins: the song is in the file but the plugins' current settings are not (the engine gave no
   // answer): the song stays unsaved and Close does not go on (audit R01).
@@ -444,6 +445,7 @@ private:
   // Autosave (M6): every minute while there are unsaved changes, a copy goes to the autosave folder (never
   // over the song); saved, or closed cleanly, it is removed. One left by a crash is offered on the next start.
   void autosaveTick();
+  void autosaveNow();  // one autosave, whatever the clock says (the tick's work; the self-test calls it)
   void startAutosave(doc::Document document);  // writes this copy on a thread, when it is not on disk yet
   bool autosaveAsking_ = false;  // the plugins' settings were asked for the next copy
   void removeOwnAutosave();
@@ -542,6 +544,8 @@ private:
     double duration = 0;
     juce::String log;
     nlohmann::json synth;  // the self-test's own test synth (app/selftest-plugins), as the scan found it
+    std::string gainId;    // the test synth's "Gain" parameter, as the engine names it
+    uint64_t pluginEditsSeen = 0;  // snap_.pluginEdits before the self-test moved a plugin's parameter
   };
   std::unique_ptr<SelfTest> test_;
   void selfTestSynth();  // the self-test's synth on every note track without a plugin

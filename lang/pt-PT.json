@@ -1937,7 +1937,7 @@
   "{} sounds measured": "{} sons medidos",
   "{} tempo change was past the new end and went (Undo brings it back).": "{} mudança de andamento estava depois do novo fim e saiu (Anular trá-la de volta).",
   "{} tempo changes were past the new end and went (Undo brings them back).": "{} mudanças de andamento estavam depois do novo fim e saíram (Anular trá-las de volta).",
-  "{} The document is intact.": "{} O documento está intacto.",
+  "{} The song is intact, except for changes made inside plugins in the last minute.": "{} A música está intacta, excepto as alterações feitas dentro de plugins no último minuto.",
   "{} unused audio file(s) sent to the Recycle Bin ({} could not be moved: in use?); {} kept while Undo can bring them back or a saved song of this folder uses them.": "{} ficheiro(s) de áudio não usado(s) enviados para a Reciclagem ({} não puderam ser movidos: em uso?); {} ficam enquanto o Anular os puder trazer de volta ou uma música guardada desta pasta os usar.",
   "{} unused audio file(s) sent to the Recycle Bin; {} kept while Undo can bring them back or a saved song of this folder uses them.": "{} ficheiro(s) de áudio não usado(s) enviados para a Reciclagem; {} ficam enquanto o Anular os puder trazer de volta ou uma música guardada desta pasta os usar.",
   "{} unused audio file(s) sent to the Recycle Bin{}": "{} ficheiro(s) de áudio não usado(s) enviados para a Reciclagem{}",

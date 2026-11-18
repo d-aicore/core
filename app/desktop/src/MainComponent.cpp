@@ -3829,12 +3829,17 @@ bool MainComponent::fetchPluginStates() {
   if (!doc::hasPlugins(history_.current())) return true;
   const json states = session_->pluginStates(5000);
   if (!states.is_object()) return false;  // no answer from the engine ({} is an answer: nothing to take)
-  doc::Document withStates = history_.current();
-  if (doc::applyPluginStates(withStates, states) > 0) {
-    history_.amend(withStates);
-    session_->setDocument(engineDocument());  // the same plugins: the engine keeps them as they are
-  }
+  adoptPluginStates(states);
   return true;
+}
+
+// The states the engine gave go into the document (no undo step, no new edit) and into the session's copy of it,
+// which is what a restarted engine makes its plugins from.
+void MainComponent::adoptPluginStates(const json& states) {
+  doc::Document withStates = history_.current();
+  if (doc::applyPluginStates(withStates, states) == 0) return;
+  history_.amend(withStates);
+  session_->setDocument(engineDocument());  // the same plugins: the engine keeps them as they are
 }
 
 MainComponent::SaveResult MainComponent::writeTo(const juce::File& target) {
@@ -6428,8 +6433,12 @@ void MainComponent::timerCallback() {
 void MainComponent::autosaveTick() {
   collectAutosave();
   const double now = juce::Time::getMillisecondCounterHiRes();
-  if (test_ || now - lastAutosaveCheck_ < 60000 || autosave_.writing()) return;  // (the self-test leaves none)
+  if (test_ || now - lastAutosaveCheck_ < 60000 || autosave_.writing()) return;  // (the self-test asks for its own)
   lastAutosaveCheck_ = now;
+  autosaveNow();
+}
+
+void MainComponent::autosaveNow() {
   if (!unsaved()) { removeOwnAutosave(); return; }
   // Changes made in a plugin's own window are only in the engine: they are asked for first, so the copy has them
   // (audit R02: it held the plugins as last saved). Asked without waiting; the copy is written when they come.
@@ -6437,13 +6446,23 @@ void MainComponent::autosaveTick() {
     if (autosaveAsking_) return;
     autosaveAsking_ = true;
     juce::Component::SafePointer<MainComponent> self(this);
-    session_->pluginStatesAsync(5000, [self](json states) {
+    // The states go into the document itself, not only into the copy (data loss, 2026-11-18): the copy alone left
+    // the document with the plugins as last saved, so an engine that died and was restarted made them from that,
+    // and the next autosave wrote the old sound over the new one.
+    session_->pluginStatesAsync(5000, [self, asked = history_.revision()](json states) {
       if (!self) return;
       self->autosaveAsking_ = false;
-      doc::Document document = self->history_.current();
-      if (!states.is_object()) logLine("Autosave: the engine did not give the plugins' settings; the copy has the last ones");
-      else doc::applyPluginStates(document, states);
-      self->startAutosave(std::move(document));
+      if (!states.is_object()) {
+        logLine("Autosave: the engine did not give the plugins' settings; the copy has the last ones");
+      } else if (self->history_.revision() != asked) {
+        // The song changed while the engine answered: a state could land on another plugin now in the same place.
+        // Nothing is taken; asked again in two seconds.
+        self->lastAutosaveCheck_ = juce::Time::getMillisecondCounterHiRes() - 58000;
+        return;
+      } else {
+        self->adoptPluginStates(states);
+      }
+      self->startAutosave(self->history_.current());
     });
     return;
   }
@@ -6451,6 +6470,7 @@ void MainComponent::autosaveTick() {
 }
 
 void MainComponent::startAutosave(doc::Document document) {
+  if (test_) return;  // the self-test leaves no copy in the user's autosave folder
   if (autosave_.writing()) return;
   std::string text = doc::toJson(document).dump();
   if (!autosave_.due(text)) return;  // this song is already on disk (a failed write stays due)
@@ -6643,7 +6663,13 @@ void MainComponent::selfTestStep() {
     t.keymapChecked = true;
     if (!ok) return finish(false, "keymap");
   }
-  const bool crashSteps = t.step == 10 || t.step == 11;
+  // The test synth's "Gain" as the live plugin holds it now, 0..1 (-1: no answer, or no such plugin).
+  auto gainOf = [&](const std::string& key) {
+    for (const auto& p : session_->pluginParams(key, 3000))
+      if (p.is_object() && p.value("name", std::string()) == "Gain") { t.gainId = p.value("id", std::string()); return p.value("value", -1.0); }
+    return -1.0;
+  };
+  const bool crashSteps = t.step == 10 || t.step == 11 || t.step == 103 || t.step == 104;
   if ((snap_.status == EngineStatus::Stopped && !crashSteps) || snap_.status == EngineStatus::Diverged) return finish(false, "engine problem");
   switch (t.step) {
     case 0:
@@ -7039,9 +7065,55 @@ void MainComponent::selfTestStep() {
       }
       else if (inStep > 5000) return finish(false, "automation not applied");
       break;
-    case 33:  // (33-34 were the VST3 test plugins; Core has no VST since 2026-11-08)
-      t.step = 35;
+    case 33:  // (33-34 were the VST3 test plugins; what a live plugin holds is checked in steps 100 and up)
+      t.step = 100;
       t.stepStarted = now;
+      break;
+    // Data loss (2026-11-18), S1: what a plugin holds is only in the engine process. Once an autosave asked for
+    // it, an engine crash must not bring the plugin back as it was last saved.
+    case 100: {  // the bass's test synth gets another gain in the live plugin only, as its own window would do
+      session_->stop();
+      const double was = gainOf("track:bass");
+      t.pluginEditsSeen = snap_.pluginEdits;
+      if (was < 0 || std::abs(was - 0.9) < 0.05 || !session_->setPluginParam("track:bass", t.gainId, 0.9, 3000))
+        return finish(false, "plugin parameter not set, gain was " + juce::String(was));
+      next("plugin gain moved");
+      break;
+    }
+    case 101:  // the engine says a plugin changed: the song is unsaved, and the autosave asks for the states
+      if (snap_.pluginEdits != t.pluginEditsSeen && pluginsDirty_) {
+        autosaveNow();
+        next("autosave asked");
+      } else if (inStep > 3000) {
+        return finish(false, "the plugin's change was not reported");
+      }
+      break;
+    case 102:  // the states came; the engine crashes
+      if (!autosaveAsking_ && inStep > 200) {
+        session_->killEngineForTest();
+        next("engine killed again");
+      } else if (inStep > 6000) {
+        return finish(false, "the autosave got no answer about the plugins");
+      }
+      break;
+    case 103:
+      if (snap_.status == EngineStatus::Stopped) {
+        session_->restart();
+        next("stopped seen again");
+      } else if (inStep > 3000) {
+        return finish(false, "second crash not reported");
+      }
+      break;
+    case 104:  // the new engine makes the plugin from the document: it has the gain moved before the crash
+      if (snap_.status == EngineStatus::Ready && applied && inStep > 1200) {
+        const double gain = gainOf("track:bass");
+        if (std::abs(gain - 0.9) > 0.01) return finish(false, "plugin state lost in the engine crash: gain " + juce::String(gain) + ", expected 0.9");
+        t.log << "plugin state kept across the crash; ";
+        t.step = 35;
+        t.stepStarted = now;
+      } else if (inStep > 8000) {
+        return finish(false, "second restart");
+      }
       break;
     case 35:  // the picture shows the waveforms once they are computed
       if (inStep > 800) {

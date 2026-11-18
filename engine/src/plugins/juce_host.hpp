@@ -27,8 +27,9 @@ public:
   bool showEditor(const std::string& key, bool open, std::string* why);
   // True once after any plugin's parameter changed from its own editor (the document needs its state).
   bool takeChanged();
-  // A parameter of a loaded plugin, 0..1 (as its editor would set it). False if there is no such plugin.
-  bool setParameter(const std::string& key, int index, float normalized);
+  // A parameter of a loaded plugin (id as parameters() gives it), 0..1, as its editor would set it. False if
+  // there is no such plugin or parameter.
+  bool setParameter(const std::string& key, const std::string& id, float normalized);
   // The parameters that can be automated: [{id, name, value, default, steps, text}] (empty if not loaded).
   json parameters(const std::string& key);
   // The loaded plugin's state as a .vstpreset file, in base64 (what a VST3 host such as Bitwig loads), from

@@ -134,6 +134,21 @@ json EngineSession::pluginParams(const std::string& key, int timeoutMs) {
   }
 }
 
+bool EngineSession::setPluginParam(const std::string& key, const std::string& id, double value, int timeoutMs) {
+  Action a{Action::PluginParam};
+  a.text = key;
+  a.args = {{"key", key}, {"id", id}, {"value", value}};
+  a.reply = std::make_shared<std::promise<json>>();
+  std::future<json> answer = a.reply->get_future();
+  queue(a);
+  if (answer.wait_for(std::chrono::milliseconds(timeoutMs)) != std::future_status::ready) return false;
+  try {
+    return answer.get().is_object();  // null: refused, or dropped (engine restarted)
+  } catch (const std::exception&) {
+    return false;
+  }
+}
+
 std::string EngineSession::pluginPreset(const std::string& key, int timeoutMs) {
   Action a{Action::PluginPreset};
   a.text = key;
@@ -299,7 +314,7 @@ void EngineSession::run() {
       // plugin's window or reading its parameters: a plugin just added is only in the engine once its edit is sent
       // (audit R05: the editor was asked for a plugin the engine did not have yet).
       const bool needsDocument = action.kind == Action::Export || action.kind == Action::PluginEditor || action.kind == Action::PluginParams ||
-                                 action.kind == Action::PluginPreset;
+                                 action.kind == Action::PluginParam || action.kind == Action::PluginPreset;
       if (needsDocument && wantedRevision_ > sentRevision_ && snap_.status != EngineStatus::Diverged) sync(lock);
       if (action.kind == Action::Export && (snap_.status == EngineStatus::Diverged || snap_.acceptedRevision != wantedRevision_)) {
         snap_.exportJob.state = "failed";
@@ -374,6 +389,9 @@ void EngineSession::run() {
             break;
           case Action::PluginParams:
             action.reply->set_value(client_->command("plugin.params", {{"key", action.text}}));
+            break;
+          case Action::PluginParam:
+            action.reply->set_value(client_->command("plugin.param", action.args));
             break;
           case Action::PluginPreset:
             action.reply->set_value(client_->command("plugin.preset", {{"key", action.text}}));
@@ -590,7 +608,10 @@ void EngineSession::onEvent(const json& event) {
   if (kind == "disconnected") {
     snap_.status = EngineStatus::Stopped;
     snap_.playing = false;
-    snap_.message = "The engine stopped: " + event.value("reason", std::string()) + " The document is intact.";
+    // Not "the document is intact": what was changed inside a plugin since the last save or autosave was only in
+    // the engine, and went with it.
+    snap_.message = "The engine stopped: " + event.value("reason", std::string()) +
+                    " The song is intact, except for changes made inside plugins in the last minute.";
     wake_.notify_all();
     return;
   }

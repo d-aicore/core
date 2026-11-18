@@ -49,6 +49,8 @@ public:
   virtual bool takeChanged() = 0;                                                // a plugin's own editor changed it
   virtual void releaseAll() = 0;                                                 // another song: no instance carries over
   virtual json parameters(const std::string& key) { (void)key; return json::array(); }  // [{id, name, value, ...}]
+  // One parameter of a loaded plugin (id as parameters() gives it), 0..1, as the plugin's own window would move it.
+  virtual bool setLiveParameter(const std::string& key, const std::string& id, double normalized) { (void)key; (void)id; (void)normalized; return false; }
   virtual void resetAll() {}                                                     // Stop: every plugin drops its tails
   // The plugin's sound as a .vstpreset file, in base64 (VST3 only; empty if not loaded or not VST3): Bitwig export.
   virtual std::string vstPreset(const std::string& key) { (void)key; return {}; }

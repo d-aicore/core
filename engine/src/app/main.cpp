@@ -81,6 +81,7 @@ public:
   bool takeChanged() override { return host_.takeChanged(); }
   void releaseAll() override { host_.releaseAll(); }
   core::json parameters(const std::string& key) override { return host_.parameters(key); }
+  bool setLiveParameter(const std::string& key, const std::string& id, double normalized) override { return host_.setParameter(key, id, (float)normalized); }
   std::string vstPreset(const std::string& key) override { return host_.vstPreset(key); }
   void resetAll() override { host_.resetAll(); }
 private:
