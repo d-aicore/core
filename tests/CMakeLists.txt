@@ -91,6 +91,13 @@ add_executable(menu_tests menu_tests.cpp)
 target_include_directories(menu_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/app/desktop/src)
 add_test(NAME menu_tests COMMAND menu_tests)
 
+# The detachable windows' layout rules (UX detachable-windows slice, 2026-11-18): the settings form, the
+# monitor validation on restore and the "bring windows back to screen" cascade. Pure logic, no JUCE.
+add_executable(window_tests window_tests.cpp ${CMAKE_SOURCE_DIR}/app/desktop/src/WindowLayout.cpp)
+target_include_directories(window_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/app/desktop/src)
+target_link_libraries(window_tests PRIVATE core_domain)  # nlohmann/json.hpp (engine/third_party)
+add_test(NAME window_tests COMMAND window_tests)
+
 # The command line: what the app and the scripts call.
 add_test(NAME cli_version COMMAND core-engine --version)
 set_tests_properties(cli_version PROPERTIES PASS_REGULAR_EXPRESSION "core-engine ${CORE_VERSION}")
@@ -111,7 +118,7 @@ if(TARGET core-package)
   set_tests_properties(cli_package_stale PROPERTIES LABELS merge TIMEOUT 300 RUN_SERIAL TRUE)
 endif()
 
-set_tests_properties(engine_tests domain_tests role_tests midi_tests bug_tests audit_tests audit2_tests hunt_tests round3_tests calls_tests bitwig_tests legacy_guard_tests menu_tests cli_version cli_demo_render cli_measure cli_unicode
+set_tests_properties(engine_tests domain_tests role_tests midi_tests bug_tests audit_tests audit2_tests hunt_tests round3_tests calls_tests bitwig_tests legacy_guard_tests menu_tests window_tests cli_version cli_demo_render cli_measure cli_unicode
                      PROPERTIES LABELS merge TIMEOUT 300)
 
 # The engine process driven through the app's client (core-engine serve, null audio backend): messages larger than
