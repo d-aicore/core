@@ -1,0 +1,6 @@
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-pattern\tests\bug_tests.cpp:770: pb->notes[0].pitch == 36: medido 84, esperado 36
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-pattern\tests\bug_tests.cpp:771: pl->notes[0].pitch == 84: medido 36, esperado 84
+FAIL sweep-28: conflicting names and parts map by part first, as the header contract says
+ok   sweep-28: one row of a part goes to the first track of that part only
+ok   sweep-28: unambiguous name-only and part-only matches keep working
+3 testes, 22 verificacoes, 2 falhas

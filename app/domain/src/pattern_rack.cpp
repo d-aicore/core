@@ -34,12 +34,21 @@ Track* trackPtr(Document& doc, const std::string& id) {
 
 PatternSlot slotFromJson(const json& j) {
   PatternSlot s;
-  s.id = j.value("id", std::string());
-  s.name = j.value("name", std::string());
-  s.bars = validBars(j.value("bars", 4));
-  s.swing = std::clamp(j.value("swing", 0.0), 0.0, kRackMaxSwing);
-  s.root = j.value("root", std::string());
-  s.scale = j.value("scale", std::string());
+  // The parser keeps patternSlots unvalidated (compat); this is the consumption boundary, so a field of the
+  // wrong type takes its default instead of throwing type_error.302 out of rackSlots (BUG-SWEEP-27).
+  const auto text = [&](const char* key) {
+    return j.contains(key) && j[key].is_string() ? j[key].get<std::string>() : std::string();
+  };
+  s.id = text("id");
+  s.name = text("name");
+  int bars = 4;
+  if (j.contains("bars") && j["bars"].is_number_integer()) bars = j["bars"].get<int>();
+  s.bars = validBars(bars);
+  double swing = 0.0;
+  if (j.contains("swing") && j["swing"].is_number()) swing = j["swing"].get<double>();
+  s.swing = std::clamp(swing, 0.0, kRackMaxSwing);
+  s.root = text("root");
+  s.scale = text("scale");
   if (j.contains("tracks") && j["tracks"].is_object())
     for (const auto& [k, v] : j["tracks"].items()) if (v.is_string()) s.tracks[k] = v.get<std::string>();
   return s;
@@ -507,11 +516,14 @@ std::map<std::string, const PatternTemplateRow*> matchRows(const Document& doc, 
     if (!playsPatterns(tr)) continue;
     const std::string part = pcoreGuessPart(tr);
     const PatternTemplateRow* pick = nullptr;
-    for (const auto& r : t.rows)
-      if (!used.count(&r) && lower(r.name) == lower(tr.name)) { pick = &r; break; }
-    if (!pick && !part.empty())
+    // The part pass runs first (the header contract and the comment above): a name that conflicts with another
+    // track's part must not steal that row (BUG-SWEEP-28).
+    if (!part.empty())
       for (const auto& r : t.rows)
         if (!used.count(&r) && r.part == part) { pick = &r; break; }
+    if (!pick)
+      for (const auto& r : t.rows)
+        if (!used.count(&r) && lower(r.name) == lower(tr.name)) { pick = &r; break; }
     if (pick) { out[tr.id] = pick; used.insert(pick); }
   }
   return out;
@@ -535,6 +547,11 @@ int applyRackTemplate(Document& doc, const PCoreCatalog* c, const PatternTemplat
   if (!t.builtin) {
     const auto rows = matchRows(doc, t);
     if (rows.empty()) throw DocumentError("template", "no track of the song plays a part of this template");
+    const auto slots = rackSlots(doc);
+    const PatternSlot* slot = findRackSlot(slots, slotId);
+    const int64_t to = slot ? swingTicks(slot->swing) : 0;
+    const PCoreStyle* style = c ? c->style(t.style) : nullptr;
+    const int64_t jitter = style ? (int64_t)std::lround(style->humanize * 24) : 0;
     for (const auto& [trackId, row] : rows) {
       Pattern& p = rackPatternFor(doc, slotId, trackId);
       std::vector<Note> notes;
@@ -547,6 +564,10 @@ int applyRackTemplate(Document& doc, const PCoreCatalog* c, const PatternTemplat
         for (auto& n : notes) n.pitch = key;
       }
       putNotes(p, notes);
+      // The loaded notes play with the slot's swing, as rackWriteShape does after writing (BUG-SWEEP-26):
+      // without this the slot says swung but the notes are straight, and the next setRackSwing is a no-op.
+      if (to > 0)
+        for (auto& n : p.notes) swingNote(n, p.lengthTicks, 0, to, jitter);
     }
     return (int)rows.size();
   }
@@ -571,6 +592,17 @@ int applyRackTemplate(Document& doc, const PCoreCatalog* c, const PatternTemplat
   l.root = slot && !slot->root.empty() ? slot->root : songRootName(doc);
   if (slot) l.scale = slot->scale;
   pcoreApplyToSong(doc, *c, l, choices, 0, 0, slot ? slot->bars : t.bars, patterns);
+  if (slot && slot->swing > 0) {  // the style is written fresh; the slot's swing goes on top (BUG-SWEEP-26)
+    const int64_t to = swingTicks(slot->swing);
+    const PCoreStyle* selectedStyle = c->style(t.style);
+    const int64_t jitter = selectedStyle ? (int64_t)std::lround(selectedStyle->humanize * 24) : 0;
+    for (const auto& [trackId, pid] : patterns) {
+      Track* written = trackPtr(doc, trackId);
+      Pattern* p = written ? written->findPattern(pid) : nullptr;
+      if (p)
+        for (auto& n : p->notes) swingNote(n, p->lengthTicks, 0, to, jitter);
+    }
+  }
   return (int)choices.size();
 }
 

@@ -8,6 +8,7 @@
 #include "assets.hpp"
 #include "edit.hpp"
 #include "follow.hpp"
+#include "pattern_rack.hpp"
 #include "pattern_tools.hpp"
 #include "pcore.hpp"
 #include "samples.hpp"
@@ -888,6 +889,314 @@ TEST("BUG-SWEEP-25: shortening the song keeps the retained ramp with a derived e
   const json mapBefore = toJson(e)["transport"]["tempoMap"];
   setSongLength(e, 20 * kBar);
   CHECK_EQ(toJson(e)["transport"]["tempoMap"].dump(), mapBefore.dump());
+}
+
+// ---------------------------------------------------------------- BUG-SWEEP-26 (2026-11-18)
+// applyRackTemplate wrote the template's notes without the slot's swing: a slot at swing 0.5 played the loaded
+// template straight, and the next setRackSwing was a no-op (its stale "from" put the notes off the 1/16 grid,
+// which swingNote refuses). rackWriteShape already re-applies the slot swing after writing; Load Template must too.
+
+TEST("sweep-26: a template loaded into a swung slot plays swung and the next swing change works") {
+  Document d = newEmptyDocument();
+  const std::string bass = addTrack(d, "bass");
+  setRackSwing(d, "s1", 0.5);  // the default slot, saved with swing 0.5
+  PatternTemplate t;
+  t.id = "tpl";
+  t.name = "Tpl";
+  t.bars = 4;
+  PatternTemplateRow row;
+  row.part = "bass";
+  row.name = "Bass line";
+  row.lengthTicks = 4 * kBar;
+  Note n;
+  n.tick = 240;  // an odd 1/16: at swing 0.5 it plays at 240 + 60
+  n.length = 120;
+  n.pitch = 36;
+  n.velocity = 0.8;
+  row.notes.push_back(n);
+  t.rows.push_back(row);
+  CHECK_EQ(applyRackTemplate(d, nullptr, t, "s1"), 1);
+  const auto slots = rackSlots(d);
+  const PatternSlot* slot = findRackSlot(slots, "s1");
+  CHECK(slot != nullptr);
+  if (!slot) return;
+  const Pattern* p = rackPattern(d, *slot, bass);
+  CHECK(p != nullptr);
+  if (!p) return;
+  CHECK_EQ(p->notes.size(), (size_t)1);
+  if (p->notes.empty()) return;
+  CHECK_EQ(p->notes[0].tick, (int64_t)300);  // before: 240, the slot's swing was not applied to the loaded notes
+  CHECK(p->notes[0].extra.contains("rackSwingBase"));
+  setRackSwing(d, "s1", 0.75);
+  const auto after = rackSlots(d);
+  const PatternSlot* slot2 = findRackSlot(after, "s1");
+  CHECK(slot2 != nullptr);
+  if (!slot2) return;
+  const Pattern* q = rackPattern(d, *slot2, bass);
+  CHECK(q != nullptr);
+  if (!q || q->notes.empty()) return;
+  CHECK_EQ(q->notes[0].tick, (int64_t)330);  // before: 240, the stale from=60 made swingNote skip the note
+}
+
+TEST("sweep-26 control: swing back to zero then 0.75 lands at 330") {
+  Document d = newEmptyDocument();
+  const std::string bass = addTrack(d, "bass");
+  setRackSwing(d, "s1", 0.5);
+  PatternTemplate t;
+  t.id = "tpl";
+  t.name = "Tpl";
+  t.bars = 4;
+  PatternTemplateRow row;
+  row.part = "bass";
+  row.name = "Bass line";
+  row.lengthTicks = 4 * kBar;
+  Note n;
+  n.tick = 240;
+  n.length = 120;
+  n.pitch = 36;
+  row.notes.push_back(n);
+  t.rows.push_back(row);
+  CHECK_EQ(applyRackTemplate(d, nullptr, t, "s1"), 1);
+  setRackSwing(d, "s1", 0.0);
+  const auto zeroed = rackSlots(d);
+  const PatternSlot* slot = findRackSlot(zeroed, "s1");
+  CHECK(slot != nullptr);
+  if (!slot) return;
+  const Pattern* p = rackPattern(d, *slot, bass);
+  CHECK(p != nullptr);
+  if (!p || p->notes.empty()) return;
+  CHECK_EQ(p->notes[0].tick, (int64_t)240);  // the unswung position, the swing record gone
+  CHECK(!p->notes[0].extra.contains("rackSwingBase"));
+  setRackSwing(d, "s1", 0.75);
+  const auto swung = rackSlots(d);
+  const PatternSlot* slot2 = findRackSlot(swung, "s1");
+  CHECK(slot2 != nullptr);
+  if (!slot2) return;
+  const Pattern* q = rackPattern(d, *slot2, bass);
+  CHECK(q != nullptr);
+  if (!q || q->notes.empty()) return;
+  CHECK_EQ(q->notes[0].tick, (int64_t)330);  // 240 + swingTicks(0.75) = 240 + 90
+}
+
+TEST("sweep-26 builtin: a P-Core style loaded into a swung slot keeps the swing") {
+  const fs::path catalogue = fs::path(__FILE__).parent_path().parent_path() / "pcore" / "styles.json";
+  const PCoreCatalog c = loadPCoreCatalog(catalogue);
+  const PCoreStyle* style = c.style("fullon");
+  CHECK(style != nullptr);
+  if (!style) return;
+  const int64_t jitter = (int64_t)std::lround(style->humanize * 24);  // the style's humanize, as rackWriteShape uses
+  Document d = newEmptyDocument();
+  const std::string bass = addTrack(d, "bass");
+  setRackSwing(d, "s1", 0.5);
+  PatternTemplate t;
+  t.id = "style-fullon";
+  t.name = "Full-on";
+  t.style = "fullon";
+  t.bars = 4;
+  t.builtin = true;
+  CHECK_EQ(applyRackTemplate(d, &c, t, "s1", 7), 1);
+  const auto slots = rackSlots(d);
+  const PatternSlot* slot = findRackSlot(slots, "s1");
+  CHECK(slot != nullptr);
+  if (!slot) return;
+  const Pattern* p = rackPattern(d, *slot, bass);
+  CHECK(p != nullptr);
+  if (!p) return;
+  CHECK(!p->notes.empty());
+  bool swung = false;
+  for (const auto& note : p->notes) {
+    const int64_t base = note.tick - 60;  // swingTicks(0.5)
+    const int64_t grid = (base + 120) / 240 * 240;
+    const int64_t diff = base > grid ? base - grid : grid - base;
+    if (grid > 0 && (grid / 240) % 2 == 1 && diff <= jitter && note.extra.contains("rackSwingBase")) swung = true;
+  }
+  CHECK(swung);  // before: the style wrote straight notes, none delayed by the slot's swing
+}
+
+// ---------------------------------------------------------------- BUG-SWEEP-27 (2026-11-18)
+// parseDocument keeps extra.patternSlots unvalidated on purpose (compat: document.cpp r.rest()), but slotFromJson
+// read it with typed j.value("bars", 4) / j.value("swing", 0.0): a wrong type threw type_error.302 out of rackSlots,
+// the consumption boundary, with no catch anywhere in the UI chain. The consumer must recover with defaults.
+
+TEST("sweep-27: malformed patternSlots metadata is read with defaults, not thrown at the consumer") {
+  Document d = newEmptyDocument();
+  addTrack(d, "bass");
+  json j = toJson(d);
+  j["patternSlots"] = json::array({
+      {{"id", "s1"}, {"bars", "four"}, {"swing", "lots"}, {"name", 7}, {"root", json::array()}, {"scale", 3}, {"tracks", "nope"}},
+      {{"id", 42}, {"bars", 4}},                      // id not a string: the entry is skipped, not a throw
+      "not an object",                                // already skipped before the fix
+      {{"id", "s2"}, {"bars", 2}, {"swing", 0.5}}});  // a well-formed neighbour survives
+  Document parsed = parseDocument(j);  // the parser keeps patternSlots as extra, unvalidated, by design
+  CHECK_EQ(parsed.extra["patternSlots"].size(), (size_t)4);
+  bool threw = false;
+  std::vector<PatternSlot> slots;
+  try {
+    slots = rackSlots(parsed);
+  } catch (const std::exception& e) {
+    threw = true;
+    std::fprintf(stderr, "  rackSlots threw: %s\n", e.what());
+  }
+  CHECK(!threw);  // before: type_error.302 from j.value("bars", 4) on the string "four"
+  if (threw) return;
+  const PatternSlot* s1 = findRackSlot(slots, "s1");
+  CHECK(s1 != nullptr);
+  if (s1) {
+    CHECK_EQ(s1->bars, 4);  // conservative default for a bars that is not a number
+    CHECK_NEAR(s1->swing, 0.0, 1e-12);
+    CHECK_EQ(s1->name, std::string("Pattern 1"));  // a name that is not a string falls back to the default naming
+    CHECK(s1->root.empty());
+    CHECK(s1->scale.empty());
+    CHECK(s1->tracks.empty());
+  }
+  CHECK(findRackSlot(slots, "s2") != nullptr);
+  const PatternSlot* s2 = findRackSlot(slots, "s2");
+  if (s2) {
+    CHECK_EQ(s2->bars, 2);
+    CHECK_NEAR(s2->swing, 0.5, 1e-12);
+  }
+  CHECK_EQ(slots.size(), (size_t)2);  // the numeric-id entry and the non-object entry are left out
+}
+
+TEST("sweep-27: unknown song and slot properties survive the parse and save round-trip") {
+  Document d = newEmptyDocument();
+  json j = toJson(d);
+  j["futureFeature"] = {{"mode", "x"}};
+  j["patternSlots"] = json::array({{{"id", "s1"}, {"bars", 4}, {"mystery", "keep-me"}}});
+  Document parsed = parseDocument(j);
+  CHECK(parsed.extra.contains("futureFeature"));
+  CHECK_EQ(parsed.extra["patternSlots"][0]["mystery"], std::string("keep-me"));
+  const json out = toJson(parsed);
+  CHECK(out.contains("futureFeature"));
+  CHECK_EQ(out["patternSlots"][0]["mystery"], std::string("keep-me"));
+  const Document again = parseDocument(out);
+  CHECK_EQ(again.extra["patternSlots"][0]["mystery"], std::string("keep-me"));
+}
+
+// ---------------------------------------------------------------- BUG-SWEEP-28 (2026-11-18)
+// pattern_rack.hpp's Load Template contract says "the same part first (else the same name)", and matchRows' own
+// comment agrees, but the code ran the NAME pass first: with conflicting names/parts the first pick stole the row
+// another track needed (the used set), mapping notes onto the wrong musical parts. Part first, name second.
+
+TEST("sweep-28: conflicting names and parts map by part first, as the header contract says") {
+  Document d = newEmptyDocument();
+  const std::string bass = addTrack(d, "bass", "Bass");
+  const std::string lead = addTrack(d, "lead", "Lead");
+  PatternTemplate t;
+  t.id = "conflict";
+  t.name = "Conflict";
+  t.bars = 1;
+  PatternTemplateRow rb;  // the bass row, named "Lead"
+  rb.part = "bass";
+  rb.name = "Lead";
+  rb.lengthTicks = kBar;
+  Note nb;
+  nb.tick = 0;
+  nb.length = 120;
+  nb.pitch = 36;
+  rb.notes.push_back(nb);
+  PatternTemplateRow rl;  // the lead row, named "Bass"
+  rl.part = "lead";
+  rl.name = "Bass";
+  rl.lengthTicks = kBar;
+  Note nl;
+  nl.tick = 0;
+  nl.length = 120;
+  nl.pitch = 84;
+  rl.notes.push_back(nl);
+  t.rows.push_back(rb);
+  t.rows.push_back(rl);
+  CHECK_EQ(applyRackTemplate(d, nullptr, t, "s1"), 2);
+  const auto slots = rackSlots(d);
+  const PatternSlot* slot = findRackSlot(slots, "s1");
+  CHECK(slot != nullptr);
+  if (!slot) return;
+  const Pattern* pb = rackPattern(d, *slot, bass);
+  const Pattern* pl = rackPattern(d, *slot, lead);
+  CHECK(pb != nullptr);
+  CHECK(pl != nullptr);
+  if (!pb || !pl || pb->notes.empty() || pl->notes.empty()) return;
+  CHECK_EQ(pb->notes[0].pitch, 36);  // before: 84, the name "Bass" stole the lead row
+  CHECK_EQ(pl->notes[0].pitch, 84);  // before: 36, the name "Lead" stole the bass row
+}
+
+TEST("sweep-28: one row of a part goes to the first track of that part only") {
+  Document d = newEmptyDocument();
+  const std::string b1 = addTrack(d, "bass", "Bass");
+  const std::string b2 = addTrack(d, "bass", "Sub Bass");  // a second bass track, id bass-2
+  PatternTemplate t;
+  t.id = "one-bass";
+  t.name = "One bass";
+  t.bars = 1;
+  PatternTemplateRow row;
+  row.part = "bass";
+  row.name = "Whatever";
+  row.lengthTicks = kBar;
+  Note n;
+  n.tick = 0;
+  n.length = 120;
+  n.pitch = 36;
+  row.notes.push_back(n);
+  t.rows.push_back(row);
+  CHECK_EQ(rackTemplateTracks(d, t), 1);
+  CHECK_EQ(applyRackTemplate(d, nullptr, t, "s1"), 1);
+  const auto slots = rackSlots(d);
+  const PatternSlot* slot = findRackSlot(slots, "s1");
+  CHECK(slot != nullptr);
+  if (!slot) return;
+  const Pattern* p1 = rackPattern(d, *slot, b1);
+  CHECK(p1 != nullptr);
+  if (p1) {
+    CHECK_EQ(p1->notes.size(), (size_t)1);
+    if (!p1->notes.empty()) CHECK_EQ(p1->notes[0].pitch, 36);
+  }
+  const Pattern* p2 = rackPattern(d, *slot, b2);  // the row was used: the second bass stays empty
+  CHECK(p2 != nullptr);
+  if (p2) CHECK(p2->notes.empty());
+}
+
+TEST("sweep-28: unambiguous name-only and part-only matches keep working") {
+  Document d = newEmptyDocument();
+  const std::string keys = addTrack(d, "keys", "Rhodes");  // no part guessed from id/name
+  const std::string kick = addTrack(d, "kick", "Kick");
+  CHECK(pcoreGuessPart(d.tracks[0]).empty());
+  PatternTemplate t;
+  t.id = "unambiguous";
+  t.name = "Unambiguous";
+  t.bars = 1;
+  PatternTemplateRow byName;
+  byName.part = "zzz-unknown";
+  byName.name = "Rhodes";
+  byName.lengthTicks = kBar;
+  Note nk;
+  nk.tick = 0;
+  nk.length = 120;
+  nk.pitch = 60;
+  byName.notes.push_back(nk);
+  PatternTemplateRow byPart;
+  byPart.part = "kick";
+  byPart.name = "Totally Different";
+  byPart.lengthTicks = kBar;
+  Note nkk;
+  nkk.tick = 0;
+  nkk.length = 120;
+  nkk.pitch = 36;
+  byPart.notes.push_back(nkk);
+  t.rows.push_back(byName);
+  t.rows.push_back(byPart);
+  CHECK_EQ(rackTemplateTracks(d, t), 2);
+  CHECK_EQ(applyRackTemplate(d, nullptr, t, "s1"), 2);
+  const auto slots = rackSlots(d);
+  const PatternSlot* slot = findRackSlot(slots, "s1");
+  CHECK(slot != nullptr);
+  if (!slot) return;
+  const Pattern* pk = rackPattern(d, *slot, keys);
+  const Pattern* pd = rackPattern(d, *slot, kick);
+  CHECK(pk != nullptr);
+  CHECK(pd != nullptr);
+  if (!pk || !pd || pk->notes.empty() || pd->notes.empty()) return;
+  CHECK_EQ(pk->notes[0].pitch, 60);  // name-only: the part is unknown on both sides
+  CHECK_EQ(pd->notes[0].pitch, 36);  // part-only: the names do not match
 }
 
 CORE_TEST_MAIN

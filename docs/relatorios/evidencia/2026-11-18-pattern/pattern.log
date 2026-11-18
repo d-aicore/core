@@ -1,0 +1,5 @@
+swing initial tick=300
+after template swing=0.5 tick=240 after .75 tick=240
+zero-reset control tick=330
+malformed metadata parse accepted=1 rack read throws=[json.exception.type_error.302] type must be number, but is string
+mapping bassPitch=84 leadPitch=36

@@ -1,0 +1,3 @@
+ok   sweep-26 control: swing back to zero then 0.75 lands at 330
+ok   sweep-26 builtin: a P-Core style loaded into a swung slot keeps the swing
+25 testes, 161 verificacoes, 0 falhas
