@@ -246,7 +246,7 @@ private:
   bool templatesLoaded_ = false;
   void showTrackMenu(const std::string& trackId);  // right click on a track
   void showAddTrackMenu();
-  // The Patterns window (P-Core's channel rack), a window of its own beside this one (Diogo, 2026-11-08). While it
+  // The Patterns window (Pattern Maker's channel rack), a window of its own beside this one (Diogo, 2026-11-08). While it
   // plays a pattern, the engine gets that pattern alone, looped (doc::rackPlayDocument); stopping gives the song back.
   void giveSilentTracksPlugins();  // Plugins menu: old (builtin) and empty tracks get their role's plugin
   // Core's tools (doc::corePlugins: the Tools panel, the Plugins menu, a track's right-click "Tools"): the same
@@ -255,8 +255,8 @@ private:
   juce::PopupMenu coreToolMenu(const std::string& toolId, const std::string& trackId);
   juce::PopupMenu coreToolsMenu(const std::string& trackId);
   void openCorePlugin(const doc::CorePluginInfo& info, juce::Component* near);
-  // The PLUGINS tab of the Tools panel (Diogo 2026-11-17): a maker's card opens its plugins' options; the F-Core
-  // intents can also be applied over chosen bars, on this track, the selected ones or all that play notes.
+  // The PLUGINS tab of the Tools panel (Diogo 2026-11-17): a maker's card opens its plugins' options; the effects
+  // by intent can also be applied over chosen bars, on this track, the selected ones or all that play notes.
   void showVendorPlugins(const doc::PluginVendorGroup& group, juce::Component* near);
   void askIntentZone(const std::string& intent, const std::string& trackId);
   void refreshInstalledCards();
