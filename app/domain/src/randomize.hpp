@@ -20,10 +20,30 @@ namespace core::doc {
 //   tempo  J: a tempo per section in steps (slower into a break, back or faster into a drop); replaces the tempo map
 const std::vector<std::string>& randomizeAxes();
 
+// One automatable parameter of a role plugin, as the engine reports it (plugin.params): its id (the automation
+// key is "vst:<id>"), its name, its current value (0..1) and its discrete step count (0 = continuous; N > 1 means
+// N positions, the values k/(N-1)). The sound axis draws a new value within 0..1, on the parameter's own steps.
+struct PluginParamInfo {
+  std::string id;
+  std::string name;
+  double value = 0.5;
+  int steps = 0;
+};
+// The parameters of one role track's plugin (trackId is the document's track id).
+struct PluginTrackParams {
+  std::string trackId;
+  std::vector<PluginParamInfo> params;
+};
+
 struct RandomizeOptions {
   uint64_t seed = 1;                 // the same seed on the same song gives the same result
   int strength = 2;                  // 1 subtle, 2 medium, 3 bold: how often a section leaves the template's choice
   std::vector<std::string> axes;     // names from randomizeAxes(); empty = all
+  // The role plugins' automatable parameters, as the engine reports them (plugin.params). The sound axis (K)
+  // randomizes these (BUG-SWEEP-11 positive, owner ratified 2026-11-18). Empty: nothing known about the plugins
+  // (the engine gave no answer, or none is loaded) — the plugin path is a graceful no-op. The caller (the UI)
+  // fills it for the tracks soundAxisPluginTracks names; the domain never talks to the engine itself.
+  std::vector<PluginTrackParams> pluginParams;
 };
 
 // The style card of a song: its menus. Known styles: "Dark psycore", "Hi-tech", "Slambient" (from the
@@ -33,12 +53,17 @@ struct RandomizeOptions {
 // (sections[].energy); a song without it is read from what plays in each section.
 std::vector<std::string> randomizeStyle(Document& doc, const RandomizeOptions& options);
 
-// BUG-SWEEP-11: whether the sound axis (K) has a target in this song. K only changes Core's own built-in
-// instruments (the style's kick/bass/hats); those left the engine (2026-11-16), so a song played by plugins (or
-// audio/samples) has no built-in sound to change. The menu disables the sound axis when this is false (PROD :83:
-// no apparently-active option that does nothing). A legacy built-in song still has the axis. Making it work on
-// plugins is an owner decision (the K contract is built-in-only).
+// BUG-SWEEP-11 (owner ratified 2026-11-18: «randomize sobre parâmetros dos plugins dos papéis (undoável);
+// escondido quando não há plugins.»): whether the sound axis (K) has a target in this song. K randomizes the
+// ROLE PLUGINS' PARAMETERS (one undoable edit); a legacy built-in song's kick/bass/hats are still targets too
+// (the old K contract, preserved for legacy load). The menu HIDES the axis when this is false — a song with no
+// plugins and no legacy built-in has nothing for it to change (PROD :83: no apparently-active option that does
+// nothing). Styled is checked by the caller (the menu ANDs it with songStyle).
 bool soundAxisAvailable(const Document& doc);
+
+// The role tracks played by a plugin (the sound axis's plugin targets), in the randomizer's part order. The UI
+// asks the engine for each one's parameters (plugin.params) and passes them in RandomizeOptions::pluginParams.
+std::vector<std::string> soundAxisPluginTracks(const Document& doc);
 
 // Changes the song's tempo (its start BPM and its tempo map) and keeps the bass gates in ms (audit
 // 48c9c38 E8/D4, Diogo 2026-11-04: the domain rewrites the notes). In every stretch whose BPM changes, the

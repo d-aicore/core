@@ -24,6 +24,11 @@ std::string instrumentLabel(const doc::Track& t) {
   // 0.7.0: the sound comes from the track's VST3 plugin; a track without one is silent and says so.
   if (t.instrument.kind == "plugin") return t.instrument.plugin.value("name", std::string("Plugin"));
   if (t.instrument.kind == "none" || t.instrument.kind.empty()) return "No instrument: FX > Replace instrument";
+  // The user-sample host (BUG-SWEEP-10 positive): it plays the user's files, not a Core sound of its own.
+  if (t.instrument.kind == "sample") {
+    const std::string zone = t.instrument.samples.empty() ? std::string("user samples") : t.instrument.samples.front().name;
+    return "Sampler: " + zone + (t.instrument.samples.size() > 1 ? " (" + std::to_string(t.instrument.samples.size()) + " notes)" : std::string());
+  }
   // "builtin": an old Core sound kept in the song but no longer played.
   const std::string& n = t.instrument.name;
   const std::string old = " (old, silent: choose a plugin)";

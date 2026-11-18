@@ -1,6 +1,7 @@
 #include "graph.hpp"
 #include "../dsp/smooth.hpp"
 #include "../dsp/finite.hpp"
+#include "../dsp/sample_host.hpp"
 #include <cstdio>
 #include <algorithm>
 #include <atomic>
@@ -336,6 +337,30 @@ Graph::Graph(const Project& p, double sampleRate, AssetStore* assets, PluginProv
         rt.plugin = processor;
         rt.instrument = std::make_unique<PluginInstrument>(sampleRate, std::move(processor));
       }
+    if (t.instrument == "sample") {
+      // The user-sample host (BUG-SWEEP-10 positive): it plays the user's files. Their audio is loaded here
+      // on the control thread through the AssetStore (the audio clips' path) and shared; a file that cannot
+      // be read leaves its zone silent and is reported, the song plays on.
+      std::vector<SampleHostZone> zones;
+      for (const auto& z : t.samples) {
+        SampleHostZone sz;
+        sz.rootKey = z.rootKey;
+        sz.loKey = z.loKey;
+        sz.hiKey = z.hiKey;
+        std::string why;
+        sz.data = assets ? assets->get(z.file, sampleRate, &why) : nullptr;
+        if (!sz.data) { missingAssets_.push_back(assets ? why : z.file + ": no audio store"); }
+        else if (z.loopEnd > 0) {
+          const int64_t frames = sz.data->frames();
+          sz.loopStart = std::clamp<int64_t>((int64_t)std::llround(z.loopStart * sampleRate), 0, frames - 1);
+          sz.loopEnd = std::clamp<int64_t>((int64_t)std::llround(z.loopEnd * sampleRate), sz.loopStart + 1, frames);
+        }
+        zones.push_back(std::move(sz));
+      }
+      rt.instrument = std::make_unique<SampleHost>(sampleRate, std::move(zones));
+      rt.stepped.set(2);  // pitched: a switch, it jumps, never glides
+      rt.stepped.set(4);  // retrigger
+    }
     const auto& specs = instrumentParams(t.instrument);
     rt.paramCount = hasNoInstrumentParams(t.instrument) ? 0 : (int)specs.size();
     for (int i = 0; i < rt.paramCount; ++i) {

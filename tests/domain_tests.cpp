@@ -8,8 +8,11 @@
 #include <share.h>
 #endif
 #include "support/check.hpp"
+#include "support/signals.hpp"
+#include "core/assets.hpp"
 #include "core/project.hpp"
 #include "core/server.hpp"
+#include "io/wav.hpp"
 #include "edit.hpp"
 #include "history.hpp"
 #include "pattern_rack.hpp"
@@ -501,13 +504,13 @@ TEST("BUG-SWEEP-09 characterization: every built-in catalogue role adds a silent
   }
 }
 
-// BUG-SWEEP-10 (2026-11-18): setTrackSample installed the removed built-in sampler (kind "builtin", name
+// BUG-SWEEP-10 (2026-11-18): setTrackSample used to install the removed built-in sampler (kind "builtin", name
 // "sampler"), which the engine projects as "none" (silent). On a track played by a plugin it overwrote the
 // working plugin and erased its instrument automation — a silent replacement of a working sound (PROD :113:
 // "Falta de plugin é explícita; não é substituída silenciosamente por som próprio"). A sample assignment on a
-// plugin track is refused; the plugin and its state survive. A silent "none" track and a legacy built-in track
-// still take a sample (legacy load preserved). The positive target for a plugin track (audio clip vs an external
-// plugin sampler) is an owner decision; the guard ships now.
+// plugin track is refused; the plugin and its state survive. A silent "none" track takes the sample as the
+// user-sample host (kind "sample") that PLAYS the user's file — the positive behaviour the owner ratified on
+// 2026-11-18 («sampler = host de samples do utilizador, sem fontes de som próprias.»), proven below.
 TEST("BUG-SWEEP-10: assigning a sample never replaces a working plugin instrument with the removed sampler") {
   Document d = newEmptyDocument();
   const json synth = {{"id", "synth-a"}, {"file", "synth-a.vst3"}, {"name", "Synth A"}, {"state", "QQ=="}};
@@ -522,11 +525,12 @@ TEST("BUG-SWEEP-10: assigning a sample never replaces a working plugin instrumen
   CHECK_EQ(d.findTrack(id)->instrument.kind, std::string("plugin"));
   CHECK(d.findTrack(id)->instrument.plugin == pluginBefore);
   CHECK(d.findTrack(id)->instrument.samples.empty());
-  // A silent "none" track still takes the sample (the legacy behaviour, preserved).
+  // A silent "none" track still takes the sample: it becomes the user-sample host (kind "sample") that plays
+  // the user's file (BUG-SWEEP-10 positive, owner ratified 2026-11-18) — never the removed silent built-in.
   Document legacy = newEmptyDocument();
   const std::string lid = addTrack(legacy, "kick");
   setTrackSample(legacy, lid, index, s);
-  CHECK_EQ(legacy.findTrack(lid)->instrument.kind, std::string("builtin"));
+  CHECK_EQ(legacy.findTrack(lid)->instrument.kind, std::string("sample"));
   CHECK_EQ(legacy.findTrack(lid)->instrument.name, std::string("sampler"));
 }
 
@@ -545,18 +549,75 @@ TEST("BUG-SWEEP-10: suggested samples keep a plugin role track's plugin (the bul
   SampleIndex index; index.root = "D:/Samples"; index.samples.push_back(s);
   const std::vector<std::string> changed = applySuggestedSamples(d, index, "Dark psycore", 0);
   CHECK_EQ(d.findTrack(pid)->instrument.kind, std::string("plugin"));  // kept, never replaced
-  // The silent track takes the sample: proves the sample is good enough, so the plugin track was skipped on
-  // purpose (not because nothing fitted).
-  CHECK_EQ(d.findTrack(nid)->instrument.kind, std::string("builtin"));
+  // The silent track takes the sample (the user-sample host): proves the sample is good enough, so the plugin
+  // track was skipped on purpose (not because nothing fitted).
+  CHECK_EQ(d.findTrack(nid)->instrument.kind, std::string("sample"));
   CHECK(!changed.empty());
 }
 
-// BUG-SWEEP-11 (2026-11-18): the Randomize sound menu item was enabled for any styled song, but the sound axis
-// (K) only changes Core's own built-in instruments, which left the engine (2026-11-16). On a plugin-only styled
-// song it threw ("no built-in sound to change") — an apparently-active option that does nothing (PROD :83). The
-// axis is disabled when no built-in target fits (soundAxisAvailable), and asking for it alone is a graceful no-op.
-// Making it work on plugins is an owner decision (the K contract is built-in-only).
-TEST("BUG-SWEEP-11: Randomize sound on a plugin-only styled song is a graceful no-op and the axis is unavailable") {
+// BUG-SWEEP-10 positive (owner ratified 2026-11-18: «sampler = host de samples do utilizador, sem fontes de som
+// próprias.»): a library sample on an unassigned track creates a USER-SAMPLE HOST (kind "sample") that PLAYS the
+// user's audio file through the engine's audio path — no synthesis, no own sound source. The track keeps its
+// notes; the projection carries the host and its zones; the render is the file's sound, not silence. The guard
+// that refuses a plugin track stays (the working plugin is never overwritten).
+TEST("BUG-SWEEP-10 positive: a sample on a none track becomes a user-sample host that plays the user's file") {
+  // A generated user sample in a temporary library: 0.2 s of a 440 Hz sine at 0.5 (no fixture in the repo).
+  const fs::path root = tempDir() / "sample-host-lib";
+  fs::create_directories(root);
+  const fs::path file = root / "kick.wav";
+  const auto wave = coretest::sine(440, 48000, 9600, 0.5f);
+  core::writeWav(file.string(), wave, wave, 48000, 32);
+  SampleIndex index = scanLibrary(root);
+  CHECK_EQ(index.samples.size(), (size_t)1);
+  const LibrarySample& sample = index.samples.front();
+
+  Document d = newEmptyDocument();
+  d.masterGainDb = 0;  // the render proves the host's level, not the empty song's headroom
+  const std::string id = addTrack(d, "kick");  // kind "none": its notes wait for a sound
+  Note n; n.id = "n1"; n.tick = 2 * kPpq; n.length = kPpq; n.pitch = 36; n.velocity = 1.0;
+  trackById(d, id).patterns[0].notes.push_back(n);
+  setTrackSample(d, id, index, sample);
+  const Track& host = *d.findTrack(id);
+  CHECK_EQ(host.instrument.kind, std::string("sample"));  // the user-sample host, not the removed built-in
+  CHECK_EQ(host.instrument.name, std::string("sampler"));
+  CHECK_EQ(host.instrument.samples.size(), (size_t)1);
+  CHECK_EQ(host.instrument.samples.front().sha256, sample.sha256);  // the user's file, by content
+  CHECK_EQ(host.instrument.samples.front().file, sample.file);
+  // No synthesis: none of the removed sampler's sound-source knobs (oscillator/filter) on the host.
+  CHECK(host.instrument.params.count("cutoff") == 0);
+  CHECK(host.instrument.params.count("filterType") == 0);
+  CHECK(host.instrument.params.count("resonance") == 0);
+  CHECK(host.instrument.synth.is_null());
+  // Save and reopen keeps the host and its zones (legacy load path unchanged).
+  CHECK_EQ(canon(parseDocument(toJson(d))), canon(d));
+  // The projection carries the host and its zones to the engine's audio/sample path.
+  const json proj = toProjection(d);
+  CHECK_EQ(proj["tracks"][0]["instrument"].get<std::string>(), std::string("sample"));
+  CHECK_EQ(proj["tracks"][0]["samples"].size(), (size_t)1);
+  CHECK_EQ(proj["tracks"][0]["samples"][0]["file"].get<std::string>(), sample.file);
+  // The engine plays the user's file: the render is the sample's sound (peak > 0), not silence. The note is
+  // at beat 2 (0.827 s at 145 BPM): before it, silence; the file at 0.5 with the host's level near 0 dB.
+  core::Project p = core::fromJson(proj);
+  core::AssetStore assets;
+  core::RenderResult r = core::renderProject(p, 48000, 512, false, 0.1, nullptr, &assets, nullptr, 0);
+  CHECK(coretest::allFinite(r.L) && coretest::allFinite(r.R));
+  CHECK(r.peak > 0.1f);
+  CHECK_NEAR(r.peak, 0.5, 0.05);
+  const int64_t noteStart = (int64_t)(2 * kPpq * core::samplesPerTick(145, 48000));
+  CHECK_NEAR(coretest::peakOf(std::vector<float>(r.L.begin(), r.L.begin() + (size_t)noteStart)), 0, 1e-6);
+  // A plugin track is still refused: the interim guard stays, the working plugin is never overwritten.
+  Document pd = newEmptyDocument();
+  const std::string pid = addPluginTrack(pd, {{"id", "synth-a"}, {"file", "synth-a.vst3"}, {"name", "Synth A"}});
+  CHECK_THROWS(setTrackSample(pd, pid, index, sample));
+  CHECK_EQ(pd.findTrack(pid)->instrument.kind, std::string("plugin"));
+}
+
+// BUG-SWEEP-11 (2026-11-18, owner ratified: «randomize sobre parâmetros dos plugins dos papéis (undoável);
+// escondido quando não há plugins.»): the sound axis (K) randomizes the ROLE PLUGINS' PARAMETERS. It is available
+// when a role track is played by a plugin (and for a legacy built-in song, the old K contract preserved); it is
+// HIDDEN when there are no plugins and no legacy built-in. Without the engine's parameter catalog the plugin path
+// is a graceful no-op (nothing known to change), never an error. The positive change + Undo proof is below.
+TEST("BUG-SWEEP-11: the sound axis targets role plugins, is hidden with no plugins, and keeps legacy built-ins") {
   Document d = newTemplateDocument();
   d.extra["template"] = {{"style", "Dark psycore"}};
   d.lengthTicks = 32 * 4 * kPpq;
@@ -566,18 +627,116 @@ TEST("BUG-SWEEP-11: Randomize sound on a plugin-only styled song is a graceful n
   for (auto& s : d.sections) s.extra["energy"] = 4;
   const json synth = {{"id", "synth-a"}, {"file", "synth-a.vst3"}, {"name", "Synth A"}};
   for (auto& t : d.tracks) replaceInstrumentWithPlugin(d, t.id, synth);  // every track played by a plugin
-  CHECK(!soundAxisAvailable(d));  // no built-in target: the menu disables the axis
+  CHECK(soundAxisAvailable(d));  // role plugins: the axis has a target (the menu shows it)
   bool threw = false;
   std::vector<std::string> changes;
   try { changes = randomizeStyle(d, {2, 2, {"sound"}}); } catch (const std::exception&) { threw = true; }
-  CHECK(!threw);           // before: an error dialog from an enabled menu item
-  CHECK(changes.empty());  // nothing to change, gracefully
+  CHECK(!threw);           // no catalog: nothing known to change, gracefully (never an error dialog)
+  CHECK(changes.empty());
   // A legacy built-in song still has the sound axis (the K contract is preserved for legacy load).
   Document b = newTemplateDocument();
   b.extra["template"] = {{"style", "Dark psycore"}};
   b.tracks[0].instrument.kind = "builtin";  // kick
   b.tracks[0].instrument.name = "kick";
   CHECK(soundAxisAvailable(b));
+  // A song with no plugins (the template's silent "none" tracks) and no legacy built-in: the axis is hidden.
+  Document none = newTemplateDocument();
+  none.extra["template"] = {{"style", "Dark psycore"}};
+  CHECK(!soundAxisAvailable(none));
+  CHECK(soundAxisPluginTracks(none).empty());
+  CHECK_EQ(soundAxisPluginTracks(d).size(), d.tracks.size());  // every role track is a plugin target
+}
+
+// BUG-SWEEP-11 positive (owner ratified 2026-11-18): Randomize sound changes the role plugins' parameters within
+// their ranges, as ONE undoable edit (a constant "vst:<id>" curve the engine plays over the plugin). One Undo
+// restores the song exactly. A parameter the user already automated keeps its curve (their work is never taken).
+TEST("BUG-SWEEP-11 positive: Randomize sound changes role plugin parameters, bounded and stepped, one Undo restores") {
+  Document d = newTemplateDocument();
+  d.extra["template"] = {{"style", "Dark psycore"}};
+  d.lengthTicks = 32 * 4 * kPpq;
+  for (auto& t : d.tracks) for (auto& c : t.clips) c.lengthTicks = d.lengthTicks;
+  addSection(d, "Intro", 0, 16 * 4 * kPpq);
+  addSection(d, "Drop", 16 * 4 * kPpq, 16 * 4 * kPpq);
+  for (auto& s : d.sections) s.extra["energy"] = 4;
+  const json synth = {{"id", "synth-a"}, {"file", "synth-a.vst3"}, {"name", "Synth A"}};
+  for (auto& t : d.tracks) replaceInstrumentWithPlugin(d, t.id, synth);
+  // The engine's catalog for each role plugin: a continuous gain and a 3-position mode (steps 3: 0, 0.5, 1).
+  RandomizeOptions o; o.seed = 7; o.strength = 3; o.axes = {"sound"};
+  for (const auto& t : d.tracks) {
+    PluginTrackParams pp; pp.trackId = t.id;
+    pp.params.push_back({"gain", "Gain", 0.5, 0});
+    pp.params.push_back({"mode", "Mode", 0.0, 3});
+    o.pluginParams.push_back(pp);
+  }
+  // A user curve on the kick's gain: randomize must keep it untouched (the user's work).
+  setAutomationPoint(d, "kick", "vst:gain", 0, 0.2);
+  setAutomationPoint(d, "kick", "vst:gain", 4 * kPpq, 0.8);
+  const Document before = d;
+  History h(before);
+  const std::vector<std::string> changes = randomizeStyle(d, o);
+  CHECK(!changes.empty());
+  h.commit(d, "Randomize sound");
+  // Some role plugin parameter changed: a constant "vst:<id>" curve at tick 0, value within 0..1, on its steps.
+  int changed = 0;
+  bool bounded = true, steppedOk = true;
+  for (const auto& t : d.tracks)
+    for (const auto& a : t.automation) {
+      if (a.param.rfind("vst:", 0) != 0) continue;
+      if (t.id == "kick" && a.param == "vst:gain") continue;  // the user's curve, checked below
+      CHECK_EQ(a.points.size(), (size_t)1);
+      CHECK_EQ(a.points[0].tick, (int64_t)0);
+      const double v = a.points[0].value;
+      bounded = bounded && v >= 0 && v <= 1;
+      if (a.param == "vst:mode") steppedOk = steppedOk && std::abs(v * 2 - std::round(v * 2)) < 1e-9;
+      ++changed;
+    }
+  CHECK(changed > 0);
+  CHECK(bounded);
+  CHECK(steppedOk);
+  // The user's kick gain curve is untouched (both points, their values).
+  const Automation* kg = findAutomation(d, "kick", "vst:gain");
+  CHECK(kg != nullptr);
+  if (kg) {
+    CHECK_EQ(kg->points.size(), (size_t)2);
+    CHECK_NEAR(kg->points[0].value, 0.2, 1e-9);
+    CHECK_NEAR(kg->points[1].value, 0.8, 1e-9);
+  }
+  // The projection carries the new curves to the engine (a vst:mode envelope the randomize added).
+  const json proj = toProjection(d);
+  bool hasVst = false;
+  for (const auto& tr : proj["tracks"])
+    for (const auto& e : tr["envelopes"])
+      if (e["param"].get<std::string>() == "vst:mode") hasVst = true;
+  CHECK(hasVst);
+  // One Undo restores the song exactly: the random curves go, the user's curve stays as it was.
+  CHECK(h.canUndo());
+  h.undo();
+  CHECK_EQ(canon(h.current()), canon(before));
+  // The same seed gives the same result (deterministic); a different seed differs.
+  Document d2 = before;
+  randomizeStyle(d2, o);
+  CHECK_EQ(canon(d2), canon(d));
+  Document d3 = before;
+  RandomizeOptions o3 = o; o3.seed = 8;
+  randomizeStyle(d3, o3);
+  CHECK(canon(d3) != canon(d));
+  // "Try again": a second Randomize sound redraws the curves it wrote (they are marked as its own) and still
+  // never takes the user's curve; one Undo brings the first randomize back.
+  Document again = d;
+  History h2(d);
+  RandomizeOptions o2 = o; o2.seed = 9;
+  const std::vector<std::string> changes2 = randomizeStyle(again, o2);
+  CHECK(!changes2.empty());
+  h2.commit(again, "Randomize sound");
+  const Automation* kg2 = findAutomation(again, "kick", "vst:gain");
+  CHECK(kg2 != nullptr);
+  if (kg2) {
+    CHECK_EQ(kg2->points.size(), (size_t)2);
+    CHECK_NEAR(kg2->points[0].value, 0.2, 1e-9);
+    CHECK_NEAR(kg2->points[1].value, 0.8, 1e-9);
+  }
+  h2.undo();
+  CHECK_EQ(canon(h2.current()), canon(d));
 }
 
 // Data loss (2026-11-18), S5: an undo step is a whole document, plugin states included. Undo put the old state of

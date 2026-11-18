@@ -204,7 +204,7 @@ bool rackStepRow(const Track& t) {
   const std::string part = pcoreGuessPart(t);
   if (part == "bass" || part == "lead" || part == "arp" || part == "pad") return false;
   if (part == "kick" || part == "hats" || part == "cymbals" || part == "perc" || part == "build") return true;
-  return t.instrument.kind == "builtin" && n == "sampler";  // a one-shot sound (fx, stabs...)
+  return (t.instrument.kind == "builtin" || t.instrument.kind == "sample") && n == "sampler";  // a one-shot sound (fx, stabs...)
 }
 
 int rackStepPitch(const Track& t, const Pattern* p) {
