@@ -2006,11 +2006,11 @@ MainComponent::MainComponent(EngineSession::Options options, doc::Document docum
   editor_.bpm = [this] { return doc::bpmAt(history_.current(), (int64_t)shownPosition()); };
   editor_.patternLibrary = [this] { return loadPatterns(); };
   editor_.pcoreCatalog = [this]() -> const doc::PCoreCatalog* {
-    // pcore/styles.json beside Core.exe, read once (a broken file is logged and P-Core says it is missing).
+    // pcore/styles.json beside Core.exe, read once (a broken file is logged and Pattern Maker says it is missing).
     if (!pcoreTried_) {
       pcoreTried_ = true;
       const juce::File f = juce::File::getSpecialLocation(juce::File::currentExecutableFile).getParentDirectory().getChildFile("pcore").getChildFile("styles.json");
-      try { pcoreCatalog_ = doc::loadPCoreCatalog(pathOf(f)); } catch (const std::exception& e) { logLine(u8("P-Core catalogue not read: ") + u8(e.what())); }
+      try { pcoreCatalog_ = doc::loadPCoreCatalog(pathOf(f)); } catch (const std::exception& e) { logLine(u8("Pattern Maker catalogue not read: ") + u8(e.what())); }
     }
     return pcoreCatalog_ ? &*pcoreCatalog_ : nullptr;
   };
@@ -2224,7 +2224,7 @@ void MainComponent::openCoreWindow(const std::string& what, const std::string& t
     repaint();
     return;
   }
-  if (what == "patterns") {  // P-Core: the Patterns window, its own window, that track chosen there
+  if (what == "patterns") {  // Pattern Maker: the Patterns window, its own window, that track chosen there
     selectTrack(track);
     openPatterns();
     if (patternsWindow_ && t && doc::playsPatterns(*t)) patternsWindow_->panel().select(track);
@@ -2327,9 +2327,7 @@ juce::PopupMenu MainComponent::coreToolMenu(const std::string& toolId, const std
   const juce::String on = t ? u8(" on ") + u8(t->name) : juce::String();
   std::string rolesProblem;
   const doc::RoleMap roleMap = PluginCatalog::roles(&rolesProblem);
-  if (toolId == "pcore") {
-    m.addItem(juce::PopupMenu::Item(u8("Open the Patterns window…")).setAction([safe] { if (safe) safe->openPatterns(); }));
-  } else if (toolId == "wcore") {
+  if (toolId == "wcore") {
     for (const char* role : {"bass", "lead", "pad", "pluck", "drums"}) {
       const juce::String label = u8(doc::findRole(role) ? doc::findRole(role)->label : role);
       if (notes)
@@ -2360,7 +2358,7 @@ juce::PopupMenu MainComponent::coreToolMenu(const std::string& toolId, const std
       for (const auto& intent : doc::fxIntents()) {
         juce::PopupMenu sub = where([safe, trackId, intent](const doc::SongSpan& span) {
           if (!safe) return;
-          safe->runTool(u8("F-Core: ") + u8(intent), [&](doc::Document& d, const doc::RoleMap& r) {
+          safe->runTool(u8("Effects: ") + u8(intent), [&](doc::Document& d, const doc::RoleMap& r) {
             return withSkipped(doc::toolIntentFx(d, trackId, r, intent, span.start, span.end, 0.7));
           });
         }, true);
@@ -2382,7 +2380,7 @@ juce::PopupMenu MainComponent::coreToolMenu(const std::string& toolId, const std
         m.addItem(juce::PopupMenu::Item(u8(capital(p.id)) + u8(": ") + u8(p.what) + u8(" (") + juce::String((int)tracks.size()) + u8(" tracks)"))
                       .setAction([safe, tracks, kind, id = p.id] {
                         if (!safe) return;
-                        safe->runTool(u8(kind == "reverb" ? "R-Core " : "D-Core ") + u8(id), [&](doc::Document& d, const doc::RoleMap& r) {
+                        safe->runTool(u8(kind == "reverb" ? "Reverb " : "Delay ") + u8(id), [&](doc::Document& d, const doc::RoleMap& r) {
                           return doc::toolSharedBus(d, tracks, r, kind, id).sentence;
                         });
                       }));
@@ -2423,9 +2421,9 @@ juce::PopupMenu MainComponent::coreToolMenu(const std::string& toolId, const std
 juce::PopupMenu MainComponent::coreToolsMenu(const std::string& trackId) {
   juce::PopupMenu m;
   for (const auto& p : doc::corePlugins()) {
-    juce::PopupMenu one = coreToolMenu(p.id, trackId);
-    if (p.id == "pcore") { m.addItem(juce::PopupMenu::Item(u8("P-Core: the Patterns window…")).setAction([this] { openPatterns(); })); continue; }
-    m.addSubMenu(u8(p.shortName) + u8(" · ") + u8(p.word), one);
+    // Pattern Maker opens its window directly; the other cards are menus (where it works, then it writes).
+    if (p.id == "pcore") { m.addItem(juce::PopupMenu::Item(u8("Pattern Maker: the Patterns window…")).setAction([this] { openPatterns(); })); continue; }
+    m.addSubMenu(u8(p.shortName) + u8(" · ") + u8(p.word), coreToolMenu(p.id, trackId));
   }
   return m;
 }
@@ -2484,7 +2482,7 @@ void MainComponent::showVendorPlugins(const doc::PluginVendorGroup& group, juce:
   m.showMenuAsync(options);
 }
 
-// F-Core over a chosen zone (Diogo 2026-11-17: "ao selecionar a zona aplicava nas pistas que queria ou em todas e
+// Effects by intent over a chosen zone (Diogo 2026-11-17: "ao selecionar a zona aplicava nas pistas que queria ou em todas e
 // ainda tinha opçao de escolher os numero do bar inicial e final"): first and last bar, the tracks, and the amount.
 // The write itself is toolIntentFxTracks, through runTool: one undo step, a refusal changes nothing.
 void MainComponent::askIntentZone(const std::string& intent, const std::string& trackId) {
@@ -2493,7 +2491,7 @@ void MainComponent::askIntentZone(const std::string& intent, const std::string& 
   const int totalBars = (int)std::max<int64_t>(1, song.lengthTicks / kBar);
   const doc::Track* t = song.findTrack(trackId);
   const std::vector<std::string> selected = selectedTracks();
-  auto* w = new juce::AlertWindow(u8("F-Core: ") + u8(intent), juce::String(), juce::MessageBoxIconType::NoIcon, this);
+  auto* w = new juce::AlertWindow(u8("Effects: ") + u8(intent), juce::String(), juce::MessageBoxIconType::NoIcon, this);
   w->addTextEditor("from", "1", lang::tr("First bar:"));
   w->addTextEditor("to", juce::String(totalBars), lang::tr("Last bar:"));
   juce::StringArray choices;
@@ -2514,7 +2512,7 @@ void MainComponent::askIntentZone(const std::string& intent, const std::string& 
     const int from = safe->getTextEditorContents("from").getIntValue();
     const int to = safe->getTextEditorContents("to").getIntValue();
     if (from < 1 || to < from || to > totalBars) {
-      showError(u8("F-Core: ") + u8(intent),
+      showError(u8("Effects: ") + u8(intent),
                 u8("Choose bars between 1 and ") + juce::String(totalBars) + u8(", the first no later than the last."));
       return;
     }
@@ -2525,7 +2523,7 @@ void MainComponent::askIntentZone(const std::string& intent, const std::string& 
     else if (choice == 2) { for (const auto& tr : history_.current().tracks) if (doc::playsPatterns(tr)) tracks.push_back(tr.id); }
     else tracks.push_back(trackId);
     const double strength = amount->getValue();
-    runTool(u8("F-Core: ") + u8(intent), [&](doc::Document& d, const doc::RoleMap& r) {
+    runTool(u8("Effects: ") + u8(intent), [&](doc::Document& d, const doc::RoleMap& r) {
       return withSkipped(doc::toolIntentFxTracks(d, tracks, r, intent, start, end, strength));
     });
   }), true);
@@ -7569,10 +7567,31 @@ void MainComponent::selfTestStep() {
     case 38:
       if (inStep > 300 && applied) {
         session_->stop();
+        // The kept surfaces after the module cleanup (2026-11-18): Pattern Maker's Patterns window, the Tools
+        // cards (no legacy *-Core title left on them) and the score open and show. The piano roll and the Mixer
+        // were exercised above (steps 16-19 and 36-37). No extra logged transition: the checks ride in this step.
+        openPatterns();
+        if (!patternsWindow_ || !patternsWindow_->isVisible() || patternsWindow_->panel().patternOf("kick") == nullptr)
+          return finish(false, "patterns window");
+        patternsWindow_->closeButtonPressed();
+        togglePlugins();
+        if (!pluginCards_.isVisible()) return finish(false, "tools panel not shown");
+        const std::vector<std::string> titles = pluginCards_.cardTitles();
+        if (titles.size() != doc::corePlugins().size()) return finish(false, "tools cards missing");
+        for (const auto& title : titles)
+          if (title.find("Core") != std::string::npos) return finish(false, "legacy card title: " + u8(title));
+        // The Pattern Maker card opens its window (the card handler's wiring).
+        if (pluginCards_.onOpen) pluginCards_.onOpen(doc::corePlugins()[0], pluginCards_);
+        if (!patternsWindow_ || !patternsWindow_->isVisible()) return finish(false, "pattern maker card did not open the window");
+        patternsWindow_->closeButtonPressed();
+        togglePlugins();
+        openCoreWindow("score", "");
+        if (!score_.isVisible()) return finish(false, "score not shown");
+        closePanels();
         // M6: this session's logs are there, with the engine's life in them.
         if (!engineLogFile().existsAsFile() || !appLogFile().loadFileAsString().contains("Engine: Ready"))
           return finish(false, "diagnostics: no log in " + logsFolder().getFullPathName());
-        return finish(true, "M1c + M2 path, live notes, audio clips, mixer, save with audio");
+        return finish(true, "M1c + M2 path, live notes, audio clips, mixer, patterns, tools, score, save with audio");
       }
       break;
   }

@@ -625,7 +625,7 @@ int applyRackTemplate(Document& doc, const PCoreCatalog* c, const PatternTemplat
     }
     return (int)rows.size();
   }
-  if (!c) throw DocumentError("template", "the P-Core catalogue is missing");
+  if (!c) throw DocumentError("template", "the Pattern Maker catalogue is missing");
   std::vector<PCoreTrackChoice> choices;
   std::map<std::string, std::string> patterns;
   for (const auto& tr : std::vector<Track>(doc.tracks)) {
@@ -636,7 +636,7 @@ int applyRackTemplate(Document& doc, const PCoreCatalog* c, const PatternTemplat
     patterns[tr.id] = p.id;
     choices.push_back({tr.id, part, ""});
   }
-  if (choices.empty()) throw DocumentError("template", "no track of the song has a part P-Core knows (kick, bass, hats...)");
+  if (choices.empty()) throw DocumentError("template", "no track of the song has a part Pattern Maker knows (kick, bass, hats...)");
   PCoreLayers l;
   l.style = t.style;
   l.align = "style";

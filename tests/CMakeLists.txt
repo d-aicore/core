@@ -28,6 +28,13 @@ target_link_libraries(legacy_guard_tests PRIVATE core_domain core_engine_lib)
 target_compile_definitions(legacy_guard_tests PRIVATE CORE_PCORE_CATALOG="${CMAKE_SOURCE_DIR}/pcore/styles.json")
 add_test(NAME legacy_guard_tests COMMAND legacy_guard_tests)
 
+# The legacy module cleanup (2026-11-18, PROD-02/04/06): the Tools cards lose the W/D/F/R-Core titles, the old
+# ids and titles stay lookup aliases, legacy buses are reused, and the bridge's "open" takes the old ids.
+add_executable(modules_tests modules_tests.cpp)
+target_include_directories(modules_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(modules_tests PRIVATE core_control core_domain)
+add_test(NAME modules_tests COMMAND modules_tests)
+
 # The role map (Settings > Roles) and the tools that play through it (SUCK, PUM, build-up effects).
 add_executable(role_tests role_tests.cpp)
 target_include_directories(role_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
@@ -111,7 +118,7 @@ if(TARGET core-package)
   set_tests_properties(cli_package_stale PROPERTIES LABELS merge TIMEOUT 300 RUN_SERIAL TRUE)
 endif()
 
-set_tests_properties(engine_tests domain_tests role_tests midi_tests bug_tests audit_tests audit2_tests hunt_tests round3_tests calls_tests bitwig_tests legacy_guard_tests menu_tests cli_version cli_demo_render cli_measure cli_unicode
+set_tests_properties(engine_tests domain_tests role_tests midi_tests bug_tests audit_tests audit2_tests hunt_tests round3_tests calls_tests bitwig_tests legacy_guard_tests menu_tests modules_tests cli_version cli_demo_render cli_measure cli_unicode
                      PROPERTIES LABELS merge TIMEOUT 300)
 
 # The engine process driven through the app's client (core-engine serve, null audio backend): messages larger than

@@ -14,17 +14,21 @@ std::string lower(std::string s) {
 }  // namespace
 
 const std::vector<CorePluginInfo>& corePlugins() {
+  // The legacy module titles (P-Core, W-Core, F-Core, R-Core, D-Core) left the cards (Diogo 2026-11-18:
+  // "apenas o pattern maker,mixer, piano, tools. o que esta a causar erros limpa, w-core, d-core f-core,
+  // tudo isso ja nao entra"). The ids stay, and the old titles are aliases below: a legacy project or the
+  // AI's old names still find the same tool.
   static const std::vector<CorePluginInfo> list = {
-      {"pcore", "P-Core", "Patterns", "writes rhythms and notes in layers: part, shape (KBB...), scale, grid, changes", {}, "window",
-       {"patterns", "pattern core", "pattern maker", "channel rack"}},
-      {"wcore", "W-Core", "Instrument", "the track plays the plugin of a role: bass, lead, pad, pluck or drums", {"bass", "lead", "pad", "pluck", "drums"},
-       "tool", {"instrument", "synth", "role instrument"}},
-      {"fcore", "F-Core", "FX", "effects by intent over a section: build-up, suck, intro, outro, impact, break", {"filter", "reverb", "delay", "drive"},
-       "tool", {"fx", "fx core", "intent"}},
-      {"rcore", "R-Core", "Reverb", "the selected tracks share one reverb on a bus that follows the sections", {"reverb"}, "tool",
-       {"reverb core", "shared reverb", "space"}},
-      {"dcore", "D-Core", "Delay", "the selected tracks share one echo on a bus that follows the sections", {"delay"}, "tool",
-       {"delay core", "shared delay", "echo"}},
+      {"pcore", "Pattern Maker", "Patterns", "writes rhythms and notes in layers: part, shape (KBB...), scale, grid, changes", {}, "window",
+       {"patterns", "pattern core", "channel rack", "p-core"}},
+      {"wcore", "Instrument", "By role", "the track plays the plugin of a role: bass, lead, pad, pluck or drums", {"bass", "lead", "pad", "pluck", "drums"},
+       "tool", {"synth", "role instrument", "w-core", "w-core synth"}},
+      {"fcore", "Effects", "By intent", "effects by intent over a section: build-up, suck, intro, outro, impact, break", {"filter", "reverb", "delay", "drive"},
+       "tool", {"fx", "fx core", "intent", "f-core"}},
+      {"rcore", "Reverb", "Shared bus", "the selected tracks share one reverb on a bus that follows the sections", {"reverb"}, "tool",
+       {"reverb core", "shared reverb", "space", "r-core"}},
+      {"dcore", "Delay", "Shared bus", "the selected tracks share one echo on a bus that follows the sections", {"delay"}, "tool",
+       {"delay core", "shared delay", "echo", "d-core"}},
       {"suck", "SUCK", "Into the drop", "the sound is sucked into the drop: the reverb opens, the filter closes, back on the drop",
        {"reverb", "filter"}, "tool", {"suck into the drop"}},
       {"pum", "PUM", "Sidechain", "the volume dips at every kick and comes back", {"sidechain"}, "tool", {"pump", "sidechain pump"}},

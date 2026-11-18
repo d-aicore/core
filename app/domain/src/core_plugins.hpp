@@ -10,13 +10,14 @@
 namespace core::doc {
 
 struct CorePluginInfo {
-  std::string id;                    // "pcore", "fcore", "rcore"... the AI's id too
-  std::string shortName;             // the card's title: "P-Core"
+  std::string id;                    // "pcore", "fcore", "rcore"... the AI's id too; the legacy ids stay
+  std::string shortName;             // the card's title: "Pattern Maker" (the old *-Core titles left, 2026-11-18)
   std::string word;                  // the small word on the card's right: "Patterns"
   std::string about;                 // what it does, in plain words
   std::vector<std::string> roles;    // the roles whose plugins it plays (empty: it only writes notes)
   std::string opens;                 // "window" (its own window) | "tool" (a menu: where, then it writes)
-  std::vector<std::string> aliases;  // other names the AI may use ("p-core", "patterns", "pum"...)
+  std::vector<std::string> aliases;  // other names the AI may use ("p-core", "patterns", "pum"...); the old
+                                     // module titles ("w-core", "f-core"...) stay here so legacy names resolve
 };
 const std::vector<CorePluginInfo>& corePlugins();  // card order
 // By id or any alias, case ignored; nullptr when none.

@@ -60,7 +60,8 @@ RoleToolResult toolBuildupFx(Document& doc, const std::string& trackId, const Ro
 struct SongSpan { int64_t start = 0, end = 0; std::string name; };
 SongSpan sectionSpan(const Document& doc, const std::string& section);
 
-// ---- R-Core / D-Core (toolSharedBus): tracks share one reverb or one delay on a bus, and it follows the sections
+// ---- Shared reverb / delay (toolSharedBus, was R-Core / D-Core): tracks share one reverb or one delay on a bus,
+// and it follows the sections.
 // The bus plays the role's plugin fully wet; each track sends to it; the bus is quieter in the drops and opens in
 // the intros, breaks, build-ups and outros. The same place again only updates the sends. kind: "reverb" | "delay".
 struct SpacePreset {
