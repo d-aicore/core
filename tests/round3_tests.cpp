@@ -131,7 +131,7 @@ TEST("ronda 3, R3-B: o F-Core so promete o que escreveu (impact sem drive nao fa
   CHECK(!has(i.sentence, "dark"));  // sem filtro
 }
 
-TEST("ronda 3, R3-C: os textos novos do painel Tools e dos menus tem traducao") {
+TEST("round 3, R3-C: the new texts of the Tools panel and the menus have a translation") {
   std::ifstream f(CORE_LANG_DIR "/pt-PT.json", std::ios::binary);
   const json lang = json::parse(f);
   for (const char* key :
@@ -144,7 +144,7 @@ TEST("ronda 3, R3-C: os textos novos do painel Tools e dos menus tem traducao") 
         "The role map could not be read ({}): Settings > Roles.", "Choose a track with notes first (click its name)",
         "Select the tracks that share it first", "No sections yet: right-click the timeline to add one", "The whole song",
         "A new track", "Open the Patterns window\xE2\x80\xA6", "Into the drop after", "Over the build-up", "Steps (1/4, 1/8, 1/16, 1/32)",
-        "Gradual (speeding up all the way)", "Instrument: {}", "New track: {}", "F-Core: {}",
+        "Gradual (speeding up all the way)", "Instrument: {}", "New track: {}", "Effects: {}",
         // O separador PLUGINS e a zona por compassos/pistas (Diogo 2026-11-17).
         "PLUGINS", "instruments", "effects", "First bar:", "Last bar:", "Apply to:", "Amount (0 to 1):",
         "Tools and plugins: Core's tools as cards, and the installed plugins by maker",
