@@ -2,6 +2,7 @@
 #include "../dsp/float_mode.hpp"
 #include <algorithm>
 #include <atomic>
+#include <cstdio>
 #include <cstring>
 #include <stdexcept>
 #include <vector>
@@ -49,6 +50,10 @@ class MiniaudioOutput final : public AudioOutput {
   ma_context context_{};
   ma_device device_{};
   bool contextReady_ = false, deviceReady_ = false;
+  // BUG-SWEEP-06: set when Linux refused realtime priority and the device was reopened at normal priority.
+  // Sticky for this output (the context is rebuilt once). Windows never sets it: TIME_CRITICAL is
+  // privilege-free there, so the Windows path stays exactly as before.
+  bool normalPriority_ = false;
   Engine* engine_ = nullptr;
   std::vector<float> L_, R_;
   uint64_t lastStartNs_ = 0;
@@ -105,9 +110,10 @@ class MiniaudioOutput final : public AudioOutput {
     ma_result r;
     // The audio thread at the top priority the OS gives a normal process (Windows: time critical), so a
     // build or another busy program on the same PC does not starve it (2026-11-04: crackles while a full
-    // MSVC build used every core).
+    // MSVC build used every core). BUG-SWEEP-06: after a Linux refusal the rebuilt context uses normal
+    // priority (normalPriority_), so the engine still opens without realtime privileges.
     ma_context_config cc = ma_context_config_init();
-    cc.threadPriority = ma_thread_priority_realtime;
+    cc.threadPriority = normalPriority_ ? ma_thread_priority_normal : ma_thread_priority_realtime;
     if (args.contains("backend") && args["backend"].is_string()) {
       ma_backend b = backendFromName(args["backend"].get<std::string>());
       r = ma_context_init(&b, 1, &cc, &context_);
@@ -174,6 +180,22 @@ public:
     L_.assign(4096, 0.0f); R_.assign(4096, 0.0f);
     lastStartNs_ = 0;
     ma_result r = ma_device_init(&context_, &config, &device_);
+#ifndef _WIN32
+    // BUG-SWEEP-06: Linux refuses realtime priority to an unprivileged process (pthread_create with
+    // PTHREAD_EXPLICIT_SCHED returns EPERM, which miniaudio maps to MA_INVALID_OPERATION and does not
+    // retry — the null device's thread is created at the context's priority). Rebuild the context at
+    // normal priority and open again, once, logged, instead of leaving the engine without a device.
+    // Windows never takes this path: TIME_CRITICAL needs no privilege and the open succeeds.
+    if (r != MA_SUCCESS && !normalPriority_) {
+      std::fprintf(stderr, "core: realtime audio priority refused (%s); reopening the device at normal priority (BUG-SWEEP-06)\n",
+                   ma_result_description(r));
+      normalPriority_ = true;
+      ma_context_uninit(&context_);
+      contextReady_ = false;
+      initContext(args);
+      r = ma_device_init(&context_, &config, &device_);
+    }
+#endif
     if (r != MA_SUCCESS) throw std::runtime_error(std::string("Cannot open the audio device: ") + ma_result_description(r));
     deviceReady_ = true;
     sampleRate_ = device_.sampleRate;
@@ -193,7 +215,9 @@ public:
             {"periods", (int)periods}, {"latencyMs", period * periods * 1000.0 / device_.sampleRate},
             {"internalSampleRate", device_.playback.internalSampleRate},
             {"backend", ma_get_backend_name(context_.backend)}, {"device", device_.playback.name},
-            {"exclusive", device_.playback.shareMode == ma_share_mode_exclusive}, {"scheduling", "Pro Audio"}};
+            {"exclusive", device_.playback.shareMode == ma_share_mode_exclusive},
+            // BUG-SWEEP-06: honest after a Linux fallback; on Windows normalPriority_ is always false.
+            {"scheduling", normalPriority_ ? "normal" : "Pro Audio"}};
   }
 
   void stop() override {

@@ -1,0 +1,4 @@
+core: realtime audio priority refused (Invalid operation); reopening the device at normal priority (BUG-SWEEP-06)
+core: realtime audio priority refused (Invalid operation); reopening the device at normal priority (BUG-SWEEP-06)
+ok   engine.start: the null device opens and reopens; a refused realtime priority falls back to normal (BUG-SWEEP-06)
+1 testes, 5 verificacoes, 0 falhas

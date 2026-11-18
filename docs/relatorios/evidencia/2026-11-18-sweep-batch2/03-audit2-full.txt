@@ -1,0 +1,12 @@
+ok   auditoria 2, bug 1: uma linha do motor com tipos errados nunca lanca no cliente
+ok   auditoria 2, ponto 4: uma resposta sem id valido termina a sessao logo, com o motivo
+ok   auditoria 2, bug 2: um project.load sem resposta volta a ser enviado sozinho, com uma revisao nova
+ok   auditoria 2, bug 3: o espaco do export conta os mono como mono e cada volume por si
+ok   auditoria 2, observacao: um autosave estragado diz que esta estragado, sem excecao do JSON
+ok   dados D2: o autosave de um Core que morreu e oferecido mesmo que o id dele ja seja de outro processo
+ok   BUG-SWEEP-03: a failed publish keeps the previous file and names it in the error
+ok   BUG-SWEEP-03: a failed export job reports the rollback and the kept backups
+ok   BUG-SWEEP-03: a publish that can restore puts the old file back and reports it
+ok   BUG-SWEEP-03: the rollback report names what was restored and what was kept
+ok   BUG-SWEEP-03: a successful publish reports no rollback and takes the new files
+11 testes, 121 verificacoes, 0 falhas

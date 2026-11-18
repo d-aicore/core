@@ -31,10 +31,11 @@ add_dependencies(CoreApp core_version_header)
 
 # The self-test plays its own test plugins (app/selftest-plugins): Core's sound comes from plugins.
 if(TARGET CoreTestSynth_VST3)
-  add_dependencies(CoreApp CoreTestSynth_VST3 CoreTestGain_VST3)
+  add_dependencies(CoreApp CoreTestSynth_VST3 CoreTestGain_VST3 CoreTestThrow_VST3)
   target_compile_definitions(CoreApp PRIVATE
     CORE_TEST_SYNTH_VST3="$<GENEX_EVAL:$<TARGET_PROPERTY:CoreTestSynth_VST3,JUCE_PLUGIN_ARTEFACT_FILE>>"
-    CORE_TEST_GAIN_VST3="$<GENEX_EVAL:$<TARGET_PROPERTY:CoreTestGain_VST3,JUCE_PLUGIN_ARTEFACT_FILE>>")
+    CORE_TEST_GAIN_VST3="$<GENEX_EVAL:$<TARGET_PROPERTY:CoreTestGain_VST3,JUCE_PLUGIN_ARTEFACT_FILE>>"
+    CORE_TEST_THROW_VST3="$<GENEX_EVAL:$<TARGET_PROPERTY:CoreTestThrow_VST3,JUCE_PLUGIN_ARTEFACT_FILE>>")
 endif()
 
 # A runnable folder: Core.exe, core-engine.exe, the demo and the style templates side by side. The demo is the psy demo

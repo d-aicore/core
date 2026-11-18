@@ -585,6 +585,25 @@ TEST("engine.start: M5 fica 0 (serial) por omissão, sem CORE_LIVE_THREADS nem l
   server.execute("engine.stop", json::object());
 }
 
+// --- BUG-SWEEP-06: the null device opens even when the OS refuses realtime priority --------------------------
+
+TEST("engine.start: the null device opens and reopens; a refused realtime priority falls back to normal (BUG-SWEEP-06)") {
+  // On Linux an unprivileged process cannot create a realtime-priority thread (EPERM): before the fix the
+  // first start threw "Cannot open the audio device: Invalid operation" and this case never reached a CHECK.
+  // The fallback rebuilds the context at normal priority and opens again. Every engine.start makes a fresh
+  // output (server.cpp), so the second start proves each new output falls back cleanly on its own.
+  // On Windows TIME_CRITICAL needs no privilege, so this passes at realtime priority, unchanged.
+  Server server([] { return makeMiniaudioOutput(); }, kSr);
+  const json first = server.execute("engine.start", {{"backend", "null"}});
+  CHECK(first.contains("blockSize"));
+  CHECK(first.value("backend", std::string()) == "Null");  // ma_get_backend_name(ma_backend_null)
+  CHECK(first.contains("scheduling"));
+  const json second = server.execute("engine.start", {{"backend", "null"}});
+  CHECK(second.contains("blockSize"));
+  CHECK(server.execute("engine.stats", json::object())["device"].contains("blockSize"));
+  server.execute("engine.stop", json::object());
+}
+
 // --- ART-003: a saída de áudio morre em silêncio ---------------------------------------------------------------
 
 TEST("ART-003: o Server reporta uma saída que parou ou mudou (dispositivo desligado / rerouted)") {

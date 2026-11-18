@@ -62,7 +62,7 @@ double answersWithin(EngineClient& engine, const std::string& cmd, const json& a
   return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
 }
 
-#if defined(CORE_TEST_CRASH_VST3) || defined(CORE_TEST_FAULT_VST3) || defined(CORE_TEST_CRASH_RESTART_VST3)
+#if defined(CORE_TEST_CRASH_VST3) || defined(CORE_TEST_FAULT_VST3) || defined(CORE_TEST_CRASH_RESTART_VST3) || defined(CORE_TEST_THROW_VST3)
 // The first plugin of a file as the engine describes it (core-engine scan): what a song's track carries.
 json scanFirst(const std::string& file) {
   const std::string command = "\"\"" + std::string(CORE_ENGINE_EXE) + "\" scan \"" + file + "\"\"";
@@ -247,6 +247,60 @@ TEST("serve: a crashed plugin that asks to restart the component does not deadlo
   CHECK(answersWithin(engine, "engine.stats", json::object(), 2000ms) >= 0);
 
   // Closing stdin ends the session: the engine exits by itself (code 0), it is not terminated (the red exited 1).
+  engine.close();
+  CHECK_EQ(end.get(), std::string("The engine exited (code 0)."));
+}
+#endif
+
+#ifdef CORE_TEST_THROW_VST3
+// BUG-SWEEP-05: a plugin that throws while playing can be tried again. The engine lets the failed instance go and
+// builds a new one from the song (plugin.retry). The new instance plays: it processes audio and throws again 0.1 s
+// in — only a new instance can fail again (the failed one is never called), so the second failure proves the retry
+// rebuilt it playing. Regression guard: the engine's retry already worked; the app never sent it (the self-test
+// covers the UI's Try again). The throwing effect sits on a synth track, so the track plays through it.
+TEST("serve: a plugin that throws while playing is retried into a new instance that plays (BUG-SWEEP-05)") {
+  const json thrower = scanFirst(CORE_TEST_THROW_VST3), synth = scanFirst(CORE_TEST_SYNTH_VST3);
+  CHECK(thrower.is_object());
+  CHECK(synth.is_object());
+  if (!thrower.is_object() || !synth.is_object()) return;
+
+  EndReason end;
+  EngineClient engine(engineOptions());
+  end.attach(engine);
+  engine.start();
+  json track = pluginTrack("synth", synth);
+  track["effects"] = json::array({{{"id", "throw"}, {"type", "plugin"}, {"bypass", false}, {"plugin", thrower}}});
+  const json loaded = engine.command("project.load", {{"project", song(json::array({track}))}}, 30000ms);
+  CHECK(loaded.value("missing", json::array()).empty());  // both test plugins loaded, or nothing is tested
+  engine.command("engine.start", {{"backend", "null"}});
+  engine.command("transport.play");
+
+  const std::string key = "fx:synth:throw";
+  auto failedNow = [&] {
+    const json list = engine.command("plugins.failed");
+    for (const auto& p : list) if (p.value("key", std::string()) == key) return true;
+    return false;
+  };
+  // The effect throws 0.1 s into processing; the engine reports it and plays on.
+  bool failed = false;
+  for (int i = 0; i < 100 && !failed; ++i) { std::this_thread::sleep_for(100ms); failed = failedNow(); }
+  CHECK(failed);
+  if (!failed) return;
+
+  // Try again: a new instance from the song's state, the failed one let go.
+  json retry;
+  CHECK(answersWithin(engine, "plugin.retry", {{"key", key}}, 10000ms, &retry) >= 0);
+  CHECK(retry.value("retried", false));
+  // The new instance processes the song and throws again: the failure comes back by itself and stays.
+  bool again = false;
+  for (int i = 0; i < 100 && !again; ++i) { std::this_thread::sleep_for(100ms); again = failedNow(); }
+  CHECK(again);
+
+  // The engine goes on answering, and the synth's state is still there to save.
+  json states;
+  CHECK(answersWithin(engine, "plugins.states", json::object(), 2000ms, &states) >= 0);
+  CHECK(states.contains("track:synth"));
+  engine.command("transport.stop");
   engine.close();
   CHECK_EQ(end.get(), std::string("The engine exited (code 0)."));
 }

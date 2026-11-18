@@ -1,0 +1,3 @@
+  FALHOU engine.start: M5 fica 0 (serial) por omissão, sem CORE_LIVE_THREADS nem liveThreads (FL-1, D51):0: excepcao: Cannot open the audio device: Invalid operation
+FAIL engine.start: M5 fica 0 (serial) por omissão, sem CORE_LIVE_THREADS nem liveThreads (FL-1, D51)
+1 testes, 0 verificacoes, 1 falhas

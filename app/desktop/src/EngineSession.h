@@ -44,6 +44,11 @@ struct ExportJob {
   std::string path, error;  // path UTF-8 (the first file)
   int64_t revision = -1;
   int files = 1, file = 0;  // how many files the job writes, and the one being written
+  // A failed export (BUG-SWEEP-03): what the rollback really did. published = new files left in place;
+  // backups = old copies kept as "<path>.previous..." because the path could not be taken back.
+  int published = 0;
+  bool rollbackAttempted = false;
+  std::vector<std::string> restored, backups;
   bool active() const { return state == "starting" || state == "running" || state == "cancelling"; }
 };
 
@@ -83,8 +88,10 @@ struct SessionSnapshot {
   ExportJob exportJob;
   std::vector<std::string> devices;  // output devices the engine can open
   std::string device;                // the one in use ("" = none)
-  // Sounds and effects that failed while playing and went silent until the next change: "track: unit".
+  // Sounds and effects that failed while playing: "track: unit". A failed plugin stays silent until it is
+  // retried (Plugins > Try the failed plugins again) or replaced; the keys to retry are in failedPlugins.
   std::vector<std::string> failedUnits;
+  std::map<std::string, std::string> failedPlugins;  // key -> "name: why" (plugin.retry rebuilds it from the document)
   std::map<std::string, std::string> missingPlugins;  // key -> "name: why" (not loaded: silent)
   uint64_t pluginEdits = 0;          // grows when a plugin's own editor changed it
 };
@@ -154,6 +161,9 @@ public:
   // The loaded plugin's sound as a .vstpreset, in base64 ("" if no answer, not loaded or not VST3): Bitwig export.
   std::string pluginPreset(const std::string& key, int timeoutMs);
   void openPluginEditor(const std::string& key);
+  // A plugin that failed while playing (snapshot().failedPlugins): the engine lets the failed instance go and
+  // builds a new one from the document (plugin.retry). Silent until then; a retry while stopped is healthy.
+  void retryPlugin(const std::string& key);
   void releasePlugins();  // another song (open, new): the engine's plugins start again from its states
   // New engine session: same document, loop and position; stays stopped.
   void restart();
@@ -168,7 +178,7 @@ public:
 
 private:
   struct Action {
-    enum Kind { Play, Stop, Home, Seek, SetLoop, Export, CancelExport, SelectDevice, LiveNote, Panic, Cpu, ResetLoudness, Analysis, Listen, Watch, PluginStates, PluginParams, PluginParam, PluginPreset, PluginEditor, ReleasePlugins } kind;
+    enum Kind { Play, Stop, Home, Seek, SetLoop, Export, CancelExport, SelectDevice, LiveNote, Panic, Cpu, ResetLoudness, Analysis, Listen, Watch, PluginStates, PluginParams, PluginParam, PluginPreset, PluginEditor, RetryPlugin, ReleasePlugins } kind;
     int64_t tick = 0;
     std::string text;
     int bits = 24;

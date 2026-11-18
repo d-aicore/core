@@ -35,7 +35,9 @@ struct RenderOutput {
 
 // Shared publication for background exports and the synchronous CLI. Call after every working file is
 // closed. workingPaths: the reserved working files, one per output (empty = the legacy "<path>.part"
-// names). On failure old targets are restored and surviving new files counted.
+// names). On failure old targets are restored when possible; the kept .previous copies and the new files
+// that could not be taken back are reported (PublishRollback and the error text); surviving new files are
+// counted in published.
 void validateRenderOutputs(const std::vector<RenderOutput>& outputs);
 // Codex review 2026-11-09 C2: a float export at +15 dBFS was published as a success. Before any file is published,
 // each one is checked: NaN or Inf anywhere, or (except a bounce, which goes back into the song before the master)
@@ -61,9 +63,17 @@ void checkExportLevel(const ExportLevel& level, const RenderOutput& output);
 using DiskSpaceQuery = std::function<bool(const std::filesystem::path& folder, std::filesystem::space_info& out)>;
 uint64_t exportFileBytes(int64_t frames, int bits, bool mono);
 void checkExportSpace(const std::vector<RenderOutput>& outputs, int64_t frames, int bits, const DiskSpaceQuery& query = {});
+// What the undo of a failed publication did (BUG-SWEEP-03): which old files went back to their paths, and
+// which old copies had to stay on disk as "<path>.previous..." because the path could not be taken back.
+// Every recoverable copy is kept and named; a failure never deletes an old file.
+struct PublishRollback {
+  bool attempted = false;              // the publication failed and the undo ran
+  std::vector<std::string> restored;   // old files put back at their original paths (UTF-8)
+  std::vector<std::string> backups;    // old copies kept on disk: "<path>.previous..." (UTF-8)
+};
 void publishRenderOutputs(const std::vector<RenderOutput>& outputs, int& published,
                           const std::function<void()>& beforePlace = {},
-                          const std::vector<std::string>& workingPaths = {});
+                          const std::vector<std::string>& workingPaths = {}, PublishRollback* rollback = nullptr);
 // BUG-SWEEP-02: reserve a working file that belongs to the calling operation alone. The name
 // "<target>.<pid>-<n>.part" is created exclusively (never truncating an existing file, in this process
 // or another); a taken name is skipped. The caller owns the returned path and cleans up only it.

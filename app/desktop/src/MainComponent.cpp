@@ -5256,7 +5256,7 @@ bool MainComponent::previewLibrarySample(const doc::LibrarySample& sample, const
 namespace { enum MenuId { kMidiNone = 200, kMidiDevice = 201, kNewEmpty = 50, kOpen = 1, kSave, kSaveAs, kExport24, kExport32, kQuit, kUndo, kRedo, kImportAudio, kRelocate, kDevice = 100,
                        kMidiDevicesEnd = 400, kPluginCoreFirst = 420 /* + place in doc::corePlugins(), up to 20 */,
                        kPluginPatterns = 440, kPluginSilent = 442,
-                       kPluginScan = 460, kPluginFolder, kPluginRetry, kMasterFx = 2400 /* + 60 */, kMasterFxAdd = 2500 /* + 400 */,
+                       kPluginScan = 460, kPluginFolder, kPluginRetry, kPluginRetryFailed, kMasterFx = 2400 /* + 60 */, kMasterFxAdd = 2500 /* + 400 */,
                        kOpenLogs = 580, kAbout = 581, kExportMono = 590, kImportMidi = 595, kExportMidi = 596, kExportBitwig = 597,
                        kSampleFolder = 1600, kSampleRescan, kSampleApply, kSampleAuto, kSampleShuffle, kSampleCatalogUndo,
                                               kRandomize = 1700 /* + strength 1..3; + 4: tempo per section; + 5: sound */, kViewLibrary = 1800, kViewInspector, kViewMixer, kViewScale = 1810 /* + 0 auto, + 1..5: 100..200 % */,
@@ -5356,6 +5356,10 @@ juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&) {
     const auto quarantine = plugins_->quarantine();
     menu.addItem(juce::PopupMenu::Item(u8("Try the set-aside plugins again (") + juce::String((int)quarantine.size()) + ")")
                      .setID(kPluginRetry).setEnabled(!quarantine.empty() && !plugins_->scanning()));
+    // BUG-SWEEP-05: a plugin that failed while playing is silent until it is retried or replaced — offer the
+    // retry here (the engine builds a new instance from the song; plugin.retry), not only on the next change.
+    menu.addItem(juce::PopupMenu::Item(u8("Try the failed plugins again (") + juce::String((int)snap_.failedPlugins.size()) + ")")
+                     .setID(kPluginRetryFailed).setEnabled(!snap_.failedPlugins.empty()));
     menu.addSectionHeader(u8("Found: ") + juce::String((int)plugins_->instruments().size()) + u8(" instruments, ") +
                           juce::String((int)plugins_->effects().size()) + u8(" effects"));
     for (const auto& f : plugins_->folders()) menu.addItem(juce::PopupMenu::Item(f).setEnabled(false));
@@ -5525,6 +5529,11 @@ void MainComponent::menuItemSelected(int id, int) {
     case kPluginSilent: giveSilentTracksPlugins(); break;
     case kPluginScan: scanPlugins(); break;
     case kPluginRetry: plugins_->clearQuarantine(); scanPlugins(); break;
+    case kPluginRetryFailed:
+      // BUG-SWEEP-05: each failed plugin gets a new instance from the song's state (the engine's plugin.retry).
+      for (const auto& entry : snap_.failedPlugins) session_->retryPlugin(entry.first);
+      if (!snap_.failedPlugins.empty()) logLine("Engine: retrying " + juce::String((int)snap_.failedPlugins.size()) + " failed plugin(s)");
+      break;
     case kPluginFolder: {
       chooser_ = std::make_unique<juce::FileChooser>(u8("A folder with VST3 plugins"), juce::File("C:\\Program Files\\Common Files\\VST3"));
       juce::Component::SafePointer<MainComponent> safe(this);
@@ -6470,7 +6479,19 @@ void MainComponent::timerCallback() {
     else if (job.state == "cancelled") notice_ = u8("Export cancelled; no file was changed.");
     else if (job.state == "failed") {
       notice_ = u8("The export failed.");
-      if (!test_) showError(u8("Could not export"), u8(job.error) + u8("\n\nNo existing file was changed."));
+      if (!test_) {
+        // BUG-SWEEP-03: say what really happened to the user's files. The old text claimed "No existing
+        // file was changed." even when the original sat in a kept .previous copy the undo could not put back.
+        juce::String detail = u8(job.error);
+        if (job.backups.empty()) {
+          detail += u8("\n\nNo existing file was changed.");
+        } else {
+          detail += u8("\n\nThe previous files could not be put back. Every old copy was kept (named above); rename a copy back to its original name to recover it.");
+        }
+        if (job.published > 0)
+          detail += u8("\n\nNew files that could not be taken back and are in place: ") + juce::String(job.published);
+        showError(u8("Could not export"), detail);
+      }
     } else if (exporting) notice_ = job.files > 1 ? u8("Exporting ") + juce::String(job.files) + u8(" files...") : u8("Exporting ") + juce::File(path).getFileName() + "...";
   }
   if (test_) selfTestStep();
@@ -6482,7 +6503,8 @@ void MainComponent::timerCallback() {
   }
   repaint(timelineArea());
   editor_.playheadMoved();  // only the old and the new line, not the whole piano roll
-  // A sound or effect that failed while playing is silent until the next change: say which, once.
+  // A sound or effect that failed while playing is silent until it is retried or replaced: say which, once,
+  // and offer the way back (BUG-SWEEP-05: the Plugins menu's "Try the failed plugins again").
   {
     std::string failedNow;
     for (const auto& u : snap_.failedUnits) failedNow += u + ", ";
@@ -6490,7 +6512,7 @@ void MainComponent::timerCallback() {
       failedSeen_ = failedNow;
       if (!failedNow.empty()) {
         failedNow.resize(failedNow.size() - 2);
-        notice_ = u8("Stopped after a fault, silent until your next change: ") + u8(failedNow);
+        notice_ = u8("Stopped after a fault: ") + u8(failedNow) + u8(". Try again from the Plugins menu, or replace the plugin; it stays silent until then.");
         logLine("Engine: failed units - " + u8(failedNow));
       }
     }
@@ -6507,7 +6529,8 @@ void MainComponent::timerCallback() {
   // Menus show the undo labels and the save state: rebuild them only when those change.
   const juce::String menuState = u8(history_.undoLabel()) + "|" + u8(history_.redoLabel()) + "|" + juce::String((int)history_.canUndo()) +
                                  juce::String((int)history_.canRedo()) + juce::String((int)unsaved()) +
-                                 juce::String((int)snap_.exportJob.active()) + u8(snap_.device) + juce::String((int)snap_.devices.size()) + juce::String((int)missing_.size());
+                                 juce::String((int)snap_.exportJob.active()) + u8(snap_.device) + juce::String((int)snap_.devices.size()) + juce::String((int)missing_.size()) +
+                                 juce::String((int)snap_.failedPlugins.size());
   if (menuState != menuState_) { menuState_ = menuState; menuItemsChanged(); }
   autosaveTick();
 }
@@ -6690,6 +6713,15 @@ void MainComponent::runSelfTest(juce::File picture, std::function<void(bool, juc
   if (found.is_array() && !found.empty()) test_->synth = found[0];
   else logLine("Self-test: the test synth was not read: " + problem);
 #endif
+#ifdef CORE_TEST_THROW_VST3
+  {
+    juce::String problem;
+    const nlohmann::json found = PluginCatalog::scanFile(juce::File::getSpecialLocation(juce::File::currentExecutableFile).getSiblingFile("core-engine.exe"),
+                                                         juce::File(CORE_TEST_THROW_VST3), &problem);
+    if (found.is_array() && !found.empty()) test_->throwPlugin = found[0];
+    else logLine("Self-test: the test throw plugin was not read: " + problem);
+  }
+#endif
   selfTestSynth();
   test_->started = test_->stepStarted = juce::Time::getMillisecondCounterHiRes();
 }
@@ -6715,6 +6747,10 @@ void MainComponent::selfTestStep() {
   const double now = juce::Time::getMillisecondCounterHiRes(), inStep = now - t.stepStarted;
   t.loudest = std::max({t.loudest, snap_.masterPeak[0], snap_.masterPeak[1]});
   if (!snap_.trackPeaks.empty()) t.trackMeters = true;
+  // BUG-SWEEP-05: latch the bass peak across the retry steps (the rebuilt instance is heard while it lives).
+  if (t.step >= 115 && t.step <= 119)
+    if (const auto it = snap_.trackPeaks.find("bass"); it != snap_.trackPeaks.end())
+      t.retryHeard = std::max({t.retryHeard, it->second.first, it->second.second});
   const bool applied = snap_.appliedRevision == snap_.documentRevision;
   auto next = [&](const juce::String& done) { t.log << done << "; "; ++t.step; t.stepStarted = now; };
   auto finish = [&](bool ok, const juce::String& why) {
@@ -7325,10 +7361,85 @@ void MainComponent::selfTestStep() {
       if (snap_.status == EngineStatus::Ready && applied && inStep > 500) {
         undo();
         next("restarted after timeouts");
-        t.step = 35;
+        t.step = 115;
         t.stepStarted = now;
       } else if (inStep > 8000) {
         return finish(false, "the engine did not restart after the timeouts");
+      }
+      break;
+    // BUG-SWEEP-05: a plugin that fails while playing must be offered a "Try again" that brings it back,
+    // not silence until the next change. The test effect throws 0.1 s into processing, so the endpoints are
+    // deterministic: fail -> offer -> retry (the failure list empties: a new instance) -> it plays and fails again.
+    case 115:  // the bass gets an effect that throws while playing
+#ifdef CORE_TEST_THROW_VST3
+      if (t.throwPlugin.is_null()) return finish(false, "the test throw plugin was not read");
+      if (applied && !snap_.playing && inStep > 300) {
+        edit([&t](doc::Document& d) {
+          d.loop.enabled = false;
+          for (auto& tr : d.tracks) if (tr.id == "bass") tr.mix.mute = false;
+          t.retryEffect = doc::addPluginEffect(d, "bass", t.throwPlugin);
+        }, "Add a failing effect");
+        session_->home();
+        session_->play();
+        next("failing effect added");
+      } else if (inStep > 5000) {
+        return finish(false, "not ready to add the failing effect");
+      }
+#else
+      t.step = 35;
+      t.stepStarted = now;
+#endif
+      break;
+    case 116:  // the engine reports the failed plugin (it already did before the fix)
+      if (!snap_.failedUnits.empty()) {
+        next("plugin failed while playing");
+      } else if (inStep > 8000) {
+        return finish(false, "the failing plugin was not reported as failed");
+      }
+      break;
+    case 117: {  // the notice offers a way back, and the Plugins menu has an enabled Try again for it
+      if (inStep < 150) break;  // the notice of this failure is set after the steps in the same timer pass
+      if (!notice_.containsIgnoreCase("try again") || notice_.contains("silent until your next change"))
+        return finish(false, "the failed-plugin notice offers no Try again: " + notice_);
+      const juce::PopupMenu menu = getMenuForIndex(4, "Plugins");  // top-level index: File, Edit, View, Audio, Plugins
+      int retryId = 0;
+      bool enabled = false;
+      for (juce::PopupMenu::MenuItemIterator it(menu); it.next();) {
+        const auto& item = it.getItem();
+        if (item.text.containsIgnoreCase("Try the failed plugins again")) { retryId = item.itemID; enabled = item.isEnabled; }
+      }
+      if (retryId == 0 || !enabled) return finish(false, "no enabled Try again item in the Plugins menu for the failed plugin");
+      menuItemSelected(retryId, 4);  // the user's path: the engine builds a new instance from the song
+      next("Try again offered and used");
+      break;
+    }
+    // The device processes on while the transport is stopped (live notes), so the rebuilt instance throws again
+    // ~0.1 s after the retry: its healthy window is short. Seeing the failure list empty proves the rebuild (a
+    // failed instance is never called again and never clears by itself); a busy machine that hides the window
+    // gets another Try again — the plugin has failed again by then, so the retry is always offered once more.
+    case 118:
+      if (snap_.failedUnits.empty()) {
+        session_->liveNote("bass", 45, 0.9, true);  // a held note through the new instance
+        next("retried plugin rebuilt healthy");
+      } else if (inStep > 1500) {
+        if (t.retryAttempts >= 5) return finish(false, "the retry never rebuilt the plugin (no healthy window seen)");
+        ++t.retryAttempts;
+        menuItemSelected(kPluginRetryFailed, 4);
+        t.stepStarted = now;
+      }
+      break;
+    case 119:  // the new instance plays: it processes the song and throws again 0.1 s in. Only a new instance can
+               // fail again (the failed one is never called), so the second failure proves the retry rebuilt it playing.
+      if (!snap_.failedUnits.empty() && inStep > 250) {  // the held note has reached the engine and its peak arrived
+        session_->liveNote("bass", 45, 0, false);
+        if (t.retryHeard < 0.01f) return finish(false, "the retried plugin's track did not play: bass peak " + juce::String(t.retryHeard, 4));
+        edit([&t](doc::Document& d) { doc::removeEffect(d, "bass", t.retryEffect); }, "Remove the failing effect");
+        session_->stop();
+        t.log << "retried plugin played again; ";
+        t.step = 35;
+        t.stepStarted = now;
+      } else if (inStep > 8000) {
+        return finish(false, "the retried plugin never failed again (did it play?)");
       }
       break;
     case 35: {  // the picture shows the waveforms once they are computed

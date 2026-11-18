@@ -550,6 +550,10 @@ private:
     std::string gainId;    // the test synth's "Gain" parameter, as the engine names it
     std::string copyTrack; // the plugin track the self-test duplicated
     uint64_t pluginEditsSeen = 0;  // snap_.pluginEdits before the self-test moved a plugin's parameter
+    nlohmann::json throwPlugin;  // the test effect that throws while playing (BUG-SWEEP-05: Try again)
+    int retryEffect = -1;        // where the throwing effect sits in the bass chain
+    float retryHeard = 0;        // the bass peak latched while the retried instance is in the song
+    int retryAttempts = 0;       // Try again clicks: a busy machine can hide the rebuilt instance's healthy window
   };
   std::unique_ptr<SelfTest> test_;
   void selfTestSynth();  // the self-test's synth on every note track without a plugin
