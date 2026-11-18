@@ -1,5 +1,6 @@
 #include "storage.hpp"
 #include <atomic>
+#include <cerrno>
 #include <fstream>
 #include <sstream>
 #include <system_error>
@@ -8,6 +9,9 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
+#else
+#include <fcntl.h>
+#include <unistd.h>
 #endif
 
 namespace core::doc {
@@ -58,6 +62,22 @@ std::string windowsError(DWORD code) {
   return message + " (" + std::to_string(code) + ")";
 }
 #endif
+
+// Creates an empty file only when the name does not exist yet: 0 = created, 1 = the name is taken, 2 = cannot
+// create here at all (no folder, no permission...). Never truncates an existing file: a ".saving-N" left by an
+// earlier failed save is the only copy of that version (BUG-SWEEP-01).
+int createNew(const fs::path& p) {
+#ifdef _WIN32
+  const HANDLE h = CreateFileW(p.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
+  if (h != INVALID_HANDLE_VALUE) { CloseHandle(h); return 0; }
+  const DWORD code = GetLastError();
+  return code == ERROR_FILE_EXISTS || code == ERROR_ALREADY_EXISTS ? 1 : 2;
+#else
+  const int fd = ::open(p.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0666);
+  if (fd >= 0) { ::close(fd); return 0; }
+  return errno == EEXIST ? 1 : 2;
+#endif
+}
 
 // The bytes are on the disk, not only in a cache, before the file replaces the previous one.
 void flushToDisk(const fs::path& path) {
@@ -172,9 +192,20 @@ OpenResult openFile(const fs::path& path) {
 
 void writeFileSafely(const std::string& text, const fs::path& path, const std::function<bool(const std::string&)>& check) {
   static std::atomic<int> counter{0};
-  // Same folder, so the final step is a rename on the same volume.
-  const fs::path temporary = withSuffix(path, ".saving-" + std::to_string(counter++));
-  auto discard = [&] { std::error_code ignored; fs::remove(temporary, ignored); };
+  // Same folder, so the final step is a rename on the same volume. The name must be free and the file created by
+  // this call alone (BUG-SWEEP-01): the counter starts at zero again in every process, and a ".saving-N" retained
+  // by an earlier failed save is the only copy of that version (D4). Taken names are skipped and the file is
+  // created exclusively, so this save never truncates, moves or deletes a temporary file it did not create — on
+  // success too, since the replacement consumes the temporary file it is given.
+  fs::path temporary;
+  for (;;) {
+    const fs::path candidate = withSuffix(path, ".saving-" + std::to_string(counter++));
+    const int made = createNew(candidate);
+    if (made == 0) { temporary = candidate; break; }
+    if (made == 2) throw SaveError("Cannot write in " + show(path.parent_path()) + ".");
+    // made == 1: a retained recovery copy or another save owns this name; try the next number.
+  }
+  auto discard = [&] { std::error_code ignored; fs::remove(temporary, ignored); };  // only this call's own file
   try {
     {
       std::ofstream out(temporary, std::ios::binary | std::ios::trunc);

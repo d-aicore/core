@@ -2,10 +2,13 @@
 // "section" são escolhidos na canção e o que é recusado antes de chegar ao Apply. O relatorio profundo de 2026-11-17
 // (itens 22 e 26) abriu estas duas portas: o resolvedor não parava na primeira faixa igual (a última ganhava) e um
 // Mix sem botões era guardado como chamada, aplicado sem mudar nada e anunciado como feito.
+#include <filesystem>
+#include <fstream>
 #include <string>
 #include <utility>
 #include <vector>
 #include "support/check.hpp"
+#include "bridge.hpp"
 #include "calls.hpp"
 #include "edit.hpp"
 
@@ -185,4 +188,69 @@ TEST("audit 26: um Open sem botoes continua a ser uma chamada que nao muda nada 
   const auto opens = core::control::opensOf(p, "");
   CHECK_EQ(opens.size(), (size_t)1);
   CHECK_EQ(opens.empty() ? std::string() : opens[0].what, std::string("mixer"));
+}
+
+// ---- BUG-SWEEP-04 (2026-11-18): a malformed addon.json is an unusable add-on with a reason, never a throw.
+// readAddon promises optional failure (bridge.hpp); typed json::value() threw type_error.302 on a non-string
+// name/version/minCore, and the desktop's calls (openAicore, chooseAicoreFolder) have no catch around them.
+
+namespace {
+namespace fs = std::filesystem;
+fs::path addonFolder(const std::string& name) {
+  const fs::path folder = fs::temp_directory_path() / "core-calls-tests" / name;
+  std::error_code e;
+  fs::remove_all(folder, e);
+  fs::create_directories(folder, e);
+  return folder;
+}
+void writeManifest(const fs::path& folder, const std::string& text) {
+  std::ofstream out(folder / "addon.json", std::ios::binary | std::ios::trunc);
+  out << text;
+}
+const char* const kValidManifest =
+    R"({"name":"AICORE","version":"1.2","minCore":"0.7","open":{"program":"{folder}/aicore.exe","args":["--page","{page}"]}})";
+}  // namespace
+
+TEST("BUG-SWEEP-04: malformed addon fields are refused with a reason, never a throw") {
+  const fs::path folder = addonFolder("malformed");
+  for (const std::string manifest : {
+         std::string(R"({"name":null})"),
+         std::string(R"({"name":"AICORE","open":{"program":"fake"},"version":42})"),
+         std::string(R"({"name":"AICORE","open":{"program":"fake"},"minCore":42})"),
+         std::string(R"({"name":"AICORE","open":"not-an-object"})")}) {
+    writeManifest(folder, manifest);
+    std::string why;
+    bool threw = false;
+    std::optional<core::control::Addon> addon;
+    try { addon = core::control::readAddon(folder, &why); } catch (const std::exception&) { threw = true; }
+    CHECK(!threw);  // before: type_error.302 escaped readAddon
+    CHECK(!addon.has_value());
+    CHECK(!why.empty());
+    CHECK(why.find("addon.json") != std::string::npos);  // the reason names the file it comes from
+  }
+  // A well-formed manifest still loads: the type checks must not refuse a usable add-on.
+  writeManifest(folder, kValidManifest);
+  std::string why;
+  const auto addon = core::control::readAddon(folder, &why);
+  CHECK(addon.has_value());
+  if (addon) {
+    CHECK_EQ(addon->name, std::string("AICORE"));
+    CHECK_EQ(addon->version, std::string("1.2"));
+    CHECK_EQ(addon->minCore, std::string("0.7"));
+    CHECK(addon->program.find("{folder}") == std::string::npos);  // {folder} filled in
+    CHECK_EQ(addon->args.size(), (size_t)2);
+  }
+}
+
+TEST("BUG-SWEEP-04: a malformed first folder does not hide the usable add-on in the next") {
+  const fs::path bad = addonFolder("bad-first");
+  const fs::path good = addonFolder("good-second");
+  writeManifest(bad, R"({"name":null})");
+  writeManifest(good, kValidManifest);
+  bool threw = false;
+  std::optional<core::control::Addon> found;
+  try { found = core::control::findAddon({bad, good}); } catch (const std::exception&) { threw = true; }
+  CHECK(!threw);  // before: the first folder's throw escaped findAddon and blocked the second folder
+  CHECK(found.has_value());
+  if (found) CHECK_EQ(found->folder, good);
 }
