@@ -1,5 +1,6 @@
 #include "MainComponent.h"
 #include "ChoiceDialog.h"
+#include "MenuIds.h"
 #include "core/project.hpp"
 #include "follow.hpp"
 #include "stutter.hpp"
@@ -32,6 +33,10 @@
 #include "role_tools.hpp"
 
 namespace core::app {
+
+// The catalog menus' identifier allocation and dispatch (BUG-SWEEP-32). Aliased because the two menu functions
+// below have a local juce::PopupMenu named `menu`, which would shadow the namespace name.
+namespace menuids = core::app::menu;
 
 namespace {
 
@@ -4607,66 +4612,77 @@ void MainComponent::showAddTrackMenu() {
   juce::PopupMenu menu;
   // The plugins of this PC first (Diogo 2026-11-16: the sound comes from plugins), by maker.
   const std::vector<nlohmann::json> instruments = plugins_->instruments();
+  const int pluginFirst = menuids::addTrackPluginFirst();
   menu.addSectionHeader(u8("Plugin instruments"));
   {
     std::map<std::string, juce::PopupMenu> byVendor;
     for (size_t i = 0; i < instruments.size(); ++i) {
       std::string vendor = instruments[i].value("vendor", std::string());
       if (vendor.empty()) vendor = "Other";
-      byVendor[vendor].addItem(2000 + (int)i, u8(instruments[i].value("name", std::string("Plugin"))));
+      byVendor[vendor].addItem(pluginFirst + (int)i, u8(instruments[i].value("name", std::string("Plugin"))));
     }
     for (auto& [vendor, sub] : byVendor) menu.addSubMenu(u8(vendor), sub);
-    if (instruments.empty()) menu.addItem(juce::PopupMenu::Item(u8("None found yet: Plugins menu > Scan plugins")).setID(99999).setEnabled(false));
+    if (instruments.empty()) menu.addItem(juce::PopupMenu::Item(u8("None found yet: Plugins menu > Scan plugins")).setID(menuids::kNoPlugins).setEnabled(false));
   }
   menu.addSeparator();
   const std::vector<doc::InstrumentChoice>& native = doc::builtinInstruments();
   menu.addSectionHeader(u8("Core's own instruments"));
   for (size_t i = 0; i < native.size(); ++i)
-    if (native[i].name != std::string("sampler")) menu.addItem(3000 + (int)i, u8(native[i].label));
-  menu.addItem(1002, u8("Sampler track (empty)"));
+    if (native[i].name != std::string("sampler")) menu.addItem(menuids::kBuiltinAddFirst + (int)i, u8(native[i].label));
+  menu.addItem(menuids::kSamplerTrack, u8("Sampler track (empty)"));
   menu.addSeparator();
-  menu.addItem(1000, u8("Audio track (empty)"));
-  menu.addItem(1001, u8("Import audio (WAV)…"));
+  menu.addItem(menuids::kAudioTrack, u8("Audio track (empty)"));
+  menu.addItem(menuids::kImportAudio, u8("Import audio (WAV)…"));
   menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&addTrack_), [this, instruments](int chosen) {
-    if (chosen >= 2000 && chosen - 2000 < (int)instruments.size()) {
-      const nlohmann::json plugin = instruments[(size_t)chosen - 2000];
-      std::string id;
-      edit([&](doc::Document& d) { id = doc::addPluginTrack(d, plugin); }, u8("Add ") + u8(plugin.value("name", std::string("plugin"))));
-      if (!id.empty()) { selectTrack(id); session_->openPluginEditor(doc::pluginKey(id)); }
-      return;
+    const menuids::AddTrackChoice choice = menuids::decodeAddTrackMenu(chosen, (int)instruments.size(), (int)doc::builtinInstruments().size());
+    switch (choice.action) {
+      case menuids::AddTrackAction::addPluginInstrument: {
+        const nlohmann::json plugin = instruments[(size_t)choice.index];
+        std::string id;
+        edit([&](doc::Document& d) { id = doc::addPluginTrack(d, plugin); }, u8("Add ") + u8(plugin.value("name", std::string("plugin"))));
+        if (!id.empty()) { selectTrack(id); session_->openPluginEditor(doc::pluginKey(id)); }
+        return;
+      }
+      case menuids::AddTrackAction::addBuiltinInstrument: {
+        const doc::InstrumentChoice builtin = doc::builtinInstruments()[(size_t)choice.index];
+        std::string id;
+        edit([&](doc::Document& d) { id = doc::addTrack(d, builtin.name); }, u8("Add ") + u8(builtin.label));
+        if (!id.empty()) selectTrack(id);
+        return;
+      }
+      case menuids::AddTrackAction::samplerTrack: {
+        std::string id;
+        edit([&](doc::Document& d) { id = doc::addTrack(d, "sampler"); }, u8("Sampler track"));
+        if (!id.empty()) selectTrack(id);
+        return;
+      }
+      case menuids::AddTrackAction::audioTrack:
+        edit([](doc::Document& d) { doc::addAudioTrack(d, "Audio"); }, u8("Audio track"));
+        return;
+      case menuids::AddTrackAction::importAudio:
+        importAudio();
+        return;
+      case menuids::AddTrackAction::none:
+        return;
     }
-    const std::vector<doc::InstrumentChoice>& list = doc::builtinInstruments();
-    if (chosen >= 3000 && chosen - 3000 < (int)list.size()) {
-      const doc::InstrumentChoice choice = list[(size_t)chosen - 3000];
-      std::string id;
-      edit([&](doc::Document& d) { id = doc::addTrack(d, choice.name); }, u8("Add ") + u8(choice.label));
-      if (!id.empty()) selectTrack(id);
-      return;
-    }
-    if (chosen == 1002) {
-      std::string id;
-      edit([&](doc::Document& d) { id = doc::addTrack(d, "sampler"); }, u8("Sampler track"));
-      if (!id.empty()) selectTrack(id);
-      return;
-    }
-    if (chosen == 1000) { edit([](doc::Document& d) { doc::addAudioTrack(d, "Audio"); }, u8("Audio track")); return; }
-    if (chosen == 1001) { importAudio(); return; }
   });
 }
 
 void MainComponent::showTrackMenu(const std::string& trackId) {
-  // Library samples offered in the Sample submenu: kOfferedSampleId + their place (a plain Sampler track offers
-  // up to 12 kinds x 12, past the menu's other ids).
+  // Library samples offered in the Sample submenu: kOfferedSampleId + their place. The band is never populated
+  // today (offered stays empty; the Tools submenu uses setAction lambdas, no numeric ids). If it is ever revived,
+  // allocate it through MenuIds.h: the plugin bands are uncapped and grow past 5000 (BUG-SWEEP-32).
   static constexpr int kOfferedSampleId = 5000;
   juce::PopupMenu menu;
-  menu.addItem(1, u8("Rename…"));
-  menu.addItem(2, "Duplicate");
-  menu.addItem(4, u8("Automation (volume, pan, effects)…"));
+  menu.addItem(menuids::kRename, u8("Rename…"));
+  menu.addItem(menuids::kDuplicate, "Duplicate");
+  menu.addItem(menuids::kAutomation, u8("Automation (volume, pan, effects)…"));
   // Another instrument for this track (its notes, effects, volume and automation stay).
   const doc::Track* current = history_.current().findTrack(trackId);
-  // Core's own instruments (ids 800 + place in builtinInstruments()).
+  // Core's own instruments (ids kBuiltinReplaceFirst + place in builtinInstruments()).
   juce::PopupMenu replace;
   const std::vector<nlohmann::json> instruments = plugins_->instruments(), pluginFx = plugins_->effects();
+  const menuids::TrackMenuIds ids = menuids::trackMenuIds((int)instruments.size(), (int)pluginFx.size());
   auto byVendor = [](const std::vector<nlohmann::json>& list, int firstId, const std::function<bool(const nlohmann::json&)>& ticked) {
     std::map<std::string, juce::PopupMenu> groups;
     for (size_t i = 0; i < list.size(); ++i) {
@@ -4676,13 +4692,13 @@ void MainComponent::showTrackMenu(const std::string& trackId) {
     }
     juce::PopupMenu out;
     for (auto& [vendor, sub] : groups) out.addSubMenu(u8(vendor), sub);
-    if (list.empty()) out.addItem(juce::PopupMenu::Item(u8("None found yet: Plugins menu > Scan plugins")).setID(99999).setEnabled(false));
+    if (list.empty()) out.addItem(juce::PopupMenu::Item(u8("None found yet: Plugins menu > Scan plugins")).setID(menuids::kNoPlugins).setEnabled(false));
     return out;
   };
-  // The track's plugins: its instrument's window, and each plugin effect's window (ids 900 + its place in the chain).
+  // The track's plugins: its instrument's window, and each plugin effect's window (ids kEffectOpenFirst + its place in the chain).
   if (current && current->instrument.kind == "plugin")
     menu.addItem(juce::PopupMenu::Item(u8("Open ") + u8(current->instrument.plugin.value("name", std::string("the plugin"))) + u8("…"))
-                     .setID(6).setEnabled(!snap_.missingPlugins.count(doc::pluginKey(trackId))));
+                     .setID(menuids::kOpenInstrument).setEnabled(!snap_.missingPlugins.count(doc::pluginKey(trackId))));
   if (current) {
     juce::PopupMenu fxMenu;
     // Every effect of the chain is listed, Core's own ones included (an old song or a template carries
@@ -4693,70 +4709,88 @@ void MainComponent::showTrackMenu(const std::string& trackId) {
       juce::PopupMenu one;
       if (entry.window) {
         const std::string key = doc::pluginKey(trackId, current->effects[(size_t)i].value("id", std::string()));
-        one.addItem(juce::PopupMenu::Item(u8("Open…")).setID(900 + i).setEnabled(!snap_.missingPlugins.count(key)));
+        one.addItem(juce::PopupMenu::Item(u8("Open…")).setID(menuids::kEffectOpenFirst + i).setEnabled(!snap_.missingPlugins.count(key)));
       }
-      one.addItem(juce::PopupMenu::Item(u8("On")).setID(940 + i).setTicked(!doc::effectBypassed(current->effects[(size_t)i])));
-      one.addItem(juce::PopupMenu::Item(u8("Remove")).setID(920 + i));
+      one.addItem(juce::PopupMenu::Item(u8("On")).setID(menuids::kEffectOnFirst + i).setTicked(!doc::effectBypassed(current->effects[(size_t)i])));
+      one.addItem(juce::PopupMenu::Item(u8("Remove")).setID(menuids::kEffectRemoveFirst + i));
       fxMenu.addSubMenu(u8(entry.label), one);
     }
     fxMenu.addSeparator();
-    fxMenu.addSubMenu(u8("Add a plugin effect"), byVendor(pluginFx, 4000, [](const nlohmann::json&) { return false; }));
+    fxMenu.addSubMenu(u8("Add a plugin effect"), byVendor(pluginFx, ids.addEffectPluginFirst, [](const nlohmann::json&) { return false; }));
     menu.addSubMenu(u8("Plugin effects"), fxMenu);
   }
   if (current && doc::playsPatterns(*current)) {
-    replace.addSubMenu(u8("Plugin instruments"), byVendor(instruments, 300, [&](const nlohmann::json& p) {
+    replace.addSubMenu(u8("Plugin instruments"), byVendor(instruments, ids.replacePluginFirst, [&](const nlohmann::json& p) {
       return current->instrument.kind == "plugin" && current->instrument.plugin.value("id", std::string()) == p.value("id", std::string()) &&
              current->instrument.plugin.value("file", std::string()) == p.value("file", std::string());
     }));
     replace.addSeparator();
     const std::vector<doc::InstrumentChoice>& native = doc::builtinInstruments();
     for (size_t i = 0; i < native.size(); ++i)
-      replace.addItem(juce::PopupMenu::Item(u8(native[i].label)).setID(800 + (int)i)
+      replace.addItem(juce::PopupMenu::Item(u8(native[i].label)).setID(menuids::kBuiltinReplaceFirst + (int)i)
                           .setTicked(current->instrument.kind == "builtin" && current->instrument.name == native[i].name));
     menu.addSubMenu(u8("Replace instrument"), replace);
   }
   std::vector<std::string> offered;
   if (current && doc::playsPatterns(*current)) menu.addSubMenu(u8("Tools"), coreToolsMenu(trackId));
   menu.addSeparator();
-  menu.addItem(3, "Remove");
+  menu.addItem(menuids::kRemoveTrack, "Remove");
   menu.showMenuAsync(juce::PopupMenu::Options(), [this, trackId, offered, instruments, pluginFx](int chosen) {
     const doc::Track* t = history_.current().findTrack(trackId);
     if (!t) return;
     const juce::String name = u8(t->name);
-    if (chosen >= 300 && chosen - 300 < (int)instruments.size()) {
-      const nlohmann::json plugin = instruments[(size_t)chosen - 300];
-      edit([&](doc::Document& d) { doc::replaceInstrumentWithPlugin(d, trackId, plugin); },
-           u8("Instrument: ") + u8(plugin.value("name", std::string("plugin"))));
-      session_->openPluginEditor(doc::pluginKey(trackId));
-      return;
+    const menuids::TrackChoice choice = menuids::decodeTrackMenu(chosen, (int)instruments.size(), (int)pluginFx.size(),
+                                                                 (int)doc::builtinInstruments().size(), (int)t->effects.size());
+    switch (choice.action) {
+      case menuids::TrackAction::replaceWithPlugin: {
+        const nlohmann::json plugin = instruments[(size_t)choice.index];
+        edit([&](doc::Document& d) { doc::replaceInstrumentWithPlugin(d, trackId, plugin); },
+             u8("Instrument: ") + u8(plugin.value("name", std::string("plugin"))));
+        session_->openPluginEditor(doc::pluginKey(trackId));
+        return;
+      }
+      case menuids::TrackAction::addPluginEffect: {
+        const nlohmann::json plugin = pluginFx[(size_t)choice.index];
+        int at = -1;
+        edit([&](doc::Document& d) { at = doc::addPluginEffect(d, trackId, plugin); }, u8("Add ") + u8(plugin.value("name", std::string("plugin"))));
+        if (const doc::Track* now = history_.current().findTrack(trackId); now && at >= 0 && at < (int)now->effects.size())
+          session_->openPluginEditor(doc::pluginKey(trackId, now->effects[(size_t)at].value("id", std::string())));
+        return;
+      }
+      case menuids::TrackAction::openEffect: {
+        const std::string fxId = t->effects[(size_t)choice.index].value("id", std::string());
+        session_->openPluginEditor(doc::pluginKey(trackId, fxId));
+        return;
+      }
+      case menuids::TrackAction::removeEffect:
+        edit([&](doc::Document& d) { doc::removeEffect(d, trackId, choice.index); }, u8("Remove effect"));
+        return;
+      case menuids::TrackAction::toggleEffect:
+        edit([&](doc::Document& d) { doc::setEffectBypass(d, trackId, choice.index, !doc::effectBypassed(d.findTrack(trackId)->effects[(size_t)choice.index])); }, u8("Effect on/off"));
+        return;
+      case menuids::TrackAction::openInstrument:
+        session_->openPluginEditor(doc::pluginKey(trackId));
+        return;
+      case menuids::TrackAction::replaceWithBuiltin: {
+        const doc::InstrumentChoice builtin = doc::builtinInstruments()[(size_t)choice.index];
+        edit([&](doc::Document& d) { doc::replaceInstrument(d, trackId, builtin.name); }, u8("Replace instrument: ") + u8(builtin.label));
+        return;
+      }
+      case menuids::TrackAction::rename:
+        askTrackName(trackId);
+        return;
+      case menuids::TrackAction::duplicate:
+        duplicateTrack(trackId);
+        return;
+      case menuids::TrackAction::removeTrack:
+        edit([&](doc::Document& d) { doc::removeTrack(d, trackId); }, "Remove " + name);  // undo brings it back
+        return;
+      case menuids::TrackAction::automation:
+        openAutomation(trackId, "gainDb");
+        return;
+      case menuids::TrackAction::none:
+        return;
     }
-    if (chosen >= 4000 && chosen - 4000 < (int)pluginFx.size()) {
-      const nlohmann::json plugin = pluginFx[(size_t)chosen - 4000];
-      int at = -1;
-      edit([&](doc::Document& d) { at = doc::addPluginEffect(d, trackId, plugin); }, u8("Add ") + u8(plugin.value("name", std::string("plugin"))));
-      if (const doc::Track* now = history_.current().findTrack(trackId); now && at >= 0 && at < (int)now->effects.size())
-        session_->openPluginEditor(doc::pluginKey(trackId, now->effects[(size_t)at].value("id", std::string())));
-      return;
-    }
-    if (chosen >= 900 && chosen < 960) {
-      const int i = (chosen - 900) % 20;
-      if (i >= (int)t->effects.size()) return;
-      const std::string fxId = t->effects[(size_t)i].value("id", std::string());
-      if (chosen < 920) session_->openPluginEditor(doc::pluginKey(trackId, fxId));
-      else if (chosen < 940) edit([&](doc::Document& d) { doc::removeEffect(d, trackId, i); }, u8("Remove effect"));
-      else edit([&](doc::Document& d) { doc::setEffectBypass(d, trackId, i, !doc::effectBypassed(d.findTrack(trackId)->effects[(size_t)i])); }, u8("Effect on/off"));
-      return;
-    }
-    if (chosen == 6) { session_->openPluginEditor(doc::pluginKey(trackId)); return; }
-    if (chosen >= 800 && chosen - 800 < (int)doc::builtinInstruments().size()) {
-      const doc::InstrumentChoice choice = doc::builtinInstruments()[(size_t)chosen - 800];
-      edit([&](doc::Document& d) { doc::replaceInstrument(d, trackId, choice.name); }, u8("Replace instrument: ") + u8(choice.label));
-      return;
-    }
-    if (chosen == 1) askTrackName(trackId);
-    if (chosen == 2) duplicateTrack(trackId);
-    if (chosen == 3) edit([&](doc::Document& d) { doc::removeTrack(d, trackId); }, "Remove " + name);  // undo brings it back
-    if (chosen == 4) openAutomation(trackId, "gainDb");
   });
 }
 

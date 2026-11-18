@@ -1,0 +1,79 @@
+Test project D:/Core-build/flawless-menu
+    Start 12: menu_tests
+1/1 Test #12: menu_tests .......................***Failed    0.02 sec
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=501 chosen=800: measured replaceWithPlugin index=500, expected replaceWithBuiltin index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=600 chosen=800: measured replaceWithPlugin index=500, expected replaceWithBuiltin index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=600 chosen=807: measured replaceWithPlugin index=507, expected replaceWithBuiltin index=7
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=601 chosen=800: measured replaceWithPlugin index=500, expected replaceWithBuiltin index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=601 chosen=807: measured replaceWithPlugin index=507, expected replaceWithBuiltin index=7
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=601 chosen=900: measured replaceWithPlugin index=600, expected openEffect index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=620 chosen=800: measured replaceWithPlugin index=500, expected replaceWithBuiltin index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=620 chosen=807: measured replaceWithPlugin index=507, expected replaceWithBuiltin index=7
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=620 chosen=900: measured replaceWithPlugin index=600, expected openEffect index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=621 chosen=800: measured replaceWithPlugin index=500, expected replaceWithBuiltin index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=621 chosen=807: measured replaceWithPlugin index=507, expected replaceWithBuiltin index=7
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=621 chosen=900: measured replaceWithPlugin index=600, expected openEffect index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=621 chosen=920: measured replaceWithPlugin index=620, expected removeEffect index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=640 chosen=800: measured replaceWithPlugin index=500, expected replaceWithBuiltin index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=640 chosen=807: measured replaceWithPlugin index=507, expected replaceWithBuiltin index=7
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=640 chosen=900: measured replaceWithPlugin index=600, expected openEffect index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=640 chosen=920: measured replaceWithPlugin index=620, expected removeEffect index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=641 chosen=800: measured replaceWithPlugin index=500, expected replaceWithBuiltin index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=641 chosen=807: measured replaceWithPlugin index=507, expected replaceWithBuiltin index=7
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=641 chosen=900: measured replaceWithPlugin index=600, expected openEffect index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=641 chosen=920: measured replaceWithPlugin index=620, expected removeEffect index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=641 chosen=940: measured replaceWithPlugin index=640, expected toggleEffect index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=1000 chosen=800: measured replaceWithPlugin index=500, expected replaceWithBuiltin index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=1000 chosen=807: measured replaceWithPlugin index=507, expected replaceWithBuiltin index=7
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=1000 chosen=900: measured replaceWithPlugin index=600, expected openEffect index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=1000 chosen=920: measured replaceWithPlugin index=620, expected removeEffect index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=1000 chosen=940: measured replaceWithPlugin index=640, expected toggleEffect index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=1001 chosen=800: measured replaceWithPlugin index=500, expected replaceWithBuiltin index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=1001 chosen=807: measured replaceWithPlugin index=507, expected replaceWithBuiltin index=7
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=1001 chosen=900: measured replaceWithPlugin index=600, expected openEffect index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=1001 chosen=920: measured replaceWithPlugin index=620, expected removeEffect index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=1001 chosen=940: measured replaceWithPlugin index=640, expected toggleEffect index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=5000 chosen=800: measured replaceWithPlugin index=500, expected replaceWithBuiltin index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=5000 chosen=807: measured replaceWithPlugin index=507, expected replaceWithBuiltin index=7
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=5000 chosen=900: measured replaceWithPlugin index=600, expected openEffect index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=5000 chosen=920: measured replaceWithPlugin index=620, expected removeEffect index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=5000 chosen=940: measured replaceWithPlugin index=640, expected toggleEffect index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=5000 chosen=4000: measured replaceWithPlugin index=3700, expected addPluginEffect index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:78: replace-instrument band catalog=501: plugin item id 800 (index 500) is also a fixed action id
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:78: replace-instrument band catalog=600: plugin item id 800 (index 500) is also a fixed action id
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:78: replace-instrument band catalog=601: plugin item id 800 (index 500) is also a fixed action id
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:78: replace-instrument band catalog=620: plugin item id 800 (index 500) is also a fixed action id
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:78: replace-instrument band catalog=621: plugin item id 800 (index 500) is also a fixed action id
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:78: replace-instrument band catalog=640: plugin item id 800 (index 500) is also a fixed action id
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:78: replace-instrument band catalog=641: plugin item id 800 (index 500) is also a fixed action id
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:78: replace-instrument band catalog=1000: plugin item id 800 (index 500) is also a fixed action id
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:78: replace-instrument band catalog=1001: plugin item id 800 (index 500) is also a fixed action id
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:78: replace-instrument band catalog=5000: plugin item id 800 (index 500) is also a fixed action id
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:126: track menu catalog=5000: the two plugin bands overlap
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=5000 chosen=4000: measured replaceWithPlugin index=3700, expected addPluginEffect index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:52: track menu catalog=5000 chosen=4299: measured replaceWithPlugin index=3999, expected addPluginEffect index=299
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:61: add track menu catalog=1001 chosen=3000: measured addPluginInstrument index=1000, expected addBuiltinInstrument index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:61: add track menu catalog=5000 chosen=3000: measured addPluginInstrument index=1000, expected addBuiltinInstrument index=0
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:61: add track menu catalog=5000 chosen=3007: measured addPluginInstrument index=1007, expected addBuiltinInstrument index=7
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:78: add-track plugin band catalog=1001: plugin item id 3000 (index 1000) is also a fixed action id
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-menu\tests\menu_tests.cpp:78: add-track plugin band catalog=5000: plugin item id 3000 (index 1000) is also a fixed action id
+FAIL track menu: action ids route to their action at every boundary catalog size
+FAIL track menu: plugin item ids never share an action id, at any boundary catalog size
+ok   track menu: the effect chain ids keep the cap-16 wrap semantics
+ok   track menu: unknown ids do nothing
+FAIL add track menu: action ids route to their action at every boundary catalog size
+FAIL add track menu: plugin item ids never share an action id, at any boundary catalog size
+ok   add track menu: unknown ids do nothing
+7 testes, 366 verificacoes, 56 falhas
+
+
+0% tests passed, 1 tests failed out of 1
+
+Label Time Summary:
+merge    =   0.02 sec*proc (1 test)
+
+Total Test time (real) =   0.02 sec
+
+The following tests FAILED:
+	 12 - menu_tests (Failed)                               merge
+Errors while running CTest
