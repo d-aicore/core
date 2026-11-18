@@ -129,6 +129,8 @@ public:
   void deleteSelection();
   // A point inside the note drawn at this tick and pitch, 2 px from its left edge (self-test mouse events).
   juce::Point<int> cellGrabPoint(int64_t tick, int pitch) const;
+  // The length a click on empty space gives a new note: the last one created or resized (0: the snap grid).
+  int64_t lastNoteLength() const { return lastLength_; }
 
 private:
   void stepMouseDown(const juce::MouseEvent& e, const doc::Note* hit);  // drums
@@ -201,7 +203,7 @@ private:
   int headerHeight() const;  // one row for drums, two for pitched tracks
   void updateKeysHint();
   void keysWheel(float deltaY, int y);  // Ctrl+wheel: Keys+/Keys- around the key under the mouse
-  juce::TextButton drawTool_, selectTool_, eraseTool_;
+  juce::TextButton drawTool_, selectTool_, eraseTool_, paintTool_;
   juce::TextButton edit_;        // Edit ▾: every note tool (showTools)
   theme::InfoDot editInfo_;
   std::set<std::string> editIds() const;  // the notes an Edit tool works on (bars shown; the selected ones among them)
@@ -237,14 +239,23 @@ private:
   juce::Rectangle<int> marquee_;               // the select tool's box while it is dragged
   juce::Label title_, hint_;
 
-  enum class Drag { None, Move, Resize, Velocity, Marquee, Erase, Playhead } drag_ = Drag::None;
+  enum class Drag { None, Move, Resize, Velocity, Marquee, Erase, Playhead, Create, Paint } drag_ = Drag::None;
   juce::Point<int> marqueeStart_;
-  std::set<std::string> marqueeBase_;          // selected before the box (Ctrl adds the box to them)
+  std::set<std::string> marqueeBase_;          // selected before the box (Ctrl/Shift adds the box to them)
   std::string dragNote_;
   int64_t dragStartTick_ = 0, dragOffsetTicks_ = 0;
   int dragStartPitch_ = 0;
   std::vector<doc::Note> dragOriginal_;  // the selected notes when the drag started
   bool gestureOpen_ = false;             // drums: the move gesture starts with the first real drag
+  // Pulse gestures (owner 2026-11-18, «apenas muda no piano»): a click creates with the last used length and the
+  // drag sizes it (one undo step); Shift+drag clones; Alt bypasses snap; Paint seeds a note per cell; Ctrl+drag lassos.
+  int64_t lastLength_ = 0;  // the last created/resized length; 0: the snap grid's length
+  std::string createId_;    // the note the create-drag is sizing
+  int64_t createTick_ = 0;
+  std::set<std::pair<int64_t, int>> painted_;  // cells the paint drag already seeded (one gesture)
+  void startMarquee(const juce::MouseEvent& e);
+  void seedPaint(juce::Point<int> p, bool free);
+  void updateCursor(juce::Point<int> p, const juce::ModifierKeys& mods);  // per tool, per place: hand over body, ↔ at edge
 
   // The ghost note and the alignment guides (see setDrawingHelp). Lines are 1 px rectangles; empty = none.
   struct Overlay {

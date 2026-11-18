@@ -70,6 +70,16 @@ void drawIcon(juce::Graphics& g, const juce::String& name, juce::Rectangle<float
     e.applyTransform(juce::AffineTransform::rotation(-0.75f).translated(c.x, c.y));
     g.strokePath(e, juce::PathStrokeType(1.4f));
     g.drawLine(c.x - s * 0.1f, c.y - s * 0.45f, c.x + s * 0.45f, c.y + s * 0.1f, 1.4f);
+  } else if (name == "paint") {  // a brush: slanted handle, flat tip, and the stroke it leaves under it
+    juce::Path handle;
+    handle.startNewSubPath(c.x + s * 0.5f, c.y - s * 0.55f);
+    handle.lineTo(c.x - s * 0.05f, c.y);
+    g.strokePath(handle, juce::PathStrokeType(1.6f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    juce::Path tip;
+    tip.addRoundedRectangle(-s * 0.3f, -s * 0.16f, s * 0.42f, s * 0.34f, 1.0f);
+    tip.applyTransform(juce::AffineTransform::rotation(-0.75f).translated(c.x - s * 0.16f, c.y + s * 0.14f));
+    g.fillPath(tip);
+    g.drawLine(c.x - s * 0.55f, c.y + s * 0.55f, c.x + s * 0.2f, c.y + s * 0.55f, 1.6f);
   } else if (name == "folder") {
     juce::Path f;
     f.startNewSubPath(c.x - s * 0.6f, c.y + s * 0.45f);

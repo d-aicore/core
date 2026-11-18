@@ -79,7 +79,7 @@ inline const juce::Colour kError{0xffe0504a};
 // A TextButton with this property ("home", "play", "pause", "stop", "loop") is drawn as that icon instead of its text.
 inline const juce::Identifier kIconProperty{"coreIcon"};
 
-// Small line icons in the current colour: play, stop, home, loop, pencil, select, erase, folder, star,
+// Small line icons in the current colour: play, stop, home, loop, pencil, select, erase, paint, folder, star,
 // starOn, wave, down, right, search, library, inspector.
 void drawIcon(juce::Graphics& g, const juce::String& name, juce::Rectangle<float> area);
 

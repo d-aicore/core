@@ -133,7 +133,8 @@ PatternEditor::PatternEditor(Host& host) : host_(host) {
     host_.applyEdit([&](doc::Document& d) { doc::removePattern(doc::trackById(d, trackId), patternId); }, u8("Delete pattern"));
   };
   for (int id : kSnapOrder) snap_.addItem(kSnapNames[id - 1], id);
-  snap_.setTooltip(u8("Grid (snap) for new notes, moves and Quantize"));
+  snap_.addItem(u8("Off"), 8);  // no snap at all (Alt bypasses it per gesture without changing this choice)
+  snap_.setTooltip(u8("Grid (snap) for new notes, moves and Quantize. Off: free; Alt bypasses it per gesture."));
   snap_.setSelectedId(2, juce::dontSendNotification);  // 1/16
   snap_.onChange = [this] { overlay_ = {}; resized(); repaint(); };  // the ghost follows the grid; drums: pads and bars shown too
   for (int i = 0; i < kLengthCount; ++i) length_.addItem(lengthName(kLengths[i]), i + 1);
@@ -152,8 +153,9 @@ PatternEditor::PatternEditor(Host& host) : host_(host) {
   octaveDown_.setTooltip(u8("One octave down (wheel: one key; Alt+wheel: bigger or smaller keys)"));
   octaveUp_.onClick = [this] { lowPitch_ = std::min(128 - keysShown(), lowPitch_ + 12); repaint(); };
   octaveDown_.onClick = [this] { lowPitch_ = std::max(0, lowPitch_ - 12); repaint(); };
-  for (auto [b, icon, tip, t] : {std::tuple<juce::TextButton*, const char*, const char*, Tool>{&drawTool_, "cursor", "Draw: a click adds a note, a drag moves it; right-click deletes", Tool::Draw},
-                                 {&selectTool_, "select", "Select: drag a box around notes (Ctrl adds to the selection)", Tool::Select},
+  for (auto [b, icon, tip, t] : {std::tuple<juce::TextButton*, const char*, const char*, Tool>{&drawTool_, "cursor", "Draw: a click adds a note with the last length, the drag sizes it; drag a note to move (Shift: clone, Alt: off the grid); right-click deletes", Tool::Draw},
+                                 {&paintTool_, "paint", "Paint: drag seeds a note in every cell it crosses (Alt: off the grid)", Tool::Paint},
+                                 {&selectTool_, "select", "Select: drag a box around notes (Ctrl or Shift adds to the selection)", Tool::Select},
                                  {&eraseTool_, "erase", "Erase: click or drag over notes (with any tool: right-click)", Tool::Erase}}) {
     b->getProperties().set(theme::kIconProperty, icon);
     b->setTooltip(tip);
@@ -227,7 +229,7 @@ PatternEditor::PatternEditor(Host& host) : host_(host) {
   rootBox_.setTooltip(u8("The scale guide's root key"));
   rootBox_.onChange = [this] { setScaleGuide(rootBox_.getSelectedId() - 1, scaleName_); };
   for (auto* c : std::initializer_list<juce::Component*>{&zoomIn_, &zoomOut_, &patternBox_, &newPattern_, &clearPattern_, &removePattern_, &snap_, &length_, &octaveUp_, &octaveDown_, &title_, &hint_, &addSound_, &pagePrev_, &pageNext_,
-                                                                &drawTool_, &selectTool_, &eraseTool_, &edit_, &editInfo_, &keysMinus_, &keysPlus_, &fitKeys_, &scaleBox_, &rootBox_}) {
+                                                                &drawTool_, &selectTool_, &eraseTool_, &paintTool_, &edit_, &editInfo_, &keysMinus_, &keysPlus_, &fitKeys_, &scaleBox_, &rootBox_}) {
     c->setWantsKeyboardFocus(false);
     addAndMakeVisible(c);
   }
@@ -246,10 +248,12 @@ void PatternEditor::setTool(Tool tool) {
   if (!overlay_.area().isEmpty()) repaint(overlay_.area().expanded(2));
   overlay_ = {};  // the ghost is the draw tool's
   drawTool_.setToggleState(tool == Tool::Draw, juce::dontSendNotification);
+  paintTool_.setToggleState(tool == Tool::Paint, juce::dontSendNotification);
   selectTool_.setToggleState(tool == Tool::Select, juce::dontSendNotification);
   eraseTool_.setToggleState(tool == Tool::Erase, juce::dontSendNotification);
-  setMouseCursor(tool == Tool::Draw ? juce::MouseCursor::NormalCursor : tool == Tool::Select ? juce::MouseCursor::CrosshairCursor
-                                                                                            : juce::MouseCursor::PointingHandCursor);
+  setMouseCursor(tool == Tool::Draw ? juce::MouseCursor::NormalCursor
+                 : tool == Tool::Erase ? juce::MouseCursor::PointingHandCursor
+                                       : juce::MouseCursor::CrosshairCursor);
 }
 
 void PatternEditor::setDrawingHelp(bool ghost, bool guides) {
@@ -301,7 +305,7 @@ PatternEditor::Overlay PatternEditor::hoverOverlay(juce::Point<int> p) const {
   doc::Note n;
   n.tick = tickAtX(p.x, true);
   n.pitch = pitchAtY(p.y);
-  n.length = std::min<int64_t>(pattern()->lengthTicks, drums() ? std::min<int64_t>(snapTicks(), 240) : snapTicks());  // as clickCell
+  n.length = std::min<int64_t>(pattern()->lengthTicks, drums() ? std::min<int64_t>(snapTicks(), 240) : (lastLength_ ? lastLength_ : snapTicks()));  // as clickCell
   if (n.pitch < 0) return {};
   const auto b = noteBounds(n);
   Overlay o = guidesFor(b, n.tick, n.tick + n.length, n.pitch, {});
@@ -497,7 +501,11 @@ void PatternEditor::placeAddSound() {
   addSound_.setBounds(g.getX() - kLabels, g.getBottom() + 3, kLabels - 6, kAddRow - 4);
 }
 
-int64_t PatternEditor::snapTicks() const { return kSnaps[std::clamp(snap_.getSelectedId(), 1, 7) - 1]; }
+int64_t PatternEditor::snapTicks() const {
+  const int id = snap_.getSelectedId();
+  if (id == 8) return 1;  // Off: every tick is its own step
+  return kSnaps[std::clamp(id, 1, 7) - 1];
+}
 
 void PatternEditor::setTrack(const std::string& trackId, const std::string& patternId) {
   if (trackId == trackId_ && (patternId.empty() || patternId == patternId_)) return;
@@ -566,8 +574,8 @@ void PatternEditor::documentChanged() {
   rootBox_.setVisible(editable && !drums() && scaleGuideOn());
   setTooltip(!editable ? juce::String()
              : drums() ? u8("Click: step on/off · Drag: move, also to another sound (Shift: off the grid) · Wheel over a step or the velocity lane: how loud")
-                       : u8("Click: note · Drag: move (Shift: off the grid) · Right edge: length · Wheel or velocity lane: velocity · Del · Ctrl+D duplicate"));
-  for (auto* b : {&drawTool_, &selectTool_, &eraseTool_, &edit_}) b->setEnabled(editable);
+                       : u8("Click: note (last length), drag sizes it · Drag body: move (Alt: off the grid, Shift: clone) · Right edge: length · Ctrl+drag: select · Alt+wheel: velocity · Del · Ctrl+D duplicate"));
+  for (auto* b : {&drawTool_, &paintTool_, &selectTool_, &eraseTool_, &edit_}) b->setEnabled(editable);
   placeAddSound();
   if (editable && !drums()) updateKeysHint();
   else hint_.setText(drums() ? u8("Click: step on/off · Drag: move (Shift: off the grid) · Wheel over a note: velocity") : juce::String(),
@@ -600,7 +608,7 @@ void PatternEditor::resized() {
   editInfo_.setBounds(header.removeFromRight(theme::InfoDot::kSlot).withSizeKeepingCentre(theme::InfoDot::kSlot, theme::InfoDot::kSlot));
   edit_.setBounds(header.removeFromRight(66).reduced(2));
   header.removeFromRight(8);
-  for (auto* b : {&eraseTool_, &selectTool_, &drawTool_}) b->setBounds(header.removeFromRight(30).reduced(2));
+  for (auto* b : {&eraseTool_, &selectTool_, &paintTool_, &drawTool_}) b->setBounds(header.removeFromRight(30).reduced(2));
   header.removeFromRight(8);
   removePattern_.setBounds(header.removeFromRight(56).reduced(2));
   clearPattern_.setBounds(header.removeFromRight(52).reduced(2));
@@ -1062,7 +1070,7 @@ void PatternEditor::paint(juce::Graphics& g) {
 void PatternEditor::clickCell(int64_t tick, int pitch) {
   if (!currentTrack()) return;
   const std::string trackId = trackId_, patternId = patternId_;
-  const int64_t length = std::min<int64_t>(pattern()->lengthTicks, drums() ? std::min<int64_t>(snapTicks(), 240) : snapTicks());
+  const int64_t length = std::min<int64_t>(pattern()->lengthTicks, drums() ? std::min<int64_t>(snapTicks(), 240) : (lastLength_ ? lastLength_ : snapTicks()));
   bool added = false;
   std::string newId;
   host_.applyEdit([&](doc::Document& d) {
@@ -1071,7 +1079,7 @@ void PatternEditor::clickCell(int64_t tick, int pitch) {
     added = doc::toggleStep(p, tick, pitch, length, 0.8);
   }, drums() ? u8("Step") : u8("Note"));
   selected_.clear();
-  if (added && !drums()) selected_.insert(newId);
+  if (added && !drums()) { selected_.insert(newId); lastLength_ = length; }
   revealSelection();
   repaint();
 }
@@ -1151,29 +1159,83 @@ void PatternEditor::mouseDown(const juce::MouseEvent& e) {
     eraseAt(e.getPosition());
     return;
   }
-  if (tool_ == Tool::Select && (!hit || drums())) {
-    if (hit) {  // drums: a click selects the step (the draw tool turns it off)
-      if (!e.mods.isCtrlDown()) selected_.clear();
-      selected_.insert(hit->id);
-      repaint();
+  if (drums()) {
+    if (tool_ == Tool::Select) {
+      if (hit) {  // drums: a click selects the step (the draw tool turns it off)
+        if (!e.mods.isCtrlDown()) selected_.clear();
+        selected_.insert(hit->id);
+        repaint();
+        return;
+      }
+      startMarquee(e);
       return;
     }
-    drag_ = Drag::Marquee;
-    marqueeStart_ = e.getPosition();
-    marqueeBase_ = e.mods.isCtrlDown() ? selected_ : std::set<std::string>();
-    selected_ = marqueeBase_;
-    marquee_ = {};
+    return stepMouseDown(e, hit);
+  }
+  // Pitched: Ctrl+drag in empty space lassos with ANY tool, Shift+drag adds to the selection; Select always lassos there.
+  if (!hit && (e.mods.isCtrlDown() || e.mods.isShiftDown() || tool_ == Tool::Select)) { startMarquee(e); return; }
+  if (tool_ == Tool::Paint) {
+    if (hit) return;  // paint seeds empty cells only
+    drag_ = Drag::Paint;
+    painted_.clear();
+    host_.startGesture(u8("Paint notes"));
+    seedPaint(e.getPosition(), e.mods.isAltDown());
     repaint();
     return;
   }
-  if (drums()) return stepMouseDown(e, hit);
   if (!hit) {
-    if (!e.mods.isCtrlDown()) selected_.clear();
-    clickCell(tickAtX(e.x, true), pitchAtY(e.y));
+    // A click creates a note with the last used length; holding and dragging sizes it, in one undo gesture.
+    drag_ = Drag::Create;
+    createTick_ = tickAtX(e.x, !e.mods.isAltDown());
+    const int pitch = pitchAtY(e.y);
+    const int64_t len = std::max<int64_t>(1, std::min(pattern()->lengthTicks - createTick_, lastLength_ ? lastLength_ : snapTicks()));
+    const std::string trackId = trackId_, patternId = patternId_;
+    const int64_t tick = createTick_;
+    std::string newId;
+    host_.startGesture(u8("Note"));
+    host_.applyEdit([&](doc::Document& d) {
+      doc::Pattern& p = doc::patternById(doc::trackById(d, trackId), patternId);
+      newId = doc::newNoteId(p);
+      doc::toggleStep(p, tick, pitch, len, 0.8);
+    }, u8("Note"));
+    createId_ = newId;
+    selected_ = {newId};
+    repaint();
     return;
   }
   if (e.mods.isCtrlDown()) {
     if (!selected_.erase(hit->id)) selected_.insert(hit->id);
+    repaint();
+    return;
+  }
+  if (e.mods.isShiftDown()) {
+    // Shift+drag clones the selection and drags the copies (Pulse); one undo step gives the original back.
+    if (!selected_.count(hit->id)) selected_ = {hit->id};
+    const std::vector<std::string> ids(selected_.begin(), selected_.end());
+    const std::string trackId = trackId_, patternId = patternId_, hitId = hit->id;
+    const int64_t hitTick = hit->tick;
+    const int hitPitch = hit->pitch;
+    std::vector<std::string> copies;
+    host_.startGesture(u8("Clone notes"));
+    host_.applyEdit([&](doc::Document& d) {
+      doc::Pattern& p = doc::patternById(doc::trackById(d, trackId), patternId);
+      const std::vector<doc::Note> source = p.notes;
+      for (const auto& n : source)
+        if (std::find(ids.begin(), ids.end(), n.id) != ids.end()) {
+          doc::Note c = n;
+          c.id = doc::newNoteId(p);
+          p.notes.push_back(c);
+          copies.push_back(c.id);
+          if (n.id == hitId) dragNote_ = c.id;
+        }
+    }, u8("Clone notes"));
+    selected_ = std::set<std::string>(copies.begin(), copies.end());
+    drag_ = Drag::Move;
+    dragStartTick_ = tickAtX(e.x, false);
+    dragOffsetTicks_ = dragStartTick_ - hitTick;
+    dragStartPitch_ = hitPitch;
+    dragOriginal_.clear();
+    for (const auto& n : pattern()->notes) if (selected_.count(n.id)) dragOriginal_.push_back(n);
     repaint();
     return;
   }
@@ -1213,9 +1275,24 @@ void PatternEditor::stepMouseDown(const juce::MouseEvent& e, const doc::Note* hi
 void PatternEditor::mouseDrag(const juce::MouseEvent& e) {
   const doc::Track* t = currentTrack();
   if (!t || drag_ == Drag::None) return;
+  updateCursor(e.getPosition(), e.mods);
   if (drag_ == Drag::Velocity) { setVelocityAt(e.x, e.y); return; }
   if (drag_ == Drag::Playhead) { movePlayheadTo(e.x); return; }
   if (drag_ == Drag::Erase) { eraseAt(e.getPosition()); return; }
+  if (drag_ == Drag::Create) {
+    // The drag sizes the note the click created; Alt sizes it off the grid. Still the click's one undo gesture.
+    const bool free = e.mods.isAltDown();
+    const int64_t s = free ? 1 : snapTicks(), len = pattern()->lengthTicks;
+    const int64_t end = std::max<int64_t>((tickAtX(e.x, false) + s / 2) / s * s, createTick_ + std::min<int64_t>(s, len - createTick_));
+    const std::string trackId = trackId_, patternId = patternId_, id = createId_;
+    const int64_t tick = createTick_;
+    host_.applyEdit([&](doc::Document& d) {
+      for (auto& n : doc::patternById(doc::trackById(d, trackId), patternId).notes)
+        if (n.id == id) n.length = std::clamp<int64_t>(end - tick, 1, len - tick);
+    }, u8("Note"));
+    return;
+  }
+  if (drag_ == Drag::Paint) { seedPaint(e.getPosition(), e.mods.isAltDown()); return; }
   if (drag_ == Drag::Marquee) {
     marquee_ = juce::Rectangle<int>(marqueeStart_, e.getPosition()).getIntersection(grid());
     selected_ = marqueeBase_;
@@ -1228,7 +1305,8 @@ void PatternEditor::mouseDrag(const juce::MouseEvent& e) {
     if (!gestureOpen_ && e.getDistanceFromDragStart() < 4) return;  // still a click
     if (!gestureOpen_) { host_.startGesture(u8("Move notes")); gestureOpen_ = true; }
   }
-  const bool free = drag_ == Drag::Move && e.mods.isShiftDown();  // Shift: moves off the grid (lengths stay on it)
+  // Alt bypasses the snap (Pulse); drums keep Shift as their off-grid modifier.
+  const bool free = (drag_ == Drag::Move || drag_ == Drag::Resize) && (e.mods.isAltDown() || (drums() && e.mods.isShiftDown()));
   const int64_t s = free ? 1 : snapTicks(), len = pattern()->lengthTicks;
   const std::string trackId = trackId_, patternId = patternId_;
   if (drag_ == Drag::Move) {
@@ -1257,7 +1335,10 @@ void PatternEditor::mouseDrag(const juce::MouseEvent& e) {
   }
 }
 
-void PatternEditor::mouseMove(const juce::MouseEvent& e) { updateHover(e.getPosition()); }
+void PatternEditor::mouseMove(const juce::MouseEvent& e) {
+  updateHover(e.getPosition());
+  updateCursor(e.getPosition(), e.mods);
+}
 
 void PatternEditor::mouseExit(const juce::MouseEvent&) { updateHover({-1, -1}); }
 
@@ -1268,9 +1349,21 @@ void PatternEditor::mouseUp(const juce::MouseEvent& e) {
   const Drag ended = drag_;
   drag_ = Drag::None;
   if (ended == Drag::Velocity || ended == Drag::Erase) { host_.finishGesture(); repaint(); return; }
+  if (ended == Drag::Create) {
+    host_.finishGesture();
+    for (const auto& n : pattern()->notes) if (n.id == createId_) lastLength_ = n.length;  // the next click uses it
+    createId_.clear();
+    repaint();
+    return;
+  }
+  if (ended == Drag::Paint) { host_.finishGesture(); painted_.clear(); repaint(); return; }
   if (ended == Drag::Marquee) { marquee_ = {}; repaint(); return; }
   if (ended == Drag::Playhead) return;
-  if (!drums()) { host_.finishGesture(); return; }
+  if (!drums()) {
+    host_.finishGesture();
+    if (ended == Drag::Resize) for (const auto& n : pattern()->notes) if (n.id == dragNote_) lastLength_ = n.length;
+    return;
+  }
   // Where the step ended: the same place counts as a click (it turns off); on another step, the moved
   // one replaces it (two steps never share a cell).
   const doc::Note* moved = nullptr;
@@ -1293,6 +1386,70 @@ void PatternEditor::mouseUp(const juce::MouseEvent& e) {
     selected_.clear();
     repaint();
   }
+}
+
+// The selection box: Ctrl or Shift keeps what was selected and adds the box to it (Pulse: Shift adds).
+void PatternEditor::startMarquee(const juce::MouseEvent& e) {
+  drag_ = Drag::Marquee;
+  marqueeStart_ = e.getPosition();
+  marqueeBase_ = (e.mods.isCtrlDown() || e.mods.isShiftDown()) ? selected_ : std::set<std::string>();
+  selected_ = marqueeBase_;
+  marquee_ = {};
+  repaint();
+}
+
+// Paint: one note per cell the drag crosses, at the last used length (Pulse seeds with the last length too).
+// A cell that already holds a note of that pitch is left alone; Alt paints off the grid, at the exact tick.
+void PatternEditor::seedPaint(juce::Point<int> p, bool free) {
+  if (!currentTrack() || !grid().contains(p)) return;
+  const int pitch = pitchAtY(p.y);
+  if (pitch < 0) return;
+  const int64_t s = snapTicks(), tick = tickAtX(p.x, !free), len = pattern()->lengthTicks;
+  if (tick >= len) return;
+  const auto cell = std::make_pair(tick, pitch);
+  if (painted_.count(cell)) return;
+  painted_.insert(cell);
+  for (const auto& n : pattern()->notes)
+    if (n.pitch == pitch && (free ? n.tick == tick : (n.tick >= tick && n.tick < tick + s))) return;
+  const int64_t length = std::max<int64_t>(1, std::min(len - tick, lastLength_ ? lastLength_ : s));
+  const std::string trackId = trackId_, patternId = patternId_;
+  host_.applyEdit([&](doc::Document& d) {
+    doc::Pattern& pat = doc::patternById(doc::trackById(d, trackId), patternId);
+    doc::Note n;
+    n.id = doc::newNoteId(pat);
+    n.tick = tick;
+    n.pitch = pitch;
+    n.length = length;
+    n.velocity = 0.8;
+    pat.notes.push_back(n);
+  }, u8("Paint notes"));
+  repaint();
+}
+
+// Cursors per tool and per place (Pulse): hand over a note's body, ↔ at its right edge, crosshair for the lasso
+// (Ctrl in any tool) and for Select/Paint; the erase hand while erasing or with the right button.
+void PatternEditor::updateCursor(juce::Point<int> p, const juce::ModifierKeys& mods) {
+  if (!currentTrack()) return;
+  if (drag_ == Drag::Move) { setMouseCursor(juce::MouseCursor::DraggingHandCursor); return; }
+  if (drag_ == Drag::Resize || drag_ == Drag::Create) { setMouseCursor(juce::MouseCursor::LeftRightResizeCursor); return; }
+  if (drag_ == Drag::Marquee) { setMouseCursor(juce::MouseCursor::CrosshairCursor); return; }
+  if (drag_ == Drag::Erase || mods.isPopupMenu()) { setMouseCursor(juce::MouseCursor::PointingHandCursor); return; }
+  if (!grid().contains(p)) {
+    setMouseCursor(tool_ == Tool::Draw ? juce::MouseCursor::NormalCursor
+                   : tool_ == Tool::Erase ? juce::MouseCursor::PointingHandCursor
+                                          : juce::MouseCursor::CrosshairCursor);
+    return;
+  }
+  if (mods.isCtrlDown() && !drums()) { setMouseCursor(juce::MouseCursor::CrosshairCursor); return; }
+  bool edge = false;
+  const doc::Note* hit = noteAt(p, &edge);
+  if (hit && !drums()) {
+    setMouseCursor(edge ? juce::MouseCursor::LeftRightResizeCursor : juce::MouseCursor::PointingHandCursor);
+    return;
+  }
+  setMouseCursor(tool_ == Tool::Draw ? juce::MouseCursor::NormalCursor
+                 : tool_ == Tool::Erase ? juce::MouseCursor::PointingHandCursor
+                                        : juce::MouseCursor::CrosshairCursor);
 }
 
 // The notes an Edit tool works on: those that start in the bars shown, only the selected ones when some are.
