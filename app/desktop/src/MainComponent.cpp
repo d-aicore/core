@@ -4601,14 +4601,17 @@ void MainComponent::showAddTrackMenu() {
     if (instruments.empty()) menu.addItem(juce::PopupMenu::Item(u8("None found yet: Plugins menu > Scan plugins")).setID(menuids::kNoPlugins).setEnabled(false));
   }
   menu.addSeparator();
+  // The fixed entries come from the offer model (BUG-SWEEP-09): only an audio track and import. Core's own
+  // instruments left the engine (2026-11-16), so the menu offers none of them and no sampler track — each would
+  // create a silent "none" track (PROD-06). The plugin instruments above are the creative choices.
   const std::vector<doc::InstrumentChoice>& native = doc::builtinInstruments();
-  menu.addSectionHeader(u8("Core's own instruments"));
-  for (size_t i = 0; i < native.size(); ++i)
-    if (native[i].name != std::string("sampler")) menu.addItem(menuids::kBuiltinAddFirst + (int)i, u8(native[i].label));
-  menu.addItem(menuids::kSamplerTrack, u8("Sampler track (empty)"));
-  menu.addSeparator();
-  menu.addItem(menuids::kAudioTrack, u8("Audio track (empty)"));
-  menu.addItem(menuids::kImportAudio, u8("Import audio (WAV)…"));
+  for (int id : menuids::addTrackFixedItems()) {
+    if (id == menuids::kAudioTrack) menu.addItem(id, u8("Audio track (empty)"));
+    else if (id == menuids::kImportAudio) menu.addItem(id, u8("Import audio (WAV)…"));
+    else if (id == menuids::kSamplerTrack) menu.addItem(id, u8("Sampler track (empty)"));
+    else if (id >= menuids::kBuiltinAddFirst && id - menuids::kBuiltinAddFirst < (int)native.size())
+      menu.addItem(id, u8(native[(size_t)(id - menuids::kBuiltinAddFirst)].label));
+  }
   menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&addTrack_), [this, instruments](int chosen) {
     const menuids::AddTrackChoice choice = menuids::decodeAddTrackMenu(chosen, (int)instruments.size(), (int)doc::builtinInstruments().size());
     switch (choice.action) {
@@ -4655,7 +4658,8 @@ void MainComponent::showTrackMenu(const std::string& trackId) {
   menu.addItem(menuids::kAutomation, u8("Automation (volume, pan, effects)…"));
   // Another instrument for this track (its notes, effects, volume and automation stay).
   const doc::Track* current = history_.current().findTrack(trackId);
-  // Core's own instruments (ids kBuiltinReplaceFirst + place in builtinInstruments()).
+  // Replace instrument: external plugins only (BUG-SWEEP-09). The built-in id band (kBuiltinReplaceFirst) stays
+  // allocated in MenuIds.h but is never offered; Core's own instruments left the engine.
   juce::PopupMenu replace;
   const std::vector<nlohmann::json> instruments = plugins_->instruments(), pluginFx = plugins_->effects();
   const menuids::TrackMenuIds ids = menuids::trackMenuIds((int)instruments.size(), (int)pluginFx.size());
@@ -4700,11 +4704,16 @@ void MainComponent::showTrackMenu(const std::string& trackId) {
       return current->instrument.kind == "plugin" && current->instrument.plugin.value("id", std::string()) == p.value("id", std::string()) &&
              current->instrument.plugin.value("file", std::string()) == p.value("file", std::string());
     }));
-    replace.addSeparator();
+    // The fixed entries come from the offer model (BUG-SWEEP-09): none. Core's own instruments left the engine
+    // (2026-11-16), so Replace instrument offers only external plugins (the submenu above). A legacy built-in
+    // track is replaced by a plugin, never by another silent built-in (PROD-06).
     const std::vector<doc::InstrumentChoice>& native = doc::builtinInstruments();
-    for (size_t i = 0; i < native.size(); ++i)
-      replace.addItem(juce::PopupMenu::Item(u8(native[i].label)).setID(menuids::kBuiltinReplaceFirst + (int)i)
-                          .setTicked(current->instrument.kind == "builtin" && current->instrument.name == native[i].name));
+    for (int id : menuids::replaceFixedItems()) {
+      const int i = id - menuids::kBuiltinReplaceFirst;
+      if (i >= 0 && i < (int)native.size())
+        replace.addItem(juce::PopupMenu::Item(u8(native[(size_t)i].label)).setID(id)
+                            .setTicked(current->instrument.kind == "builtin" && current->instrument.name == native[(size_t)i].name));
+    }
     menu.addSubMenu(u8("Replace instrument"), replace);
   }
   std::vector<std::string> offered;

@@ -20,9 +20,11 @@
 #include "translation.hpp"
 #include "core/project.hpp"
 #include "core/tempo_map.hpp"
+#include "MenuIds.h"
 
 using namespace core::doc;
 namespace fs = std::filesystem;
+namespace menu = core::app::menu;
 
 namespace {
 constexpr int64_t kBar = 4 * kPpq;
@@ -1327,6 +1329,30 @@ TEST("write safety BUG-SWEEP-16: a late write failure on the roles file throws a
   CHECK_EQ(loadRoleMap(file).roles.size(), (size_t)2);
   CHECK_EQ(bytesIn(backupPath(file)), before);
   CHECK(noEmptyFileUnder(dir));
+}
+
+// BUG-SWEEP-09 (2026-11-18): the Add Track and Replace instrument menus offered Core's own instruments and a
+// sampler track. Core's own instruments left the engine (2026-11-16): addTrack always creates kind "none" (a
+// silent track with no instrument), so each of those entries promised a sound the engine no longer makes
+// (PROD-06: "Nenhum menu oferece um instrumento/efeito criativo interno como se produzisse som"). The menus
+// offer only external plugins, an audio track and import. The offer model is MenuIds.h (extracted from the two
+// menu lambdas); the builtin id bands stay allocated (BUG-SWEEP-32), they are simply never offered.
+TEST("BUG-SWEEP-09: the track menus offer no built-in instrument (each would create a silent, unassigned track)") {
+  const std::vector<int> add = menu::addTrackFixedItems();
+  const std::vector<int> repl = menu::replaceFixedItems();
+  auto has = [](const std::vector<int>& v, int id) { return std::find(v.begin(), v.end(), id) != v.end(); };
+  // No built-in instrument and no sampler track is offered on either menu.
+  for (int i = 0; i < 8; ++i) {
+    CHECK(!has(add, menu::kBuiltinAddFirst + i));
+    CHECK(!has(repl, menu::kBuiltinReplaceFirst + i));
+  }
+  CHECK(!has(add, menu::kSamplerTrack));
+  // The plugin path stays (the uncapped band), and the audio track and import are still offered.
+  CHECK(has(add, menu::kAudioTrack));
+  CHECK(has(add, menu::kImportAudio));
+  CHECK_EQ(repl.size(), (size_t)0);  // Replace instrument offers plugins only, no fixed built-in entry
+  // The catalogue itself stays: addTrack names a track from it (edit.cpp). Offering it as a sound is what went.
+  CHECK_EQ(builtinInstruments().size(), (size_t)8);
 }
 
 CORE_TEST_MAIN

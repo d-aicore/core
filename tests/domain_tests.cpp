@@ -481,6 +481,24 @@ TEST("plugins: droppedPluginKeys names the plugins a change takes away, and noth
   CHECK(droppedPluginKeys(more, before).size() == (size_t)4);  // the new track, its copy's instrument and effect, b's effect
 }
 
+// BUG-SWEEP-09 characterization (2026-11-18): Core's own instruments left the engine (Diogo 2026-11-16: the
+// sound comes from plugins). addTrack keeps the role's name from the catalogue but always creates kind "none"
+// — a silent track waiting for a plugin. This is why the menus must not offer the catalogue as a sound: every
+// entry would create a silent, unassigned track. The catalogue itself stays (it names the tracks).
+TEST("BUG-SWEEP-09 characterization: every built-in catalogue role adds a silent, unassigned track (kind none)") {
+  CHECK_EQ(builtinInstruments().size(), (size_t)8);
+  for (const auto& c : builtinInstruments()) {
+    Document d = newEmptyDocument();
+    const std::string id = addTrack(d, c.name);
+    const Track* t = d.findTrack(id);
+    CHECK(t != nullptr);
+    CHECK_EQ(t->instrument.kind, std::string("none"));
+    CHECK(t->instrument.plugin.is_null());
+    CHECK(t->instrument.samples.empty());
+    CHECK_EQ(t->name, c.label);  // the catalogue still names the track
+  }
+}
+
 // Data loss (2026-11-18), S5: an undo step is a whole document, plugin states included. Undo put the old state of
 // a plugin that stays alive back into the document while the engine kept the instance and its new sound: the next
 // save without the engine's answer, or an engine restart, brought the old sound.

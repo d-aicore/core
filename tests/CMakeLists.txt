@@ -42,7 +42,7 @@ add_test(NAME midi_tests COMMAND midi_tests)
 
 # The medium and small bugs fixed from the reviewed sweep (2026-11-16): each failed before its fix.
 add_executable(bug_tests bug_tests.cpp)
-target_include_directories(bug_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(bug_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/app/desktop/src)
 target_link_libraries(bug_tests PRIVATE core_domain core_engine_lib)
 target_compile_definitions(bug_tests PRIVATE CORE_LANG_DIR="${CMAKE_SOURCE_DIR}/lang")
 add_test(NAME bug_tests COMMAND bug_tests)
