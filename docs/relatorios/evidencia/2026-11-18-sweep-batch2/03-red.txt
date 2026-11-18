@@ -1,0 +1,12 @@
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-batch2\tests\audit2_tests.cpp:245: message.find("mix.wav.previous") != std::string::npos
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-batch2\tests\audit2_tests.cpp:284: st.value("rollbackAttempted", false)
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-batch2\tests\audit2_tests.cpp:285: st.contains("backups") && st["backups"].is_array() && st["backups"].size() == 1
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-batch2\tests\audit2_tests.cpp:288: st.contains("restored") && st["restored"].is_array() && st["restored"].empty()
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-batch2\tests\audit2_tests.cpp:289: st.value("error", std::string()).find("mix.wav.previous") != std::string::npos
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-batch2\tests\audit2_tests.cpp:326: st.value("rollbackAttempted", false)
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-batch2\tests\audit2_tests.cpp:327: st.contains("backups") && st["backups"].is_array() && st["backups"].empty()
+  FALHOU D:\CORE\CORE\.agents\worktrees\flawless-batch2\tests\audit2_tests.cpp:328: st.contains("restored") && st["restored"].is_array() && st["restored"].size() == 1
+FAIL BUG-SWEEP-03: a failed publish keeps the previous file and names it in the error
+FAIL BUG-SWEEP-03: a failed export job reports the rollback and the kept backups
+FAIL BUG-SWEEP-03: a publish that can restore puts the old file back and reports it
+3 testes, 24 verificacoes, 8 falhas

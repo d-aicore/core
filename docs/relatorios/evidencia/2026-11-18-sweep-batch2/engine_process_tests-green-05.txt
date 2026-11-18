@@ -1,0 +1,14 @@
+  slowest answer after the crash: 0 ms
+ok   serve: after a plugin crashes in processBlock the engine still answers, retries, releases it and exits
+ok   serve: a plugin change that is not a parameter is reported as pluginsChanged
+ok   serve: a crashed plugin that asks to restart the component does not deadlock the message thread
+ok   serve: a plugin that throws while playing is retried into a new instance that plays (BUG-SWEEP-05)
+ok   serve: a plugin that crashes giving its state is silenced and leaked, the engine answers and plays on
+ok   serve: a plugin that crashes loading its state is reported missing, the engine answers and plays on
+ok   serve: a plugin that crashes in reset is silenced, the engine answers and plays on
+ok   serve: a plugin that crashes opening its editor is silenced, the engine answers and plays on
+ok   serve: a plugin that crashes in a parameter getter is silenced, the engine answers and plays on
+  project.load 99 ms, project.get 393 ms
+ok   serve: a song with more than 8 MB of plugin state reaches the engine and comes back whole (M2)
+ok   serve: a message over the limit fails that command with a clear error and the engine stays alive (M2)
+11 testes, 131 verificacoes, 0 falhas

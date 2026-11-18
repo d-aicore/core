@@ -1,0 +1,6 @@
+ok   BUG-SWEEP-03: a failed publish keeps the previous file and names it in the error
+ok   BUG-SWEEP-03: a failed export job reports the rollback and the kept backups
+ok   BUG-SWEEP-03: a publish that can restore puts the old file back and reports it
+ok   BUG-SWEEP-03: the rollback report names what was restored and what was kept
+ok   BUG-SWEEP-03: a successful publish reports no rollback and takes the new files
+5 testes, 41 verificacoes, 0 falhas
