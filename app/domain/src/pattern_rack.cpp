@@ -240,7 +240,7 @@ bool toggleRackStep(Pattern& p, int64_t start, int64_t length, int pitch, double
   n.tick = std::min(tick, p.lengthTicks - 1);
   n.length = std::clamp<int64_t>(length / 2, 1, p.lengthTicks - n.tick);
   n.pitch = std::clamp(pitch, 0, 127);
-  n.velocity = std::clamp(velocity, 0.0, 1.0);
+  setNoteVelocity(n, std::clamp(velocity, 0.0, 1.0));  // BUG-SWEEP-30 follow-up: the shared helper (a new step: no envelope)
   if (tick != start) { n.tick = start; n.length = std::clamp<int64_t>(length / 2, 1, p.lengthTicks - start); swingNote(n, p.lengthTicks, 0, swingTicks(swing)); }
   p.notes.push_back(n);
   std::sort(p.notes.begin(), p.notes.end(), [](const Note& a, const Note& b) { return a.tick != b.tick ? a.tick < b.tick : a.pitch < b.pitch; });

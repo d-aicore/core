@@ -44,7 +44,7 @@ int humanizeNotes(Pattern& pattern, const std::set<std::string>& ids, int64_t ti
     const double v = std::clamp(std::round((n.velocity + dv * std::max(0.0, velocity)) * 100.0) / 100.0, 0.05, 1.0);
     if (tick != n.tick || v != n.velocity) ++changed;
     n.tick = tick;
-    n.velocity = v;
+    setNoteVelocity(n, v);  // BUG-SWEEP-30 follow-up (ratified): a roll's envelope scales with the base's realized factor
   }
   return changed;
 }
@@ -87,7 +87,7 @@ int varyNotes(Pattern& pattern, const std::set<std::string>& ids, const std::str
     for (Note* n : notes) {
       const bool onBeat = n->tick % kPpq == 0;
       const double v = std::clamp(std::round((onBeat ? n->velocity + 0.15 : n->velocity - 0.1) * 100.0) / 100.0, 0.05, 1.0);
-      if (v != n->velocity) { n->velocity = v; ++changed; }
+      if (v != n->velocity) { setNoteVelocity(*n, v); ++changed; }  // BUG-SWEEP-30 follow-up (ratified): the envelope follows
     }
   } else {
     throw DocumentError("variation", "unknown variation '" + kind + "'");
