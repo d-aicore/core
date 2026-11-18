@@ -95,7 +95,7 @@ if(CORE_SANITIZE)
     core_domain core_control core_engine_client core_sampling core_previews
     CoreApp CoreTestSynth CoreTestGain CoreSetup
     engine_tests domain_tests role_tests midi_tests bug_tests bitwig_tests
-    audit_tests audit2_tests hunt_tests round3_tests calls_tests
+    audit_tests audit2_tests hunt_tests round3_tests calls_tests engine_process_tests
     asan_canary ubsan_canary tsan_canary)
   foreach(tgt IN LISTS CORE_SANITIZED_TARGETS)
     if(TARGET ${tgt})

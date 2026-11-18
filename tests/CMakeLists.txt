@@ -91,6 +91,28 @@ add_test(NAME cli_unicode COMMAND ${CMAKE_COMMAND} -DENGINE=$<TARGET_FILE:core-e
 set_tests_properties(engine_tests domain_tests role_tests midi_tests bug_tests audit_tests audit2_tests hunt_tests round3_tests calls_tests bitwig_tests cli_version cli_demo_render cli_measure cli_unicode
                      PROPERTIES LABELS merge TIMEOUT 300)
 
+# A plugin that crashes in processBlock (app/selftest-plugins, CORE_TEST_CRASH) must not hang the engine: the offline
+# render ends, and the served engine goes on answering and exits. These need the test plugins, which are built with
+# JUCE (CORE_BUILD_APP on Windows, as the gate builds): without them the two tests are not registered at all.
+if(TARGET CoreTestCrash_VST3 AND TARGET CoreTestSynth_VST3 AND TARGET core_engine_client)
+  set(CORE_TEST_CRASH_VST3 "$<GENEX_EVAL:$<TARGET_PROPERTY:CoreTestCrash_VST3,JUCE_PLUGIN_ARTEFACT_FILE>>")
+  set(CORE_TEST_SYNTH_VST3 "$<GENEX_EVAL:$<TARGET_PROPERTY:CoreTestSynth_VST3,JUCE_PLUGIN_ARTEFACT_FILE>>")
+  add_test(NAME cli_plugin_crash_render COMMAND ${CMAKE_COMMAND} -DENGINE=$<TARGET_FILE:core-engine> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli
+                                                -DCRASH_PLUGIN=${CORE_TEST_CRASH_VST3} -DSYNTH_PLUGIN=${CORE_TEST_SYNTH_VST3}
+                                                -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_plugin_crash_render.cmake)
+  # The engine process driven through the app's client (core-engine serve, null audio backend).
+  add_executable(engine_process_tests engine_process_tests.cpp)
+  target_include_directories(engine_process_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+  target_link_libraries(engine_process_tests PRIVATE core_engine_client)
+  target_compile_definitions(engine_process_tests PRIVATE
+    CORE_ENGINE_EXE="$<TARGET_FILE:core-engine>"
+    CORE_TEST_CRASH_VST3="${CORE_TEST_CRASH_VST3}"
+    CORE_TEST_SYNTH_VST3="${CORE_TEST_SYNTH_VST3}")
+  add_dependencies(engine_process_tests core-engine CoreTestCrash_VST3 CoreTestSynth_VST3)
+  add_test(NAME engine_process_tests COMMAND engine_process_tests)
+  set_tests_properties(cli_plugin_crash_render engine_process_tests PROPERTIES LABELS merge TIMEOUT 120)
+endif()
+
 # The app's own end-to-end test (play, undo, save/reopen, export... on the null device, with its test plugins).
 # It opens Core's window for ~20 s, so it has its own label.
 if(TARGET CoreApp)

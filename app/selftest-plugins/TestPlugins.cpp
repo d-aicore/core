@@ -1,5 +1,7 @@
 // The test plugins (one file, built once per plugin): CORE_TEST_SYNTH (a sine per note), CORE_TEST_GAIN or
-// CORE_TEST_DELAY (a delay that reports it as latency), CORE_TEST_THROW (a gain that throws after 0.1 s, audit 6.4). All have one parameter, "gain" (0..1, 0.5), saved in their state, and the generic editor.
+// CORE_TEST_DELAY (a delay that reports it as latency), CORE_TEST_THROW (a gain that throws after 0.1 s, audit 6.4),
+// CORE_TEST_CRASH (an instrument that crashes after 0.1 s). All have one parameter, "gain" (0..1, 0.5), saved in
+// their state, and the generic editor.
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <array>
 #include <cmath>
@@ -143,6 +145,29 @@ private:
   int64_t limit_ = 4800, played_ = 0;
 };
 juce::AudioProcessor* make() { return new Throw(); }
+#endif
+
+#if CORE_TEST_CRASH
+// An instrument that is silent for 0.1 s and then crashes in processBlock (an access violation: a write through a
+// null pointer). The engine must silence its track, play the others on, and never wait for this instance again: a
+// crash caught by the host runs no destructor, so every lock held around the call stays held.
+class Crash final : public TestPlugin {
+public:
+  Crash() : TestPlugin(BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true)) {}
+  bool acceptsMidi() const override { return true; }
+  bool producesMidi() const override { return false; }
+  bool isBusesLayoutSupported(const BusesLayout& l) const override { return l.getMainOutputChannelSet() == juce::AudioChannelSet::stereo(); }
+  void prepareToPlay(double sampleRate, int) override { limit_ = (int64_t)(0.1 * sampleRate); played_ = 0; }
+  void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) override {
+    buffer.clear();
+    if (played_ >= limit_) *nowhere_ = 1;  // the crash, on purpose
+    played_ += buffer.getNumSamples();
+  }
+private:
+  int64_t limit_ = 4800, played_ = 0;
+  volatile int* volatile nowhere_ = nullptr;  // volatile: the compiler cannot prove the write is invalid and drop it
+};
+juce::AudioProcessor* make() { return new Crash(); }
 #endif
 
 }  // namespace

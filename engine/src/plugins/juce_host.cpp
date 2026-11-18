@@ -97,8 +97,18 @@ public:
 
   ~JuceProcessor() override {
     for (auto* p : instance_->getParameters()) p->removeListener(this);
-    // A plugin is released and deleted on the message thread.
     juce::AudioPluginInstance* raw = instance_.release();
+    // A plugin that crashed is never called again, not even to be released or deleted: it is leaked on purpose.
+    // The crash was caught with structured exception handling (guardedCall), and under /EHsc the destructors of
+    // the frames it cuts through do not run, so every lock held around the call stays held for good. JUCE's VST3
+    // host takes a spin lock around processBlock and takes the same lock in releaseResources() and reset():
+    // releasing this instance waited for it forever on the message thread, and from then on the engine answered
+    // nothing and never exited.
+    if (crashed()) {
+      trace("a crashed plugin is left as it is: its instance is leaked on purpose, never released or deleted");
+      return;
+    }
+    // A plugin is released and deleted on the message thread.
     auto finish = [raw] {
       if (!guarded([raw] { raw->releaseResources(); delete raw; })) trace("a plugin crashed while it was deleted (left as it is)");
     };
@@ -107,6 +117,15 @@ public:
   }
 
   juce::AudioPluginInstance& instance() { return *instance_; }
+
+  // The plugin crashed inside its own code (processBlock, its state, its editor, a reset): from then on nothing
+  // of the instance is called, see the destructor. Kept apart from failure(), which holds the first reason only
+  // (a plugin already silenced for non-finite audio that crashes later must still be known as crashed).
+  void markCrashed() {
+    crashed_.store(true, std::memory_order_release);
+    markFailed(Failure::Crash);
+  }
+  bool crashed() const { return crashed_.load(std::memory_order_acquire); }
 
   // Gathers what the graph sends (audio for an effect, notes for an instrument) and gives back the
   // output of the previous block of 128 (block_): each sample comes out block_ samples after it went in.
@@ -142,6 +161,7 @@ public:
   }
   // The hosted parameter queues the value for the plugin's next block (JUCE caches it, lock free).
   void setParameter(int index, float normalized) override {
+    if (failed()) return;  // a failed plugin is not called any more
     if (index >= 0 && index < (int)params_.size()) params_[(size_t)index]->setValue(std::clamp(normalized, 0.0f, 1.0f));
   }
 
@@ -173,7 +193,7 @@ private:
 #if defined(_MSC_VER)
     view_ = &view;
     if (!guardedCall([](void* self) { auto* p = static_cast<JuceProcessor*>(self); p->instance_->processBlock(*p->view_, p->midi_); }, this)) {
-      markFailed(Failure::Crash);  // the graph sees it after this call, counts it and silences the plugin's track
+      markCrashed();  // the graph sees it after this call, counts it and silences the plugin's track
       midi_.clear();
       notesInBlock_ = 0;
       fill_ = 0;
@@ -198,6 +218,7 @@ private:
   std::unique_ptr<juce::AudioPluginInstance> instance_;
   bool instrument_;
   std::atomic<bool>* changed_;
+  std::atomic<bool> crashed_{false};
   std::vector<juce::AudioProcessorParameter*> params_;  // owned by the instance; fixed once it is made
   juce::AudioBuffer<float> buffer_;
   juce::MidiBuffer midi_;
@@ -234,7 +255,12 @@ struct JuceHost::Impl {
     std::shared_ptr<JuceProcessor> processor;
   };
   std::map<std::string, Slot> live;
-  std::map<std::string, std::unique_ptr<EditorWindow>> editors;  // message thread only
+  // A plugin's window and the instance it shows (the window must know whether that one crashed).
+  struct Editor {
+    std::unique_ptr<EditorWindow> window;
+    std::shared_ptr<JuceProcessor> owner;
+  };
+  std::map<std::string, Editor> editors;  // message thread only
   std::atomic<bool> changed{false};
 
   // Closes a plugin's window (message thread); its editor is deleted with it, inside the guard: a plugin
@@ -243,9 +269,17 @@ struct JuceHost::Impl {
   bool closeWindow(const std::string& key) {
     auto it = editors.find(key);
     if (it == editors.end()) return false;
-    EditorWindow* window = it->second.release();
+    EditorWindow* window = it->second.window.release();
+    const std::shared_ptr<JuceProcessor> owner = std::move(it->second.owner);  // let go after its window
     editors.erase(it);
     if (!window) return false;
+    if (owner && owner->crashed()) {
+      // Deleting the editor calls into the plugin (and the instance under it is never deleted, see
+      // ~JuceProcessor): the window of a crashed plugin is hidden and leaked with it.
+      trace("hiding the window of " + key + " (its plugin crashed: the window is leaked with it)");
+      if (!guarded([window] { window->setVisible(false); })) trace("the plugin of " + key + " crashed while its window was hidden (left as it is)");
+      return true;
+    }
     trace("closing the window of " + key);
     if (!guarded([window] { delete window; })) trace("the plugin of " + key + " crashed while its window closed (left as it is)");
     return true;
@@ -319,8 +353,9 @@ std::shared_ptr<PluginProcessor> JuceHost::get(const std::string& key, const jso
     if (!offline) impl_->closeWindow(key);  // its window belongs to the instance being replaced
     trace("loading '" + name + "' for " + key + (offline ? " (export)" : ""));
     juce::MemoryBlock carried;
-    if (previous && !guarded([&] { previous->instance().getStateInformation(carried); })) {
-      previous->markFailed(PluginProcessor::Failure::Crash);
+    // A failed plugin is not asked for its state (it is never called again): the new one starts from the document's.
+    if (previous && !previous->failed() && !guarded([&] { previous->instance().getStateInformation(carried); })) {
+      previous->markCrashed();
       carried.reset();  // from the document's state instead
     }
     if (!guarded([&] { made = impl_->create(plugin, sampleRate, why, carried.getSize() > 0 ? &carried : nullptr, offline ? exportPluginBlock() : kPluginBlock); })) {
@@ -371,7 +406,7 @@ void JuceHost::resetAll() {
       if (p->failed()) continue;
       if (!guarded([&] { p->instance().reset(); })) {
         trace("the plugin of " + key + " crashed while it was reset: it is silenced (Retry loads it again)");
-        p->markFailed(PluginProcessor::Failure::Crash);
+        p->markCrashed();
       }
     }
   });
@@ -390,7 +425,7 @@ json JuceHost::captureStates() {
       juce::MemoryBlock data;
       if (!guarded([&] { p->instance().getStateInformation(data); })) {
         trace("the plugin of " + key + " crashed while it gave its state: it is silenced (Retry loads it again)");
-        p->markFailed(PluginProcessor::Failure::Crash);
+        p->markCrashed();
         continue;
       }
       out[key] = utf8(juce::Base64::toBase64(data.getData(), data.getSize()));
@@ -408,15 +443,21 @@ bool JuceHost::showEditor(const std::string& key, bool open, std::string* why) {
     if (it != impl_->live.end()) { p = it->second.processor; name = it->second.name; }
   }
   if (!p) { if (why) *why = "no plugin loaded for " + key; return false; }
+  // A failed plugin is never called again, and making an editor calls it. Closing only hides the window it has.
+  if (open && p->failed()) { if (why) *why = "the plugin failed and is silenced (Retry loads it again)"; return false; }
   bool ok = true;
   runSync([&] {
-    auto& window = impl_->editors[key];
-    if (!open) { if (window) window->setVisible(false); return; }
+    if (!open) {
+      auto it = impl_->editors.find(key);
+      if (it != impl_->editors.end() && it->second.window) it->second.window->setVisible(false);
+      return;
+    }
+    auto& [window, owner] = impl_->editors[key];
     if (!window) {
       trace("opening the window of '" + name + "' (" + key + ")");
       juce::AudioProcessorEditor* editor = nullptr;
       if (!guarded([&] { editor = p->instance().hasEditor() ? p->instance().createEditorIfNeeded() : nullptr; })) {
-        p->markFailed(PluginProcessor::Failure::Crash);
+        p->markCrashed();
         impl_->editors.erase(key);
         if (why) *why = "the plugin crashed while it opened its window";
         ok = false;
@@ -424,6 +465,7 @@ bool JuceHost::showEditor(const std::string& key, bool open, std::string* why) {
       }
       if (!editor) editor = new juce::GenericAudioProcessorEditor(p->instance());
       window = std::make_unique<EditorWindow>(juce::String::fromUTF8(name.empty() ? key.c_str() : name.c_str()), editor);
+      owner = p;
     }
     window->setVisible(true);
     window->toFront(true);
@@ -440,7 +482,7 @@ bool JuceHost::setParameter(const std::string& key, int index, float normalized)
     auto it = impl_->live.find(key);
     if (it != impl_->live.end()) p = it->second.processor;
   }
-  if (!p) return false;
+  if (!p || p->failed()) return false;  // a failed plugin is not called any more
   bool ok = false;
   runSync([&] {
     auto params = p->instance().getParameters();
@@ -459,7 +501,7 @@ json JuceHost::parameters(const std::string& key) {
     if (it != impl_->live.end()) p = it->second.processor;
   }
   json out = json::array();
-  if (!p) return out;
+  if (!p || p->failed()) return out;  // a failed plugin is not called any more (its names and values come from it)
   runSync([&] {
     for (auto* param : p->instance().getParameters()) {
       const juce::String name = param->getName(64).trim();
@@ -485,7 +527,7 @@ std::string JuceHost::vstPreset(const std::string& key) {
     juce::MemoryBlock preset;
     // JUCE 9: getVST3Client() (null when the plugin is not VST3); the ExtensionsVisitor is gone.
     if (!guarded([&] { if (auto* c = p->instance().getVST3Client()) preset = c->getPreset(); })) {
-      p->markFailed(PluginProcessor::Failure::Crash);
+      p->markCrashed();
       return;
     }
     if (preset.getSize() > 0) out = utf8(juce::Base64::toBase64(preset.getData(), preset.getSize()));

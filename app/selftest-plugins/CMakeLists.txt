@@ -29,3 +29,20 @@ juce_add_plugin(CoreTestGain
 target_sources(CoreTestGain PRIVATE TestPlugins.cpp)
 target_compile_definitions(CoreTestGain PUBLIC CORE_TEST_GAIN=1 JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0)
 target_link_libraries(CoreTestGain PRIVATE juce::juce_audio_utils PUBLIC juce::juce_recommended_config_flags)
+
+# An instrument that crashes in processBlock after 0.1 s (an access violation), for the engine's tests only
+# (tests/cli_plugin_crash_render.cmake, tests/engine_process_tests.cpp): a crashed plugin must not hang the engine.
+juce_add_plugin(CoreTestCrash
+  PRODUCT_NAME "Core Test Crash"
+  COMPANY_NAME "Core"
+  VERSION 1.0.0
+  PLUGIN_MANUFACTURER_CODE Core
+  PLUGIN_CODE CTcr
+  IS_SYNTH TRUE
+  NEEDS_MIDI_INPUT TRUE
+  FORMATS VST3
+  COPY_PLUGIN_AFTER_BUILD FALSE
+  VST3_AUTO_MANIFEST TRUE)
+target_sources(CoreTestCrash PRIVATE TestPlugins.cpp)
+target_compile_definitions(CoreTestCrash PUBLIC CORE_TEST_CRASH=1 JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0)
+target_link_libraries(CoreTestCrash PRIVATE juce::juce_audio_utils PUBLIC juce::juce_recommended_config_flags)
