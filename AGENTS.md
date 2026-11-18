@@ -17,7 +17,7 @@
 
 - Owner's instruction, verbatim (2026-11-18 02:23 Europe/Lisbon, DSH coordinator session `session-2ff54f03-8344-40bb-8cb4-54df0601eb69`): «sempre tudo em ingles, meter como rule nos fecheiros necessarios».
 - Everything written into this repository is in English: source code, identifiers, comments, test names and test output, log and error messages, script and tool output, commit messages, and new documentation.
-- Build tools must emit English. Compiler and linker messages are forced to English in the gate (`VSLANG=1033`): localized MSVC output broke Ninja's header dependency tracking and produced false-green gates.
+- Build tools emit English where the toolchain has it. The gate asks MSVC for English (`VSLANG=1033`, ignored when the English resources are not installed, as on the owner's PC) and switches to the UTF-8 code page (`chcp 65001`): localized compiler output in a mismatched code page broke Ninja's header dependency tracking and produced false-green gates.
 - User-visible app text is English in the source; translations live only in `lang/*.json`.
 - Not translated: the owner's verbatim quotes (always kept in the original language) and the existing ledger and history (`ESTADO.md`, `docs/relatorios/`, `docs/historico/`), which are never edited.
 - Existing non-English code, test names and tool messages are converted to English when they are touched; do not mix a translation sweep into an unrelated fix.
