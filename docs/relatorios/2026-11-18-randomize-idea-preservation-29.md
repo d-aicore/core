@@ -158,7 +158,8 @@ flag). Note: `gate-resumo.txt` says "(com alteracoes por commitar)" because gate
   (copies from the build dir), `merge-verbose.log` (`ctest -L merge -V`, per-suite count lines),
   `gate-rc.txt` (exit codes, lock acquisition, timestamps).
 - Archived verbatim (byte-compared with `cmp`) into `docs/relatorios/evidencia/2026-11-18-randomize/`:
-  `report (5).md`, `edit-probe.cpp`, `edit.log` (owner-side probe: `afterExists=0 rackRefs=0`,
+  `report (5).md`, `edit-probe.cpp`, `edit-log.txt` (the owner's `edit.log`, byte-identical — `.txt` because
+  the repo ignores `*.log`; owner-side probe: `afterExists=0 rackRefs=0`,
   `undo ideaRestored=1`, `reopening slot notes=0`).
 
 ## Proposed ESTADO.md lines (NOT written — only the ledger scribe writes ESTADO.md, D72/D80)

@@ -1,0 +1,5 @@
+roll louder changed=1 displayedVelocity=0.57 exportedMidiUnchanged=1
+ordinary louder midiChanged=1
+before randomize ideaExists=1 rackRefs=1 afterExists=0 rackRefs=0 changes=1
+undo ideaRestored=1
+reopening slot notes=0
