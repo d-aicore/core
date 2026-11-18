@@ -5,32 +5,59 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <filesystem>
+#include <iostream>
 #include <thread>
+#include "core/assets.hpp"
 #include "core/server.hpp"
 #include "io/device.hpp"
 #include "io/wav.hpp"
 
 namespace core {
 
+namespace {
+// L10 (2026-11-18): Core has no built-in instruments/effects (removed 2026-11-16), so the demo sounds from a
+// deterministic generated audio file, not from removed builtins. Written once to a stable temp folder; the
+// project's audio clip references it by absolute path, so every render path (engine_tests, measure,
+// core-engine demo -> render) loads the same samples. This is an audio fixture, not engine DSP.
+std::filesystem::path demoAudioFile() {
+  namespace fs = std::filesystem;
+  static fs::path cached;
+  if (!cached.empty()) return cached;
+  std::error_code ec;
+  const fs::path dir = fs::temp_directory_path() / "core-demo-audio";
+  fs::create_directories(dir, ec);
+  const fs::path file = dir / "demo-backing.wav";
+  if (!fs::exists(file, ec)) {
+    const double sr = 48000.0;
+    const int64_t n = (int64_t)(30.0 * sr);  // covers the song at the slowest demo tempo
+    std::vector<float> L((size_t)n), R((size_t)n);
+    const double pi = 3.14159265358979323846;
+    for (int64_t i = 0; i < n; ++i) {
+      const double t = (double)i / sr;
+      const double beat = std::fmod(t, 0.5);  // a 120 BPM pulse grid
+      const double kick = 0.6 * std::sin(2 * pi * 50 * t) * std::exp(-beat * 25.0);
+      const double bass = 0.25 * std::sin(2 * pi * 80 * t);
+      const double hat = 0.08 * std::sin(2 * pi * 6000 * t) * std::exp(-std::fmod(t + 0.25, 0.5) * 40.0);
+      L[(size_t)i] = R[(size_t)i] = (float)(kick + bass + hat);
+    }
+    writeWav(file.string(), L, R, (int)sr, 24);
+  }
+  cached = file;
+  return cached;
+}
+}  // namespace
+
 json demoProject(double bpm) {
-  json kick = {{"id", "kick"}, {"name", "Kick"}, {"instrument", "kick"}, {"patternTicks", 4 * 4 * kPpq},
-               {"params", {{"ampDecay", 170}}}, {"notes", json::array()}};
-  for (int beat = 0; beat < 15; ++beat) kick["notes"].push_back({{"tick", beat * kPpq}, {"length", kPpq / 4}, {"pitch", 36}, {"velocity", 0.95}});
-  // Last beat of every 4 bars: an 8-hit roll rising in velocity.
-  kick["notes"].push_back({{"tick", 15 * kPpq}, {"length", kPpq}, {"pitch", 36}, {"velocity", 0.9},
-                           {"roll", {{"count", 8}, {"velocityFrom", 0.35}, {"velocityTo", 1.0}}}});
-  json bass = {{"id", "bass"}, {"name", "Bass"}, {"instrument", "wave"}, {"instrumentVersion", 2}, {"patternTicks", 4 * kPpq},
-               {"params", {{"wave", 3}, {"tone", 400}, {"subLevel", 0.6}, {"unison", 1}, {"uniWidth", 0}, {"env1Attack", 1}, {"env1Decay", 70}, {"env1Sustain", 0.3}, {"env1Release", 12}}}, {"notes", json::array()},
-               {"envelopes", {{{"param", "tone"}, {"points", {{{"tick", 0}, {"value", 160}}, {{"tick", 8 * 4 * kPpq}, {"value", 1400}}}}}}}};
-  for (int beat = 0; beat < 4; ++beat)
-    for (int sixteenth = 1; sixteenth < 4; ++sixteenth)
-      bass["notes"].push_back({{"tick", beat * kPpq + sixteenth * kPpq / 4}, {"length", kPpq / 4 - 40}, {"pitch", 33}, {"velocity", 0.8}});
-  json hats = {{"id", "hats"}, {"name", "Hats"}, {"instrument", "hats"}, {"patternTicks", kPpq}, {"gainDb", -4},
-               {"notes", {{{"tick", kPpq / 4}, {"length", 60}, {"pitch", 42}, {"velocity", 0.5}},
-                          {{"tick", kPpq / 2}, {"length", 120}, {"pitch", 46}, {"velocity", 0.8}},
-                          {{"tick", 3 * kPpq / 4}, {"length", 60}, {"pitch", 42}, {"velocity", 0.5}}}}};
-  return {{"format", kProjectFormat}, {"version", 2}, {"name", "Psy demo"}, {"bpm", bpm},
-          {"lengthTicks", 8 * 4 * kPpq}, {"masterGainDb", -8}, {"tracks", {kick, bass, hats}}};
+  const double sr = 48000.0;
+  const int64_t lengthTicks = 8 * 4 * kPpq;
+  const double songSeconds = (double)lengthTicks * samplesPerTick(bpm, sr) / sr;
+  const json clip = {{"startTick", 0}, {"path", demoAudioFile().string()}, {"offsetSeconds", 0.0},
+                     {"durationSeconds", songSeconds}, {"gainDb", 0.0}};
+  const json track = {{"id", "kick"}, {"name", "Demo audio"}, {"instrument", "audio"},
+                      {"audioClips", json::array({clip})}};
+  return {{"format", kProjectFormat}, {"version", 2}, {"name", "Psy demo (generated audio)"}, {"bpm", bpm},
+          {"lengthTicks", lengthTicks}, {"masterGainDb", 0.0}, {"tracks", json::array({track})}};
 }
 
 namespace {
@@ -38,11 +65,12 @@ namespace {
 json sweep(const std::string& outDir) {
   json rows = json::array();
   const double sr = 48000;
+  AssetStore assets;  // the demo sounds from generated audio: the render must load it
   int worstSched = 0; double worstPair = 0, worstKickOnset = 0; bool allFinite = true; float worstPeak = 0; double slowest = 1e9;
   for (int bpm = 190; bpm <= 500; bpm += 10) {
     Project p = fromJson(demoProject(bpm));
     EventLog log;
-    RenderResult r = renderProject(p, sr, 512, true, 1.0, &log);
+    RenderResult r = renderProject(p, sr, 512, true, 1.0, &log, &assets);
     const double spt = samplesPerTick(bpm, sr);
     // 1. Scheduling: every note-on vs the exact (fractional) grid position.
     double maxSched = 0;
@@ -71,7 +99,7 @@ json sweep(const std::string& outDir) {
     bool finite = true; double dc = 0;
     for (size_t i = 0; i < r.L.size(); ++i) { if (!finiteBits(r.L[i]) || !finiteBits(r.R[i])) finite = false; dc += r.L[i]; }
     dc /= std::max<size_t>(1, r.L.size());
-    RenderResult single = renderProject(p, sr, 128, false, 1.0);  // one pass, no stems, real-time block size
+    RenderResult single = renderProject(p, sr, 128, false, 1.0, nullptr, &assets);  // one pass, no stems, real-time block size
     const double rt = (single.L.size() / sr) * 1000 / std::max(0.001, single.renderMs);
     rows.push_back({{"bpm", bpm}, {"notes", log.entries.size()}, {"maxScheduleErrorSamples", maxSched},
                     {"maxKickBassErrorSamples", maxPair}, {"maxKickOnsetSamples", maxOnset}, {"finite", finite},
@@ -90,11 +118,12 @@ json sweep(const std::string& outDir) {
 
 json blockIndependence() {
   json out = json::array();
+  AssetStore assets;
   for (double bpm : {190.0, 333.0, 500.0}) {
     Project p = fromJson(demoProject(bpm));
-    RenderResult ref = renderProject(p, 48000, 512);
+    RenderResult ref = renderProject(p, 48000, 512, false, 1.5, nullptr, &assets);
     for (int block : {1, 32, 64, 128, 333, 1024}) {
-      RenderResult r = renderProject(p, 48000, block);
+      RenderResult r = renderProject(p, 48000, block, false, 1.5, nullptr, &assets);
       double diff = 0;
       for (size_t i = 0; i < ref.L.size(); ++i) diff = std::max(diff, (double)std::fabs(ref.L[i] - r.L[i]));
       out.push_back({{"bpm", bpm}, {"block", block}, {"maxDifference", diff}});
@@ -178,7 +207,8 @@ json liveCase(const json& opts, const std::string& edit, float baselineStep, std
   if (edit == "none") {
     // The live output must be exactly the offline render of the same project.
     Project p = fromJson(demoProject(190));
-    RenderResult ref = renderProject(p, sr, 512, false, 0);
+    AssetStore assets;
+    RenderResult ref = renderProject(p, sr, 512, false, 0, nullptr, &assets);
     double diff = 0;
     for (int64_t i = 0; i < std::min<int64_t>(n, (int64_t)ref.L.size()); ++i) diff = std::max(diff, (double)std::fabs(ref.L[i] - L[i]));
     out["maxDifferenceFromOffline"] = diff;
@@ -195,9 +225,10 @@ json liveCase(const json& opts, const std::string& edit, float baselineStep, std
 
 json fourCases(const json& opts, const std::string& outDir) {
   json cases = json::array();
-  // 1. Offline WAV at 190 BPM, no edits: synthesis, mix and render.
+  // 1. Offline WAV at 190 BPM, no edits: the generated-audio demo, mix and render.
   Project p = fromJson(demoProject(190));
-  RenderResult r = renderProject(p, 48000, 512, false, 1.0);
+  AssetStore assets;
+  RenderResult r = renderProject(p, 48000, 512, false, 1.0, nullptr, &assets);
   AudioCheck c = checkAudio(r.L, r.R, (int64_t)r.L.size());
   if (!outDir.empty()) writeWav(outDir + "/case1-offline-190.wav", r.L, r.R, 48000, 24);
   cases.push_back({{"case", "offline WAV, 190 BPM, no edits"}, {"sampleRate", 48000}, {"peak", c.peak},
@@ -215,6 +246,12 @@ json fourCases(const json& opts, const std::string& outDir) {
 
 json runMeasure(const std::string& outDir, const json& realtime) {
   json report;
+  // L10b (2026-11-18): report what loading converted, in JSON and on stderr, so a silent-by-conversion song
+  // is named and never hidden. The generated-audio demo carries no conversion notes; a legacy builtin song
+  // would list each "track: what" here (the same notes project.load returns to the client as "converted").
+  const Project demo = fromJson(demoProject(190));
+  report["conversionNotes"] = demo.conversionNotes;
+  for (const auto& n : demo.conversionNotes) std::cerr << "conversion: " << n << '\n';
   report["sweep"] = sweep(outDir);
   report["blockIndependence"] = blockIndependence();
   const uint64_t t0 = nowNs();

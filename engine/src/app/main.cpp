@@ -692,6 +692,10 @@ int main(int argc, char** argv) {
       const json missing = loaded.value("missing", json::array()), missingAssets = loaded.value("missingAssets", json::array());
       for (const auto& m : missing) std::cerr << "missing plugin: " << m.dump() << '\n';
       for (const auto& m : missingAssets) std::cerr << "missing audio: " << m.dump() << '\n';
+      // L10b (2026-11-18): what an older version's conversion could not carry over is reported, never hidden.
+      // A song silenced by conversion (every track -> "none") names each track here and in the result JSON.
+      const json converted = loaded.value("converted", json::array());
+      for (const auto& n : converted) std::cerr << "conversion: " << n.dump() << '\n';
       json renderArgs = {{"path", args[2]}, {"stems", flag(args, "--stems")}, {"bits", std::stoi(option(args, "--bits", "24"))},
                          {"mono", flag(args, "--mono")}};
       // A region (training clips, Diogo 2026-11-05): ticks of the song; the tail after it in ms (default 2000).
@@ -699,7 +703,7 @@ int main(int argc, char** argv) {
       if (const std::string e = option(args, "--end-tick", ""); !e.empty()) renderArgs["endTick"] = std::stoll(e);
       if (const std::string t = option(args, "--tail-ms", ""); !t.empty()) renderArgs["tailMs"] = std::stod(t);
       r = server.handle({{"cmd", "render"}, {"args", renderArgs}});
-      if (r["ok"] && r.contains("result") && r["result"].is_object()) { r["result"]["missing"] = missing; r["result"]["missingAssets"] = missingAssets; }
+      if (r["ok"] && r.contains("result") && r["result"].is_object()) { r["result"]["missing"] = missing; r["result"]["missingAssets"] = missingAssets; r["result"]["conversionNotes"] = converted; }
       std::cout << r.dump(2) << '\n';
       return r["ok"] ? 0 : 1;
     }
