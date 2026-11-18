@@ -1,0 +1,131 @@
+CMake Warning (author) at C:/Users/vk_do/AppData/Local/Microsoft/WinGet/Packages/Kitware.CMake_Microsoft.Winget.Source_8wekyb3d8bbwe/cmake-4.4.4-windows-x86_64/share/cmake-4.4/Modules/FetchContent.cmake:1386 (message):
+  The DOWNLOAD_EXTRACT_TIMESTAMP option was not given and policy CMP0135 is
+  not set.  The policy's OLD behavior will be used.  When using a URL
+  download, the timestamps of extracted files should preferably be that of
+  the time of extraction, otherwise code that depends on the extracted
+  contents might not be rebuilt if the URL changes.  The OLD behavior
+  preserves the timestamps from the archive instead, but this is usually not
+  what you want.  Update your project to the NEW behavior or specify the
+  DOWNLOAD_EXTRACT_TIMESTAMP option with a value of true to avoid this
+  robustness issue.
+Call Stack (most recent call first):
+  CMakeLists.txt:64 (FetchContent_Declare)
+This warning is for project developers.  Use -Wno-author to suppress it.
+
+-- Configuring juceaide
+-- Building juceaide
+-- Exporting juceaide
+-- Testing juceaide
+-- Finished setting up juceaide
+-- Configuring done (0.9s)
+-- Generating done (0.2s)
+-- Build files have been written to: D:/Core-build/ux-pulse-A
+[0/2] Re-checking globbed directories...
+[1/25] Building VST3 manifest helper for CoreTestSynth
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/ux-pulse-A/vst3_helpers/CoreTestSynth
+ninja: no work to do.
+[2/25] Building VST3 manifest helper for CoreTestThrow
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/ux-pulse-A/vst3_helpers/CoreTestThrow
+ninja: no work to do.
+[3/25] Building VST3 manifest helper for CoreTestGain
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/ux-pulse-A/vst3_helpers/CoreTestGain
+ninja: no work to do.
+[4/25] Building VST3 manifest helper for CoreTestCrash
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/ux-pulse-A/vst3_helpers/CoreTestCrash
+ninja: no work to do.
+[5/25] Building VST3 manifest helper for CoreTestCrashRestart
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/ux-pulse-A/vst3_helpers/CoreTestCrashRestart
+ninja: no work to do.
+[6/25] Building VST3 manifest helper for CoreTestFault
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/ux-pulse-A/vst3_helpers/CoreTestFault
+ninja: no work to do.
+[7/25] Core version
+[8/25] Building CXX object engine\CMakeFiles\core-engine.dir\src\app\main.cpp.obj
+[9/25] Linking CXX executable engine\core-engine.exe
+[10/25] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\Diagnostics.cpp.obj
+[11/25] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\InspectorPanel.cpp.obj
+[12/25] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\Main.cpp.obj
+[13/25] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\Mixer.cpp.obj
+[14/25] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\PatternEditor.cpp.obj
+[15/25] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\Settings.cpp.obj
+[16/25] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\SCorePanel.cpp.obj
+[17/25] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\MainComponent.cpp.obj
+[18/25] Linking CXX executable app\desktop\CoreApp_artefacts\Release\Core.exe
+[19/25] Packing the Core package for the installer
+[20/25] Generating juce_binarydata_CoreSetupData/JuceLibraryCode/BinaryData1.cpp, juce_binarydata_CoreSetupData/JuceLibraryCode/CoreSetupData.h
+[21/25] Building CXX object app\installer\CMakeFiles\CoreSetup.dir\Setup.cpp.obj
+[22/25] Building CXX object app\installer\CMakeFiles\CoreSetupData.dir\juce_binarydata_CoreSetupData\JuceLibraryCode\BinaryData1.cpp.obj
+[23/25] Linking CXX static library app\installer\CoreSetupData.lib
+[24/25] Linking CXX executable "app\installer\CoreSetup_artefacts\Release\Core Setup.exe"
+Test project D:/Core-build/ux-pulse-A
+      Start  1: engine_tests
+ 1/22 Test  #1: engine_tests .....................   Passed    7.07 sec
+      Start  2: domain_tests
+ 2/22 Test  #2: domain_tests .....................   Passed    2.55 sec
+      Start  3: legacy_guard_tests
+ 3/22 Test  #3: legacy_guard_tests ...............   Passed    0.04 sec
+      Start  4: modules_tests
+ 4/22 Test  #4: modules_tests ....................   Passed    0.01 sec
+      Start  5: role_tests
+ 5/22 Test  #5: role_tests .......................   Passed    0.03 sec
+      Start  6: midi_tests
+ 6/22 Test  #6: midi_tests .......................   Passed    0.06 sec
+      Start  7: bug_tests
+ 7/22 Test  #7: bug_tests ........................   Passed    0.33 sec
+      Start  8: bitwig_tests
+ 8/22 Test  #8: bitwig_tests .....................   Passed    0.01 sec
+      Start  9: audit_tests
+ 9/22 Test  #9: audit_tests ......................   Passed    0.12 sec
+      Start 10: audit2_tests
+10/22 Test #10: audit2_tests .....................   Passed    0.26 sec
+      Start 11: hunt_tests
+11/22 Test #11: hunt_tests .......................   Passed    0.19 sec
+      Start 12: round3_tests
+12/22 Test #12: round3_tests .....................   Passed    0.01 sec
+      Start 13: calls_tests
+13/22 Test #13: calls_tests ......................   Passed    0.03 sec
+      Start 14: menu_tests
+14/22 Test #14: menu_tests .......................   Passed    0.01 sec
+      Start 15: window_tests
+15/22 Test #15: window_tests .....................   Passed    0.01 sec
+      Start 16: cli_version
+16/22 Test #16: cli_version ......................   Passed    0.08 sec
+      Start 17: cli_demo_render
+17/22 Test #17: cli_demo_render ..................   Passed    0.09 sec
+      Start 18: cli_measure
+18/22 Test #18: cli_measure ......................   Passed    0.68 sec
+      Start 19: cli_unicode
+19/22 Test #19: cli_unicode ......................   Passed    0.07 sec
+      Start 20: cli_package_stale
+20/22 Test #20: cli_package_stale ................   Passed    1.43 sec
+      Start 21: engine_process_tests
+21/22 Test #21: engine_process_tests .............   Passed   19.20 sec
+      Start 22: cli_plugin_crash_render
+22/22 Test #22: cli_plugin_crash_render ..........   Passed    0.12 sec
+
+100% tests passed out of 22
+
+Label Time Summary:
+merge    =  32.40 sec*proc (22 tests)
+
+Total Test time (real) =  32.42 sec
+Gate do Core: VERDE
+Codigo: D:\CORE\CORE\.agents\worktrees\ux-pulse-A @ 0d2135d (com alteracoes por commitar)
+Build:  D:/Core-build/ux-pulse-A
+Testes: merge
+Tempo:  60 s
+
+100% tests passed out of 22
+MERGE_EXIT=0

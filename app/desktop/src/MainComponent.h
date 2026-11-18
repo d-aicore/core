@@ -12,6 +12,7 @@
 #include <set>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_data_structures/juce_data_structures.h>  // juce::PropertySet (the window layout in the user settings)
 #include "EngineSession.h"
 #include "GlobalKeys.h"
 #include "SCorePanel.h"
@@ -36,6 +37,8 @@
 
 #include "bridge.hpp"
 #include "calls.hpp"
+#include "PanelWindows.h"
+#include "WindowLayout.h"
 class ProposalsPanel;
 
 namespace core::app {
@@ -89,6 +92,61 @@ public:
 private:
   class TrackRow;
   class AudioEditor;  // the bottom panel for the selected audio clip (in place of the pattern editor)
+  // ---------------------------------------------------------------- detachable windows (UX slice, 2026-11-18)
+  // Pulse's window organization with Core's look: the Playlist (ruler + tracks), the channel rack, the piano
+  // roll, the Mixer and the Browser each live docked in this window by default, pop out into an OS window on
+  // any monitor (⧉), come back (dock), or hide (×). Their places are kept in the user settings and checked
+  // against the monitors on restore; View > "Bring windows back to screen" rescues any that went off screen.
+  class ArrangementView;  // the ruler and the tracks: docked in the centre, or in a window of their own
+  std::unique_ptr<ArrangementView> arrangementView_;
+  bool arrangementShown_ = true;   // the Playlist docked and shown (× hides it; View brings it back)
+  bool pianoRollHidden_ = false;   // the piano roll's ×: the bottom slot stays empty until View opens it again
+  bool rackDocked_ = false;        // the channel rack's home is the bottom slot (else its own window)
+  bool rackOpen_ = false;          // docked and occupying the slot (as the Mixer's mixerOpen_)
+  std::unique_ptr<PatternsPanel> patternsPanel_;  // owned here: the slot or the window shows it, never both
+  struct DetachedPanel {
+    std::unique_ptr<PanelWindow> owned;  // the shell made here (the channel rack keeps its own PatternsWindow)
+    juce::DocumentWindow* window = nullptr;
+    winlayout::Panel layout;  // the state and the last detached place (kept while docked too)
+  };
+  std::map<juce::String, DetachedPanel> detached_;
+  bool windowLayoutDirty_ = false;  // a window moved: the settings take the place at most once a second
+  double windowLayoutSavedAt_ = 0;
+  bool restoringWindowLayout_ = false;  // applying the saved places: no write-back while reading them
+  static const std::vector<juce::String>& panelIds();
+  static winlayout::Panel defaultPanelLayout(const juce::String& id);
+  juce::Component* panelContent(const juce::String& id);
+  juce::String panelTitle(const juce::String& id) const;
+  bool panelDetached(const juce::String& id) const;
+  bool panelShown(const juce::String& id) const;  // docked and shown, or detached (the View menu's tick)
+  void detachPanel(const juce::String& id);
+  void dockPanel(const juce::String& id);   // back into this window, shown
+  void hidePanel(const juce::String& id);   // ×: hidden; its place kept for the next show
+  void showPanel(const juce::String& id);   // View / the F keys: shown again, where it lives
+  void togglePanelShown(const juce::String& id);
+  void togglePanelWindow(const juce::String& id);  // ⧉: detach <-> dock
+  void panelBoundsChanged(const juce::String& id);
+  void ensurePatternsPanel();  // the channel rack's panel and its host wiring (openPatterns shows it)
+  std::vector<winlayout::Rect> windowScreens() const;  // the monitors' work areas
+  winlayout::Rect defaultPanelPlace(const juce::String& id) const;  // a first detach: beside this window
+  void saveWindowLayout(juce::PropertySet& props);
+  void restoreWindowLayout(const juce::PropertySet& props);
+  void collectWindowLayout();  // the timer: a moved window's place, at most once a second
+  void bringWindowsBackToScreen();
+  void markWindowLayoutDirty();
+  // The arrangement's geometry is local to its view: the same numbers docked and in its own window.
+  bool arrangementDocked() const { return arrangementShown_ && !panelDetached("playlist"); }
+  bool pianoRollAway() const { return pianoRollHidden_ || panelDetached("pianoRoll"); }
+  bool audioClipSelected() const;
+  bool bottomSlotEmpty() const;  // the piano roll away and nothing else in the slot: the tracks take the room
+  void paintArrangement(juce::Graphics& g);   // the ruler, the tracks' panel and its window buttons
+  void layoutArrangement();                   // the tracks, the time bar and the box inside the view
+  void arrangementMouseDown(const juce::MouseEvent& e);  // e relative to the view
+  void arrangementMouseDrag(const juce::MouseEvent& e);
+  void arrangementMouseUp(const juce::MouseEvent& e);
+  void arrangementMouseMove(const juce::MouseEvent& e);
+  juce::Rectangle<int> arrangementDetachArea() const;  // ⧉ and × at the ruler's top right
+  juce::Rectangle<int> arrangementCloseArea() const;
   void showEditorForSelection();
   void openScore();  // Stage Core: the song's parts
   // The window that shows a part of Core or an "open" call: "score", "mixer", "patterns", "instrument" (the
@@ -151,7 +209,8 @@ private:
   void projectFolderChanged(); // the engine reads the audio files from the new folder
   std::filesystem::path projectDir() const;
   void askText(const juce::String& title, const juce::String& initial, std::function<void(const std::string&)> done);
-  juce::Rectangle<int> laneSpan() const;  // x range of the clip lanes and the ruler
+  juce::Rectangle<int> laneSpan() const;  // x range of the clip lanes and the ruler (local to the arrangement view)
+  juce::Rectangle<int> laneSpanFor(const juce::Component& c) const;  // the same span in another component's coordinates
   juce::Rectangle<int> editorArea() const;
 
   void timerCallback() override;

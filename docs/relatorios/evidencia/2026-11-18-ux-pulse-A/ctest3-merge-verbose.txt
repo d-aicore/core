@@ -1,0 +1,467 @@
+UpdateCTestConfiguration  from :D:/Core-build/ux-pulse-A/DartConfiguration.tcl
+Test project D:/Core-build/ux-pulse-A
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 1
+      Start  1: engine_tests
+
+1: Test command: D:\Core-build\ux-pulse-A\tests\engine_tests.exe
+1: Working Directory: D:/Core-build/ux-pulse-A/tests
+1: Test timeout computed to be: 300
+1: ok   wav: escrever e ler um seno de 32 bits devolve as mesmas amostras
+1: ok   wav: 24 bits fica a menos de 2 passos de quantizacao (-132 dBFS)
+1: ok   wav: ficheiro inexistente da erro, nao audio vazio
+1: ok   tempo: samplesPerTick a 150 BPM / 48 kHz
+1: ok   projecto: toJson(fromJson(x)) e estavel
+1: ok   projecto: entrada invalida e recusada
+1: ok   project: an old song with automation on a built-in instrument opens
+1: ok   render: a silent song gives finite silence with the right duration
+1: ok   render: clip de audio toca no sitio, ao nivel certo e sem NaN
+1: ok   render: ganho do clip de -6 dB baixa o pico para metade
+1: ok   render: o tamanho do bloco nao muda o resultado
+1: ok   render: deterministico na mesma build (duas vezes igual)
+1: ok   render: ficheiro em falta nao parte o render
+1: ok   sample host: a note plays the user's file at its level, to the file's end (not silence)
+1: ok   sample host: the level and the velocity scale the file's gain
+1: ok   sample host: a pitched zone follows the key (an octave up reads twice as fast)
+1: ok   sample host: a held zone loops while the note is held and releases after it
+1: ok   sample host: the block size does not change the render
+1: ok   sample host: a missing file is silent and reported, the song plays on
+1: ok   render: the demo sounds (amplitude > 0), not silence-by-conversion
+1: ok   render: generated audio and the test synth sound out (amplitude > 0)
+1: ok   render: note-ons land on the exact grid (scheduling accuracy)
+1: ok   loop: posto no tempo novo antes de o audio aplicar o grafo novo nao e convertido outra vez
+1: ok   audio: o limite de memoria recusa antes de ler o ficheiro que nao cabe (audit 10)
+1: ok   audio: um ficheiro ao ritmo do projecto nao e copiado outra vez (audit 10)
+1: ok   freeze: o congelamento fica dentro do pedaco pedido (audit 11)
+1: ok   adopt: a mudanca de tempo nao desloca o arranque do envelope (audit 12)
+1: ok   adopt: os note-offs que ficaram na reserva passam para o grafo novo (audit 13)
+1: ok   engine.start: uma saída que falha não deixa a app sem som (audit 14)
+1: ok   engine.start: a device switch that fails after a rate change puts the engine, the rate and the output back (FL-3)
+1: ok   engine.start: M5 fica 0 (serial) por omissão, sem CORE_LIVE_THREADS nem liveThreads (FL-1, D51)
+1: ok   engine.start: the null device opens and reopens; a refused realtime priority falls back to normal (BUG-SWEEP-06)
+1: ok   ART-003: o Server reporta uma saída que parou ou mudou (dispositivo desligado / rerouted)
+1: ok   A-009: canção com instrument='elastic' abre em 'none', conversão reportada, e o grafo não crasha
+1: ok   protocol: a song with more than 8 MB of plugin state is read, loaded and answered whole (M2)
+1: ok   M5: a worker that was late once is re-armed after the cooldown; a stalling plugin stays serial (budget)
+1: ok   A-004: swapping a plugin instance keeps the held note sounding (re-chased into the fresh instance)
+1: ok   protocol: project.load asks for the state it needs and edits carry none (STATE-PER-EDIT)
+1: ok   freeze split BUG-SWEEP-21: unfreeze then split is null-identical; the old frozen split changed the held source
+1: 39 testes, 221 verificacoes, 0 falhas
+ 1/22 Test  #1: engine_tests .....................   Passed    7.05 sec
+test 2
+      Start  2: domain_tests
+
+2: Test command: D:\Core-build\ux-pulse-A\tests\domain_tests.exe
+2: Working Directory: D:/Core-build/ux-pulse-A/tests
+2: Test timeout computed to be: 300
+2: ok   documento: novo documento vazio e valido e estavel
+2: ok   documento: o template basico tem kick, bass e hats a espera de plugin
+2: ok   guardar/reabrir: o ficheiro reaberto e igual ao guardado
+2: ok   guardar/reabrir: ficheiro estragado da erro e nao apaga nada
+2: ok   dados D3: o Save ve que o ficheiro mudou em disco desde que esta janela o abriu ou gravou
+2: ok   data loss D4: ReplaceFileW fails half way (1177) and neither version is lost; the file opens
+2: ok   data loss D4: 1177 and the new file cannot be moved in either -> the error says where each version is, the temporary file stays
+2: ok   data loss D4: the normal path is as it was (new in place, previous in the .bak, no temporary files)
+2:      (message: Cannot replace C:\Users\vk_do\AppData\Local\Temp\core-domain-tests\d4-bak-locked.core: Não foi possível remover o ficheiro a ser substituído (1175))
+2: ok   data loss D4: locked .bak -> refused with an error, the previous file intact, no temporary file left, the error has words
+2: ok   data loss BUG-SWEEP-01: a rejected save leaves every retained recovery copy byte-identical
+2: ok   data loss BUG-SWEEP-01: a successful save does not consume a retained recovery copy
+2: ok   undo/redo: adicionar e remover pistas volta exactamente atras
+2: ok   undo/redo: um gesto (arrastar) e um so passo
+2: ok   modificado: guardar limpa, editar suja, undo ate ao guardado limpa
+2: ok   undo/redo: a large plugin state does not shrink the history below the minimum number of steps
+2: ok   undo/redo: beyond the minimum number of steps the byte budget still drops the oldest
+2: ok   undo/redo: above the hard ceiling the oldest steps go even below the minimum, but one undo always stays
+2: ok   plugins: droppedPluginKeys names the plugins a change takes away, and nothing for other changes
+2: ok   BUG-SWEEP-09 characterization: every built-in catalogue role adds a silent, unassigned track (kind none)
+2: ok   BUG-SWEEP-10: assigning a sample never replaces a working plugin instrument with the removed sampler
+2: ok   BUG-SWEEP-10: suggested samples keep a plugin role track's plugin (the bulk flow never replaces it)
+2: ok   BUG-SWEEP-10 positive: a sample on a none track becomes a user-sample host that plays the user's file
+2: ok   BUG-SWEEP-11: the sound axis targets role plugins, is hidden with no plugins, and keeps legacy built-ins
+2: ok   BUG-SWEEP-11 positive: Randomize sound changes role plugin parameters, bounded and stepped, one Undo restores
+2: ok   plugins: keepLivePluginStates never takes back the state of a plugin that stays alive
+2: ok   templates: a saved template opens, projects and the engine renders it finite
+2: ok   plugins por fabricante: todos entram num grupo, sem fabricante vai para Other, ordem alfabetica
+2:      (round-trip: length=3500 patterns=1 equal=1)
+2: ok   tempo round-trip BUG-SWEEP-07: separate edits 145 -> 300 -> 145 restore the song exactly
+2: ok   tempo round-trip BUG-SWEEP-07: a single drag with the baseline reset restores the song
+2: ok   tempo round-trip BUG-SWEEP-07: a walk 145 -> 300 -> 400 -> 145 still restores the original gates
+2: ok   tempo round-trip BUG-SWEEP-07: an edited copy is retimed, never taken back to the source
+2: ok   tempo round-trip BUG-SWEEP-07: an edited source is never restored over the copy
+2: ok   tempo round-trip BUG-SWEEP-07: short gates keep their ms one way and come back exactly
+2: ok   tempo round-trip BUG-SWEEP-07: a saved tempo copy reopens and still restores exactly
+2: ok   randomize: tempo-only keeps an unarranged Patterns-window idea (BUG-SWEEP-29)
+2: ok   score: Stage Core's live operations (song shape, arrange, cell on/off) on the template song
+2: ok   projection: plugin state does not travel with every edit (STATE-PER-EDIT)
+2: 37 testes, 639 verificacoes, 0 falhas
+ 2/22 Test  #2: domain_tests .....................   Passed    2.66 sec
+test 3
+      Start  3: legacy_guard_tests
+
+3: Test command: D:\Core-build\ux-pulse-A\tests\legacy_guard_tests.exe
+3: Working Directory: D:/Core-build/ux-pulse-A/tests
+3: Test timeout computed to be: 300
+3: ok   legacy guard: an old song opens and keeps every stored sound datum
+3: ok   legacy guard: the projection sends none of the removed built-ins to the engine
+3: ok   legacy guard: the engine loads a legacy project (sampler zones, synth, bus with samples)
+3: ok   legacy guard: a legacy song with audio renders bit for bit at any block size
+3: ok   legacy guard L2: modulator, sidechain and A/B sound data survive a save/reopen
+3: ok   legacy guard L2: the live effect and instrument paths still work
+3: ok   legacy guard L2: the pattern catalogue loads and the kick/bass/cymbal alignment keeps its rules
+3: ok   legacy guard L2: the sample role catalogue and the live fit rules are unchanged
+3: 8 testes, 158 verificacoes, 0 falhas
+ 3/22 Test  #3: legacy_guard_tests ...............   Passed    0.04 sec
+test 4
+      Start  4: modules_tests
+
+4: Test command: D:\Core-build\ux-pulse-A\tests\modules_tests.exe
+4: Working Directory: D:/Core-build/ux-pulse-A/tests
+4: Test timeout computed to be: 300
+4: ok   module cleanup: the cards keep the nine tool ids, with no legacy *-Core title
+4: ok   module cleanup: the old module ids and titles still resolve as lookup aliases
+4: ok   module cleanup: a new shared bus is named Reverb / Delay, and the sentence says so
+4: ok   module cleanup: a legacy R-Core / D-Core bus is reused under its own name, not duplicated
+4: ok   module cleanup: a legacy project with old module identifiers opens and keeps its data
+4: ok   module cleanup: a new track of the old wave role is not named after the retired module
+4: ok   module cleanup: the bridge opens the old module ids (open aliases)
+4: 7 testes, 137 verificacoes, 0 falhas
+ 4/22 Test  #4: modules_tests ....................   Passed    0.01 sec
+test 5
+      Start  5: role_tests
+
+5: Test command: D:\Core-build\ux-pulse-A\tests\role_tests.exe
+5: Working Directory: D:/Core-build/ux-pulse-A/tests
+5: Test timeout computed to be: 300
+5: ok   papeis: o catalogo tem efeitos com macros e instrumentos sem macros
+5: ok   papeis: as macros adivinham-se pelos nomes dos parametros, palavras inteiras
+5: ok   papeis: o ficheiro guarda e reabre igual; ficheiro estragado da mapa vazio e diz porque
+5: ok   papeis: ensureRoleEffect poe o plugin uma vez, marcado com o papel, e toca no motor
+5: ok   papeis: um papel sem plugin, ou do tipo errado, e recusado sem mexer na musica
+5: ok   papeis: addRoleTrack e setTrackRole poem o plugin do papel como instrumento
+5: ok   SUCK: o reverb abre ate ao drop e volta ao repouso no drop; o filtro fecha
+5: ok   PUM: o volume do plugin de sidechain desce em cada nota do kick e volta antes da seguinte
+5: ok   build-up: o filtro abre, o reverb e o delay crescem ate ao drop; papeis em falta sao saltados
+5: ok   pistas mudas: o papel adivinha-se pelo nome e pelo som antigo
+5: ok   pistas mudas: as builtin e none com papel no mapa passam a tocar o plugin; as outras ficam e sao listadas
+5: ok   pistas mudas: pistas de audio, bus e com plugin nao mudam
+5: ok   toolSharedBus: one bus only with the role's plugin, sends without duplicating, quieter in the drops
+5: ok   toolSharedBus: no plugin for the role, or a wrong preset, refuses without changing the song
+5: ok   toolIntentFx: cada intencao escreve as macros dos papeis; papel em falta e saltado e dito
+5: ok   toolIntentFxTracks: a intencao escreve em TODAS as pistas com notas, nao so na primeira
+5: ok   toolRoll: um padrao novo que acelera ate ao drop, os clips do sitio saem; valores errados recusam
+5: ok   catalogo das tools: ids unicos, cada uma com o que faz e parametros com nome
+5: ok   cartoes das tools: a lista esta certa, sem S-Core, e acha-se por id e pelos nomes da AI
+5: ok   SUCK: uma cadeia de efeitos cheia recusa-se antes de escrever seja o que for
+5: ok   build-up e fx por intencao: cadeia cheia nao deixa metade escrita
+5: 21 testes, 216 verificacoes, 0 falhas
+ 5/22 Test  #5: role_tests .......................   Passed    0.03 sec
+test 6
+      Start  6: midi_tests
+
+6: Test command: D:\Core-build\ux-pulse-A\tests\midi_tests.exe
+6: Working Directory: D:/Core-build/ux-pulse-A/tests
+6: Test timeout computed to be: 300
+6: ok   MIDI exportar: os rolls saem expandidos como o motor os toca, em cada repeticao do loop
+6: ok   MIDI exportar: o fim da musica corta, pistas mudas ficam de fora, o tempo e as rampas vao no ficheiro
+6: ok   MIDI: escrever e ler da as mesmas notas e o mesmo tempo
+6: ok   MIDI ler: running status, note-on com velocidade 0, formato 0 com dois canais, 96 ticks por seminima
+6: ok   MIDI importar: cada pista vira uma pista do Core com padroes; compassos iguais sao o mesmo padrao
+6: ok   MIDI importar: nomes estragados ficam validos; sem notas e recusado sem mexer em nada
+6: ok   MIDI importar para um padrao: notas no padrao a partir de um ponto, as de fora ficam de fora
+6: ok   MIDI ler: o cabecalho a prometer mais pistas do que as que o ficheiro tem da erro
+6: ok   MIDI import BUG-SWEEP-18: overlong, surrogate and above-U+10FFFF names keep the song savable
+6: ok   rename BUG-SWEEP-18: a track name that is not valid UTF-8 is refused, the song stays savable
+6: ok   MIDI SWEEP-30: Louder and Softer scale a roll's played hit velocities with its base
+6: ok   MIDI SWEEP-30: the ordinary-note control and the single-hit velocity contract stay intact
+6: ok   MIDI export: a late write failure throws and the previous file stays byte-identical
+6: ok   MIDI export: a successful overwrite reads back the same bytes and keeps the previous export as .bak
+6: ok   MIDI SWEEP-19: the exporter reads a roll only when hasRoll says there is one
+6: ok   MIDI SWEEP-19: density copies carry no stale roll; the export survives save/reopen unchanged
+6: ok   MIDI SWEEP-19: a preset cut from a rolled pattern carries no stale roll payload
+6: ok   MIDI SWEEP-30 follow-up: humanizeNotes scales a roll's played envelope with its base
+6: ok   MIDI SWEEP-30 follow-up: varyNotes accent scales a roll's played envelope with its base
+6: ok   MIDI SWEEP-30 follow-up: buildup ramp, rack steps and follow write through the shared helper unchanged
+6: 20 testes, 402 verificacoes, 0 falhas
+ 6/22 Test  #6: midi_tests .......................   Passed    0.04 sec
+test 7
+      Start  7: bug_tests
+
+7: Test command: D:\Core-build\ux-pulse-A\tests\bug_tests.exe
+7: Working Directory: D:/Core-build/ux-pulse-A/tests
+7: Test timeout computed to be: 300
+7: ok   dados D1: o audio de outra cancao da mesma pasta nao e 'stray'
+7: ok   dados D1: um .core da pasta que nao se le -> nada e 'stray' (na duvida nao se apaga nada)
+7: ok   dados D1: um .wav que nenhuma cancao da pasta refere continua a ser devolvido
+7: ok   dados D1: contam tambem o .core.bak, um ficheiro de schema 1 e um 'core-project' da pasta
+7: ok   dados D1: o mesmo audio importado em duas cancoes (um so ficheiro) nao sai quando uma delas o deixa de usar
+7: ok   dados D1: o texto da pergunta do Remove unused tem traducao
+7: ok   dados D3: a pergunta 'o ficheiro mudou em disco' tem traducao
+7: ok   data loss D4: the error 'the file is not in its place' has a translation
+7: ok   data loss D5: the corrections of an index of another version are salvaged (the reader gives an error and none)
+7: ok   data loss D5: salvaging is tolerant - what cannot be read is left out, and nothing throws
+7: ok   data loss D5: the index that could not be read is set aside, never written over, and the new one has the corrections
+7: ok   data loss D5: what the window says about an index it could not read has a translation
+7: ok   sweep: addPattern recusa um padrao de comprimento 0 (dividia por zero na projeccao)
+7: ok   sweep: ids enormes num ficheiro nao dao a volta ao gerar o seguinte
+7: ok   sweep: um padrao aprovado guarda o 'approval' e volta a ler; um id longo com sufixo cabe nos 80
+7: ok   sweep: schemaVersion 2^32 + 1 de um template nao e lido como 1
+7: ok   sweep: P-Core com numeros enormes nao tem cast indefinido (recusado ou limitado)
+7: ok   sweep: isolateRegion guarda os campos extra do clip cortado e o nome da copia nao parte um caracter
+7: ok   sweep: STUTTER numa zona apanha as notas das repeticoes de um clip em loop
+7: ok   sweep: FOLLOW grava o corte da nota que atravessa o inicio da zona
+7: ok   reset: o menu da chain oferece TODOS os efeitos (os proprios incluidos) e o Remove leva o FX proprio e as curvas dele
+7: ok   duplicating a section copies the tempo changes inside it
+7: ok   work preservation BUG-SWEEP-17: a retained .saving-N copy keeps the audio only it references
+7: ok   work preservation BUG-SWEEP-17: an unreadable retained .saving-N copy is doubt; a non-song copy does not block
+7: ok   BUG-SWEEP-22: a duplicated section starts at its own tempo, boundary ramps keep their shape
+7: ok   BUG-SWEEP-23: swapping sections moves the tempo with the music
+7: ok   BUG-SWEEP-24: inserted empty bars hold the tempo, the ramp keeps its shape on both sides
+7: ok   BUG-SWEEP-25: shortening the song keeps the retained ramp with a derived endpoint
+7: ok   sweep-26: a template loaded into a swung slot plays swung and the next swing change works
+7: ok   sweep-26 control: swing back to zero then 0.75 lands at 330
+7: ok   sweep-26 builtin: a P-Core style loaded into a swung slot keeps the swing
+7: ok   sweep-27: malformed patternSlots metadata is read with defaults, not thrown at the consumer
+7: ok   sweep-27: unknown song and slot properties survive the parse and save round-trip
+7: ok   sweep-28: conflicting names and parts map by part first, as the header contract says
+7: ok   sweep-28: one row of a part goes to the first track of that part only
+7: ok   sweep-28: unambiguous name-only and part-only matches keep working
+7: ok   sweep-20: a slot saved as a template keeps its rolls through save, load and apply
+7: ok   sweep-20: templates written before rolls keep loading and saving unchanged
+7: ok   write safety BUG-SWEEP-16: a late write failure on a pattern preset throws and leaves no empty file
+7: ok   write safety BUG-SWEEP-16: a late write failure on a rack template throws and leaves no empty file
+7: ok   write safety BUG-SWEEP-16: a late write failure on the roles file throws and the previous map stays byte-identical
+7: ok   freeze split BUG-SWEEP-21: a frozen clip refuses the split with an unfreeze offer and stays whole
+7: ok   freeze split BUG-SWEEP-21: unfreeze is one Undo step, then the split succeeds normally
+7: ok   swing save BUG-SWEEP-26: saving a swung slot preserves its swing state, never strips it
+7: ok   swing save BUG-SWEEP-26: load applies the saved swing once — same-swing round trip exact, other swing reconciles without drift
+7: ok   swing save BUG-SWEEP-26: a small swing with style jitter is never doubled on load
+7: ok   swing save BUG-SWEEP-26: legacy templates (no swing metadata) load exactly as before
+7: ok   swing save BUG-SWEEP-26: the explicit unswing export option strips the swing; the default keeps it
+7: ok   BUG-SWEEP-09: the track menus offer no built-in instrument (each would create a silent, unassigned track)
+7: 49 testes, 493 verificacoes, 0 falhas
+ 7/22 Test  #7: bug_tests ........................   Passed    0.22 sec
+test 8
+      Start  8: bitwig_tests
+
+8: Test command: D:\Core-build\ux-pulse-A\tests\bitwig_tests.exe
+8: Working Directory: D:/Core-build/ux-pulse-A/tests
+8: Test timeout computed to be: 300
+8: ok   Bitwig: cada pista com notas e o seu MIDI track, o instrumento e os efeitos plugin dao um preset cada
+8: ok   Bitwig: nomes de ficheiro sem caracteres que o Windows recusa e sem cortar um caracter a meio
+8: 2 testes, 25 verificacoes, 0 falhas
+ 8/22 Test  #8: bitwig_tests .....................   Passed    0.01 sec
+test 9
+      Start  9: audit_tests
+
+9: Test command: D:\Core-build\ux-pulse-A\tests\audit_tests.exe
+9: Working Directory: D:/Core-build/ux-pulse-A/tests
+9: Test timeout computed to be: 300
+9: ok   auditoria B01: importar take..1.wav deixa guardar e fazer autosave; um '..' a sair da pasta continua recusado
+9: ok   auditoria B02: uma pista chamada master nao partilha os estados de plugin do master
+9: ok   auditoria B03: recortar um template a meio de uma rampa de tempo guarda a rampa
+9: ok   auditoria B04: exportar em mono mede o que o ficheiro mono leva, nao o pico estereo
+9: ok   auditoria B06: render com endTick 0 e uma regiao vazia e e recusado, como no render.start
+9: ok   amostras: um wav trocado por dentro, com os mesmos bytes e a mesma data, le de novo
+9: ok   motor: um wav trocado por dentro, com os mesmos bytes e a mesma data, sai do cache
+9: 7 testes, 65 verificacoes, 0 falhas
+ 9/22 Test  #9: audit_tests ......................   Passed    0.10 sec
+test 10
+      Start 10: audit2_tests
+
+10: Test command: D:\Core-build\ux-pulse-A\tests\audit2_tests.exe
+10: Working Directory: D:/Core-build/ux-pulse-A/tests
+10: Test timeout computed to be: 300
+10: ok   auditoria 2, bug 1: uma linha do motor com tipos errados nunca lanca no cliente
+10: ok   auditoria 2, ponto 4: uma resposta sem id valido termina a sessao logo, com o motivo
+10: ok   auditoria 2, bug 2: um project.load sem resposta volta a ser enviado sozinho, com uma revisao nova
+10: ok   auditoria 2, bug 3: o espaco do export conta os mono como mono e cada volume por si
+10: ok   auditoria 2, observacao: um autosave estragado diz que esta estragado, sem excecao do JSON
+10: ok   dados D2: o autosave de um Core que morreu e oferecido mesmo que o id dele ja seja de outro processo
+10: ok   BUG-SWEEP-02: a successful export never consumes a preexisting .part and cleans up only its own working file
+10: ok   BUG-SWEEP-02: a failed or cancelled export keeps the preexisting .part and removes only its own working files
+10: ok   BUG-SWEEP-02: two concurrent exports of the same target never share a working path
+10: ok   BUG-SWEEP-02: working-file reservations are unique, exclusive and never truncate an existing candidate
+10: ok   BUG-SWEEP-03: a failed publish keeps the previous file and names it in the error
+10: ok   BUG-SWEEP-03: a failed export job reports the rollback and the kept backups
+10: ok   BUG-SWEEP-03: a publish that can restore puts the old file back and reports it
+10: ok   BUG-SWEEP-03: the rollback report names what was restored and what was kept
+10: ok   BUG-SWEEP-03: a successful publish reports no rollback and takes the new files
+10: 15 testes, 364 verificacoes, 0 falhas
+10/22 Test #10: audit2_tests .....................   Passed    0.26 sec
+test 11
+      Start 11: hunt_tests
+
+11: Test command: D:\Core-build\ux-pulse-A\tests\hunt_tests.exe
+11: Working Directory: D:/Core-build/ux-pulse-A/tests
+11: Test timeout computed to be: 300
+11: ok   caca P01: o bounce de uma pista com nome comprido (72+ bytes, com acentos) guarda e faz autosave
+11: ok   caca P02: render e render.start tem a mesma cauda por omissao
+11: ok   caca P03: ids de efeito repetidos ou com ':' sao limpos ao abrir, e o motor ja nao renomeia nada
+11: ok   hunt P04: own effects and modulators stay in the .core and out of the engine; plugins and their curves play
+11: ok   caca P06: apagar a pista mostrada nao mete na selecao uma pista que ninguem escolheu
+11: ok   caca 2, P05: converter 44,1 kHz para 48 kHz da o numero certo de frames
+11: ok   caca 2, IPC: uma resposta com um campo event continua a ser a resposta
+11: ok   caca 2, U-8: os tres textos que faltavam tem traducao
+11: ok   caca 2, P08: um clip so de NaN e um ficheiro estragado, nao silencio
+11: ok   caca 2, seccao 4: um ppq que nao e 960 tem uma mensagem que se entende
+11: ok   caca audit 2026-11-17 #1: os nomes que o randomizador da aos padroes entram no leitor e guardam-se
+11: ok   caca audit #1 (irmao): os nomes que o rack da aos padroes entram no leitor
+11: ok   caca audit #1 (irmao): duplicar com o nome todo cheio da um nome diferente
+11: 13 testes, 121 verificacoes, 0 falhas
+11/22 Test #11: hunt_tests .......................   Passed    0.17 sec
+test 12
+      Start 12: round3_tests
+
+12: Test command: D:\Core-build\ux-pulse-A\tests\round3_tests.exe
+12: Working Directory: D:/Core-build/ux-pulse-A/tests
+12: Test timeout computed to be: 300
+12: ok   ronda 3, R3-A: toolRoll numa pista cheia (64 padroes) recusa e nao corta nada
+12: ok   ronda 3, R3-D: um reverb sem tamanho diz que o huge nao teve tamanho
+12: ok   ronda 3, R3-E: uma pista com 8 sends fica como estava e e dita pelo nome; quem ja tinha um R-Core muda sem o perder
+12: ok   ronda 3, R3-F: kind e style aceitam maiusculas, como preset, intent e section
+12: ok   ronda 3, R3-G: seccoes que o hall nao conhece nao fazem a frase dizer 'quieter in the drops'
+12: ok   ronda 3, R3-B: o F-Core so promete o que escreveu (impact sem drive nao fala de grit)
+12: ok   round 3, R3-C: the new texts of the Tools panel and the menus have a translation
+12: 7 testes, 82 verificacoes, 0 falhas
+12/22 Test #12: round3_tests .....................   Passed    0.01 sec
+test 13
+      Start 13: calls_tests
+
+13: Test command: D:\Core-build\ux-pulse-A\tests\calls_tests.exe
+13: Working Directory: D:/Core-build/ux-pulse-A/tests
+13: Test timeout computed to be: 300
+13: ok   audit 22: um on que e o id de uma faixa ganha a outra que se chama assim
+13: ok   audit 22: duas faixas com o mesmo nome fica a primeira
+13: ok   audit 22: o nome continua a servir quando so ha uma faixa com ele
+13: ok   audit 22: uma section que e o id de uma parte ganha a outra que se chama assim
+13: ok   audit 26: um Mix sem volume nem pan e deixado de fora, nao aplicado a vazio
+13: ok   audit 26: um Mix do master so com pan e deixado de fora (o master nao tem pan)
+13: ok   audit 26: um Mix so com um botao que nao existe e deixado de fora
+13: ok   audit 26: um Mix com o que o master tem fica, e so isso
+13: ok   audit 26: um Mix de faixa com volume e pan fica e aplica os dois
+13: ok   audit 26: um Open sem botoes continua a ser uma chamada que nao muda nada (de proposito)
+13: ok   BUG-SWEEP-04: malformed addon fields are refused with a reason, never a throw
+13: ok   BUG-SWEEP-04: a malformed first folder does not hide the usable add-on in the next
+13: 12 testes, 69 verificacoes, 0 falhas
+13/22 Test #13: calls_tests ......................   Passed    0.02 sec
+test 14
+      Start 14: menu_tests
+
+14: Test command: D:\Core-build\ux-pulse-A\tests\menu_tests.exe
+14: Working Directory: D:/Core-build/ux-pulse-A/tests
+14: Test timeout computed to be: 300
+14: ok   track menu: action ids route to their action at every boundary catalog size
+14: ok   track menu: plugin item ids never share an action id, at any boundary catalog size
+14: ok   track menu: the effect chain ids keep the cap-16 wrap semantics
+14: ok   track menu: unknown ids do nothing
+14: ok   add track menu: action ids route to their action at every boundary catalog size
+14: ok   add track menu: plugin item ids never share an action id, at any boundary catalog size
+14: ok   add track menu: unknown ids do nothing
+14: 7 testes, 366 verificacoes, 0 falhas
+14/22 Test #14: menu_tests .......................   Passed    0.01 sec
+test 15
+      Start 15: window_tests
+
+15: Test command: D:\Core-build\ux-pulse-A\tests\window_tests.exe
+15: Working Directory: D:/Core-build/ux-pulse-A/tests
+15: Test timeout computed to be: 300
+15: ok   layout: a panel round-trips through the settings form
+15: ok   layout: the settings form names every field
+15: ok   layout: a legacy or broken settings entry loads as the docked default
+15: ok   layout: a place fully on a monitor is kept as it was
+15: ok   layout: a place off every monitor comes back to the fallback screen
+15: ok   layout: a place partly off a monitor is clamped into it
+15: ok   layout: a window bigger than its monitor is shrunk to fit
+15: ok   layout: a tiny strip of title bar is enough to be reachable
+15: ok   layout: no monitor reported falls back without throwing
+15: ok   layout: bring back cascades every window onto the primary monitor
+15: 10 testes, 70 verificacoes, 0 falhas
+15/22 Test #15: window_tests .....................   Passed    0.01 sec
+test 16
+      Start 16: cli_version
+
+16: Test command: D:\Core-build\ux-pulse-A\engine\core-engine.exe "--version"
+16: Working Directory: D:/Core-build/ux-pulse-A/tests
+16: Test timeout computed to be: 300
+16: core-engine 0.7.0+69c2850b8a
+16/22 Test #16: cli_version ......................   Passed    0.01 sec
+test 17
+      Start 17: cli_demo_render
+
+17: Test command: C:\Users\vk_do\AppData\Local\Microsoft\WinGet\Packages\Kitware.CMake_Microsoft.Winget.Source_8wekyb3d8bbwe\cmake-4.4.4-windows-x86_64\bin\cmake.exe "-DENGINE=D:/Core-build/ux-pulse-A/engine/core-engine.exe" "-DWORK=D:/Core-build/ux-pulse-A/tests/cli" "-P" "D:/CORE/CORE/.agents/worktrees/ux-pulse-A/tests/cli_demo_render.cmake"
+17: Working Directory: D:/Core-build/ux-pulse-A/tests
+17: Test timeout computed to be: 300
+17: -- demo.wav 4389560 bytes, peak 0.74338769912719727
+17/22 Test #17: cli_demo_render ..................   Passed    0.08 sec
+test 18
+      Start 18: cli_measure
+
+18: Test command: C:\Users\vk_do\AppData\Local\Microsoft\WinGet\Packages\Kitware.CMake_Microsoft.Winget.Source_8wekyb3d8bbwe\cmake-4.4.4-windows-x86_64\bin\cmake.exe "-DENGINE=D:/Core-build/ux-pulse-A/engine/core-engine.exe" "-DWORK=D:/Core-build/ux-pulse-A/tests/cli" "-P" "D:/CORE/CORE/.agents/worktrees/ux-pulse-A/tests/cli_measure.cmake"
+18: Working Directory: D:/Core-build/ux-pulse-A/tests
+18: Test timeout computed to be: 300
+18: -- measure: allFinite, maxPeak 0.74338769912719727, schedule 0.0 samples, 18 blocks without difference
+18/22 Test #18: cli_measure ......................   Passed    0.66 sec
+test 19
+      Start 19: cli_unicode
+
+19: Test command: C:\Users\vk_do\AppData\Local\Microsoft\WinGet\Packages\Kitware.CMake_Microsoft.Winget.Source_8wekyb3d8bbwe\cmake-4.4.4-windows-x86_64\bin\cmake.exe "-DENGINE=D:/Core-build/ux-pulse-A/engine/core-engine.exe" "-DWORK=D:/Core-build/ux-pulse-A/tests/cli" "-P" "D:/CORE/CORE/.agents/worktrees/ux-pulse-A/tests/cli_unicode.cmake"
+19: Working Directory: D:/Core-build/ux-pulse-A/tests
+19: Test timeout computed to be: 300
+19: -- Unicode: D:/Core-build/ux-pulse-A/tests/cli/saída-ação-漢字.wav
+19/22 Test #19: cli_unicode ......................   Passed    0.06 sec
+test 20
+      Start 20: cli_package_stale
+
+20: Test command: C:\Users\vk_do\AppData\Local\Microsoft\WinGet\Packages\Kitware.CMake_Microsoft.Winget.Source_8wekyb3d8bbwe\cmake-4.4.4-windows-x86_64\bin\cmake.exe "-DBUILD_DIR=D:/Core-build/ux-pulse-A" "-DSRC=D:/CORE/CORE/.agents/worktrees/ux-pulse-A" "-P" "D:/CORE/CORE/.agents/worktrees/ux-pulse-A/tests/cli_package_stale.cmake"
+20: Working Directory: D:/Core-build/ux-pulse-A/tests
+20: Test timeout computed to be: 300
+20: -- core-package: stale seeds removed; all current resources present in package/Core and the zip
+20/22 Test #20: cli_package_stale ................   Passed    1.21 sec
+test 21
+      Start 21: engine_process_tests
+
+21: Test command: D:\Core-build\ux-pulse-A\tests\engine_process_tests.exe
+21: Working Directory: D:/Core-build/ux-pulse-A/tests
+21: Test timeout computed to be: 120
+21:   slowest answer after the crash: 1 ms
+21: ok   serve: after a plugin crashes in processBlock the engine still answers, retries, releases it and exits
+21: ok   serve: a plugin change that is not a parameter is reported as pluginsChanged
+21: ok   serve: a crashed plugin that asks to restart the component does not deadlock the message thread
+21: ok   serve: a plugin that throws while playing is retried into a new instance that plays (BUG-SWEEP-05)
+21: ok   serve: a plugin that crashes giving its state is silenced and leaked, the engine answers and plays on
+21: ok   serve: a plugin that crashes loading its state is reported missing, the engine answers and plays on
+21: ok   serve: a plugin that crashes in reset is silenced, the engine answers and plays on
+21: ok   serve: a plugin that crashes in reset while the audio thread waits on its lock is silenced (wide window)
+21: ok   serve: a plugin stuck in processBlock does not hold Stop hostage (bounded reset)
+21: ok   serve: a plugin that crashes opening its editor is silenced, the engine answers and plays on
+21: ok   serve: a plugin that crashes in a parameter getter is silenced, the engine answers and plays on
+21:   project.load 90 ms, project.get 333 ms
+21: ok   serve: a song with more than 8 MB of plugin state reaches the engine and comes back whole (M2)
+21: ok   serve: a message over the limit fails that command with a clear error and the engine stays alive (M2)
+21:   STATE-PER-EDIT 32 tracks x 318128 B: projection 9881 B; 20 edits: projection avg 0.95 ms, round-trip avg 12.9 ms, total avg 13.8 ms/edit (worst 15.5 ms)
+21: ok   serve: 32 tracks of plugin state edit without carrying the blobs (STATE-PER-EDIT)
+21:   sound-neutral (on demand): 1152044 bytes rendered, peak 0.201 (identity checked above)
+21:   sound-neutral (refreshed): 1152044 bytes rendered, peak 0.602 (identity checked above)
+21: ok   serve: plugin state on demand renders bit-identical to state in the song (STATE-PER-EDIT)
+21: 15 testes, 256 verificacoes, 0 falhas
+21/22 Test #21: engine_process_tests .............   Passed   19.18 sec
+test 22
+      Start 22: cli_plugin_crash_render
+
+22: Test command: C:\Users\vk_do\AppData\Local\Microsoft\WinGet\Packages\Kitware.CMake_Microsoft.Winget.Source_8wekyb3d8bbwe\cmake-4.4.4-windows-x86_64\bin\cmake.exe "-DENGINE=D:/Core-build/ux-pulse-A/engine/core-engine.exe" "-DWORK=D:/Core-build/ux-pulse-A/tests/cli" "-DCRASH_PLUGIN=D:/Core-build/ux-pulse-A/app/selftest-plugins/CoreTestCrash_artefacts/Release/VST3/Core Test Crash.vst3" "-DSYNTH_PLUGIN=D:/Core-build/ux-pulse-A/app/selftest-plugins/CoreTestSynth_artefacts/Release/VST3/Core Test Synth.vst3" "-P" "D:/CORE/CORE/.agents/worktrees/ux-pulse-A/tests/cli_plugin_crash_render.cmake"
+22: Working Directory: D:/Core-build/ux-pulse-A/tests
+22: Test timeout computed to be: 120
+22: -- plugin-crash.wav 1728044 bytes, peak 0.40157479047775269
+22/22 Test #22: cli_plugin_crash_render ..........   Passed    0.14 sec
+
+100% tests passed out of 22
+
+Label Time Summary:
+merge    =  31.97 sec*proc (22 tests)
+
+Total Test time (real) =  31.99 sec

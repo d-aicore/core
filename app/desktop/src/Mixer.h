@@ -29,6 +29,9 @@ public:
 
   std::function<void(const std::string& trackId)> onSelect;  // a click on a strip's name ("" = the master)
   std::function<void()> onClose;                            // back to the pattern editor
+  // The window controls (UX detachable-windows slice): ⧉ pops the Mixer out / docks it back.
+  std::function<void()> onToggleWindow;
+  std::function<bool()> isDetached;
 
   void paint(juce::Graphics& g) override;
   void resized() override;
@@ -41,7 +44,7 @@ private:
   PatternEditor::Host& host_;
   std::string selected_, shape_;
   juce::Label title_;
-  juce::TextButton addBus_, close_;
+  juce::TextButton addBus_, detach_, close_;
   juce::Viewport view_;
   juce::Component strip_;
   std::vector<std::unique_ptr<Strip>> strips_;

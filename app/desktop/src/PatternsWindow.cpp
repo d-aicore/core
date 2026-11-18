@@ -487,16 +487,26 @@ PatternsPanel::PatternsPanel(Host host) : host_(std::move(host)) {
   search_.setTextToShowWhenEmpty(u8("Search templates"), kDim);
   search_.onTextChange = [this] { refreshTemplates(); };
   addAndMakeVisible(search_);
-  filterAll_.setButtonText(u8("All"));
-  filterBuiltin_.setButtonText(u8("Built-in"));
-  filterMine_.setButtonText(u8("Mine"));
-  filterBuiltin_.setTooltip(u8("Pattern Maker's styles: a groove written fresh on your tracks each time"));
-  filterMine_.setTooltip(u8("The ones you saved with Save as template"));
-  int f = 0;
-  for (auto* b : {&filterAll_, &filterBuiltin_, &filterMine_}) {
-    b->onClick = [this, f] { filter_ = f; refreshTemplates(); };
-    addAndMakeVisible(*b);
-    ++f;
+  // The catalogue source: one dropdown (All / Built-in recipes / Mine), not a row of buttons (the owner:
+  // «usem dropdowns em vez de muitos botoes para escolhar»). Every source of the button row stays reachable.
+  // "Built-in recipes" names Pattern Maker's built-in pattern recipes — never a built-in instrument: Core ships
+  // none (D110), so the two must not read as the same thing.
+  filterBox_.addItem(u8("All"), 1);
+  filterBox_.addItem(u8("Built-in recipes"), 2);
+  filterBox_.addItem(u8("Mine"), 3);
+  filterBox_.setTooltip(u8("Which templates: all, Pattern Maker's built-in pattern recipes (a groove written fresh on your tracks each time — notes only, never an instrument), or the ones you saved with Save as template"));
+  filterBox_.onChange = [this] { filter_ = filterBox_.getSelectedId() - 1; refreshTemplates(); };
+  addAndMakeVisible(filterBox_);
+  // The window controls: detach / dock and close (Core's line icons).
+  windowBtn_.getProperties().set(theme::kIconProperty, "detach");
+  windowBtn_.setTooltip(u8("Detach the channel rack into its own window (dock it back with the same button)"));
+  windowBtn_.onClick = [this] { if (host_.toggleWindow) host_.toggleWindow(); };
+  closeBtn_.getProperties().set(theme::kIconProperty, "close");
+  closeBtn_.setTooltip(u8("Close the channel rack (View > Channel rack brings it back)"));
+  closeBtn_.onClick = [this] { if (host_.closePanel) host_.closePanel(); };
+  for (auto* b : {&windowBtn_, &closeBtn_}) {
+    b->setWantsKeyboardFocus(false);
+    addAndMakeVisible(b);
   }
   list_ = std::make_unique<TemplateList>(*this);
   addAndMakeVisible(*list_);
@@ -749,11 +759,7 @@ void PatternsPanel::refreshTemplates() {
     if (q.isNotEmpty() && !(u8(t.name) + " " + u8(t.style) + " " + u8(t.about)).toLowerCase().contains(q)) continue;
     shown_.push_back(t);
   }
-  int f = 0;
-  for (auto* b : {&filterAll_, &filterBuiltin_, &filterMine_}) {
-    b->setColour(juce::TextButton::buttonOnColourId, kPrimary);
-    b->setToggleState(f++ == filter_, juce::dontSendNotification);
-  }
+  filterBox_.setSelectedId(filter_ + 1, juce::dontSendNotification);
   list_->updateContent();
   int row = 0;
   for (size_t i = 0; i < shown_.size(); ++i) if (shown_[i].id == keep) row = (int)i;
@@ -1050,6 +1056,13 @@ void PatternsPanel::resized() {
   top.removeFromLeft(16);
   bpm_.setBounds(top.removeFromLeft(130));
   top.removeFromLeft(16);
+  // The window controls at the far right (detach / dock, close), then Send to Arrange.
+  const bool detached = host_.isDetached && host_.isDetached();
+  windowBtn_.getProperties().set(theme::kIconProperty, detached ? "dock" : "detach");
+  windowBtn_.setTooltip(detached ? u8("Dock the channel rack into the main window") : u8("Detach the channel rack into its own window"));
+  closeBtn_.setBounds(top.removeFromRight(28).reduced(0, 4));
+  windowBtn_.setBounds(top.removeFromRight(28).reduced(0, 4));
+  top.removeFromRight(10);
   send_.setBounds(top.removeFromRight(160));
   top.removeFromRight(16);
   redo_.setBounds(top.removeFromRight(38));
@@ -1068,15 +1081,7 @@ void PatternsPanel::resized() {
   side.removeFromTop(6);
   search_.setBounds(side.removeFromTop(30));
   side.removeFromTop(10);
-  {
-    auto f = side.removeFromTop(28);
-    const int w = (f.getWidth() - 12) / 3;
-    filterAll_.setBounds(f.removeFromLeft(w));
-    f.removeFromLeft(6);
-    filterBuiltin_.setBounds(f.removeFromLeft(w));
-    f.removeFromLeft(6);
-    filterMine_.setBounds(f);
-  }
+  filterBox_.setBounds(side.removeFromTop(28));
   side.removeFromTop(10);
   caption_.setBounds(side.removeFromBottom(22));
   load_.setBounds(side.removeFromBottom(40));
@@ -1190,15 +1195,11 @@ void PatternsPanel::paint(juce::Graphics& g) {
 
 // ------------------------------------------------------------------ the window
 
-PatternsWindow::PatternsWindow(PatternsPanel::Host host)
-    : juce::DocumentWindow(u8("Core · Patterns"), kBackground, juce::DocumentWindow::allButtons) {
-  setUsingNativeTitleBar(true);
-  panel_ = new PatternsPanel(std::move(host));
-  setContentOwned(panel_, false);
-  GlobalKeys::ownPlayStop(*this, [p = panel_] { p->togglePlay(); });  // Space here plays this pattern alone
-  setResizable(true, true);
+PatternsWindow::PatternsWindow(PatternsPanel* panel, std::function<void()> closeRequested)
+    : PanelWindow(u8("Core · Patterns"), panel, std::move(closeRequested)), panel_(panel) {
   setResizeLimits(1140, 640, 4000, 3000);
-  centreWithSize(1360, 820);
+  GlobalKeys::ownPlayStop(*this, [p = panel_] { p->togglePlay(); });  // Space here plays this pattern alone
+  centreWithSize(1360, 820);  // a first place; the framework sets the saved one when it detaches
 }
 
 void PatternsWindow::show() {
@@ -1207,11 +1208,6 @@ void PatternsWindow::show() {
   if (!wasShown) panel_->opened();
   toFront(true);
   panel_->grabKeyboardFocus();
-}
-
-void PatternsWindow::closeButtonPressed() {
-  panel_->closing();
-  setVisible(false);
 }
 
 } // namespace core::app

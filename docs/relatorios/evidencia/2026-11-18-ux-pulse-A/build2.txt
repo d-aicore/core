@@ -1,0 +1,37 @@
+[0/2] Re-checking globbed directories...
+[1/25] Core version
+[2/25] Building VST3 manifest helper for CoreTestSynth
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/ux-pulse-A/vst3_helpers/CoreTestSynth
+ninja: no work to do.
+[3/25] Building VST3 manifest helper for CoreTestGain
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/ux-pulse-A/vst3_helpers/CoreTestGain
+ninja: no work to do.
+[4/25] Building CXX object engine\CMakeFiles\core-engine.dir\src\app\main.cpp.obj
+FAILED: [code=2] engine/CMakeFiles/core-engine.dir/src/app/main.cpp.obj 
+"C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Tools\MSVC\14.51.36231\bin\Hostx64\x64\cl.exe"  /nologo /TP -DCORE_ENGINE_PLUGINS=1 -ID:\CORE\CORE\.agents\worktrees\ux-pulse-A\engine\src -ID:\CORE\CORE\.agents\worktrees\ux-pulse-A\engine\third_party -ID:\Core-build\ux-pulse-A\generated /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /utf-8 /W3 /fp:fast /showIncludes /Foengine\CMakeFiles\core-engine.dir\src\app\main.cpp.obj /Fdengine\CMakeFiles\core-engine.dir\ /FS -c D:\CORE\CORE\.agents\worktrees\ux-pulse-A\engine\src\app\main.cpp
+D:\CORE\CORE\.agents\worktrees\ux-pulse-A\engine\src\app\main.cpp(17): fatal error C1083: NÆo ‚ poss¡vel abrir arquivo incluir: 'atomic': No such file or directory
+[5/25] Building VST3 manifest helper for CoreTestThrow
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/ux-pulse-A/vst3_helpers/CoreTestThrow
+ninja: no work to do.
+[6/25] Building VST3 manifest helper for CoreTestCrash
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/ux-pulse-A/vst3_helpers/CoreTestCrash
+ninja: no work to do.
+[7/25] Building VST3 manifest helper for CoreTestCrashRestart
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/ux-pulse-A/vst3_helpers/CoreTestCrashRestart
+ninja: no work to do.
+[8/25] Building VST3 manifest helper for CoreTestFault
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/ux-pulse-A/vst3_helpers/CoreTestFault
+ninja: no work to do.
+ninja: build stopped: subcommand failed.
