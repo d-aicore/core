@@ -78,6 +78,11 @@ LibraryPanel::LibraryPanel() {
   minimise_.setWantsKeyboardFocus(false);
   minimise_.onClick = [this] { if (onMinimise) onMinimise(); };
   addAndMakeVisible(minimise_);
+  detach_.getProperties().set(theme::kIconProperty, "detach");
+  detach_.setTooltip(u8("Detach the Browser into its own window (dock it back with the same button)"));
+  detach_.setWantsKeyboardFocus(false);
+  detach_.onClick = [this] { if (onDetach) onDetach(); };
+  addAndMakeVisible(detach_);
   search_.setTextToShowWhenEmpty("Search sounds", kDim);
   search_.setTooltip(u8("Search by name, role (kick, bass...), style or key"));
   search_.setIndents(26, 6);
@@ -696,6 +701,10 @@ juce::Rectangle<int> LibraryPanel::rolesArea() const {
 void LibraryPanel::resized() {
   auto r = getLocalBounds().reduced(8);
   minimise_.setBounds(r.withHeight(kHeader).removeFromRight(28).reduced(0, 4));
+  const bool detached = isDetached && isDetached();
+  detach_.getProperties().set(theme::kIconProperty, detached ? "dock" : "detach");
+  detach_.setTooltip(detached ? u8("Dock the Browser back into the main window") : u8("Detach the Browser into its own window"));
+  detach_.setBounds(r.withHeight(kHeader).removeFromRight(28).reduced(0, 4));
   r.removeFromTop(kHeader);
   search_.setBounds(r.removeFromTop(28));
   r.removeFromTop(4);

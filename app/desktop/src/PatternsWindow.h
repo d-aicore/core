@@ -17,6 +17,7 @@
 #include <vector>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "pattern_rack.hpp"
+#include "PanelWindows.h"
 #include "Theme.h"
 
 namespace core::app {
@@ -40,6 +41,11 @@ public:
     std::function<void(const std::string& trackId, const std::string& patternId)> openPianoRoll;
     std::function<void(const std::string& trackId)> openEffects;
     std::function<void()> addTrack;                // the main window's + Track menu
+    // The window controls (UX detachable-windows slice): ⧉ docks the rack into the main window / pops it out
+    // into its own window; × hides it (View > Channel rack brings it back).
+    std::function<void()> toggleWindow;
+    std::function<void()> closePanel;
+    std::function<bool()> isDetached;
     std::function<float(const std::string& trackId)> level;  // the meter, 0..1+
     std::function<juce::Colour(const doc::Track&)> colourOf;
     std::function<const doc::PCoreCatalog*()> catalog;
@@ -109,8 +115,11 @@ private:
   // Templates.
   juce::Label templatesTitle_, caption_;
   juce::TextEditor search_;
-  juce::TextButton filterAll_, filterBuiltin_, filterMine_, preview_, load_;
+  juce::ComboBox filterBox_;  // All / Built-in / Mine: one dropdown, not a row of buttons
+  juce::TextButton preview_, load_;
   int filter_ = 0;  // 0 all, 1 built-in, 2 mine
+  // The window controls at the top bar's right end (detach / dock, close).
+  juce::TextButton windowBtn_, closeBtn_;
   std::vector<doc::PatternTemplate> templates_, shown_;
   std::unique_ptr<TemplateList> list_;
   // Rack.
@@ -132,16 +141,17 @@ private:
   juce::Rectangle<int> rackArea_, numbersArea_, statusArea_, sideArea_;
 };
 
-// The window around it: its own title bar, resizable, hidden (not destroyed) when closed.
-class PatternsWindow final : public juce::DocumentWindow {
+// The window around it: its own title bar, resizable, hidden (not destroyed) when closed. A PanelWindow (the
+// detachable-windows framework): the panel belongs to the main window, which docks it into the bottom slot
+// or lets it live here; Space in this window plays the pattern alone (GlobalKeys).
+class PatternsWindow final : public PanelWindow {
 public:
-  explicit PatternsWindow(PatternsPanel::Host host);
+  PatternsWindow(PatternsPanel* panel, std::function<void()> closeRequested);
   PatternsPanel& panel() { return *panel_; }
   void show();
-  void closeButtonPressed() override;
 
 private:
-  PatternsPanel* panel_ = nullptr;  // owned by the window (setContentOwned)
+  PatternsPanel* panel_ = nullptr;  // owned by the main window (setContentNonOwned)
 };
 
 } // namespace core::app

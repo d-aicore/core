@@ -107,6 +107,9 @@ public:
   juce::String buildupTake(const doc::PCoreSettings& settings, int64_t from, int64_t to, double tempoTo, bool again, int effects = 0);
   // The Patterns window (P-Core's channel rack, a window of its own): the menus' "Patterns…" open it.
   std::function<void()> onOpenPatterns;
+  // The window controls (UX detachable-windows slice): the main window sets these; ⧉ detaches / docks, × hides.
+  std::function<void()> onToggleWindow, onClosePanel;
+  std::function<bool()> isDetached;
   std::function<const doc::PCoreCatalog*()> pcoreCatalog;  // pcore/styles.json beside Core.exe (nullptr: missing)
   std::function<std::string()> songStyle;                  // the song's style name ("Hi-tech"), "" when none
 
@@ -211,7 +214,23 @@ private:
   int headerHeight() const;  // one row for drums, two for pitched tracks
   void updateKeysHint();
   void keysWheel(float deltaY, int y);  // Ctrl+wheel: Keys+/Keys- around the key under the mouse
-  juce::TextButton drawTool_, selectTool_, eraseTool_, paintTool_;
+  // The mouse's tool: one dropdown, not a row of buttons (the owner: «usem dropdowns em vez de muitos botoes
+  // para escolhar»). Draw / Paint / Select / Erase — the four tools of the piano-roll gesture slice.
+  juce::ComboBox toolBox_;
+  // The window controls (UX detachable-windows slice): ⧉ pops the piano roll out into an OS window / docks it
+  // back, × hides it (View > Piano roll brings it back). The main window sets these.
+  juce::TextButton detach_, closePanel_;
+  // Toolbar row that no longer fits: its controls go into an overflow menu before any of them is clipped.
+  struct ToolbarSlot { juce::Component* c; int w; bool square = false; };  // c == nullptr: a plain gap
+  void applyToolbarVisibility();  // what the document state shows, before the width decides the rest
+  static int wantedWidth(const std::vector<ToolbarSlot>& slots);
+  void placeToolbarRow(juce::Rectangle<int>& row, const std::vector<ToolbarSlot>& slots, bool fromRight);
+  void buildOverflowMenu();
+  void runOverflowItem(int menuId);
+  std::vector<juce::Component*> overflowed_;
+  std::map<int, std::pair<juce::Component*, int>> overflowItems_;  // menu id -> control (+ its combo item id)
+  juce::PopupMenu overflowMenu_;
+  juce::TextButton overflowMore_;
   juce::TextButton edit_;        // Edit ▾: every note tool (showTools)
   theme::InfoDot editInfo_;
   std::set<std::string> editIds() const;  // the notes an Edit tool works on (bars shown; the selected ones among them)

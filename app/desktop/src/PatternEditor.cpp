@@ -153,15 +153,34 @@ PatternEditor::PatternEditor(Host& host) : host_(host) {
   octaveDown_.setTooltip(u8("One octave down (wheel: one key; Alt+wheel: bigger or smaller keys)"));
   octaveUp_.onClick = [this] { lowPitch_ = std::min(128 - keysShown(), lowPitch_ + 12); repaint(); };
   octaveDown_.onClick = [this] { lowPitch_ = std::max(0, lowPitch_ - 12); repaint(); };
-  for (auto [b, icon, tip, t] : {std::tuple<juce::TextButton*, const char*, const char*, Tool>{&drawTool_, "cursor", "Draw: a click adds a note with the last length, the drag sizes it; drag a note to move (Shift: clone, Alt: off the grid); right-click deletes", Tool::Draw},
-                                 {&paintTool_, "paint", "Paint: drag seeds a note in every cell it crosses (Alt: off the grid)", Tool::Paint},
-                                 {&selectTool_, "select", "Select: drag a box around notes (Ctrl or Shift adds to the selection)", Tool::Select},
-                                 {&eraseTool_, "erase", "Erase: click or drag over notes (with any tool: right-click)", Tool::Erase}}) {
-    b->getProperties().set(theme::kIconProperty, icon);
-    b->setTooltip(tip);
-    b->setClickingTogglesState(false);
-    b->onClick = [this, t] { setTool(t); };
-  }
+  // The tool dropdown (Draw / Paint / Select / Erase): one choice instead of four buttons (the owner:
+  // «usem dropdowns em vez de muitos botoes para escolhar»). Every tool of the gesture slice stays reachable.
+  toolBox_.addItem(u8("Draw"), 1);
+  toolBox_.addItem(u8("Paint"), 2);
+  toolBox_.addItem(u8("Select"), 3);
+  toolBox_.addItem(u8("Erase"), 4);
+  toolBox_.setTooltip(u8("The mouse's tool. Draw: a click adds a note with the last length, the drag sizes it; drag a note to move "
+                         "(Shift: clone, Alt: off the grid). Paint: drag seeds a note in every cell it crosses (Alt: off the grid). "
+                         "Select: drag a box around notes (Ctrl or Shift adds to the selection). Erase: click or drag over notes. "
+                         "With any tool: right-click deletes."));
+  toolBox_.onChange = [this] { setTool(static_cast<Tool>(toolBox_.getSelectedId() - 1)); };
+  // The window controls: detach / dock and close (Core's line icons).
+  detach_.getProperties().set(theme::kIconProperty, "detach");
+  detach_.setTooltip(u8("Detach the piano roll into its own window (dock it back with the same button)"));
+  detach_.onClick = [this] { if (onToggleWindow) onToggleWindow(); };
+  closePanel_.getProperties().set(theme::kIconProperty, "close");
+  closePanel_.setTooltip(u8("Close the piano roll (View > Piano roll brings it back)"));
+  closePanel_.onClick = [this] { if (onClosePanel) onClosePanel(); };
+  overflowMore_.setButtonText(u8("More ▾"));
+  overflowMore_.setTooltip(u8("The toolbar controls that do not fit at this width"));
+  overflowMore_.onClick = [this] {
+    buildOverflowMenu();
+    overflowMenu_.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&overflowMore_),
+                                [safe = juce::Component::SafePointer<PatternEditor>(this)](int r) {
+                                  if (!safe || r <= 0) return;
+                                  safe->runOverflowItem(r);
+                                });
+  };
   // One Edit menu for every note tool (Diogo, 2026-11-05): Timing, Notes, Variation, Randomize, More/Fewer notes,
   // Build-up, each a submenu; the windows (P-Core, Build-up) and Save at the end.
   edit_.setButtonText(u8("Edit ▾"));
@@ -183,8 +202,8 @@ PatternEditor::PatternEditor(Host& host) : host_(host) {
   hint_.setJustificationType(juce::Justification::centredRight);
   pagePrev_.getProperties().set(theme::kIconProperty, "left");  // clean chevrons, not the ‹ › characters
   pageNext_.getProperties().set(theme::kIconProperty, "right");
-  pagePrev_.setTooltip(u8("Previous bars (Shift+wheel scrolls; Ctrl+wheel or − shows more)"));
-  pageNext_.setTooltip(u8("Next bars (Shift+wheel scrolls; Ctrl+wheel or − shows more)"));
+  pagePrev_.setTooltip(u8("Previous bars (Shift+wheel scrolls; Ctrl+Shift+wheel, or −, shows more)"));
+  pageNext_.setTooltip(u8("Next bars (Shift+wheel scrolls; Ctrl+Shift+wheel, or −, shows more)"));
   pagePrev_.onClick = [this] { viewStart_ = shownStart() - shownLength(); placePaging(); repaint(); };
   pageNext_.onClick = [this] { viewStart_ = shownStart() + shownLength(); placePaging(); repaint(); };
   addSound_.setButtonText(u8("+ Sound"));
@@ -201,8 +220,8 @@ PatternEditor::PatternEditor(Host& host) : host_(host) {
   };
   zoomIn_.setButtonText("+");
   zoomOut_.setButtonText(u8("−"));
-  zoomIn_.setTooltip(u8("Zoom in (Ctrl+wheel)"));
-  zoomOut_.setTooltip(u8("Zoom out (Ctrl+wheel)"));
+  zoomIn_.setTooltip(u8("Zoom in: fewer bars across the grid (Ctrl+Shift+wheel up). Ctrl+wheel is Keys+/Keys− on the piano roll."));
+  zoomOut_.setTooltip(u8("Zoom out: more bars across the grid (Ctrl+Shift+wheel down). Ctrl+wheel is Keys+/Keys− on the piano roll."));
   zoomIn_.onClick = [this] { zoom(0.5, shownStart() + shownLength() / 2); };
   zoomOut_.onClick = [this] { zoom(2.0, shownStart() + shownLength() / 2); };
   // The key range (owner, 2026-11-18: «piano deve conseguir expandir», «no piano ctrl+scroll keys+ e keys»).
@@ -232,10 +251,12 @@ PatternEditor::PatternEditor(Host& host) : host_(host) {
   noteTools_.setTooltip(u8("Note tools window: Quantize (grid, strength, swing), Humanize, Groove, and the kick/bass tools. Each choice is one Ctrl+Z."));
   noteTools_.onClick = [this] { openNoteTools(); };
   for (auto* c : std::initializer_list<juce::Component*>{&zoomIn_, &zoomOut_, &patternBox_, &newPattern_, &clearPattern_, &removePattern_, &snap_, &length_, &octaveUp_, &octaveDown_, &title_, &hint_, &addSound_, &pagePrev_, &pageNext_,
-                                                                &drawTool_, &selectTool_, &eraseTool_, &paintTool_, &edit_, &editInfo_, &keysMinus_, &keysPlus_, &fitKeys_, &scaleBox_, &rootBox_, &noteTools_}) {
+                                                                &toolBox_, &edit_, &editInfo_, &keysMinus_, &keysPlus_, &fitKeys_, &scaleBox_, &rootBox_, &noteTools_, &detach_, &closePanel_}) {
     c->setWantsKeyboardFocus(false);
     addAndMakeVisible(c);
   }
+  overflowMore_.setWantsKeyboardFocus(false);
+  addChildComponent(overflowMore_);  // shown only when a toolbar row does not fit
   setWantsKeyboardFocus(true);
   addChildComponent(dock_);
   dock_.onLayoutChanged = [this] { resized(); repaint(); };
@@ -250,10 +271,7 @@ void PatternEditor::setTool(Tool tool) {
   tool_ = tool;
   if (!overlay_.area().isEmpty()) repaint(overlay_.area().expanded(2));
   overlay_ = {};  // the ghost is the draw tool's
-  drawTool_.setToggleState(tool == Tool::Draw, juce::dontSendNotification);
-  paintTool_.setToggleState(tool == Tool::Paint, juce::dontSendNotification);
-  selectTool_.setToggleState(tool == Tool::Select, juce::dontSendNotification);
-  eraseTool_.setToggleState(tool == Tool::Erase, juce::dontSendNotification);
+  toolBox_.setSelectedId(static_cast<int>(tool) + 1, juce::dontSendNotification);
   setMouseCursor(tool == Tool::Draw ? juce::MouseCursor::NormalCursor
                  : tool == Tool::Erase ? juce::MouseCursor::PointingHandCursor
                                        : juce::MouseCursor::CrosshairCursor);
@@ -570,15 +588,12 @@ void PatternEditor::documentChanged() {
   const bool editable = t != nullptr;
   snap_.setEnabled(editable);
   length_.setEnabled(editable);
-  octaveUp_.setVisible(editable && !drums());
-  octaveDown_.setVisible(editable && !drums());
-  for (auto* b : {&keysMinus_, &keysPlus_, &fitKeys_, &noteTools_}) b->setVisible(editable && !drums());
-  scaleBox_.setVisible(editable && !drums());
-  rootBox_.setVisible(editable && !drums() && scaleGuideOn());
+  applyToolbarVisibility();
   setTooltip(!editable ? juce::String()
              : drums() ? u8("Click: step on/off · Drag: move, also to another sound (Shift: off the grid) · Wheel over a step or the velocity lane: how loud")
                        : u8("Click: note (last length), drag sizes it · Drag body: move (Alt: off the grid, Shift: clone) · Right edge: length · Ctrl+drag: select · Alt+wheel: velocity · Del · Ctrl+D duplicate"));
-  for (auto* b : {&drawTool_, &paintTool_, &selectTool_, &eraseTool_, &edit_}) b->setEnabled(editable);
+  edit_.setEnabled(editable);
+  toolBox_.setEnabled(editable);
   placeAddSound();
   if (editable && !drums()) updateKeysHint();
   else hint_.setText(drums() ? u8("Click: step on/off · Drag: move (Shift: off the grid) · Wheel over a note: velocity") : juce::String(),
@@ -599,45 +614,59 @@ void PatternEditor::resized() {
   dock_.setBounds(dock_.hasTool() ? getLocalBounds().reduced(8).removeFromRight(dockWidth() - 8) : juce::Rectangle<int>());
   auto headAll = area().reduced(8, 4);
   auto header = headAll.removeFromTop(kHeader - 4);
-  // Right side first (grid, length, octave), then the left from the start; the title takes what is left.
-  zoomIn_.setBounds(header.removeFromRight(30).reduced(2));
-  zoomOut_.setBounds(header.removeFromRight(30).reduced(2));
+  applyToolbarVisibility();  // the document state first, so the overflow below starts from a known visibility
+  overflowed_.clear();
+  // The dedicated header area: the window buttons at the far right (detach / dock, close). They never overflow,
+  // so a narrow window can always dock or hide the panel again.
+  const bool detached = isDetached && isDetached();
+  detach_.getProperties().set(theme::kIconProperty, detached ? "dock" : "detach");
+  detach_.setTooltip(detached ? u8("Dock the piano roll back into the main window") : u8("Detach the piano roll into its own window"));
+  closePanel_.setBounds(header.removeFromRight(28).reduced(2));
+  detach_.setBounds(header.removeFromRight(28).reduced(2));
   header.removeFromRight(6);
-  octaveUp_.setBounds(header.removeFromRight(50).reduced(2));
-  octaveDown_.setBounds(header.removeFromRight(50).reduced(2));
-  length_.setBounds(header.removeFromRight(84).reduced(2));
-  snap_.setBounds(header.removeFromRight(88).reduced(2));
-  header.removeFromRight(8);
-  editInfo_.setBounds(header.removeFromRight(theme::InfoDot::kSlot).withSizeKeepingCentre(theme::InfoDot::kSlot, theme::InfoDot::kSlot));
-  edit_.setBounds(header.removeFromRight(66).reduced(2));
-  header.removeFromRight(8);
-  for (auto* b : {&eraseTool_, &selectTool_, &paintTool_, &drawTool_}) b->setBounds(header.removeFromRight(30).reduced(2));
-  header.removeFromRight(8);
-  removePattern_.setBounds(header.removeFromRight(56).reduced(2));
-  clearPattern_.setBounds(header.removeFromRight(52).reduced(2));
-  newPattern_.setBounds(header.removeFromRight(48).reduced(2));
+
+  // First row: the context (pattern, title), the Tool dropdown, Snap, Note tools and Edit. The zoom and the key
+  // range live on the second row for pitched tracks and stay here for drums, which have only one row.
+  const bool pitched = currentTrack() && !drums();
   // The pattern's whole name when there is room (up to 260 px), never under 112; the title keeps at least 60.
   const int nameW = juce::GlyphArrangement::getStringWidthInt(juce::Font(juce::FontOptions(theme::kFontStrong)), patternBox_.getText()) + 44;
-  patternBox_.setBounds(header.removeFromRight(std::min(std::clamp(nameW, 112, 260), std::max(0, header.getWidth() - 60))).reduced(2));
-  title_.setBounds(header.withSizeKeepingCentre(header.getWidth(), 18));  // one line: a long name ends in "..."
+  std::vector<ToolbarSlot> row1;
+  if (!pitched) row1.insert(row1.end(), {{&zoomIn_, 30}, {&zoomOut_, 30}, {nullptr, 6}});
+  row1.insert(row1.end(), {{&editInfo_, theme::InfoDot::kSlot + 4, true}, {&edit_, 66}, {nullptr, 8},
+                           {&noteTools_, 78}, {&snap_, 88}, {&toolBox_, 96}, {nullptr, 8},
+                           {&length_, 84}, {&removePattern_, 56}, {&clearPattern_, 52}, {&newPattern_, 48},
+                           {&patternBox_, std::clamp(nameW, 112, 260)}});
+  // Second row (pitched tracks): the key range, Fit keys, the scale guide and the time navigation.
+  std::vector<ToolbarSlot> row2;
+  if (pitched)
+    row2 = {{&keysMinus_, 56}, {&keysPlus_, 56}, {&fitKeys_, 62}, {nullptr, 6},
+            {&octaveDown_, 50}, {&octaveUp_, 50}, {nullptr, 6},
+            {&scaleBox_, 130}, {&rootBox_, 52}, {nullptr, 6}, {&zoomOut_, 30}, {&zoomIn_, 30}};
+
+  auto work = header;
+  work.removeFromLeft(60);  // the title's floor: the rows are laid out in what is left of it
+  auto row2Area = pitched ? headAll.removeFromTop(kRow2) : juce::Rectangle<int>();
+  auto row2Work = row2Area;
+  row2Work.removeFromRight(180);  // the hint's floor on the second row
+  const bool overflows = wantedWidth(row1) > work.getWidth() || wantedWidth(row2) > row2Work.getWidth();
+  overflowMore_.setVisible(overflows);
+  if (overflows) {
+    overflowMore_.setBounds(work.removeFromRight(64).reduced(2));
+    work.removeFromRight(4);
+  }
+  placeToolbarRow(work, row1, true);
+  placeToolbarRow(row2Work, row2, false);
+  work.removeFromRight(8);
+  const auto titleRect = header.withWidth(std::max(0, work.getRight() - header.getX()));
+  title_.setBounds(titleRect.withSizeKeepingCentre(titleRect.getWidth(), 18));  // one line: a long name ends in "..."
   // A narrow header drops the "PIANO ROLL" / "STEPS" prefix so the track's name is what stays readable.
   if (const doc::Track* t = currentTrack()) {
     const juce::String full = editorName() + u8(" — ") + u8(t->name);
-    const bool fits = juce::GlyphArrangement::getStringWidthInt(title_.getFont(), full) + 8 <= header.getWidth();
+    const bool fits = juce::GlyphArrangement::getStringWidthInt(title_.getFont(), full) + 8 <= titleRect.getWidth();
     title_.setText(fits ? full : u8(t->name), juce::dontSendNotification);
   }
-  // The pitched tracks' second row: the key range and the scale guide; the hint takes what is left.
-  if (currentTrack() && !drums()) {
-    auto row2 = headAll.removeFromTop(kRow2);
-    keysMinus_.setBounds(row2.removeFromLeft(56).reduced(2));
-    keysPlus_.setBounds(row2.removeFromLeft(56).reduced(2));
-    fitKeys_.setBounds(row2.removeFromLeft(62).reduced(2));
-    row2.removeFromLeft(6);
-    scaleBox_.setBounds(row2.removeFromLeft(130).reduced(2));
-    if (rootBox_.isVisible()) rootBox_.setBounds(row2.removeFromLeft(52).reduced(2));
-    row2.removeFromLeft(6);
-    noteTools_.setBounds(row2.removeFromLeft(78).reduced(2));
-    hint_.setBounds(row2.reduced(4, 0));
+  if (pitched) {
+    hint_.setBounds(row2Work.reduced(4, 0));
     hint_.setVisible(true);
   } else {
     hint_.setBounds({});
@@ -645,6 +674,76 @@ void PatternEditor::resized() {
   }
   placeAddSound();
   placePaging();
+}
+
+// What the document state shows on the toolbar (independent of the width, so the overflow can hide and restore
+// controls on every layout without losing these rules).
+void PatternEditor::applyToolbarVisibility() {
+  const bool editable = currentTrack() != nullptr;
+  const bool pitched = editable && !drums();
+  for (auto* b : {&octaveUp_, &octaveDown_, &keysMinus_, &keysPlus_, &fitKeys_, &noteTools_}) b->setVisible(pitched);
+  scaleBox_.setVisible(pitched);
+  rootBox_.setVisible(pitched && scaleGuideOn());
+}
+
+// The width a row wants: the visible slots only (a hidden control is not part of the row).
+int PatternEditor::wantedWidth(const std::vector<ToolbarSlot>& slots) {
+  int w = 0;
+  for (const auto& s : slots)
+    if (!s.c || s.c->isVisible()) w += s.w;
+  return w;
+}
+
+// One toolbar row, laid out in priority order (right to left on the first row, left to right on the second).
+// A slot that no longer fits goes into the overflow menu instead of being clipped or squeezed out of shape.
+void PatternEditor::placeToolbarRow(juce::Rectangle<int>& row, const std::vector<ToolbarSlot>& slots, bool fromRight) {
+  for (const auto& s : slots) {
+    if (s.c && !s.c->isVisible()) continue;
+    if (row.getWidth() < s.w) {
+      if (s.c) {
+        overflowed_.push_back(s.c);
+        s.c->setVisible(false);
+      }
+      continue;
+    }
+    const auto cell = fromRight ? row.removeFromRight(s.w) : row.removeFromLeft(s.w);
+    if (!s.c) continue;
+    s.c->setBounds(s.square ? cell.withSizeKeepingCentre(s.w - 4, s.w - 4) : cell.reduced(2));
+  }
+}
+
+// The overflow menu: a hidden button keeps its own action, a hidden dropdown opens as a submenu of its choices.
+void PatternEditor::buildOverflowMenu() {
+  overflowMenu_.clear();
+  overflowItems_.clear();
+  int id = 1;
+  for (auto* c : overflowed_) {
+    if (auto* box = dynamic_cast<juce::ComboBox*>(c)) {
+      juce::PopupMenu sub;
+      for (int i = 0; i < box->getNumItems(); ++i) {
+        const int itemId = box->getItemId(i);
+        if (itemId <= 0) continue;
+        sub.addItem(id, box->getItemText(i), true, itemId == box->getSelectedId());
+        overflowItems_[id] = {box, itemId};
+        ++id;
+      }
+      overflowMenu_.addSubMenu(box == &toolBox_ ? u8("Tool") : box->getText(), sub);
+    } else if (auto* b = dynamic_cast<juce::Button*>(c)) {
+      overflowMenu_.addItem(id, b->getButtonText());
+      overflowItems_[id] = {b, 0};
+      ++id;
+    }
+  }
+}
+
+void PatternEditor::runOverflowItem(int menuId) {
+  const auto it = overflowItems_.find(menuId);
+  if (it == overflowItems_.end()) return;
+  if (auto* box = dynamic_cast<juce::ComboBox*>(it->second.first)) {
+    if (it->second.second > 0) box->setSelectedId(it->second.second, juce::sendNotification);
+  } else if (auto* b = dynamic_cast<juce::Button*>(it->second.first)) {
+    b->triggerClick();
+  }
 }
 
 // One toolbar row for drums, two for pitched tracks (the key range and the scale live on the second).
@@ -759,7 +858,7 @@ juce::Rectangle<int> PatternEditor::velocityLane() const {
   return area().reduced(8).removeFromBottom(kVelocity).withTrimmedLeft(kLabels);
 }
 
-// The part of the pattern shown (zoom): all of it, or viewLength_ ticks from viewStart_ (Ctrl+wheel).
+// The part of the pattern shown (zoom): all of it, or viewLength_ ticks from viewStart_ (Ctrl+Shift+wheel, +/−).
 double PatternEditor::shownLength() const {
   const double len = currentTrack() ? (double)pattern()->lengthTicks : 1.0;
   if (viewLength_ > 0) return std::min(viewLength_, len);

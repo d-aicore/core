@@ -58,6 +58,7 @@ constexpr int kRail = 40;  // the page rail's width, left of the panels
 constexpr int kTracksScrollBar = 10, kMenuBar = 0, kFooter = 24, kMenusWidth = 430, kLibraryWidth = 260, kInspectorWidth = 250, kEditorHeight = 300,
               kEditorMinHeight = 140, kEditorCollapsed = 40;
 constexpr int kMixerHeight = 300, kMixerMinHeight = 210;  // the Mixer's band: by default and at its shortest
+constexpr int kRackHeight = 460, kRackMinHeight = 200;    // the channel rack docked in the bottom slot (its rows scroll)
 
 // "#rrggbb" (as the document keeps colours) as a JUCE colour.
 juce::Colour hexColour(const std::string& hex) {
@@ -143,6 +144,41 @@ void styleToggle(juce::TextButton& b, juce::Colour on) {
 }
 
 } // namespace
+
+// The Playlist / arrangement (UX detachable-windows slice): the ruler and the tracks, docked in the centre
+// of the main window or in an OS window of their own. The owner keeps owning the tracks, the time bar and
+// the selection box; they move in here, and the geometry (laneSpan, xOfTick, tickAt...) is local to this
+// view, so the same numbers work docked and detached. Drawing and input stay in MainComponent (paintArrangement,
+// arrangementMouseDown...): this class is the surface they work on. A DragAndDropContainer of its own so clip
+// drags work when it is detached (JUCE finds drop targets across the whole desktop); WAV drops go to the owner.
+// Defined here before TrackRow (its originX is this view's coordinates); the constructor comes after the
+// tracks' own classes, which it takes in.
+class MainComponent::ArrangementView final : public juce::Component, public juce::DragAndDropContainer,
+                                             public juce::FileDragAndDropTarget {
+public:
+  explicit ArrangementView(MainComponent& owner);
+  void paint(juce::Graphics& g) override { owner_.paintArrangement(g); }
+  void resized() override { owner_.layoutArrangement(); }
+
+  bool isInterestedInFileDrag(const juce::StringArray& files) override { return owner_.isInterestedInFileDrag(files); }
+  void fileDragMove(const juce::StringArray& files, int x, int y) override {
+    const auto at = ownerX(x, y);
+    owner_.fileDragMove(files, at.x, at.y);
+  }
+  void fileDragExit(const juce::StringArray& files) override { owner_.fileDragExit(files); }
+  void filesDropped(const juce::StringArray& files, int x, int y) override {
+    const auto at = ownerX(x, y);
+    owner_.filesDropped(files, at.x, at.y);
+  }
+
+private:
+  // A point here in the owner's coordinates (the same place docked; across the desktop detached). The owner's
+  // drop handlers go to screen coordinates from there, so the rows are found in either window.
+  juce::Point<int> ownerX(int x, int y) const {
+    return owner_.getLocalPoint(nullptr, localPointToGlobal(juce::Point<int>(x, y)));
+  }
+  MainComponent& owner_;
+};
 
 // ---------------------------------------------------------------- one track: header (name, mute, solo, volume,
 // meter) and its clip lane, which lines up with the ruler
@@ -249,7 +285,7 @@ public:
   }
 
   // The row sits in the scrolling tracks panel: its x in the main window's frame, where the ruler is.
-  int originX() const { return owner_.getLocalPoint(this, juce::Point<int>()).x; }
+  int originX() const { return owner_.arrangementView_->getLocalPoint(this, juce::Point<int>()).x; }
   int laneX(double tick) const { return owner_.xOfTick(tick) - originX(); }
   int64_t laneTick(int x, int64_t snap) const { return owner_.tickAt(x + originX(), snap, true); }  // clips may go past the end
   bool inLane(int x) const { return x >= kTrackHead; }
@@ -1568,7 +1604,7 @@ public:
   }
 
   // The wheel zooms and scrolls the song, as over the lanes.
-  void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& w) override { owner_.mouseWheelMove(e.getEventRelativeTo(&owner_), w); }
+  void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& w) override { owner_.mouseWheelMove(e.getEventRelativeTo(owner_.arrangementView_.get()), w); }
 
 private:
   const doc::AutomatableParam* paramInfo() const {
@@ -1577,11 +1613,11 @@ private:
   }
   // Under the clip lanes: the same x for the same tick.
   juce::Rectangle<int> plot() const {
-    const auto lanes = owner_.laneSpan();
-    return juce::Rectangle<int>::leftTopRightBottom(lanes.getX() - getX(), 44, lanes.getRight() - getX(), getHeight() - 10);
+    const auto lanes = owner_.laneSpanFor(*this);
+    return juce::Rectangle<int>::leftTopRightBottom(lanes.getX(), 44, lanes.getRight(), getHeight() - 10);
   }
-  int xOf(double tick) const { return owner_.xOfTick(tick) - getX(); }
-  int64_t tickAt(int x, bool free) const { return owner_.tickAt(x + getX(), free ? 1 : std::min<int64_t>(kBeat / 4, owner_.gridStep(8))); }  // 1/16, finer when zoomed in
+  int xOf(double tick) const { return owner_.laneSpanFor(*this).getX() + (owner_.xOfTick(tick) - owner_.laneSpan().getX()); }
+  int64_t tickAt(int x, bool free) const { return owner_.tickAt(x - owner_.laneSpanFor(*this).getX() + owner_.laneSpan().getX(), free ? 1 : std::min<int64_t>(kBeat / 4, owner_.gridStep(8))); }  // 1/16, finer when zoomed in
   double norm(double v) const {  // 0..1 up the plot (logarithmic for frequencies and times)
     const doc::AutomatableParam* i = paramInfo();
     if (!i || i->max <= i->min) return 0;
@@ -1695,7 +1731,7 @@ public:
   // Over the clips the wheel moves along the song (Ctrl+wheel zooms); over the track names it scrolls the
   // tracks up and down (when they do not all fit). Shift+wheel or a sideways swipe always moves along the song.
   void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& w) override {
-    const auto at = e.getEventRelativeTo(&owner_);
+    const auto at = e.getEventRelativeTo(owner_.arrangementView_.get());
     const bool sideways = std::abs(w.deltaX) > std::abs(w.deltaY);
     const bool overflow = getViewedComponent() != nullptr && getViewedComponent()->getHeight() > getViewHeight();
     const bool overClips = at.x >= owner_.laneSpan().getX();
@@ -1743,6 +1779,15 @@ void MainComponent::updateTimeBar() {
   timeBar_->setRangeLimits(0.0, viewSpan());
   timeBar_->setCurrentRange(viewStart(), viewLength());
   timeBar_->updating = false;
+}
+
+// The arrangement view takes the tracks, the time bar and the selection box in (the owner keeps owning them).
+MainComponent::ArrangementView::ArrangementView(MainComponent& owner) : owner_(owner) {
+  setWantsKeyboardFocus(true);  // a click on the ruler takes the keys; they bubble to the owner (docked) or the window forwards them
+  addAndMakeVisible(*owner_.tracksView_);
+  addAndMakeVisible(*owner_.timeBar_);
+  addAndMakeVisible(*owner_.boxOverlay_);
+  addMouseListener(&owner_, false);  // the ruler, the divider and the window buttons: the owner's mouse handlers
 }
 
 // Minimise, maximise (restore when maximised) and close, drawn by Core at the top bar's right end, as on
@@ -1857,13 +1902,14 @@ MainComponent::MainComponent(EngineSession::Options options, doc::Document docum
   }
   tracksView_ = std::make_unique<TracksView>(*this);
   timeBar_ = std::make_unique<TimeBar>(*this);
-  addChildComponent(*timeBar_);
   tracksView_->setViewedComponent(&tracksHolder_, false);
-  addAndMakeVisible(*tracksView_);
   tracksHolder_.addAndMakeVisible(addTrack_);  // under the last track, scrolling with them
   tracksHolder_.addMouseListener(this, false);  // the empty space under the last track: the selection box
   boxOverlay_ = std::make_unique<BoxOverlay>(*this);
-  addAndMakeVisible(*boxOverlay_);  // over the tracks (kept in front in resized)
+  // The arrangement view takes the tracks, the time bar and the box (it keeps owning them): docked here,
+  // or in a window of its own when the Playlist pops out.
+  arrangementView_ = std::make_unique<ArrangementView>(*this);
+  addAndMakeVisible(*arrangementView_);
 
   bpm_.setSliderStyle(juce::Slider::LinearBar);
   theme::markPlain(bpm_);  // the number big and centred, no fill behind it
@@ -1950,7 +1996,9 @@ MainComponent::MainComponent(EngineSession::Options options, doc::Document docum
     if (!trackId.empty()) selectTrack(trackId);
     mixer_->select(trackId);
   };
-  mixer_->onClose = [this] { setMixerOpen(false); };
+  mixer_->onClose = [this] { panelDetached("mixer") ? hidePanel("mixer") : setMixerOpen(false); };
+  mixer_->onToggleWindow = [this] { togglePanelWindow("mixer"); };
+  mixer_->isDetached = [this] { return panelDetached("mixer"); };
   addChildComponent(*mixer_);
   arrangeButton_.setButtonText("ARRANGE");
   arrangeButton_.setTooltip(u8("The arrangement and the piano roll (every page closed)"));
@@ -1961,7 +2009,7 @@ MainComponent::MainComponent(EngineSession::Options options, doc::Document docum
     struct Item { const char* icon; const char* tip; std::function<void()> click; };
     const std::vector<Item> items = {
         {"arrange", "Arrangement", [this] { arrangeButton_.onClick(); }},
-        {"mixer", "Mixer (Ctrl+M)", [this] { setMixerOpen(!mixerOpen_); }},
+        {"mixer", "Mixer (Ctrl+M)", [this] { togglePanelShown("mixer"); }},
         // The Patterns window (channel rack, templates, swing, Send to Arrange): Diogo 2026-11-16, "facilidade em criar".
         {"patterns", "Patterns: the channel rack and the templates (Ctrl+P)", [this] { openPatterns(); }},
         {"library", "Library", [this] { toggleSidePanel(true); }},
@@ -2016,11 +2064,20 @@ MainComponent::MainComponent(EngineSession::Options options, doc::Document docum
   };
   editor_.songStyle = [this] { return doc::songStyle(history_.current()); };
   editor_.onOpenPatterns = [this] { openPatterns(); };
+  editor_.onToggleWindow = [this] { togglePanelWindow("pianoRoll"); };
+  editor_.onClosePanel = [this] { hidePanel("pianoRoll"); };
+  editor_.isDetached = [this] { return panelDetached("pianoRoll"); };
   addAndMakeVisible(*inspector_);
   setupLibrary();
   library_.onMinimise = [this] {
-    juce::MessageManager::callAsync([safe = juce::Component::SafePointer<MainComponent>(this)] { if (safe && safe->showLibrary_) safe->toggleSidePanel(true); });
+    juce::MessageManager::callAsync([safe = juce::Component::SafePointer<MainComponent>(this)] {
+      if (!safe) return;
+      if (safe->panelDetached("browser")) safe->hidePanel("browser");
+      else if (safe->showLibrary_) safe->toggleSidePanel(true);
+    });
   };
+  library_.onDetach = [this] { togglePanelWindow("browser"); };
+  library_.isDetached = [this] { return panelDetached("browser"); };
   addAndMakeVisible(library_);
   libraryWidth_ = settings_.getUserSettings()->getIntValue("libraryWidth", 0);
   showLibrary_ = settings_.getUserSettings()->getBoolValue("showLibrary", true);
@@ -2056,6 +2113,9 @@ MainComponent::MainComponent(EngineSession::Options options, doc::Document docum
     loadSampleIndex();
     if (sampleLibraryFolder().isDirectory()) scanSampleLibrary();
   }
+  // The windows as the last session left them (docked, detached and where, hidden), checked against the
+  // monitors. The tests keep the defaults: every panel docked, the Mixer and the rack closed.
+  if (realOutput_) restoreWindowLayout(*settings_.getUserSettings());
   startTimerHz(30);
   // Once the window is up: work an earlier session left unsaved (a crash) is offered back.
   juce::MessageManager::callAsync([safe = juce::Component::SafePointer<MainComponent>(this)] { if (safe) safe->offerRecovery(); });
@@ -2063,6 +2123,7 @@ MainComponent::MainComponent(EngineSession::Options options, doc::Document docum
 
 MainComponent::~MainComponent() {
   globalKeys_.reset();  // no more keys into a component being destroyed
+  detached_.clear();  // the detached windows go first: their content belongs to this window, never deleted there
   patternsWindow_.reset();  // its buttons call this window
   if (settingsWindow_ != nullptr) delete settingsWindow_.getComponent();  // it shows this window's settings and jobs
   if (sampleScan_) sampleScan_->stop = true;  // its thread owns what it uses and ends at the next file
@@ -2111,8 +2172,8 @@ void MainComponent::edit(const std::function<void(doc::Document&)>& change, cons
   loop_.setToggleState(after.enabled, juce::dontSendNotification);
   editor_.documentChanged();
   showEditorForSelection();
-  repaint(timelineArea());
-  if (patternsWindow_) patternsWindow_->panel().documentChanged();
+  if (arrangementView_) arrangementView_->repaint(timelineArea());
+  if (patternsPanel_) patternsPanel_->documentChanged();
 }
 
 // What the plugins hold now, from the engine into the document, for a change that must not be made without it.
@@ -2178,7 +2239,7 @@ void MainComponent::documentChanged(bool rebuildRows) {
   if (patternPlay_) patternPlay_->preview.reset();
   session_->setDocument(engineDocument());
   session_->setLoop(engineLoop());
-  if (patternsWindow_) patternsWindow_->panel().documentChanged();
+  if (patternsPanel_) patternsPanel_->documentChanged();
   bpm_.setValue(d.bpm, juce::dontSendNotification);
   // A song that changes tempo: the field is its tempo at the start; the changes are on the ruler.
   bpmLabel_.setText(d.tempoMap.empty() ? "Tempo" : "Start", juce::dontSendNotification);
@@ -2227,7 +2288,7 @@ void MainComponent::openCoreWindow(const std::string& what, const std::string& t
   if (what == "patterns") {  // Pattern Maker: the Patterns window, its own window, that track chosen there
     selectTrack(track);
     openPatterns();
-    if (patternsWindow_ && t && doc::playsPatterns(*t)) patternsWindow_->panel().select(track);
+    if (patternsPanel_ && t && doc::playsPatterns(*t)) patternsPanel_->select(track);
     return;
   }
   selectTrack(track);
@@ -2235,6 +2296,10 @@ void MainComponent::openCoreWindow(const std::string& what, const std::string& t
 }
 
 void MainComponent::setMixerOpen(bool open) {
+  if (panelDetached("mixer")) {  // the Mixer lives in its own window: Open brings it to the front
+    if (open && detached_["mixer"].window) detached_["mixer"].window->toFront(true);
+    return;
+  }
   mixerOpen_ = open;
   if (open) {
     automationOpen_ = scoreOpen_ = false;
@@ -2557,8 +2622,11 @@ void MainComponent::giveSilentTracksPlugins() {
   repaint();
 }
 
-void MainComponent::openPatterns() {
-  if (!patternsWindow_) {
+// The channel rack's panel and its wiring, made once. It lives docked in the bottom slot or in its own
+// window (PatternsWindow); this window owns it either way, so docking and detaching never rebuild it.
+void MainComponent::ensurePatternsPanel() {
+  if (patternsPanel_) return;
+  {
     PatternsPanel::Host h;
     h.document = [this]() -> const doc::Document& { return history_.current(); };
     h.edit = [this](const std::function<void(doc::Document&)>& f, const juce::String& label) { edit(f, label); };
@@ -2600,9 +2668,18 @@ void MainComponent::openPatterns() {
     h.catalog = [this] { return editor_.pcoreCatalog ? editor_.pcoreCatalog() : nullptr; };
     h.songStyle = [this] { return doc::songStyle(history_.current()); };
     h.templatesFolder = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("Core").getChildFile("PatternTemplates");
-    patternsWindow_ = std::make_unique<PatternsWindow>(std::move(h));
+    h.toggleWindow = [this] { togglePanelWindow("channelRack"); };
+    h.closePanel = [this] { hidePanel("channelRack"); };
+    h.isDetached = [this] { return panelDetached("channelRack"); };
+    patternsPanel_ = std::make_unique<PatternsPanel>(std::move(h));
   }
-  patternsWindow_->show();
+  patternsWindow_ = std::make_unique<PatternsWindow>(patternsPanel_.get(), [this] { hidePanel("channelRack"); });
+  patternsWindow_->onBoundsChanged = [this] { panelBoundsChanged("channelRack"); };
+}
+
+void MainComponent::openPatterns() {
+  ensurePatternsPanel();
+  showPanel("channelRack");
 }
 
 void MainComponent::closePanels() {
@@ -2626,21 +2703,29 @@ void MainComponent::placeBottomPanels() {
   const auto area = editorArea();
   score_.setBounds(area);
   automation_->setBounds(area);
-  editor_.setBounds(area);
+  if (!panelDetached("pianoRoll")) editor_.setBounds(area);  // detached: its window lays it out
   audioEditor_->setBounds(area);
+  if (patternsPanel_ && !panelDetached("channelRack")) patternsPanel_->setBounds(rackOpen_ ? area : juce::Rectangle<int>());
 }
 
 void MainComponent::showEditorForSelection() {
-  // The bottom panels' places follow what is open, on every way out.
+  // The bottom panels' places follow what is open, on every way out. A detached panel is never touched here:
+  // its window shows it, whatever the slot holds.
   struct Place { MainComponent* m; ~Place() { m->placeBottomPanels(); } } place{this};
+  const bool pianoHere = !panelDetached("pianoRoll");
   // The Mixer, until it is closed (or a curve or Stage Core is opened).
   if (automationOpen_ || scoreOpen_ || !mixer_) mixerOpen_ = false;
+  if (automationOpen_ || scoreOpen_) rackOpen_ = false;  // the rack's slot goes to the curve / Stage Core
   mixerButton_.setToggleState(mixerOpen_, juce::dontSendNotification);
-  if (mixer_) mixer_->setVisible(mixerOpen_);
+  if (mixer_ && !panelDetached("mixer")) mixer_->setVisible(mixerOpen_);
   if (library_.isVisible() != libraryShown()) resized();  // the Mixer closed by another view: the side panels come back
   if (mixerOpen_) {
     mixer_->documentChanged();
-    for (juce::Component* c : std::initializer_list<juce::Component*>{automation_.get(), &score_, audioEditor_.get(), &editor_}) c->setVisible(false);
+    automation_->setVisible(false);
+    score_.setVisible(false);
+    audioEditor_->setVisible(false);
+    if (pianoHere) editor_.setVisible(false);
+    if (patternsPanel_ && !panelDetached("channelRack")) patternsPanel_->setVisible(false);
     return;
   }
   // Automation of a track or the master, until something else is chosen.
@@ -2650,7 +2735,8 @@ void MainComponent::showEditorForSelection() {
     automation_->documentChanged();
     score_.setVisible(false);
     audioEditor_->setVisible(false);
-    editor_.setVisible(false);
+    if (pianoHere) editor_.setVisible(false);
+    if (patternsPanel_ && !panelDetached("channelRack")) patternsPanel_->setVisible(false);
     return;
   }
   // Stage Core (the song's parts), until it is closed or something else is chosen.
@@ -2658,17 +2744,24 @@ void MainComponent::showEditorForSelection() {
   if (scoreOpen_) {
     score_.documentChanged();
     audioEditor_->setVisible(false);
-    editor_.setVisible(false);
+    if (pianoHere) editor_.setVisible(false);
+    if (patternsPanel_ && !panelDetached("channelRack")) patternsPanel_->setVisible(false);
     return;
   }
-  const doc::Track* t = history_.current().findTrack(selectedTrack_);
-  bool audioClip = false;
-  if (t && t->instrument.kind == "audio") for (const auto& c : t->audioClips) audioClip |= c.id == selectedClip_;
+  // The channel rack docked: the slot until something else is chosen (as the Mixer).
+  if (patternsPanel_ && !panelDetached("channelRack")) patternsPanel_->setVisible(rackOpen_);
+  if (rackOpen_ && patternsPanel_ && !panelDetached("channelRack")) {
+    patternsPanel_->documentChanged();
+    audioEditor_->setVisible(false);
+    if (pianoHere) editor_.setVisible(false);
+    return;
+  }
+  const bool audioClip = audioClipSelected();
   if (audioClip) audioEditor_->setClip(selectedTrack_, selectedClip_);
   else audioEditor_->setClip({}, {});
   audioEditor_->documentChanged();
   audioEditor_->setVisible(audioClip);
-  editor_.setVisible(!audioClip);
+  if (pianoHere) editor_.setVisible(!audioClip && !pianoRollHidden_);
 }
 
 void MainComponent::selectTrack(const std::string& trackId) {
@@ -2770,7 +2863,7 @@ void MainComponent::endBox(const juce::MouseEvent& e) {
     // A click on an empty part of a lane also puts the start line there (to the beat), as in Ableton. Ctrl adds
     // to the selection and leaves the line where it is; while playing, only the ruler moves it (no jump by accident).
     if (!boxAdd_ && !snap_.playing) {
-      const int x = getLocalPoint(nullptr, boxFrom_).x;
+      const int x = arrangementView_->getLocalPoint(nullptr, boxFrom_).x;
       if (x >= laneSpan().getX() && x < laneSpan().getRight()) moveShownPosition(tickAt(x, kBeat));
     }
     return;
@@ -5312,6 +5405,7 @@ namespace { enum MenuId { kMidiNone = 200, kMidiDevice = 201, kNewEmpty = 50, kO
                        kOpenLogs = 580, kAbout = 581, kExportMono = 590, kImportMidi = 595, kExportMidi = 596, kExportBitwig = 597,
                        kSampleFolder = 1600, kSampleRescan, kSampleApply, kSampleAuto, kSampleShuffle, kSampleCatalogUndo,
                                               kRandomize = 1700 /* + strength 1..3; + 4: tempo per section; + 5: sound */, kViewLibrary = 1800, kViewInspector, kViewMixer, kViewScale = 1810 /* + 0 auto, + 1..5: 100..200 % */,
+                                              kViewPlaylist = 1830, kViewChannelRack, kViewPianoRoll, kViewBringWindows,
                        kViewSectionShades = 1820,
                        kRenderMixToSample = 1900, kRenderTrackToSample, kSettings, kShortcuts, kResampleLoop, kBounceTrack,
                        kTrainingClips = 1950,
@@ -5345,11 +5439,15 @@ juce::StringArray MainComponent::getMenuBarNames() { return {"File", "Edit", "Vi
 
 juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&) {
   juce::PopupMenu menu;
-  if (index == 2) {  // View: the side panels
-    menu.addItem(juce::PopupMenu::Item(u8("Library")).setID(kViewLibrary).setTicked(showLibrary_));
+  if (index == 2) {  // View: every window with its tick (shown, docked or detached), then the view's own choices
+    menu.addItem(juce::PopupMenu::Item(u8("Playlist / Arrangement")).setID(kViewPlaylist).setTicked(panelShown("playlist")));
+    menu.addItem(juce::PopupMenu::Item(u8("Channel rack")).setID(kViewChannelRack).setTicked(panelShown("channelRack")));
+    menu.addItem(juce::PopupMenu::Item(u8("Piano roll")).setID(kViewPianoRoll).setTicked(panelShown("pianoRoll")));
+    menu.addItem(juce::PopupMenu::Item(u8("Mixer")).setID(kViewMixer).setTicked(panelShown("mixer")));
+    menu.addItem(juce::PopupMenu::Item(u8("Browser (Library)")).setID(kViewLibrary).setTicked(panelShown("browser")));
     menu.addItem(juce::PopupMenu::Item(u8("Inspector")).setID(kViewInspector).setTicked(showInspector_));
     menu.addSeparator();
-    menu.addItem(juce::PopupMenu::Item(u8("Mixer")).setID(kViewMixer).setTicked(mixerOpen_));
+    menu.addItem(juce::PopupMenu::Item(u8("Bring windows back to screen")).setID(kViewBringWindows));
     menu.addSeparator();
     menu.addItem(juce::PopupMenu::Item(u8("Section colours behind the tracks")).setID(kViewSectionShades).setTicked(sectionShades_));
     menu.addSeparator();
@@ -5515,7 +5613,10 @@ juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&) {
                    : item.itemID == kUndo ? "edit.undo" : item.itemID == kRedo ? "edit.redo"
                    : item.itemID == kNewEmpty ? "file.new"
                    : item.itemID == kExport24 ? "file.export" : item.itemID == kSettings ? "file.settings" : item.itemID == kImportAudio ? "file.importAudio"
-                   : item.itemID == kViewMixer ? "view.mixer" : item.itemID == kPluginPatterns ? "view.patterns" : nullptr;
+                   : item.itemID == kViewMixer ? "view.mixer" : item.itemID == kPluginPatterns ? "view.patterns"
+                   : item.itemID == kViewPlaylist ? "view.playlist" : item.itemID == kViewChannelRack ? "view.channelRack"
+                   : item.itemID == kViewPianoRoll ? "view.pianoRoll" : item.itemID == kViewLibrary ? "view.browser"
+                   : item.itemID == kViewBringWindows ? "view.bringWindows" : nullptr;
     item.shortcutKeyDescription = id != nullptr ? Keymap::get().text(id) : juce::String();
   }
   return menu;
@@ -5552,7 +5653,11 @@ void MainComponent::menuItemSelected(int id, int) {
     case kRandomize + 1: case kRandomize + 2: case kRandomize + 3: randomizeSong(id - kRandomize); break;
     case kRandomize + 4: randomizeSong(2, "tempo"); break;
     case kRandomize + 5: randomizeSong(2, "sound"); break;
-    case kViewMixer: setMixerOpen(!mixerOpen_); break;
+    case kViewMixer: togglePanelShown("mixer"); break;
+    case kViewPlaylist: togglePanelShown("playlist"); break;
+    case kViewChannelRack: togglePanelShown("channelRack"); break;
+    case kViewPianoRoll: togglePanelShown("pianoRoll"); break;
+    case kViewBringWindows: bringWindowsBackToScreen(); break;
     case kViewSectionShades:
       sectionShades_ = !sectionShades_;
       settings_.getUserSettings()->setValue("sectionShades", sectionShades_);
@@ -5563,10 +5668,8 @@ void MainComponent::menuItemSelected(int id, int) {
       settings_.getUserSettings()->setValue("uiScale", id == kViewScale ? 0.0 : 0.75 + 0.25 * (id - kViewScale));
       if (auto* parent = getParentComponent()) parent->resized();  // the window's holder draws this one at the new size
       break;
-    case kViewLibrary:
-    case kViewInspector:
-      toggleSidePanel(id == kViewLibrary);
-      break;
+    case kViewLibrary: togglePanelShown("browser"); break;
+    case kViewInspector: toggleSidePanel(false); break;
     case kSampleAuto:
       settings_.getUserSettings()->setValue("suggestSamples", !settings_.getUserSettings()->getBoolValue("suggestSamples", true));
       settings_.saveIfNeeded();
@@ -5634,6 +5737,10 @@ juce::Rectangle<int> MainComponent::workArea() const {
 }
 
 void MainComponent::toggleSidePanel(bool library) {
+  if (library && panelDetached("browser")) {  // the Browser lives in its own window: bring it to the front
+    if (detached_["browser"].window) detached_["browser"].window->toFront(true);
+    return;
+  }
   bool& shown = library ? showLibrary_ : showInspector_;
   shown = library && showPlugins_ ? true : !shown;  // from the Tools: back to the Library
   if (library) showPlugins_ = false;
@@ -5659,7 +5766,8 @@ int MainComponent::inspectorWidth() const { return inspector_ && inspector_->fol
 
 bool MainComponent::inspectorShown() const { return showInspector_ && !mixerOpen_; }
 // With the Mixer open the strips get the whole width, as on ref-3 (the Library comes back when it closes).
-bool MainComponent::libraryShown() const { return showLibrary_ && !mixerOpen_ && !showPlugins_; }
+// Detached, the Browser is in its own window: its docked place here is free.
+bool MainComponent::libraryShown() const { return showLibrary_ && !mixerOpen_ && !showPlugins_ && !panelDetached("browser"); }
 // The Tools panel takes the Library's place (one of the two at a time).
 bool MainComponent::pluginsShown() const { return showPlugins_ && !mixerOpen_; }
 void MainComponent::togglePlugins() {
@@ -5693,28 +5801,53 @@ juce::Rectangle<int> MainComponent::inspectorArea() const {
   if (sideShown()) r.removeFromLeft(libraryWidth() + 8);
   return r.removeFromLeft(inspectorWidth());
 }
-juce::Rectangle<int> MainComponent::timelineArea() const { return centre().withHeight(52); }
-juce::Rectangle<int> MainComponent::tracksArea() const { return centre().withTrimmedTop(52 + 8).withTrimmedBottom(masterRow() + 8 + editorHeight() + 8); }
+// The arrangement's geometry is local to its view (docked in the centre, or in a window of its own): the
+// ruler on top, the tracks under it, the divider (8 px) at the bottom — the same numbers in either place.
+juce::Rectangle<int> MainComponent::timelineArea() const {
+  return arrangementView_ ? arrangementView_->getLocalBounds().withHeight(52) : juce::Rectangle<int>();
+}
+juce::Rectangle<int> MainComponent::tracksArea() const {
+  return arrangementView_ ? arrangementView_->getLocalBounds().withTrimmedTop(52 + 8).withTrimmedBottom(8) : juce::Rectangle<int>();
+}
 juce::Rectangle<int> MainComponent::editorArea() const { return centre().withTrimmedBottom(masterRow() + 8).removeFromBottom(editorHeight()); }
 
+bool MainComponent::audioClipSelected() const {
+  const doc::Track* t = history_.current().findTrack(selectedTrack_);
+  if (t && t->instrument.kind == "audio")
+    for (const auto& c : t->audioClips) if (c.id == selectedClip_) return true;
+  return false;
+}
+
+bool MainComponent::bottomSlotEmpty() const {
+  return pianoRollAway() && !mixerOpen_ && !rackOpen_ && !automationOpen_ && !scoreOpen_ && !audioClipSelected();
+}
+
 // The tracks and the editor share the height: the divider between them is dragged (kept in the settings); by
-// default the editor takes a little under half.
+// default the editor takes a little under half. With the arrangement away (detached or hidden) the ruler's
+// share goes to the editor; with the piano roll away and nothing else in the slot, the tracks take it all.
 int MainComponent::editorHeight() const {
-  const int room = centre().getHeight() - (52 + 8) - (masterRow() + 8) - 8;  // the ruler and the master row stay
+  const bool arrangementHere = arrangementDocked();
+  const int room = centre().getHeight() - (arrangementHere ? 52 + 8 : 0) - (masterRow() + 8) - 8;
   // By default the tracks take what their rows need (between 30% and 55% of the room); the editor the rest.
   const int rowsNeeded = std::max(splitRows_, (int)rows_.size()) * kTrackRow + 36 + 24;  // removing a track leaves room
   // The Mixer: a compact band (kMixerHeight) so the tracks stay in view; the divider makes it taller or shorter
   // (its own height, kept in the settings apart from the editor's).
   if (mixerOpen_)
     return juce::jlimit(std::min(kMixerMinHeight, std::max(120, room - 110)), std::max(kMixerMinHeight, room - 110), mixerHeight_ > 0 ? mixerHeight_ : kMixerHeight);
-  const int wanted = editorHeight_ > 0 ? editorHeight_ : room - juce::jlimit((int)(room * 0.3), (int)(room * 0.55), rowsNeeded);
+  // The channel rack docked: a taller band (its rows scroll), the same divider.
+  if (rackOpen_)
+    return juce::jlimit(std::min(kRackMinHeight, std::max(120, room - 110)), std::max(kRackMinHeight, room - 110), editorHeight_ > 0 ? editorHeight_ : kRackHeight);
+  if (bottomSlotEmpty()) return 0;
+  const int wanted = editorHeight_ > 0 ? editorHeight_
+                   : arrangementHere ? room - juce::jlimit((int)(room * 0.3), (int)(room * 0.55), rowsNeeded)
+                   : room;  // the arrangement away: the editor takes what is left
   // Down to a short band (Diogo 2026-11-09: "não me deixa ir mais abaixo").
   return juce::jlimit(std::min(kEditorMinHeight, std::max(120, room - 140)), std::max(kEditorMinHeight, room - 140), wanted);
 }
 
 juce::Rectangle<int> MainComponent::dividerArea() const {
-  const auto t = tracksArea();
-  return {t.getX(), t.getBottom(), t.getWidth(), 8};
+  if (!arrangementDocked() || !arrangementView_) return {};  // no divider when the arrangement is away
+  return arrangementView_->getLocalBounds().removeFromBottom(8);
 }
 
 void MainComponent::resized() {
@@ -5769,7 +5902,7 @@ void MainComponent::resized() {
   library_.setVisible(libraryShown());
   pluginCards_.setVisible(pluginsShown());
   pluginCards_.setBounds(libraryArea());
-  library_.setBounds(libraryArea());
+  if (!panelDetached("browser")) library_.setBounds(libraryArea());  // detached: its window lays it out
   if (inspector_) {
     inspector_->setVisible(inspectorShown());
     inspector_->setBounds(inspectorArea());
@@ -5788,22 +5921,18 @@ void MainComponent::resized() {
     }
     message_.setBounds(bar);
   }
-  {
-    // The rows keep the ruler's width; the scroll bar (when the tracks do not fit) sits in the panel's margin.
-    const auto tracks = tracksArea().reduced(12);
-    tracksView_->setBounds(tracks.withWidth(tracks.getWidth() + kTracksScrollBar));
-    const auto lanes = laneSpan();
-    timeBar_->setBounds(lanes.getX(), tracksArea().getBottom() - 11, lanes.getWidth(), 9);
-    updateTimeBar();
-    // At least as tall as the panel: the empty space under the last track takes the selection box.
-    tracksHolder_.setSize(tracks.getWidth(), std::max((int)rows_.size() * kTrackRow + 36, tracks.getHeight()));
-    boxOverlay_->setBounds(tracksView_->getBounds());
-    boxOverlay_->toFront(false);
-    auto inside = tracksHolder_.getLocalBounds();
-    for (auto& row : rows_) row->setBounds(inside.removeFromTop(kTrackRow));
-    addTrack_.setBounds(inside.removeFromTop(36).removeFromLeft(110).reduced(0, 4));
+  // The arrangement: docked here between the top bar and the editor (its view lays the tracks out inside),
+  // in its own window when detached (the window lays it out), or hidden (×): nothing of it here.
+  if (arrangementView_) {
+    if (arrangementDocked()) {
+      arrangementView_->setVisible(true);
+      arrangementView_->setBounds(centre().withTrimmedBottom(masterRow() + 8 + editorHeight()));
+    } else if (!panelDetached("playlist")) {
+      arrangementView_->setVisible(false);
+    }
+    layoutArrangement();
   }
-  if (mixer_) mixer_->setBounds(editorArea());
+  if (mixer_ && !panelDetached("mixer")) mixer_->setBounds(editorArea());
   placeBottomPanels();
   {  // the page rail: the pages, then the side panels (as on the reference's left edge)
     auto rail = content().withWidth(kRail);
@@ -5859,6 +5988,15 @@ juce::Rectangle<int> MainComponent::laneSpan() const {
   return rows.withTrimmedLeft(kTrackHead).withY(timelineArea().getY()).withHeight(timelineArea().getHeight());
 }
 
+// The lane span in another component's coordinates (the automation editor aligns its plot with the lanes).
+// With the arrangement away there are no lanes beside it: the span is the component's own width.
+juce::Rectangle<int> MainComponent::laneSpanFor(const juce::Component& c) const {
+  const auto lanes = laneSpan();
+  if (!arrangementDocked() || !arrangementView_) return {0, lanes.getY(), c.getWidth(), lanes.getHeight()};
+  const auto at = c.getLocalPoint(arrangementView_.get(), lanes.getPosition());
+  return {at.x, at.y, lanes.getWidth(), lanes.getHeight()};
+}
+
 // The song plus some room after its end (a clip dragged there, or a double click, makes the song longer).
 double MainComponent::viewSpan() const {
   const int64_t song = std::max<int64_t>(1, history_.current().lengthTicks);
@@ -5906,7 +6044,8 @@ int64_t MainComponent::tickAt(int x, int64_t snap, bool pastEnd) const {
 
 void MainComponent::mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& w) {
   if (event.eventComponent == &tracksHolder_) return;  // (the box's listener: the tracks' panel already has it)
-  const auto e = event.getEventRelativeTo(this);
+  if (!arrangementView_) return;
+  const auto e = event.getEventRelativeTo(arrangementView_.get());  // the lanes' geometry is the view's own
   const auto lanes = laneSpan().withBottom(tracksArea().getBottom());
   if (!lanes.contains(e.getPosition())) return;
   const double delta = std::abs(w.deltaX) > std::abs(w.deltaY) ? -w.deltaX : w.deltaY;
@@ -5975,6 +6114,22 @@ void MainComponent::paint(juce::Graphics& g) {
       g.drawRoundedRectangle(field.reduced(0.5f), theme::kCorner, 1);
     }
   }
+  // The master row (under the editor): the song's master, or the Mixer's CPU footer. The ruler and the tracks
+  // are the arrangement view's own painting (paintArrangement), docked here or in a window of their own.
+  if (mixerOpen_) { paintCpuFooter(g, centre().removeFromBottom(masterRow())); return; }
+  auto master = centre().removeFromBottom(64).reduced(12, 10);
+  g.setFont(juce::FontOptions(theme::kFontTitle));
+  g.setColour(kText);
+  g.drawText(lang::tr("Master"), master.removeFromLeft(186), juce::Justification::centredLeft);
+  g.setColour(kMuted);
+  g.drawText("L / R", master.removeFromLeft(80 + 60 + 8 + 140 + 12), juce::Justification::centredLeft);
+  drawMeter(g, master.toFloat(), master_[0], master_[1]);
+}
+
+// The arrangement view's painting: the ruler (sections, bars, loop, playhead), the tracks' panel and the
+// window buttons (detach / dock, close) at the ruler's top right. Local coordinates: the same numbers docked
+// in the centre and in a window of its own.
+void MainComponent::paintArrangement(juce::Graphics& g) {
   const doc::Document& d = history_.current();
 
   // Timeline: bars, loop region, playhead.
@@ -6069,7 +6224,7 @@ void MainComponent::paint(juce::Graphics& g) {
   g.fillPath(handle);
   g.restoreState();
 
-  // Tracks panel and master.
+  // Tracks panel.
   auto area = tracksArea();
   g.setColour(kPanel);
   g.fillRoundedRectangle(area.toFloat(), theme::kCorner);
@@ -6078,14 +6233,20 @@ void MainComponent::paint(juce::Graphics& g) {
     g.setFont(juce::FontOptions(theme::kFontTitle));
     g.drawFittedText(loadProblem_, area.reduced(12).removeFromTop(40), juce::Justification::centredLeft, 2);
   }
-  if (mixerOpen_) { paintCpuFooter(g, centre().removeFromBottom(masterRow())); return; }
-  auto master = centre().removeFromBottom(64).reduced(12, 10);
-  g.setFont(juce::FontOptions(theme::kFontTitle));
-  g.setColour(kText);
-  g.drawText(lang::tr("Master"), master.removeFromLeft(186), juce::Justification::centredLeft);
-  g.setColour(kMuted);
-  g.drawText("L / R", master.removeFromLeft(80 + 60 + 8 + 140 + 12), juce::Justification::centredLeft);
-  drawMeter(g, master.toFloat(), master_[0], master_[1]);
+  // The window buttons at the ruler's top right (Core's line icons, as the main window's own): detach / dock
+  // and close. A light hover, as every button in Core.
+  const bool detached = panelDetached("playlist");
+  const auto mouse = arrangementView_ ? arrangementView_->getMouseXYRelative() : juce::Point<int>();
+  const std::pair<juce::Rectangle<int>, const char*> buttons[] = {{arrangementDetachArea(), detached ? "dock" : "detach"},
+                                                                  {arrangementCloseArea(), "close"}};
+  for (const auto& [r, icon] : buttons) {
+    if (r.isEmpty()) continue;
+    const bool over = r.contains(mouse);
+    g.setColour(over ? theme::kControlHover : theme::kControl);
+    g.fillRoundedRectangle(r.toFloat(), theme::kCorner);
+    g.setColour(over ? theme::kText : theme::kMuted);
+    theme::drawIcon(g, icon, r.toFloat().reduced(4.0f));
+  }
 }
 
 // ---------------------------------------------------------------- input
@@ -6142,8 +6303,13 @@ bool MainComponent::keyPressed(const juce::KeyPress& key) {
   if (is("file.importAudio")) { importAudio(); return true; }
   if (is("file.settings")) { openSettings(false); return true; }
   if (is("edit.addTrack")) { showAddTrackMenu(); return true; }
-  if (is("view.mixer")) { setMixerOpen(!mixerOpen_); return true; }
+  if (is("view.mixer")) { togglePanelShown("mixer"); return true; }
   if (is("view.patterns")) { openPatterns(); return true; }
+  if (is("view.playlist")) { togglePanelShown("playlist"); return true; }
+  if (is("view.channelRack")) { togglePanelShown("channelRack"); return true; }
+  if (is("view.pianoRoll")) { togglePanelShown("pianoRoll"); return true; }
+  if (is("view.browser")) { togglePanelShown("browser"); return true; }
+  if (is("view.bringWindows")) { bringWindowsBackToScreen(); return true; }
   if (is("view.effects")) {  // the selected track's plugins
     if (const std::string id = selectedTrack_.empty() ? editor_.track() : selectedTrack_; !id.empty()) showTrackMenu(id);
     return true;
@@ -6202,9 +6368,17 @@ int MainComponent::loopEdgeAt(juce::Point<int> p) const {
 
 void MainComponent::mouseMove(const juce::MouseEvent& e) {
   if (e.eventComponent == &tracksHolder_) return;
-  setMouseCursor(dividerArea().contains(e.getPosition()) ? juce::MouseCursor::UpDownResizeCursor
-                 : libraryEdge().contains(e.getPosition()) || loopEdgeAt(e.getPosition())
-                     ? juce::MouseCursor::LeftRightResizeCursor : juce::MouseCursor::NormalCursor);
+  if (e.eventComponent == arrangementView_.get()) { arrangementMouseMove(e.getEventRelativeTo(arrangementView_.get())); return; }
+  setMouseCursor(libraryEdge().contains(e.getPosition()) ? juce::MouseCursor::LeftRightResizeCursor : juce::MouseCursor::NormalCursor);
+}
+
+void MainComponent::arrangementMouseMove(const juce::MouseEvent& e) {
+  const bool overButtons = arrangementDetachArea().contains(e.getPosition()) || arrangementCloseArea().contains(e.getPosition());
+  arrangementView_->setMouseCursor(overButtons ? juce::MouseCursor::PointingHandCursor
+                                 : dividerArea().contains(e.getPosition()) ? juce::MouseCursor::UpDownResizeCursor
+                                 : loopEdgeAt(e.getPosition()) ? juce::MouseCursor::LeftRightResizeCursor
+                                 : juce::MouseCursor::NormalCursor);
+  if (overButtons) arrangementView_->repaint(arrangementDetachArea().getUnion(arrangementCloseArea()));
 }
 
 void MainComponent::mouseDown(const juce::MouseEvent& e) {
@@ -6213,7 +6387,14 @@ void MainComponent::mouseDown(const juce::MouseEvent& e) {
     startBox(e);
     return;
   }
+  if (e.eventComponent == arrangementView_.get()) { arrangementMouseDown(e.getEventRelativeTo(arrangementView_.get())); return; }
   if (libraryEdge().contains(e.getPosition())) { sideGrab_ = 1; return; }
+}
+
+// The arrangement's own press (e relative to its view): the window buttons, the divider, the ruler.
+void MainComponent::arrangementMouseDown(const juce::MouseEvent& e) {
+  if (arrangementDetachArea().contains(e.getPosition())) { togglePanelWindow("playlist"); return; }
+  if (arrangementCloseArea().contains(e.getPosition())) { hidePanel("playlist"); return; }
   if (dividerArea().contains(e.getPosition())) {
     // A double-click: the editor as tall as it gets, or back to the default share.
     if (e.getNumberOfClicks() >= 2 && mixerOpen_) {  // the Mixer: its shortest, or back to the default
@@ -6281,6 +6462,7 @@ void MainComponent::mouseDrag(const juce::MouseEvent& e) {
     else if (boxing_) dragBox(e);
     return;
   }
+  if (e.eventComponent == arrangementView_.get()) { arrangementMouseDrag(e.getEventRelativeTo(arrangementView_.get())); return; }
   if (sideGrab_ > 0) {  // a side panel's edge follows the mouse
     libraryWidth_ = e.x - libraryArea().getX() - 4;
     libraryWidth_ = libraryWidth();
@@ -6289,9 +6471,13 @@ void MainComponent::mouseDrag(const juce::MouseEvent& e) {
     for (auto& row : rows_) row->repaint();
     return;
   }
+}
+
+void MainComponent::arrangementMouseDrag(const juce::MouseEvent& e) {
   if (dividerGrab_ >= 0) {
-    // The editor's top follows the mouse; its bottom stays (over the master row).
-    const int h = editorArea().getBottom() - (e.y - dividerGrab_ + 8);
+    // The editor's top follows the mouse; its bottom stays (over the master row). The divider is the view's
+    // bottom edge, docked: its place in this window is the view's own y.
+    const int h = editorArea().getBottom() - (arrangementView_->getY() + e.y - dividerGrab_ + 8);
     if (mixerOpen_) {
       mixerHeight_ = h;
       mixerHeight_ = editorHeight();  // within the limits
@@ -6317,7 +6503,7 @@ void MainComponent::mouseDrag(const juce::MouseEvent& e) {
   }
   if (dragStartTick_ < 0) return;
   dragTick_ = tickAt(e.x, loopSnap());
-  repaint(timelineArea());
+  if (arrangementView_) arrangementView_->repaint(timelineArea());
 }
 
 // Click or drag: move the position (to the beat). Ctrl + drag: mark a new loop region (to the grid) and turn
@@ -6328,11 +6514,15 @@ void MainComponent::mouseUp(const juce::MouseEvent& e) {
     else if (boxing_) endBox(e);
     return;
   }
+  if (e.eventComponent == arrangementView_.get()) { arrangementMouseUp(e.getEventRelativeTo(arrangementView_.get())); return; }
   if (sideGrab_ > 0) {
     settings_.getUserSettings()->setValue("libraryWidth", libraryWidth_);
     sideGrab_ = 0;
     return;
   }
+}
+
+void MainComponent::arrangementMouseUp(const juce::MouseEvent& e) {
   if (dividerGrab_ >= 0) {
     dividerGrab_ = -1;
     settings_.getUserSettings()->setValue(mixerOpen_ ? "mixerHeight" : "editorHeight", mixerOpen_ ? mixerHeight_ : editorHeight_);
@@ -6352,7 +6542,288 @@ void MainComponent::mouseUp(const juce::MouseEvent& e) {
   } else if (a != b) {
     edit([&](doc::Document& d) { d.loop = {edge ? d.loop.enabled : true, std::min(a, b), std::max(a, b), d.loop.extra}; }, "Loop");
   }
-  repaint(timelineArea());
+  if (arrangementView_) arrangementView_->repaint(timelineArea());
+}
+
+// ---------------------------------------------------------------- detachable windows (the framework)
+// Pulse's window organization, Core's own code: five panels, each docked here by default, each with a ⧉
+// (detach / dock) and a × (hide). Detaching moves the panel component itself into an OS window — nothing is
+// rebuilt, no edit state is lost — and docking takes it back. The places live in the user settings
+// ("window.<id>"), validated against the monitors on restore; View > "Bring windows back to screen" rescues
+// any window that went off screen (a monitor unplugged). The legacy keys (showLibrary, editorHeight...) keep
+// their meaning; the new keys only add the windows' states and places.
+
+const std::vector<juce::String>& MainComponent::panelIds() {
+  static const std::vector<juce::String> ids = {"playlist", "channelRack", "pianoRoll", "mixer", "browser"};
+  return ids;
+}
+
+winlayout::Panel MainComponent::defaultPanelLayout(const juce::String& id) {
+  winlayout::Panel p;
+  // The Mixer and the channel rack start closed (as before); the rest are part of the window.
+  p.state = id == "mixer" || id == "channelRack" ? winlayout::State::Hidden : winlayout::State::Docked;
+  return p;
+}
+
+juce::Component* MainComponent::panelContent(const juce::String& id) {
+  if (id == "playlist") return arrangementView_.get();
+  if (id == "channelRack") { ensurePatternsPanel(); return patternsPanel_.get(); }
+  if (id == "pianoRoll") return &editor_;
+  if (id == "mixer") return mixer_.get();
+  if (id == "browser") return &library_;
+  return nullptr;
+}
+
+juce::String MainComponent::panelTitle(const juce::String& id) const {
+  if (id == "playlist") return u8("Core · Playlist");
+  if (id == "pianoRoll") return u8("Core · Piano roll");
+  if (id == "mixer") return u8("Core · Mixer");
+  if (id == "browser") return u8("Core · Browser");
+  return u8("Core · Patterns");
+}
+
+bool MainComponent::panelDetached(const juce::String& id) const {
+  const auto it = detached_.find(id);
+  return it != detached_.end() && it->second.layout.state == winlayout::State::Detached && it->second.window != nullptr;
+}
+
+bool MainComponent::panelShown(const juce::String& id) const {
+  if (panelDetached(id)) return true;
+  if (id == "playlist") return arrangementShown_;
+  if (id == "channelRack") return rackDocked_ && rackOpen_;
+  if (id == "pianoRoll") return !pianoRollHidden_;
+  if (id == "mixer") return mixerOpen_;
+  if (id == "browser") return showLibrary_;
+  return false;
+}
+
+namespace {
+winlayout::Rect screenRectOf(const juce::Component* c) {
+  const auto b = c->getScreenBounds();
+  return {b.getX(), b.getY(), b.getWidth(), b.getHeight()};
+}
+}  // namespace
+
+std::vector<winlayout::Rect> MainComponent::windowScreens() const {
+  std::vector<winlayout::Rect> out;
+  for (const auto& d : juce::Desktop::getInstance().getDisplays().displays) {
+    const auto& a = d.userArea;  // the work area: the taskbar is not a place for a window
+    out.push_back({a.getX(), a.getY(), a.getWidth(), a.getHeight()});
+  }
+  return out;
+}
+
+winlayout::Rect MainComponent::defaultPanelPlace(const juce::String& id) const {
+  int w = 1100, h = 640;
+  if (id == "playlist") { w = 1280; h = 720; }
+  else if (id == "channelRack") { w = 1360; h = 820; }
+  else if (id == "mixer") { w = 1200; h = 520; }
+  else if (id == "browser") { w = 380; h = 760; }
+  const auto top = getTopLevelComponent() ? getTopLevelComponent()->getScreenBounds() : juce::Rectangle<int>(0, 0, 1600, 900);
+  return {top.getX() + 60, top.getY() + 60, w, h};
+}
+
+void MainComponent::detachPanel(const juce::String& id) {
+  juce::Component* content = panelContent(id);
+  if (content == nullptr) return;
+  auto& p = detached_[id];
+  if (p.window == nullptr) {
+    if (id == "channelRack") {
+      p.window = patternsWindow_.get();  // its own shell: Space there plays the pattern alone
+    } else {
+      p.owned = std::make_unique<PanelWindow>(panelTitle(id), content, [this, id] { hidePanel(id); });
+      p.owned->onBoundsChanged = [this, id] { panelBoundsChanged(id); };
+      p.owned->forwardKey = [this](const juce::KeyPress& k) { return keyPressed(k); };
+      p.owned->forwardKeyState = [this](bool down) { return keyStateChanged(down); };
+      p.window = p.owned.get();
+    }
+  }
+  // The panel itself moves into the window (JUCE takes it out of this one): nothing rebuilt, nothing lost.
+  // The window may still name the panel as its content from an earlier dock (the first dock back does not
+  // know the window yet): clear it first, or setContentNonOwned sees the same component and does nothing.
+  p.window->clearContentComponent();
+  p.window->setContentNonOwned(content, false);
+  content->setVisible(true);
+  const auto screens = windowScreens();
+  const auto fallback = defaultPanelPlace(id);
+  auto place = winlayout::validated(p.layout.rect.empty() ? fallback : p.layout.rect, screens, fallback);
+  p.window->setBounds(place.x, place.y, place.w, place.h);
+  p.window->setVisible(true);
+  p.window->toFront(true);
+  p.layout.state = winlayout::State::Detached;
+  p.layout.rect = place;
+  // The docked places let go: the slot, the side, the centre.
+  if (id == "mixer") mixerOpen_ = false;
+  if (id == "channelRack") { rackDocked_ = false; rackOpen_ = false; patternsPanel_->opened(); }
+  showEditorForSelection();
+  resized();
+  if (realOutput_ && !restoringWindowLayout_) { saveWindowLayout(*settings_.getUserSettings()); settings_.saveIfNeeded(); }
+}
+
+void MainComponent::dockPanel(const juce::String& id) {
+  auto& p = detached_[id];
+  if (p.window != nullptr) {
+    if (p.window->isVisible()) p.layout.rect = screenRectOf(p.window);  // the place is kept for the next detach
+    p.window->clearContentComponent();
+    p.window->setVisible(false);
+  }
+  if (juce::Component* content = panelContent(id)) addAndMakeVisible(content);  // back into this window
+  p.layout.state = winlayout::State::Docked;
+  if (id == "mixer") { mixerOpen_ = true; automationOpen_ = scoreOpen_ = false; }
+  if (id == "browser") showLibrary_ = true;
+  if (id == "channelRack") { rackDocked_ = true; rackOpen_ = true; patternsPanel_->opened(); }
+  if (id == "pianoRoll") pianoRollHidden_ = false;
+  if (id == "playlist") arrangementShown_ = true;
+  showEditorForSelection();
+  resized();
+  if (realOutput_ && !restoringWindowLayout_) { saveWindowLayout(*settings_.getUserSettings()); settings_.saveIfNeeded(); }
+}
+
+void MainComponent::hidePanel(const juce::String& id) {
+  auto& p = detached_[id];
+  if (p.window != nullptr && p.window->isVisible()) {
+    p.layout.rect = screenRectOf(p.window);
+    p.window->clearContentComponent();
+    p.window->setVisible(false);
+    // The panel comes back to this window, hidden: nothing dangles in a window nobody sees.
+    if (juce::Component* content = panelContent(id)) { addChildComponent(content); content->setVisible(false); }
+  }
+  p.layout.state = winlayout::State::Hidden;
+  if (id == "mixer") mixerOpen_ = false;
+  if (id == "browser") showLibrary_ = false;
+  if (id == "channelRack") { rackOpen_ = false; if (patternsPanel_) patternsPanel_->closing(); }
+  if (id == "pianoRoll") pianoRollHidden_ = true;
+  if (id == "playlist") arrangementShown_ = false;
+  showEditorForSelection();
+  resized();
+  if (realOutput_ && !restoringWindowLayout_) { saveWindowLayout(*settings_.getUserSettings()); settings_.saveIfNeeded(); }
+}
+
+void MainComponent::showPanel(const juce::String& id) {
+  auto& p = detached_[id];
+  if (p.layout.state == winlayout::State::Detached && p.window != nullptr) {
+    p.window->setVisible(true);
+    p.window->toFront(true);
+    if (id == "channelRack" && patternsPanel_) patternsPanel_->opened();
+    return;
+  }
+  dockPanel(id);  // hidden or docked: shown here again
+}
+
+void MainComponent::togglePanelShown(const juce::String& id) {
+  panelShown(id) ? hidePanel(id) : showPanel(id);
+}
+
+void MainComponent::togglePanelWindow(const juce::String& id) {
+  panelDetached(id) ? dockPanel(id) : detachPanel(id);
+}
+
+void MainComponent::panelBoundsChanged(const juce::String& id) {
+  const auto it = detached_.find(id);
+  if (it == detached_.end() || it->second.window == nullptr) return;
+  it->second.layout.rect = screenRectOf(it->second.window);
+  markWindowLayoutDirty();
+}
+
+void MainComponent::markWindowLayoutDirty() { windowLayoutDirty_ = true; }
+
+void MainComponent::collectWindowLayout() {
+  if (!windowLayoutDirty_ || !realOutput_) return;
+  const double now = juce::Time::getMillisecondCounterHiRes();
+  if (now - windowLayoutSavedAt_ < 1000) return;  // a drag writes once a second, not every pixel
+  windowLayoutDirty_ = false;
+  windowLayoutSavedAt_ = now;
+  saveWindowLayout(*settings_.getUserSettings());
+  settings_.saveIfNeeded();
+}
+
+void MainComponent::saveWindowLayout(juce::PropertySet& props) {
+  for (const auto& id : panelIds()) {
+    winlayout::Panel p;
+    p.state = panelDetached(id) ? winlayout::State::Detached : panelShown(id) ? winlayout::State::Docked : winlayout::State::Hidden;
+    const auto it = detached_.find(id);
+    if (it != detached_.end()) p.rect = it->second.layout.rect;
+    if (panelDetached(id) && it->second.window != nullptr) p.rect = screenRectOf(it->second.window);
+    props.setValue("window." + id, juce::String(winlayout::toJson(p).dump()));
+  }
+}
+
+void MainComponent::restoreWindowLayout(const juce::PropertySet& props) {
+  restoringWindowLayout_ = true;
+  const auto screens = windowScreens();
+  for (const auto& id : panelIds()) {
+    const juce::String key = "window." + id;
+    winlayout::Panel p;
+    if (props.containsKey(key)) {
+      // A settings file may hold anything: a broken entry loads as the default, never a lost window.
+      p = winlayout::fromJson(nlohmann::json::parse(props.getValue(key).toStdString(), nullptr, false));
+    } else {
+      p = defaultPanelLayout(id);
+      // The legacy key (settings from before the window keys): the Browser's place, kept when there is no new one.
+      if (id == "browser") p.state = props.getBoolValue("showLibrary", showLibrary_) ? winlayout::State::Docked : winlayout::State::Hidden;
+    }
+    detached_[id].layout = p;
+    if (p.state == winlayout::State::Detached) {
+      detached_[id].layout.rect = winlayout::validated(p.rect, screens, defaultPanelPlace(id));
+      detachPanel(id);
+    } else if (p.state == winlayout::State::Hidden) {
+      hidePanel(id);
+    } else {
+      dockPanel(id);
+    }
+  }
+  restoringWindowLayout_ = false;
+}
+
+void MainComponent::bringWindowsBackToScreen() {
+  const auto screens = windowScreens();
+  int slot = 0;
+  for (const auto& id : panelIds()) {
+    auto& p = detached_[id];
+    if (p.layout.state != winlayout::State::Detached || p.window == nullptr) continue;
+    const auto r = winlayout::bringBack(screenRectOf(p.window), screens, slot++);
+    p.window->setBounds(r.x, r.y, r.w, r.h);
+    p.layout.rect = r;
+    p.window->toFront(false);
+  }
+  // The main window too, when it went off screen (Pulse's Ctrl+Shift+H brings the whole workspace back).
+  if (auto* top = getTopLevelComponent()) {
+    const auto r = screenRectOf(top);
+    if (!winlayout::reachable(r, screens)) {
+      const auto back = winlayout::bringBack(r, screens, slot);
+      top->setBounds(back.x, back.y, back.w, back.h);
+    }
+  }
+  if (realOutput_) { saveWindowLayout(*settings_.getUserSettings()); settings_.saveIfNeeded(); }
+  notice_ = u8("Every window is back on screen.");
+}
+
+// The arrangement's tracks, time bar and selection box, laid out inside its view (local coordinates).
+void MainComponent::layoutArrangement() {
+  if (!arrangementView_ || !tracksView_) return;
+  // The rows keep the ruler's width; the scroll bar (when the tracks do not fit) sits in the panel's margin.
+  const auto tracks = tracksArea().reduced(12);
+  tracksView_->setBounds(tracks.withWidth(tracks.getWidth() + kTracksScrollBar));
+  const auto lanes = laneSpan();
+  timeBar_->setBounds(lanes.getX(), tracksArea().getBottom() - 11, lanes.getWidth(), 9);
+  updateTimeBar();
+  // At least as tall as the panel: the empty space under the last track takes the selection box.
+  tracksHolder_.setSize(tracks.getWidth(), std::max((int)rows_.size() * kTrackRow + 36, tracks.getHeight()));
+  boxOverlay_->setBounds(tracksView_->getBounds());
+  boxOverlay_->toFront(false);
+  auto inside = tracksHolder_.getLocalBounds();
+  for (auto& row : rows_) row->setBounds(inside.removeFromTop(kTrackRow));
+  addTrack_.setBounds(inside.removeFromTop(36).removeFromLeft(110).reduced(0, 4));
+}
+
+// ⧉ and × at the ruler's top right (the arrangement's window controls, Core's line icons).
+juce::Rectangle<int> MainComponent::arrangementDetachArea() const {
+  const auto tl = timelineArea();
+  return tl.isEmpty() ? juce::Rectangle<int>() : juce::Rectangle<int>{tl.getRight() - 46, tl.getY() + 3, 20, 18};
+}
+juce::Rectangle<int> MainComponent::arrangementCloseArea() const {
+  const auto tl = timelineArea();
+  return tl.isEmpty() ? juce::Rectangle<int>() : juce::Rectangle<int>{tl.getRight() - 24, tl.getY() + 3, 20, 18};
 }
 
 // The engine is told at once; the ruler and the lanes draw the new place now, not when the engine's report comes back.
@@ -6364,13 +6835,13 @@ void MainComponent::moveShownPosition(int64_t tick) {
   const int x = xOfTick(shownTick_);
   if (x != playheadX_) {
     for (auto& row : rows_) {
-      const int rx = getLocalPoint(row.get(), juce::Point<int>()).x;
+      const int rx = arrangementView_->getLocalPoint(row.get(), juce::Point<int>()).x;
       if (playheadX_ >= 0) row->repaint(playheadX_ - rx - 1, 0, 3, row->getHeight());
       row->repaint(x - rx - 1, 0, 3, row->getHeight());
     }
     playheadX_ = x;
   }
-  repaint(timelineArea());
+  if (arrangementView_) arrangementView_->repaint(timelineArea());
 }
 
 // ---------------------------------------------------------------- updates (30 per second)
@@ -6395,6 +6866,7 @@ void MainComponent::updatePlayTick() {
 }
 
 void MainComponent::timerCallback() {
+  collectWindowLayout();  // a detached window's moved place, kept at most once a second
   // Space and the other shortcuts work on every page: a button, slider or list that took the keyboard
   // focus with a click gives it back (it would eat Space as its own click). Text fields and the editors
   // with their own keys (piano roll: Delete, arrows) keep it.
@@ -6470,7 +6942,7 @@ void MainComponent::timerCallback() {
                     juce::dontSendNotification);
   if (const int x = xOfTick(shownPosition()); x != playheadX_) {
     for (auto& row : rows_) {
-      const int rx = getLocalPoint(row.get(), juce::Point<int>()).x;
+      const int rx = arrangementView_->getLocalPoint(row.get(), juce::Point<int>()).x;
       if (playheadX_ >= 0) row->repaint(playheadX_ - rx - 1, 0, 3, row->getHeight());
       row->repaint(x - rx - 1, 0, 3, row->getHeight());
     }
@@ -6552,11 +7024,11 @@ void MainComponent::timerCallback() {
   if (test_) selfTestStep();
   arrangeButton_.setToggleState(!mixerOpen_, juce::dontSendNotification);
   if (rail_.size() == 6) {
-    const bool states[] = {arrangeButton_.getToggleState(), mixerOpen_, patternsWindow_ != nullptr && patternsWindow_->isVisible(), libraryShown(),
-                           pluginsShown(), inspectorShown()};
+    const bool states[] = {arrangeButton_.getToggleState(), mixerOpen_ || panelDetached("mixer"), panelShown("channelRack"),
+                           libraryShown() || panelDetached("browser"), pluginsShown(), inspectorShown()};
     for (size_t i = 0; i < 6; ++i) rail_[i]->setToggleState(states[i], juce::dontSendNotification);
   }
-  repaint(timelineArea());
+  if (arrangementView_) arrangementView_->repaint(timelineArea());
   editor_.playheadMoved();  // only the old and the new line, not the whole piano roll
   // A sound or effect that failed while playing is silent until it is retried or replaced: say which, once,
   // and offer the way back (BUG-SWEEP-05: the Plugins menu's "Try the failed plugins again").
@@ -7047,7 +7519,7 @@ void MainComponent::selfTestStep() {
           TrackRow* row = nullptr;
           for (auto& r : rows_) if (r->id() == "bass") row = r.get();
           if (!row || !p || p->notes.empty()) return finish(false, "note drawing: no bass row or pattern");
-          const int origin = getLocalPoint(row, juce::Point<int>()).x;
+          const int origin = arrangementView_->getLocalPoint(row, juce::Point<int>()).x;  // the lanes' geometry is the view's own
           const int x0 = xOfTick((double)c.startTick) - origin, x1 = xOfTick((double)(c.startTick + c.lengthTicks)) - origin;
           // Inside the clip, away from its selection edge and top strip: only the notes draw kClipNote here.
           const auto box = juce::Rectangle<int>::leftTopRightBottom(x0 + 4, 8, std::min(x1 - 4, row->getWidth()), row->getHeight() - 8);
@@ -7734,10 +8206,122 @@ void MainComponent::selfTestStep() {
       }
       break;
     }
-    case 41:
-      if (inStep > 300 && applied)
-        return finish(true, "M1c + M2 path, live notes, audio clips, mixer, save with audio, piano roll Pulse gestures");
+    // The piano group ended at case 40; the detachable-window group is renumbered 41-47 (plan §3:
+    // both groups run, unique step ids, one final exit) so neither branch's checks are lost.
+    // The detachable windows (UX slice): every panel pops out into an OS window and docks back; the places
+    // are kept in the settings form, validated against the monitors, and the bring-back command rescues them.
+    // The settings used here are in memory: the user's own file is never touched by the test.
+    case 41: {  // the Mixer: detach, the place saved, dock back
+      if (inStep < 200) break;
+      detachPanel("mixer");
+      if (!panelDetached("mixer") || mixer_->getParentComponent() == this || !mixer_->isVisible() || mixerOpen_)
+        return finish(false, "mixer detach");
+      juce::PropertySet props;  // in memory only: the user's settings file is never touched by the test
+      saveWindowLayout(props);
+      const auto saved = winlayout::fromJson(nlohmann::json::parse(props.getValue("window.mixer").toStdString(), nullptr, false));
+      if (saved.state != winlayout::State::Detached || saved.rect.empty()) return finish(false, "mixer layout save");
+      dockPanel("mixer");
+      if (panelDetached("mixer") || !mixerOpen_ || mixer_->getParentComponent() != this) return finish(false, "mixer dock");
+      setMixerOpen(false);
+      next("mixer detach/dock");
       break;
+    }
+    case 42: {  // the piano roll and the Browser: out and back, the side panel's place freed while detached
+      if (inStep < 200) break;
+      detachPanel("pianoRoll");
+      if (!panelDetached("pianoRoll") || editor_.getParentComponent() == this || !editor_.isVisible()) return finish(false, "piano roll detach");
+      detachPanel("browser");
+      if (!panelDetached("browser") || library_.getParentComponent() == this || libraryShown()) return finish(false, "browser detach");
+      dockPanel("pianoRoll");
+      dockPanel("browser");
+      if (panelDetached("pianoRoll") || panelDetached("browser") || !libraryShown() || editor_.getParentComponent() != this)
+        return finish(false, "piano/browser dock");
+      next("piano roll + browser detach/dock");
+      break;
+    }
+    case 43: {  // the channel rack: opened docked, detached, docked again, closed
+      if (inStep < 200) break;
+      openPatterns();
+      if (!rackDocked_ || !rackOpen_ || patternsPanel_->getParentComponent() != this) return finish(false, "rack dock");
+      detachPanel("channelRack");
+      if (!panelDetached("channelRack")) return finish(false, "rack detach: state not detached");
+      if (patternsPanel_->getParentComponent() == this) return finish(false, "rack detach: content still in the main window");
+      dockPanel("channelRack");
+      if (panelDetached("channelRack") || !rackOpen_ || patternsPanel_->getParentComponent() != this) return finish(false, "rack re-dock");
+      hidePanel("channelRack");
+      if (panelShown("channelRack")) return finish(false, "rack close");
+      next("channel rack dock/detach/close");
+      break;
+    }
+    case 44: {  // the Playlist: the tracks keep working in their own window (select, a clip edit, undo, zoom)
+      if (inStep < 200) break;
+      detachPanel("playlist");
+      if (!panelDetached("playlist") || arrangementView_->getParentComponent() == this) return finish(false, "playlist detach");
+      const std::string trackId = history_.current().tracks.front().id;
+      selectTrack(trackId);
+      addClipAt(trackId, 2 * kBar);
+      if (!history_.canUndo()) return finish(false, "playlist detached: clip edit");
+      undo();
+      setView(kBar, 4 * kBar);
+      if (xOfTick(kBar) != laneSpan().getX() || std::abs(xOfTick(5 * kBar) - laneSpan().getRight()) > 1) return finish(false, "playlist detached geometry");
+      setView(0, viewSpan());
+      dockPanel("playlist");
+      if (panelDetached("playlist") || arrangementView_->getParentComponent() != this || !arrangementDocked()) return finish(false, "playlist dock");
+      next("playlist detach/dock");
+      break;
+    }
+    case 45: {  // the layout round-trip: a saved place restored; an off-screen place rescued; the bring-back cascade
+      if (inStep < 200) break;
+      juce::PropertySet props;  // in memory only: the user's settings file is never touched by the test
+      detachPanel("mixer");
+      detached_["mixer"].window->setBounds(120, 90, 1000, 600);
+      saveWindowLayout(props);
+      dockPanel("mixer");
+      restoreWindowLayout(props);  // as a new session: the Mixer comes back detached, at its place
+      if (!panelDetached("mixer")) return finish(false, "layout restore: mixer not detached");
+      const auto b = detached_["mixer"].window->getScreenBounds();
+      if (std::abs(b.getX() - 120) > 4 || std::abs(b.getY() - 90) > 4) return finish(false, "layout restore: place");
+      // A monitor that is not there anymore: the window must come back on screen, its size kept.
+      const winlayout::Panel gone{winlayout::State::Detached, {99999, 99999, 1000, 600}};
+      props.setValue("window.mixer", juce::String(winlayout::toJson(gone).dump()));
+      restoreWindowLayout(props);
+      const auto back = detached_["mixer"].window->getScreenBounds();
+      if (!winlayout::reachable({back.getX(), back.getY(), back.getWidth(), back.getHeight()}, windowScreens())) return finish(false, "off-screen restore");
+      bringWindowsBackToScreen();
+      const auto primary = windowScreens().front();
+      const auto bb = detached_["mixer"].window->getScreenBounds();
+      if (bb.getX() < primary.x || bb.getY() < primary.y || bb.getRight() > primary.x + primary.w || bb.getBottom() > primary.y + primary.h)
+        return finish(false, "bring back");
+      dockPanel("mixer");
+      setMixerOpen(false);
+      next("layout save/restore, off-screen, bring back");
+      break;
+    }
+    case 46: {  // a legacy settings file (no window keys): the defaults, the old keys' meaning kept
+      if (inStep < 200) break;
+      juce::PropertySet legacy;
+      legacy.setValue("showLibrary", false);
+      legacy.setValue("editorHeight", 280);
+      restoreWindowLayout(legacy);
+      for (const auto& id : panelIds())
+        if (panelDetached(id)) return finish(false, "legacy: " + id + " detached");
+      if (showLibrary_) return finish(false, "legacy: showLibrary kept");
+      if (panelShown("mixer") || panelShown("channelRack")) return finish(false, "legacy: mixer/rack closed");
+      if (!panelShown("playlist") || !panelShown("pianoRoll")) return finish(false, "legacy: playlist/piano shown");
+      showLibrary_ = true;  // the test's own state again
+      resized();
+      next("legacy settings load");
+      break;
+    }
+    case 47: {  // a picture with the Browser detached (its place in the main window freed), then back
+      if (inStep < 300) break;
+      const juce::File windows = t.picture.getSiblingFile(t.picture.getFileNameWithoutExtension() + "-windows.png");
+      detachPanel("browser");
+      const bool wrote = savePicture(windows);
+      dockPanel("browser");
+      if (!wrote) return finish(false, "cannot write " + windows.getFullPathName());
+      return finish(true, "M1c + M2 path, live notes, audio clips, mixer, save with audio, piano roll Pulse gestures, detachable windows");
+    }
   }
 }
 
