@@ -813,6 +813,7 @@ std::vector<std::string> randomizeStyle(Document& doc, const RandomizeOptions& o
   json allAxes = json::array();
   for (const auto& x : randomizeAxes()) if (x != "tempo" && x != "sound") allAxes.push_back(x);
   json recipe = {{"seed", o.seed}, {"strength", o.strength}, {"style", style}, {"axes", o.axes.empty() ? allAxes : json(o.axes)}};
+  if (soundOn) recipe["sound"] = sound;
   if (tempoOn) {
     json map = json::array();
     for (const auto& t : doc.tempoMap) map.push_back(tempoPointJson(t));
