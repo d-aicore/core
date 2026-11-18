@@ -1,0 +1,7 @@
+duplicate: originalStart=120 copyStart=160 originalLater=200 copyLater=200 followingBefore=160 followingAfter=160
+swap: firstName=B firstBpm=120 secondName=A secondBpm=240 mapUnchanged=1
+insert ramp: beforeEditBpmAtBar1=150 afterEdit=140 beforeSeconds=1.78515 afterSeconds=1.84981 originalAt3=210 movedAt5=220
+insert-delete roundtrip: same=0 bpmAtBar1=140
+shorten ramp: beforeEditBpmAtBar1=150 afterEdit=120 beforeSeconds=1.78515 afterSeconds=2 remainingPoints=0
+length roundtrip: same=0 bpmAtBar1=120
+step insertion control: before=120 after=120
