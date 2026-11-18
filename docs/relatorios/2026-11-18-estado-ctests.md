@@ -70,8 +70,8 @@ n/p = no case/verification counts printed by the cli_* tests. The only ed4642e�
 | eef8db0 (gate-eef8db0) | 1/1 pass | ok | 49 | 0 | `0.7.0+eef8db0b3a` | document=61 accepted=61 applied=61 | 19.86 s |
 
 The desktop suite is one ctest case (`desktop_self_test`, `tests/CMakeLists.txt:124-127`); its internal unit is the
-step (49 steps: play, undo, save/reopen, export, engine kill/restart, plugin crash survival, automation, autosave
-recovery, mixer, picture — full list in the committed self-test reports). It prints no case/verification counters.
+step (49 steps: play, undo, save/reopen, export, engine kill/restart, plugin state kept across the engine crash,
+automation, autosave recovery, mixer, picture — full list in the committed self-test reports). It prints no case/verification counters.
 
 Full set (no label filter), **measured-by-me**, `ctest --test-dir <dir> --output-on-failure` (exit 0 both):
 **18/18 pass at ed4642e and 18/18 at eef8db0** ("100% tests passed out of 18"). The full set is exactly
