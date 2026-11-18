@@ -45,13 +45,26 @@ public:
   const std::string& patternId() const { return patternId_; }
   void documentChanged();                     // after any edit, undo or open
   void playheadMoved();                       // every frame: redraws only where the playhead line was and is
-  // The mouse's tool: draw (click adds a note), select (drag a box), erase (click or drag over notes).
-  enum class Tool { Draw, Select, Erase };
+  // The mouse's tool: draw (click adds a note, drag sizes it), paint (drag seeds a note per cell),
+  // select (drag a box), erase (click or drag over notes).
+  enum class Tool { Draw, Paint, Select, Erase };
   void setTool(Tool tool);
   Tool tool() const { return tool_; }
   // Drawing help (File > Settings > Piano roll, both on by default): a faint note where a click would put one,
   // and thin guides when that note (or a dragged one) lines up with another: same key across, same time down.
   void setDrawingHelp(bool ghost, bool guides);
+  // Expandable key range (owner, 2026-11-18: «piano deve conseguir expandir», «no piano ctrl+scroll keys+ e keys»):
+  // Keys+/Keys- grow or shrink the visible range, Fit keys shows all 128. Ctrl+wheel is Keys+/Keys-.
+  void fitKeys();
+  void keysMore();
+  void keysLess();
+  int keysShown() const;  // keys in the view (128 after Fit keys)
+  // The scale guide (Pulse's «Scale»): a faint tint on the scale's keys, a stronger one and a mark on the root.
+  // A guide only: creating and moving never trap the mouse. "" = off.
+  void setScaleGuide(int root, const std::string& scaleName);
+  bool scaleGuideOn() const { return !scaleName_.empty(); }
+  int scaleRoot() const { return scaleRoot_; }
+  const std::string& scaleName() const { return scaleName_; }
   // Groove tools (Edit > Timing, Variation) on the notes of the bars shown, the selected ones among them; one undo step each.
   // Strength and swing (0..1) are set in the Inspector.
   double quantizeStrength = 1.0, swing = 0.0;
@@ -175,12 +188,19 @@ private:
   std::set<std::string> selected_;
   int hoverPitch_ = -1;  // the row under the mouse: lit, its note named on the keyboard
   int lowPitch_ = 24;  // bass view: the lowest key shown
-  int rowsWanted_ = 0;  // keys shown (Alt+wheel); 0: as many as fit at a comfortable height
-  int keysShown() const;
+  int rowsWanted_ = 0;  // keys shown (Keys±, Ctrl+wheel, Alt+wheel); 0: as many as fit at a comfortable height
+  int scaleRoot_ = 0;
+  std::string scaleName_;  // "" = the scale guide is off
   juce::ComboBox patternBox_, snap_, length_;
   juce::TextButton newPattern_, clearPattern_, removePattern_;
   juce::TextButton octaveUp_, octaveDown_, zoomIn_, zoomOut_;
   void zoom(double factor, double at);
+  // The second toolbar row (pitched tracks): the key range and the scale guide, as dropdowns where there is a choice.
+  juce::TextButton keysMinus_, keysPlus_, fitKeys_;
+  juce::ComboBox scaleBox_, rootBox_;
+  int headerHeight() const;  // one row for drums, two for pitched tracks
+  void updateKeysHint();
+  void keysWheel(float deltaY, int y);  // Ctrl+wheel: Keys+/Keys- around the key under the mouse
   juce::TextButton drawTool_, selectTool_, eraseTool_;
   juce::TextButton edit_;        // Edit ▾: every note tool (showTools)
   theme::InfoDot editInfo_;
