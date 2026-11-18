@@ -1,20 +1,197 @@
 // Testes dos bugs medios e pequenos corrigidos a 2026-11-16 (lista do sweep antigo revista contra o main 06e0882).
 // Cada teste falhava antes da correcao.
 #include <algorithm>
+#include <cstdint>
 #include <filesystem>
+#include <fstream>
 #include "support/check.hpp"
+#include "assets.hpp"
 #include "edit.hpp"
 #include "follow.hpp"
 #include "pattern_tools.hpp"
 #include "pcore.hpp"
 #include "stutter.hpp"
+#include "storage.hpp"
 #include "templates.hpp"
+#include "translation.hpp"
 
 using namespace core::doc;
 namespace fs = std::filesystem;
 
 namespace {
 constexpr int64_t kBar = 4 * kPpq;
+
+fs::path freshDir(const std::string& name) {
+  const fs::path d = fs::temp_directory_path() / "core-bug-tests" / name;
+  fs::remove_all(d);
+  fs::create_directories(d);
+  return d;
+}
+
+void writeText(const fs::path& file, const std::string& text) {
+  std::ofstream out(file, std::ios::binary | std::ios::trunc);
+  out << text;
+}
+
+// Um WAV minimo (mono, 16 bit, 48 kHz, 64 amostras todas com `value`): valores diferentes, conteudos diferentes.
+void tinyWav(const fs::path& file, int16_t value) {
+  const uint32_t frames = 64, bytes = frames * 2, rate = 48000;
+  auto u32 = [](uint32_t v) { return std::string{(char)(v & 255), (char)((v >> 8) & 255), (char)((v >> 16) & 255), (char)((v >> 24) & 255)}; };
+  auto u16 = [](uint16_t v) { return std::string{(char)(v & 255), (char)((v >> 8) & 255)}; };
+  std::string wav = "RIFF" + u32(36 + bytes) + "WAVEfmt " + u32(16) + u16(1) + u16(1) + u32(rate) + u32(rate * 2) + u16(2) + u16(16) +
+                    "data" + u32(bytes);
+  for (uint32_t i = 0; i < frames; ++i) wav += u16((uint16_t)value);
+  writeText(file, wav);
+}
+
+bool lists(const std::vector<fs::path>& files, const fs::path& file) {
+  return std::any_of(files.begin(), files.end(), [&](const fs::path& f) { std::error_code e; return fs::equivalent(f, file, e); });
+}
+
+// Uma cancao com um clip de audio, gravada em dir/<name>.core; devolve o ficheiro do audio dela em dir/Audio.
+fs::path songWithAudio(const fs::path& dir, const std::string& name, int16_t value, Document* out = nullptr, std::string take = "") {
+  const fs::path source = dir / ((take.empty() ? name + "-take" : take) + ".wav");
+  tinyWav(source, value);
+  Document d = newEmptyDocument();
+  d.name = name;
+  const std::string asset = importAudio(d, source, dir);
+  addAudioClip(d, addAudioTrack(d, "take"), asset, 0);
+  saveFile(d, dir / (name + kFileExtension));
+  fs::remove(source);
+  if (out) *out = d;
+  return assetFile(*d.findAsset(asset), dir);
+}
+}  // namespace
+
+// ---------------------------------------------------------------- perda de dados (2026-11-18), D1
+// "Remove unused" mandava para a Reciclagem o audio das OUTRAS cancoes da pasta: todas partilham <pasta>/Audio e
+// strayAudioFiles so olhava para a cancao aberta.
+
+TEST("dados D1: o audio de outra cancao da mesma pasta nao e 'stray'") {
+  const fs::path dir = freshDir("d1-duas-cancoes");
+  Document a;
+  const fs::path audioA = songWithAudio(dir, "A", 1000, &a);
+  const fs::path audioB = songWithAudio(dir, "B", 2000);
+  CHECK(fs::exists(audioA));
+  CHECK(fs::exists(audioB));
+  const auto stray = strayAudioFiles(a, dir);
+  CHECK(!lists(stray, audioB));  // antes: la estava, e o Remove unused mandava-o para a Reciclagem
+  CHECK(!lists(stray, audioA));
+  CHECK_EQ(stray.size(), (size_t)0);
+}
+
+TEST("dados D1: um .core da pasta que nao se le -> nada e 'stray' (na duvida nao se apaga nada)") {
+  for (const std::string broken : {"{ isto nao e json", R"({"format":"core-document","schemaVersion":99,"name":"de um Core mais novo"})",
+                                   R"({"format":"outra-coisa"})"}) {
+    const fs::path dir = freshDir("d1-ilegivel");
+    Document a;
+    songWithAudio(dir, "A", 1000, &a);
+    songWithAudio(dir, "B", 2000);
+    tinyWav(dir / kAssetFolder / "orfao.wav", 3000);  // ninguem o refere: sem o ficheiro estragado seria devolvido
+    writeText(dir / "C.core", broken);
+    CHECK_EQ(strayAudioFiles(a, dir).size(), (size_t)0);
+    CHECK_EQ(filesNoSavedSongNeeds({dir / kAssetFolder / "orfao.wav"}, dir).size(), (size_t)0);
+  }
+  // O mesmo para a copia de seguranca de outra cancao: tambem e uma versao que alguem pode querer abrir.
+  const fs::path dir = freshDir("d1-bak-ilegivel");
+  Document a;
+  songWithAudio(dir, "A", 1000, &a);
+  tinyWav(dir / kAssetFolder / "orfao.wav", 3000);
+  writeText(dir / "C.core.bak", "lixo");
+  CHECK_EQ(strayAudioFiles(a, dir).size(), (size_t)0);
+}
+
+TEST("dados D1: um .wav que nenhuma cancao da pasta refere continua a ser devolvido") {
+  const fs::path dir = freshDir("d1-orfao");
+  Document a;
+  songWithAudio(dir, "A", 1000, &a);
+  songWithAudio(dir, "B", 2000);
+  const fs::path orphan = dir / kAssetFolder / "orfao.wav";
+  tinyWav(orphan, 3000);
+  writeText(dir / "notas.json", R"({"isto":"nao e uma cancao do Core"})");  // um .json qualquer nao trava nada
+  writeText(dir / "leia-me.txt", "nada");
+  const auto stray = strayAudioFiles(a, dir);
+  CHECK_EQ(stray.size(), (size_t)1);
+  CHECK(lists(stray, orphan));
+}
+
+TEST("dados D1: contam tambem o .core.bak, um ficheiro de schema 1 e um 'core-project' da pasta") {
+  const fs::path dir = freshDir("d1-outros-formatos");
+  Document a;
+  songWithAudio(dir, "A", 1000, &a);
+  // B gravada duas vezes: a versao de agora ja nao tem o audio, a anterior (B.core.bak) ainda o tem.
+  Document b;
+  const fs::path audioB = songWithAudio(dir, "B", 2000, &b);
+  Document later = b;
+  later.tracks.clear();
+  later.assets.clear();
+  saveFile(later, dir / "B.core");
+  CHECK(fs::exists(backupPath(dir / "B.core")));
+  CHECK_EQ(openFile(dir / "B.core").document.assets.size(), (size_t)0);
+  // Schema 1 (abre como importado): os assets dele contam.
+  const fs::path audioOld = dir / kAssetFolder / "antigo.wav";
+  tinyWav(audioOld, 4000);
+  writeText(dir / "Antiga.core", R"({"format":"core-document","schemaVersion":1,"name":"Antiga","transport":{"bpm":145},"master":{},
+    "assets":[{"id":"a1","name":"antigo.wav","path":"Audio/antigo.wav","sha256":"","sampleRate":48000,"channels":1,"frames":64}],"tracks":[]})");
+  CHECK(openFile(dir / "Antiga.core").imported);
+  // core-project (o formato do motor): o audio vai por caminho, relativo a pasta ou absoluto.
+  const fs::path audioRel = dir / kAssetFolder / "do-motor.wav", audioAbs = dir / kAssetFolder / "do-motor-abs.wav";
+  tinyWav(audioRel, 5000);
+  tinyWav(audioAbs, 6000);
+  const json clipRel = {{"path", "Audio/do-motor.wav"}, {"startTick", 0}, {"durationSeconds", 0.001}};
+  const auto abs8 = audioAbs.u8string();
+  const json clipAbs = {{"path", std::string(abs8.begin(), abs8.end())}, {"startTick", 0}, {"durationSeconds", 0.001}};
+  const json project = {{"format", "core-project"}, {"version", 2}, {"bpm", 145}, {"lengthTicks", 960},
+                        {"tracks", json::array({json{{"id", "audio1"}, {"instrument", "audio"}, {"audioClips", json::array({clipRel, clipAbs})}}})}};
+  writeText(dir / "Motor.core", project.dump());
+  const fs::path orphan = dir / kAssetFolder / "orfao.wav";
+  tinyWav(orphan, 3000);
+  const auto stray = strayAudioFiles(a, dir);
+  CHECK(!lists(stray, audioB));
+  CHECK(!lists(stray, audioOld));
+  CHECK(!lists(stray, audioRel));
+  CHECK(!lists(stray, audioAbs));
+  CHECK(lists(stray, orphan));
+  CHECK_EQ(stray.size(), (size_t)1);
+}
+
+TEST("dados D1: o mesmo audio importado em duas cancoes (um so ficheiro) nao sai quando uma delas o deixa de usar") {
+  const fs::path dir = freshDir("d1-mesmo-conteudo");
+  Document a;
+  const fs::path audioA = songWithAudio(dir, "A", 1000, &a, "kick");
+  const fs::path audioB = songWithAudio(dir, "B", 1000, nullptr, "kick");  // o mesmo ficheiro importado: um so em Audio
+  CHECK(fs::equivalent(audioA, audioB));
+  a.tracks.clear();  // em A ja nenhum clip o toca
+  const std::vector<Asset> removed = removeUnusedAssets(a);
+  CHECK_EQ(removed.size(), (size_t)1);
+  std::vector<fs::path> candidates;
+  for (const auto& r : removed) candidates.push_back(assetFile(r, dir));
+  CHECK_EQ(filesNoSavedSongNeeds(candidates, dir).size(), (size_t)0);  // B (e a A que esta em disco) ainda o usam
+  // Depois de A gravada sem ele, B continua a segura-lo.
+  saveFile(a, dir / "A.core");
+  saveFile(a, dir / "A.core");  // duas vezes: a copia de seguranca de A tambem ja nao o tem
+  CHECK_EQ(strayAudioFiles(a, dir).size(), (size_t)0);
+  CHECK_EQ(filesNoSavedSongNeeds(candidates, dir).size(), (size_t)0);
+  // Sem B (nem a copia de seguranca dela) ja ninguem o usa.
+  fs::remove(dir / "B.core");
+  fs::remove(backupPath(dir / "B.core"));
+  CHECK_EQ(filesNoSavedSongNeeds(candidates, dir).size(), (size_t)1);
+  CHECK(lists(strayAudioFiles(a, dir), audioA));
+}
+
+TEST("dados D1: o texto da pergunta do Remove unused tem traducao") {
+  const Translation pt = loadTranslation(CORE_LANG_DIR "/pt-PT.json");
+  CHECK(pt.has("3 audio file(s) are not used: files of this song that no clip plays, and files in the Audio folder that no song "
+               "of this folder uses.\n\nThe song's files leave the song (Edit > Undo puts them back in the song) and all of them go "
+               "to the Recycle Bin, from where they can be restored. Files Undo can still bring back stay until the song is closed. "
+               "Save the song afterwards."));
+  // O aviso depois: a parte nova ("ou uma musica guardada desta pasta os usa") nao fica em ingles a meio da frase.
+  for (const char* notice : {"2 unused audio file(s) sent to the Recycle Bin; 1 kept while Undo can bring them back or a saved song of this folder uses them.",
+                             "2 unused audio file(s) sent to the Recycle Bin (1 could not be moved: in use?); 3 kept while Undo can bring them back or a "
+                             "saved song of this folder uses them."}) {
+    CHECK(pt.has(notice));
+    CHECK(pt.translate(notice).find("kept while") == std::string::npos);
+  }
 }
 
 TEST("sweep: addPattern recusa um padrao de comprimento 0 (dividia por zero na projeccao)") {

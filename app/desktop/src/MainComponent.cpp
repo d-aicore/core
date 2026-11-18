@@ -4073,13 +4073,15 @@ void MainComponent::collectSampleScan() {
 
 // Library > Project > Remove unused: the song's audio files no clip plays leave the song (one undo step), and
 // their files and the stray ones in the Audio folder go to the Recycle Bin (from where they can be brought back).
+// The Audio folder belongs to every song saved in this folder: a file another one of them uses never goes.
 void MainComponent::removeUnusedAudio() {
   const std::filesystem::path dir = projectDir();
   const auto unused = doc::unusedAssets(history_.current());
   const auto stray = doc::strayAudioFiles(history_.current(), dir);
   if (unused.empty() && stray.empty()) return;
-  juce::String text = juce::String((int)(unused.size() + stray.size())) + u8(" audio file(s) of this song are not played by any clip.\n\n") +
-                      u8("They leave the song (Edit > Undo puts them back in the song) and their files go to the Recycle Bin, ") +
+  juce::String text = juce::String((int)(unused.size() + stray.size())) +
+                      u8(" audio file(s) are not used: files of this song that no clip plays, and files in the Audio folder that no song of this folder uses.\n\n") +
+                      u8("The song's files leave the song (Edit > Undo puts them back in the song) and all of them go to the Recycle Bin, ") +
                       u8("from where they can be restored. Files Undo can still bring back stay until the song is closed. Save the song afterwards.");
   juce::Component::SafePointer<MainComponent> safe(this);
   juce::AlertWindow::showAsync(juce::MessageBoxOptions().withIconType(juce::MessageBoxIconType::QuestionIcon)
@@ -4104,12 +4106,13 @@ void MainComponent::removeUnusedAudio() {
     std::vector<std::filesystem::path> candidates;
     for (const auto& a : removed) candidates.push_back(doc::assetFile(a, dir));
     for (const auto& p : strayNow) candidates.push_back(p);
-    const auto trashable = doc::filesNoStateNeeds(o.history_, candidates, dir);
+    // And only the files no song saved in this folder uses: the same audio imported in two songs is one file.
+    const auto trashable = doc::filesNoSavedSongNeeds(doc::filesNoStateNeeds(o.history_, candidates, dir), dir);
     for (const auto& p : trashable) toTrash(p);
     const int kept = (int)(candidates.size() - trashable.size());
     o.notice_ = juce::String(trashed) + u8(" unused audio file(s) sent to the Recycle Bin") +
                 (failed > 0 ? u8(" (") + juce::String(failed) + u8(" could not be moved: in use?)") : juce::String()) +
-                (kept > 0 ? u8("; ") + juce::String(kept) + u8(" kept while Undo can bring them back") : juce::String()) + u8(".");
+                (kept > 0 ? u8("; ") + juce::String(kept) + u8(" kept while Undo can bring them back or a saved song of this folder uses them") : juce::String()) + u8(".");
     logLine(o.notice_);
     o.repaint();
   });

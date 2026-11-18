@@ -66,8 +66,13 @@ bool isProjectSample(const Asset& asset);
 // A file another asset still points at is not returned.
 std::vector<Asset> removeUnusedAssets(Document& doc);
 // Audio files in <projectDir>/Audio that no asset of the document points at (left by an older version of
-// the song, or by an edit that was undone and saved over).
+// the song, or by an edit that was undone and saved over) and that no song saved in the folder needs
+// (filesNoSavedSongNeeds: every song of a folder keeps its audio in the same Audio folder).
 std::vector<std::filesystem::path> strayAudioFiles(const Document& doc, const std::filesystem::path& projectDir);
+// Of `files`, the ones no song saved in projectDir points at: every "*.core" there and its "*.core.bak" (the open
+// song's file on disk too), in any schema Core opens, and the files of the engine's format ("core-project", whose
+// audio goes by path). None when one of them cannot be read (damaged, made by a newer Core): in doubt, no file goes.
+std::vector<std::filesystem::path> filesNoSavedSongNeeds(const std::vector<std::filesystem::path>& files, const std::filesystem::path& projectDir);
 class History;
 // Codex review 2026-11-09 C4: Remove unused sent the files to the Recycle Bin, and Undo then brought a clip back with
 // no audio. Of `files`, the ones no state of the history (current, Undo, Redo) points at: only those may go. The

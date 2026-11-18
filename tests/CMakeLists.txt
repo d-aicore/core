@@ -36,6 +36,7 @@ add_test(NAME midi_tests COMMAND midi_tests)
 add_executable(bug_tests bug_tests.cpp)
 target_include_directories(bug_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(bug_tests PRIVATE core_domain core_engine_lib)
+target_compile_definitions(bug_tests PRIVATE CORE_LANG_DIR="${CMAKE_SOURCE_DIR}/lang")
 add_test(NAME bug_tests COMMAND bug_tests)
 
 # The export for the Bitwig: the .mid and the .vstpreset of each plugin, and which goes on which track.

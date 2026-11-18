@@ -8,6 +8,7 @@
 #include <set>
 #include "history.hpp"
 #include "sha256.hpp"
+#include "storage.hpp"
 
 namespace core::doc {
 
@@ -346,6 +347,60 @@ std::vector<Asset> removeUnusedAssets(Document& doc) {
   return removed;
 }
 
+namespace {
+bool endsWith(const std::string& s, const char* tail) {
+  const size_t n = std::strlen(tail);
+  return s.size() >= n && s.compare(s.size() - n, n, tail) == 0;
+}
+
+// Every text in a file of the engine's format that names a .wav: its audio goes by path (relative to the folder, or
+// absolute), in fields the document does not read.
+void wavPathsIn(const json& value, const fs::path& projectDir, std::set<fs::path>& used) {
+  if (value.is_string()) {
+    const std::string text = value.get<std::string>();
+    std::string lower = text;
+    for (auto& c : lower) c = (char)std::tolower((unsigned char)c);
+    if (!endsWith(lower, ".wav")) return;
+    std::error_code e;
+    const fs::path p = fromUtf8(text);
+    used.insert(fs::weakly_canonical(p.is_absolute() ? p : projectDir / p, e));
+  } else if (value.is_structured()) {
+    for (const auto& item : value) wavPathsIn(item, projectDir, used);
+  }
+}
+
+// The audio files the songs saved in projectDir use, added to `used`: all of them share <projectDir>/Audio (the
+// project folder is the folder of the .core file). Every "*.core" and its "*.core.bak" is read (the open song's own
+// too: what is on disk may still need a file the open song dropped), and a ".json" that is a song of Core's (File >
+// Open takes them). False when one of them cannot be read: then nobody knows what it needs.
+bool audioSavedSongsUse(const fs::path& projectDir, std::set<fs::path>& used) {
+  std::error_code e;
+  for (fs::directory_iterator it(projectDir, e), end; !e && it != end; it.increment(e)) {
+    std::error_code kind;
+    if (!it->is_regular_file(kind)) continue;
+    try {
+      std::string name = utf8(it->path().filename());
+      for (auto& c : name) c = (char)std::tolower((unsigned char)c);
+      const bool song = endsWith(name, kFileExtension) || endsWith(name, (std::string(kFileExtension) + ".bak").c_str());
+      if (!song && !endsWith(name, ".json") && !endsWith(name, ".json.bak")) continue;
+      const json value = json::parse(readTextFile(it->path()), nullptr, false);
+      const json format = value.is_object() && value.contains("format") ? value["format"] : json();
+      if (format == kDocumentFormat) {
+        // Older schemas are migrated here, as when they are opened; a newer one or a damaged one throws.
+        for (const auto& a : parseDocument(value).assets) used.insert(fs::weakly_canonical(assetFile(a, projectDir), kind));
+      } else if (format == "core-project") {
+        wavPathsIn(value, projectDir, used);
+      } else if (song) {
+        return false;  // named as a song, and not one Core reads
+      }
+    } catch (const std::exception&) {
+      return false;
+    }
+  }
+  return !e;  // (the folder could not be listed to its end: the same doubt)
+}
+}  // namespace
+
 std::vector<fs::path> strayAudioFiles(const Document& doc, const fs::path& projectDir) {
   std::vector<fs::path> out;
   std::error_code e;
@@ -361,6 +416,19 @@ std::vector<fs::path> strayAudioFiles(const Document& doc, const fs::path& proje
     if (!known.count(fs::weakly_canonical(it->path(), e))) out.push_back(it->path());
   }
   std::sort(out.begin(), out.end());
+  // The other songs saved in the folder keep their audio in the same Audio folder (2026-11-18, D1: Remove unused
+  // sent it to the Recycle Bin).
+  return filesNoSavedSongNeeds(out, projectDir);
+}
+
+std::vector<fs::path> filesNoSavedSongNeeds(const std::vector<fs::path>& files, const fs::path& projectDir) {
+  std::vector<fs::path> out;
+  std::set<fs::path> used;
+  // The song files are only read when there is something to decide. In doubt, nothing may go.
+  if (files.empty() || projectDir.empty() || !audioSavedSongsUse(projectDir, used)) return out;
+  std::error_code e;
+  for (const auto& f : files)
+    if (!used.count(fs::weakly_canonical(f, e))) out.push_back(f);
   return out;
 }
 
