@@ -1,0 +1,2 @@
+ok   plugins: keepLivePluginStates never takes back the state of a plugin that stays alive
+1 testes, 15 verificacoes, 0 falhas

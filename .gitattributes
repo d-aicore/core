@@ -1,2 +1,5 @@
 # The AICORE knowledge pack is checked by SHA-256 (manifest.json): never convert its line endings.
 knowledge/aicore/** -text
+# The deeper-audit evidence is archived verbatim (sha256 recorded in 2026-11-18-tempo-roundtrip.md):
+# never convert its line endings either.
+docs/relatorios/evidencia/2026-11-18-deeper-audit/** -text
