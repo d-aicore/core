@@ -74,6 +74,9 @@ add_dependencies(CoreApp core_resources)
 
 # Development package (M1c): a zip with Core.exe, core-engine.exe and the demo, runnable on a Windows
 # machine without Node, Python or a network. cmake --build build --target core-package
+# The resource folders are removed before copying (BUG-SWEEP-14), like the app staging above and the
+# installer: copy_directory keeps destination-only files, so a lang/patterns/pcore file removed from
+# the repo would otherwise stay in package/Core and in the zip.
 add_custom_target(core-package
   COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/package/Core
   COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:CoreApp> $<TARGET_FILE:core-engine>
@@ -81,8 +84,11 @@ add_custom_target(core-package
           ${CMAKE_BINARY_DIR}/package/Core
   COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/package/Core/templates
   COMMAND ${CMAKE_COMMAND} -E copy_directory $<TARGET_FILE_DIR:CoreApp>/templates ${CMAKE_BINARY_DIR}/package/Core/templates
+  COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/package/Core/lang
   COMMAND ${CMAKE_COMMAND} -E copy_directory $<TARGET_FILE_DIR:CoreApp>/lang ${CMAKE_BINARY_DIR}/package/Core/lang
+  COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/package/Core/patterns
   COMMAND ${CMAKE_COMMAND} -E copy_directory $<TARGET_FILE_DIR:CoreApp>/patterns ${CMAKE_BINARY_DIR}/package/Core/patterns
+  COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/package/Core/pcore
   COMMAND ${CMAKE_COMMAND} -E copy_directory $<TARGET_FILE_DIR:CoreApp>/pcore ${CMAKE_BINARY_DIR}/package/Core/pcore
   COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_BINARY_DIR}/package
           ${CMAKE_COMMAND} -E tar cf ${CMAKE_BINARY_DIR}/Core-windows-x64.zip --format=zip Core

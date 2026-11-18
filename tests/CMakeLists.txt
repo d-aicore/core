@@ -88,6 +88,15 @@ add_test(NAME cli_measure COMMAND ${CMAKE_COMMAND} -DENGINE=$<TARGET_FILE:core-e
 add_test(NAME cli_unicode COMMAND ${CMAKE_COMMAND} -DENGINE=$<TARGET_FILE:core-engine> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli
                                   -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_unicode.cmake)
 
+# The development zip (BUG-SWEEP-14): a file removed from the repo must not survive in package/Core or
+# Core-windows-x64.zip. Runs the real core-package target, so it is registered only where the app is
+# built (the Windows gate build). RUN_SERIAL: it repacks the build's shared package folder and zip.
+if(TARGET core-package)
+  add_test(NAME cli_package_stale COMMAND ${CMAKE_COMMAND} -DBUILD_DIR=${CMAKE_BINARY_DIR} -DSRC=${CMAKE_SOURCE_DIR}
+                                          -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_package_stale.cmake)
+  set_tests_properties(cli_package_stale PROPERTIES LABELS merge TIMEOUT 300 RUN_SERIAL TRUE)
+endif()
+
 set_tests_properties(engine_tests domain_tests role_tests midi_tests bug_tests audit_tests audit2_tests hunt_tests round3_tests calls_tests bitwig_tests cli_version cli_demo_render cli_measure cli_unicode
                      PROPERTIES LABELS merge TIMEOUT 300)
 
