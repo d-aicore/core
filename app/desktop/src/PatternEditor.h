@@ -172,6 +172,7 @@ private:
   juce::Rectangle<int> grid() const;
   juce::Rectangle<int> velocityLane() const;  // under the grid: one bar per note, its height the velocity
   void setVelocityAt(int x, int y);           // the notes drawn at x get the velocity of height y
+  void wheelVelocityAt(int x, double step);   // Alt+wheel: the notes at x (selected ones among them) by step
   void eraseAt(juce::Point<int> p);
   int64_t tickAtX(int x, bool snap) const;
   void movePlayheadTo(int x);  // the ruler: the start line to the tick under x

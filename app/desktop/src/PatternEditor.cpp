@@ -2385,13 +2385,30 @@ void PatternEditor::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseW
     zoom(std::pow(2.0, -wheel.deltaY * 2.0), shownStart() + std::clamp((e.x - grid().getX()) / (double)std::max(1, grid().getWidth()), 0.0, 1.0) * shownLength());
     return;
   }
-  // Alt+wheel: bigger or smaller keys (fewer or more of them), the key under the mouse kept in place.
-  if (currentTrack() && !drums() && e.mods.isAltDown()) {
-    const int under = pitchAtY(e.y), before = keysShown();
-    rowsWanted_ = std::clamp(before + (wheel.deltaY > 0 ? -2 : 2), kKeysMin, kKeysMax);
-    if (under >= 0) lowPitch_ = std::clamp(under - (under - lowPitch_) * keysShown() / std::max(1, before), 0, 128 - keysShown());
-    updateKeysHint();
-    repaint();
+  // Ctrl+Alt+wheel: fine velocity (±1 %) on the note under the mouse, or the selection when it is selected.
+  if (currentTrack() && ctrl && e.mods.isAltDown()) {
+    const doc::Note* hit = noteAt(e.getPosition(), nullptr);
+    if (!hit && velocityLane().contains(e.getPosition()))
+      for (const auto& n : pattern()->notes)
+        if (const int x0 = xOfTick(n.tick); e.x >= x0 - 2 && e.x <= x0 + 10) { hit = &n; break; }
+    if (hit) wheelVelocityAt(e.x, wheel.deltaY > 0 ? 0.01 : -0.01);
+    return;
+  }
+  // Alt+wheel over a note or the velocity lane: its velocity ±5 % (the selection's when the note is selected);
+  // over empty space: bigger or smaller keys (fewer or more of them), the key under the mouse kept in place.
+  if (currentTrack() && e.mods.isAltDown()) {
+    const doc::Note* hit = noteAt(e.getPosition(), nullptr);
+    if (!hit && velocityLane().contains(e.getPosition()))
+      for (const auto& n : pattern()->notes)
+        if (const int x0 = xOfTick(n.tick); e.x >= x0 - 2 && e.x <= x0 + 10) { hit = &n; break; }
+    if (hit) { wheelVelocityAt(e.x, wheel.deltaY > 0 ? 0.05 : -0.05); return; }
+    if (!drums()) {
+      const int under = pitchAtY(e.y), before = keysShown();
+      rowsWanted_ = std::clamp(before + (wheel.deltaY > 0 ? -2 : 2), kKeysMin, kKeysMax);
+      if (under >= 0) lowPitch_ = std::clamp(under - (under - lowPitch_) * keysShown() / std::max(1, before), 0, 128 - keysShown());
+      updateKeysHint();
+      repaint();
+    }
     return;
   }
   if (currentTrack() && shownLength() < (double)pattern()->lengthTicks && (e.mods.isShiftDown() || std::abs(wheel.deltaX) > std::abs(wheel.deltaY))) {
@@ -2409,12 +2426,38 @@ void PatternEditor::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseW
     if (!drums()) { lowPitch_ = std::clamp(lowPitch_ + (wheel.deltaY > 0 ? 1 : -1), 0, 128 - keysShown()); repaint(); }
     return;
   }
+  // Plain wheel over a drum step: its velocity (as before). Over a pitched note: scroll the keys — scrolling
+  // must not change a note's loudness by accident (velocity moved to Alt+wheel, as in the reference).
+  if (!drums()) {
+    lowPitch_ = std::clamp(lowPitch_ + (wheel.deltaY > 0 ? 1 : -1), 0, 128 - keysShown());
+    repaint();
+    return;
+  }
   const std::string trackId = trackId_, patternId = patternId_, id = hit->id;
   const double step = wheel.deltaY > 0 ? 0.05 : -0.05;
   host_.applyEdit([&](doc::Document& d) {
     for (auto& n : doc::patternById(doc::trackById(d, trackId), patternId).notes)
       if (n.id == id) doc::setNoteVelocity(n, std::clamp(std::round((n.velocity + step) * 100) / 100, 0.05, 1.0));
   }, "Velocity");
+}
+
+// Alt+wheel velocity: every note drawn at x, only the selected ones when the note under x is selected (the same
+// rule as the lane). One undo step per notch; the roll envelope moves with the base (BUG-SWEEP-30 setNoteVelocity).
+void PatternEditor::wheelVelocityAt(int x, double step) {
+  if (!currentTrack()) return;
+  std::set<std::string> ids;
+  bool anySelected = false;
+  for (const auto& n : pattern()->notes) {
+    const int x0 = xOfTick(n.tick), w = juce::jlimit(3, drums() ? 14 : 8, xOfTick(n.tick + n.length) - x0 - 2);
+    if (x >= x0 - 2 && x <= x0 + w + 2) { ids.insert(n.id); anySelected |= selected_.count(n.id) > 0; }
+  }
+  if (anySelected) for (auto it = ids.begin(); it != ids.end();) it = selected_.count(*it) ? std::next(it) : ids.erase(it);
+  if (ids.empty()) return;
+  const std::string trackId = trackId_, patternId = patternId_;
+  host_.applyEdit([&](doc::Document& d) {
+    for (auto& n : doc::patternById(doc::trackById(d, trackId), patternId).notes)
+      if (ids.count(n.id)) doc::setNoteVelocity(n, std::clamp(std::round((n.velocity + step) * 100) / 100, 0.05, 1.0));
+  }, u8("Velocity"));
 }
 
 bool PatternEditor::keyPressed(const juce::KeyPress& key) {
