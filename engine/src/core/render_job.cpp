@@ -69,32 +69,41 @@ void validateRenderOutputs(const std::vector<RenderOutput>& outputs) {
         throw std::runtime_error("One file is another one's working copy (.part): " + u.string() + ".");
 }
 
-void publishRenderOutputs(const std::vector<RenderOutput>& outputs, int& published, const std::function<void()>& beforePlace) {
+void publishRenderOutputs(const std::vector<RenderOutput>& outputs, int& published, const std::function<void()>& beforePlace, PublishRollback* rollback) {
   const size_t count = outputs.size();
   auto partOf = [](const std::string& path) { return utf8(path + ".part"); };
   published = 0;
   // Reserve backups before moving anything; all paths use the same alias rules.
   std::vector<fs::path> asides(count);
+  std::vector<std::string> asideNames(count);  // the same paths as text, for the rollback report
   {
     std::vector<fs::path> taken;
     for (const auto& o : outputs) { taken.push_back(utf8(o.path).lexically_normal()); taken.push_back(partOf(o.path).lexically_normal()); }
     for (size_t f = 0; f < count; ++f) {
       for (int k = 1;; ++k) {
-        const fs::path candidate = utf8(outputs[f].path + ".previous" + (k == 1 ? std::string() : "-" + std::to_string(k)));
+        const std::string name = outputs[f].path + ".previous" + (k == 1 ? std::string() : "-" + std::to_string(k));
+        const fs::path candidate = utf8(name);
         std::error_code ignored;
         bool clash = fs::exists(candidate, ignored);
         for (const auto& t : taken) clash = clash || sameTarget(t, candidate);
-        if (!clash) { asides[f] = candidate; taken.push_back(candidate.lexically_normal()); break; }
+        if (!clash) { asides[f] = candidate; asideNames[f] = name; taken.push_back(candidate.lexically_normal()); break; }
       }
     }
   }
   std::vector<char> aside(count, 0), placed(count, 0);
+  PublishRollback rb;
   auto undo = [&] {
+    rb.attempted = true;
     int left = 0;  // new files that could not be taken back (reported as "published")
     for (size_t f = 0; f < count; ++f) {
       std::error_code ignored;
       if (placed[f]) { fs::remove(utf8(outputs[f].path), ignored); if (ignored) ++left; }
-      if (aside[f]) { fs::rename(asides[f], utf8(outputs[f].path), ignored); (void)ignored; }
+      if (aside[f]) {
+        fs::rename(asides[f], utf8(outputs[f].path), ignored);
+        // A restore that fails leaves the old copy where it is: kept and named, never deleted (BUG-SWEEP-03).
+        if (ignored) rb.backups.push_back(asideNames[f]);
+        else rb.restored.push_back(outputs[f].path);
+      }
     }
     published = left;
   };
@@ -115,7 +124,18 @@ void publishRenderOutputs(const std::vector<RenderOutput>& outputs, int& publish
       if (e) { throw std::runtime_error("Cannot replace " + outputs[f].path + ": " + e.message()); }
       placed[f] = 1;
     }
-  } catch (...) { undo(); throw; }
+  } catch (const std::exception& ex) {
+    undo();
+    if (rollback) *rollback = rb;
+    // The kept copies go into the error itself: the CLI and any other caller can name them too.
+    std::string msg = ex.what();
+    if (!rb.backups.empty()) {
+      msg += rb.backups.size() == 1 ? " The previous file was kept as a copy: " : " The previous files were kept as copies: ";
+      for (size_t i = 0; i < rb.backups.size(); ++i) msg += (i ? "; " : "") + rb.backups[i];
+    }
+    throw std::runtime_error(msg);
+  } catch (...) { undo(); if (rollback) *rollback = rb; throw; }
+  if (rollback) *rollback = rb;
   for (size_t f = 0; f < count; ++f) {
     std::error_code ignored;
     if (aside[f]) fs::remove(asides[f], ignored);
@@ -137,6 +157,7 @@ struct RenderJobs::Job {
   float peak = 0;
   double renderMs = 0;
   int published = 0;  // files put in place (all of them on success; on a failure only those that could not be undone)
+  PublishRollback rollback;  // what the undo of a failed publication did: restored files and kept .previous copies
   int threads = 0;  // export workers besides the job's own thread (M4a)
   // Last values reported by takeUpdates().
   State reportedState = State::Queued;
@@ -332,7 +353,7 @@ void RenderJobs::run(std::shared_ptr<Job> job) {
       return;
     }
     if (testHooks.afterPublishClaimed) testHooks.afterPublishClaimed(job->id);
-    publishRenderOutputs(r.outputs, job->published, [&] { if (testHooks.beforePlace) testHooks.beforePlace(job->id); });
+    publishRenderOutputs(r.outputs, job->published, [&] { if (testHooks.beforePlace) testHooks.beforePlace(job->id); }, &job->rollback);
     job->renderMs = (nowNs() - t0) / 1e6;
     job->progress = 1;
     job->state = State::Succeeded;  // only now: the final files are closed and in place
@@ -362,6 +383,11 @@ json RenderJobs::describe(const Job& job) const {
     if (s == State::Failed) {
       out["error"] = job.error;
       if (job.published > 0) out["published"] = job.published;  // new files the failure could not take back
+      if (job.rollback.attempted) {
+        out["rollbackAttempted"] = true;
+        out["restored"] = job.rollback.restored;  // old files put back at their paths
+        out["backups"] = job.rollback.backups;    // old copies kept as .previous: named so they can be recovered
+      }
     }
   }
   return out;

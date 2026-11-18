@@ -6473,7 +6473,19 @@ void MainComponent::timerCallback() {
     else if (job.state == "cancelled") notice_ = u8("Export cancelled; no file was changed.");
     else if (job.state == "failed") {
       notice_ = u8("The export failed.");
-      if (!test_) showError(u8("Could not export"), u8(job.error) + u8("\n\nNo existing file was changed."));
+      if (!test_) {
+        // BUG-SWEEP-03: say what really happened to the user's files. The old text claimed "No existing
+        // file was changed." even when the original sat in a kept .previous copy the undo could not put back.
+        juce::String detail = u8(job.error);
+        if (job.backups.empty()) {
+          detail += u8("\n\nNo existing file was changed.");
+        } else {
+          detail += u8("\n\nThe previous files could not be put back. Every old copy was kept (named above); rename a copy back to its original name to recover it.");
+        }
+        if (job.published > 0)
+          detail += u8("\n\nNew files that could not be taken back and are in place: ") + juce::String(job.published);
+        showError(u8("Could not export"), detail);
+      }
     } else if (exporting) notice_ = job.files > 1 ? u8("Exporting ") + juce::String(job.files) + u8(" files...") : u8("Exporting ") + juce::File(path).getFileName() + "...";
   }
   if (test_) selfTestStep();

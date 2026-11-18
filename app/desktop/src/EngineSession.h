@@ -44,6 +44,11 @@ struct ExportJob {
   std::string path, error;  // path UTF-8 (the first file)
   int64_t revision = -1;
   int files = 1, file = 0;  // how many files the job writes, and the one being written
+  // A failed export (BUG-SWEEP-03): what the rollback really did. published = new files left in place;
+  // backups = old copies kept as "<path>.previous..." because the path could not be taken back.
+  int published = 0;
+  bool rollbackAttempted = false;
+  std::vector<std::string> restored, backups;
   bool active() const { return state == "starting" || state == "running" || state == "cancelling"; }
 };
 

@@ -17,6 +17,15 @@ void readJob(ExportJob& job, const json& j) {
   job.revision = revision.is_number_integer() ? revision.get<int64_t>() : -1;
   if (j.contains("files") && j["files"].is_array()) job.files = std::max(1, (int)j["files"].size());
   job.file = j.value("file", job.file);
+  // The rollback of a failed export (BUG-SWEEP-03): the real outcome, not an assumed one.
+  job.published = j.value("published", 0);
+  job.rollbackAttempted = j.value("rollbackAttempted", false);
+  job.restored.clear();
+  job.backups.clear();
+  if (j.contains("restored") && j["restored"].is_array())
+    for (const auto& v : j["restored"]) if (v.is_string()) job.restored.push_back(v.get<std::string>());
+  if (j.contains("backups") && j["backups"].is_array())
+    for (const auto& v : j["backups"]) if (v.is_string()) job.backups.push_back(v.get<std::string>());
 }
 }
 
