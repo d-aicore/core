@@ -17,7 +17,7 @@ import sys
 GLOBS = (
     'engine/src/core/*.cpp', 'engine/src/dsp/*.cpp', 'engine/src/io/*.cpp', 'engine/src/app/*.cpp',
     'engine/src/plugins/*.cpp', 'app/domain/src/*.cpp', 'app/control/src/*.cpp',
-    'app/engine-client/src/*.cpp', 'app/sampling/src/*.cpp', 'app/previews/src/*.cpp',
+    'app/engine-client/src/*.cpp', 'app/sampling/src/*.cpp',
 )
 
 

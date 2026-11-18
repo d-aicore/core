@@ -334,27 +334,6 @@ public:
     }
   }
 
-  // A pattern's sound inside its clip, every repeat: the peaks as a light veil and the RMS body over them, in the
-  // track's colour and see-through, so the grid shows behind. The fader's level is in the picture (a quieter track
-  // draws smaller), the mute dims it.
-  void paintClipWave(juce::Graphics& g, const doc::Clip& c, const doc::Pattern& p, const Waveform& w, juce::Rectangle<int> box, int x0, int x1) {
-    const auto area = box.reduced(0, 3);
-    const auto visible = area.getIntersection(g.getClipBounds());
-    if (visible.isEmpty() || x1 <= x0 || p.lengthTicks <= 0 || w.peaks.empty()) return;
-    const double patternTicks = (double)p.lengthTicks;
-    const double ticksPerPixel = (double)c.lengthTicks / (double)(x1 - x0);
-    const double secondsPerTick = (double)w.peaks.size() * w.framesPerPeak / w.sampleRate / patternTicks;
-    const bool automated = std::any_of(track_.automation.begin(), track_.automation.end(), [](const doc::Automation& a) { return a.param == "gainDb"; });
-    const float gain = automated ? 1.0f : (float)std::pow(10.0, track_.mix.gainDb / 20);
-    const juce::Colour colour = colour_.interpolatedWith(kText, 0.3f).withAlpha(track_.mix.mute ? 0.35f : 0.82f);
-    const float mid = (float)area.getCentreY(), half = area.getHeight() / 2.0f - 1.0f;
-    for (int x = visible.getX(); x < visible.getRight(); ++x) {
-      const double at = std::fmod((x - x0) * ticksPerPixel + (double)c.offsetTicks, patternTicks);
-      const double to = std::min(patternTicks, at + ticksPerPixel);
-      drawWaveColumn(g, w, (float)x, mid, half, at * secondsPerTick, to * secondsPerTick, colour, gain);
-    }
-  }
-
   // A pattern's notes, small and light, inside its clip (each repeat), as on the reference. Drum rows (one pitch
   // per sound) and melodies both fit: the pitches in use spread over the clip's height.
   void paintClipNotes(juce::Graphics& g, const doc::Clip& c, const doc::Pattern& p, juce::Rectangle<int> box) {
@@ -453,12 +432,9 @@ public:
       g.setColour(kField.withAlpha(0.6f));
       for (int64_t t = c.startTick + p->lengthTicks; t < c.startTick + c.lengthTicks; t += p->lengthTicks)
         if (const int x = laneX((double)t); x > box.getX() + 2 && x < box.getRight() - 1) g.drawVerticalLine(x, (float)box.getY() + 2, (float)box.getBottom() - 2);
-      // The pattern's real sound as a waveform (rendered by the engine's instruments in the background); its notes
-      // until the first render is done, or when there is no sound to show (a plugin, silence).
-      if (auto wave = owner_.patternWaves_.get(owner_.history_.current(), owner_.history_.revision(), id_, p->id, owner_.projectDir()))
-        paintClipWave(g, c, *p, *wave, box, x0, x1);
-      else
-        paintClipNotes(g, c, *p, box);
+      // The pattern's notes: Core's sound comes from plugins and audio files (2026-11-16), so a pattern clip
+      // always shows its notes (the retired native-instrument waveform preview rendered silence).
+      paintClipNotes(g, c, *p, box);
       if (selected) {
         g.setColour(kAccent);
         g.drawRoundedRectangle(box.toFloat().reduced(0.5f), theme::kCorner, 1.5f);
@@ -6925,7 +6901,30 @@ void MainComponent::selfTestStep() {
       break;
     }
     case 19:
-      if (applied && snap_.playing && inStep > 1500) { session_->stop(); next("arrangement heard"); }
+      if (applied && snap_.playing && inStep > 1500) {
+        session_->stop();
+        // CLEAN-07: a pattern clip draws its MIDI notes (the retired native-instrument preview is gone; plugin
+        // tracks never had a waveform). The bass clip's notes must be visible inside its lane box.
+        {
+          const doc::Track& bass = *history_.current().findTrack("bass");
+          const doc::Clip& c = bass.clips.front();
+          const doc::Pattern* p = bass.findPattern(c.patternId);
+          TrackRow* row = nullptr;
+          for (auto& r : rows_) if (r->id() == "bass") row = r.get();
+          if (!row || !p || p->notes.empty()) return finish(false, "note drawing: no bass row or pattern");
+          const int origin = getLocalPoint(row, juce::Point<int>()).x;
+          const int x0 = xOfTick((double)c.startTick) - origin, x1 = xOfTick((double)(c.startTick + c.lengthTicks)) - origin;
+          // Inside the clip, away from its selection edge and top strip: only the notes draw kClipNote here.
+          const auto box = juce::Rectangle<int>::leftTopRightBottom(x0 + 4, 8, std::min(x1 - 4, row->getWidth()), row->getHeight() - 8);
+          const juce::Image shot = row->createComponentSnapshot(box, false, 1.0f);
+          int notePixels = 0;
+          for (int y = 0; y < shot.getHeight(); ++y)
+            for (int x = 0; x < shot.getWidth(); ++x)
+              if (shot.getPixelAt(x, y) == theme::kClipNote) ++notePixels;
+          if (notePixels < 4) return finish(false, "pattern notes not drawn in the clip: " + juce::String(notePixels) + " note pixels");
+        }
+        next("arrangement heard");
+      }
       break;
     case 20:  // live notes, stopped: the Z key on the bass, then a MIDI note-on / note-off
       if (!snap_.playing && inStep > 800) {
@@ -7262,7 +7261,19 @@ void MainComponent::selfTestStep() {
         return finish(false, "the plugin's change was not reported (undo)");
       }
       break;
-    case 35:  // the picture shows the waveforms once they are computed
+    case 35: {  // the picture shows the waveforms once they are computed
+      // CLEAN-07: the file-based waveform cache still serves the audio clips (the Library reads the same cache):
+      // the imported tone has a real overview. The retired pattern preview never served audio files.
+      const doc::Document& d = history_.current();
+      const doc::Track* at = d.findTrack(t.audioTrack);
+      const doc::Asset* asset = at && !at->audioClips.empty() ? d.findAsset(at->audioClips[0].assetId) : nullptr;
+      std::shared_ptr<const Waveform> wave = asset ? waves_.get(asset->sha256, fileOf(doc::assetFile(*asset, projectDir()))) : nullptr;
+      if (!asset || !wave || wave->peaks.empty()) {
+        if (inStep > 5000) return finish(false, "audio clip waveform not computed");
+        break;
+      }
+      if (wave->peakBetween(0, at->audioClips[0].offsetSeconds + at->audioClips[0].durationSeconds) < 0.05f)
+        return finish(false, "audio clip waveform is silent");
       if (inStep > 800) {
         session_->stop();
         // M6: an autosave left by a session that is not running (a crash) comes back as the song, unsaved.
@@ -7286,6 +7297,7 @@ void MainComponent::selfTestStep() {
         next("waveform, autosave recovered");
       }
       break;
+    }
     case 36: {  // the picture of the window; then the Mixer, with a track that has effects chosen
       if (!savePicture(t.picture)) return finish(false, "cannot write " + t.picture.getFullPathName());
       std::string chosen;

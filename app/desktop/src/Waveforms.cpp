@@ -1,6 +1,5 @@
 #include "Waveforms.h"
 #include <cmath>
-#include <set>
 
 namespace core::app {
 
@@ -63,88 +62,6 @@ std::shared_ptr<const Waveform> WaveformCache::get(const std::string& id, const 
     juce::MessageManager::callAsync([this, alive] { if (auto a = alive.lock(); a && *a && onReady_) onReady_(); });
   });
   return nullptr;
-}
-
-PatternWaves::PatternWaves(std::function<void()> onReady) : onReady_(std::move(onReady)) {}
-
-PatternWaves::~PatternWaves() {
-  *stop_ = true;  // a render running stops at its next block
-  *alive_ = false;
-  pool_.removeAllJobs(true, 10000);
-}
-
-std::shared_ptr<const Waveform> PatternWaves::get(const doc::Document& doc, unsigned long long revision, const std::string& trackId,
-                                                  const std::string& patternId, const std::filesystem::path& assetRoot) {
-  const std::string name = trackId + "|" + patternId;
-  const auto u8root = assetRoot.u8string();
-  const std::string root(u8root.begin(), u8root.end());
-  std::lock_guard<std::mutex> g(mutex_);
-  Slot& slot = slots_[name];
-  if (slot.revision != revision || slot.root != root) {
-    slot.revision = revision;
-    slot.root = root;
-    auto request = preview::makeRequest(doc, trackId, patternId, assetRoot);
-    if (!request) {
-      slot.key.clear();
-      slot.shown.reset();
-      slot.next.reset();
-    } else if (request->key != slot.key) {
-      slot.key = request->key;
-      if (auto it = ready_.find(slot.key); it != ready_.end()) {
-        slot.shown = it->second;
-        slot.next.reset();
-      } else if (slot.running) {
-        slot.next = std::move(request);  // after the one running: only the latest
-      } else {
-        start(name, std::move(request));
-      }
-    }
-  }
-  return slot.key.empty() ? nullptr : slot.shown;
-}
-
-void PatternWaves::start(const std::string& name, std::unique_ptr<preview::Request> request) {
-  slots_[name].running = true;
-  std::shared_ptr<preview::Request> job(std::move(request));
-  std::weak_ptr<std::atomic<bool>> alive = alive_;
-  std::shared_ptr<std::atomic<bool>> stop = stop_;
-  pool_.addJob([this, name, job, alive, stop] {
-    std::shared_ptr<const Waveform> wave;
-    {
-      if (*stop) return;
-      const preview::Sound sound = preview::render(*job, assets_, stop.get());
-      if (*stop) return;
-      if (!sound.empty()) {
-        auto w = std::make_shared<Waveform>();
-        w->sampleRate = sound.sampleRate;
-        w->framesPerPeak = sound.framesPerPeak;
-        w->peaks = sound.peaks;
-        w->rms = sound.rms;
-        wave = w;
-      }
-      if (assets_.bytes() > ((size_t)384 << 20)) assets_.prune();
-    }
-    {
-      auto a = alive.lock();
-      if (!a || !*a) return;
-      std::lock_guard<std::mutex> g(mutex_);
-      if (ready_.size() > 600) {  // forget the sounds no pattern shows any more
-        std::set<std::string> used;
-        for (const auto& [n, s] : slots_) used.insert(s.key);
-        for (auto it = ready_.begin(); it != ready_.end();) it = used.count(it->first) ? std::next(it) : ready_.erase(it);
-      }
-      ready_[job->key] = wave;
-      Slot& slot = slots_[name];
-      slot.running = false;
-      if (slot.key == job->key) slot.shown = wave;
-      if (slot.next) {
-        auto next = std::move(slot.next);
-        if (auto it = ready_.find(next->key); it != ready_.end()) { if (slot.key == next->key) slot.shown = it->second; }
-        else start(name, std::move(next));
-      }
-    }
-    juce::MessageManager::callAsync([this, alive] { if (auto a = alive.lock(); a && *a && onReady_) onReady_(); });
-  });
 }
 
 void drawWaveColumn(juce::Graphics& g, const Waveform& w, float x, float mid, float half, double from, double to, juce::Colour colour,

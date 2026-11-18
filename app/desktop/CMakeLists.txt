@@ -23,7 +23,7 @@ target_compile_definitions(CoreApp PRIVATE
   JUCE_APPLICATION_NAME_STRING="$<TARGET_PROPERTY:CoreApp,JUCE_PRODUCT_NAME>"
   JUCE_APPLICATION_VERSION_STRING="$<TARGET_PROPERTY:CoreApp,JUCE_VERSION>")
 target_link_libraries(CoreApp
-  PRIVATE juce::juce_gui_basics juce::juce_audio_devices juce::juce_audio_formats core_engine_client core_domain core_previews core_version core_control core_sampling
+  PRIVATE juce::juce_gui_basics juce::juce_audio_devices juce::juce_audio_formats core_engine_client core_domain core_engine_lib core_version core_control core_sampling
           $<$<PLATFORM_ID:Windows>:dbghelp>
   PUBLIC juce::juce_recommended_config_flags)
 
