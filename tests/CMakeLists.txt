@@ -25,7 +25,7 @@ add_test(NAME domain_tests COMMAND domain_tests)
 add_executable(legacy_guard_tests legacy_guard_tests.cpp)
 target_include_directories(legacy_guard_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(legacy_guard_tests PRIVATE core_domain core_engine_lib)
-target_compile_definitions(legacy_guard_tests PRIVATE CORE_TEMPLATES_DIR="${CMAKE_SOURCE_DIR}/templates")
+target_compile_definitions(legacy_guard_tests PRIVATE CORE_TEMPLATES_DIR="${CMAKE_SOURCE_DIR}/templates" CORE_PCORE_CATALOG="${CMAKE_SOURCE_DIR}/pcore/styles.json")
 add_test(NAME legacy_guard_tests COMMAND legacy_guard_tests)
 
 # The role map (Settings > Roles) and the tools that play through it (SUCK, PUM, build-up effects).

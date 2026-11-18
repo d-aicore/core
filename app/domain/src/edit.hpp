@@ -3,7 +3,6 @@
 #pragma once
 #include <map>
 #include <set>
-#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -44,11 +43,6 @@ double instrumentParamValue(const Track& track, const InstrumentParamInfo& param
 // Sets one parameter of a built-in instrument (the fixed value; automation, when there is some, plays over it).
 // Throws DocumentError for an audio track, an unknown name, a value out of range, a choice not whole.
 void setInstrumentParam(Document& doc, const std::string& trackId, const std::string& param, double value);
-// Puts every parameter of a built-in instrument back to its default (the sound it starts with). Automation curves stay.
-// Returns how many values changed (0: already at the defaults). Throws DocumentError for an audio track.
-int resetInstrumentParams(Document& doc, const std::string& trackId);
-// True when every parameter of the track's built-in instrument is at its default (or it has none).
-bool instrumentAtDefaults(const Track& track);
 
 // A free id from a base ("bass" -> "bass", "bass-2", ...), valid for the id rules.
 std::string uniqueTrackId(const Document& doc, const std::string& base);
@@ -72,39 +66,6 @@ void setTrackOutput(Document& doc, const std::string& trackId, const std::string
 std::string addSend(Document& doc, const std::string& trackId, const std::string& busId, double gainDb = 0, bool pre = false);
 void setSend(Document& doc, const std::string& trackId, const std::string& sendId, double gainDb, bool pre);
 void removeSend(Document& doc, const std::string& trackId, const std::string& sendId);
-
-// ---- modulation (M8a): a tempo-synced LFO on a parameter ("cutoff", "gainDb", "pan"...).
-// shape: sine | triangle | square | saw | ramp | random; rateBeats: beats per cycle (0.25 = a sixteenth);
-// depth in the parameter's units (octaves for a parameter in Hz); phase 0..1. Returns its id ("m1"...).
-std::string setModulator(Document& doc, const std::string& trackId, const std::string& id, const std::string& param,
-                         const std::string& shape, double rateBeats, double depth, double phase = 0);
-// Turns a modulator on or off; off, it moves nothing and keeps its depth ("on": false in the song).
-void setModulatorOn(Document& doc, const std::string& trackId, const std::string& id, bool on);
-// M8b: an envelope from each note of the track on param (0 -> 1 over attackMs, then down to -60 dB over
-// decayMs), times depth in the parameter's units (octaves for a parameter in Hz). Not glided.
-std::string setEnvelopeModulator(Document& doc, const std::string& trackId, const std::string& id, const std::string& param,
-                                 double attackMs, double decayMs, double depth);
-// A step sequence on param: one value per step (1..16, each -1..1, times depth), each held for stepBeats.
-// It loops on the song's grid like an LFO. Returns its id.
-std::string setStepModulator(Document& doc, const std::string& trackId, const std::string& id, const std::string& param,
-                             double stepBeats, const std::vector<double>& steps, double depth);
-// The trigger of an envelope: "" = the track's own notes, else another track that plays notes.
-void setModulatorSource(Document& doc, const std::string& trackId, const std::string& id, const std::string& sourceTrackId);
-void removeModulator(Document& doc, const std::string& trackId, const std::string& id);
-// Designed ducking: the track's volume dips at every note of another track (the bass at every kick), with an
-// envelope's shape: down by depthDb over attackMs, back over releaseMs. One per track (modulator "duck"); the
-// source plays even when muted (a ghost kick). Refused: the track itself, a bus or an audio track as source.
-struct DuckPreset {
-  const char* id;
-  const char* label;
-  const char* what;     // plain words (the hover dot)
-  double depthDb, attackMs, releaseBeats;
-};
-const std::vector<DuckPreset>& duckPresets();  // Tight, Pump, Soft (sources: cinetrance 3-6 dB; kick tail 1/16)
-void setDucking(Document& doc, const std::string& trackId, const std::string& sourceTrackId, double depthDb, double attackMs, double releaseMs);
-void setDuckingPreset(Document& doc, const std::string& trackId, const std::string& sourceTrackId, const std::string& preset);  // at the song's BPM
-void removeDucking(Document& doc, const std::string& trackId);
-std::optional<std::string> duckingSource(const Track& track);
 
 // ---- patterns and clips (one track)
 Track& trackById(Document& doc, const std::string& trackId);  // throws DocumentError
@@ -170,9 +131,6 @@ struct EffectPreset {
   const char* from = nullptr;  // a Core FX preset: the old effect it was made for ("space", "echo"...)
 };
 const std::vector<EffectPreset>& effectPresets();
-// A built-in effect with these values. A recipe written for an old effect (saturation, delay, reverb, space,
-// echo, spiral, flux) becomes the Core FX that sounds like it (corefx_legacy.hpp).
-int addEffectWith(Document& doc, const std::string& trackId, const std::string& name, const json& params);
 json& effectChain(Document& doc, const std::string& trackId);
 const json& effectChain(const Document& doc, const std::string& trackId);
 // At the end, with an id of its own (the engine keeps an effect's tail across edits by that id); returns its place.
@@ -184,10 +142,6 @@ int songRoot(const Document& doc);
 int followSongKey(const Document& doc, int note);
 // The same, with a preset's values (clamped to each knob's range). A METAL preset's note follows songRoot.
 int addEffect(Document& doc, const std::string& trackId, const EffectPreset& preset);
-// The psytrance phrase-end comb (2026-11-07, the FL tutorial Diogo sent): a Comb filter, silent (Mix 0) except in
-// the last bar of every `phraseBars` bars, where it fades in while its pitch falls (a decaying, comb-like sweep that
-// marks the end of the phrase). Two automation lanes, ordinary ones afterwards. Returns the effect's index.
-int addPhraseEndComb(Document& doc, const std::string& trackId, int phraseBars = 8);
 // A preset's values on the effect already at `index` (the help window's "Try it"): knobs it does not list go back
 // to their default (a preset never stacks on the previous one); the same clamping and METAL key rule as addEffect. Refused (DocumentError) when the effect there is not
 // the preset's.
@@ -198,10 +152,6 @@ void removeEffect(Document& doc, const std::string& trackId, int index);
 void moveEffect(Document& doc, const std::string& trackId, int from, int to);
 void setEffectParam(Document& doc, const std::string& trackId, int index, const std::string& param, double value);
 void setEffectBypass(Document& doc, const std::string& trackId, int index, bool bypass);
-// M7c: the compressor at index follows another track's signal (after its inserts, before its fader: a
-// muted "ghost" kick still ducks). "" = its own input again. Refused: not a compressor, a bus, itself,
-// a loop, the master.
-void setEffectSidechain(Document& doc, const std::string& trackId, int index, const std::string& sourceTrackId);
 
 // ---- instruments
 // Another built-in instrument for a track that plays notes. The notes, patterns, clips, effects, mixer and
@@ -284,9 +234,6 @@ std::string addAudioTrack(Document& doc, const std::string& name);
 // The whole asset from startTick; returns the clip id.
 std::string addAudioClip(Document& doc, const std::string& trackId, const std::string& assetId, int64_t startTick);
 void moveAudioClip(Document& doc, const std::string& trackId, const std::string& clipId, int64_t startTick);
-// A sampler zone's sustain loop (file seconds; loopEnd 0 takes it away). Throws DocumentError (not a sampler,
-// no such zone, loopEnd < loopStart + 2 ms, past the zone's file when its length is known: fileSeconds > 0).
-void setSampleLoop(Document& doc, const std::string& trackId, size_t zone, double loopStart, double loopEnd, double fileSeconds = 0);
 
 // Trim: the start moves with the music and the audio stays where it was (the offset follows); the end
 // changes the duration. Both are limited to the file.
@@ -347,21 +294,5 @@ void setPatternLength(Pattern& pattern, int64_t lengthTicks);
 // Longer pattern with its notes repeated to fill the new bars (as a loop would play them); shorter or
 // equal: the same as setPatternLength.
 void extendPatternRepeating(Pattern& pattern, int64_t lengthTicks);
-
-// ---- A/B (Diogo 2026-11-07: "eu nao tenho A B no core?"): two versions of a track's sound, swapped to compare.
-// The sound is the instrument (its knobs, samples, plugin state), the effect chain, the Movement (LFOs) and the
-// records that belong to them (a mood's knobs, racks, FCore). Notes, clips, the mixer, sends and automation stay.
-// trackId "" = the master: its effect chain only.
-struct TrackSound {
-  Instrument instrument;
-  json effects = json::array(), modulators = json::array(), extra = json::object();
-};
-TrackSound trackSoundOf(const Document& doc, const std::string& trackId);  // throws DocumentError (no track)
-// Puts a sound back. Refused (DocumentError) when the track now has another instrument (a W-Core sound never
-// lands on a W-Core track). Automation of an effect the chain no longer has goes with it, as removeEffect does.
-void setTrackSound(Document& doc, const std::string& trackId, const TrackSound& sound);
-bool sameTrackSound(const TrackSound& a, const TrackSound& b);
-// What must match for a stored sound to be put back on the track: "builtin:wave", "plugin:<id>", "master".
-std::string trackSoundKind(const TrackSound& sound, const std::string& trackId);
 
 } // namespace core::doc

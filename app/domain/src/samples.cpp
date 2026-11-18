@@ -972,7 +972,7 @@ double roleFit(const std::string& want, const std::string& is) {
       {"accent", {{"clap", 100}, {"snare", 95}, {"perc", 60}}},
       {"impact", {{"impact", 100}, {"crash", 85}, {"fx", 40}}},
       {"riser", {{"riser", 100}, {"fx", 55}}},
-      // Kinds a plain Sampler track browses (browseSampleRoles); no track name gives them.
+      // Kinds with no track name of their own: a sample of these kinds still fits a track that asks for it.
       {"fx", {{"fx", 100}, {"riser", 60}, {"impact", 60}}},
       {"vox", {{"vox", 100}}},
       {"pad", {{"pad", 100}}},
@@ -1123,15 +1123,6 @@ std::vector<SampleSuggestion> suggestSamples(const SampleIndex& index, const std
 
 const std::vector<std::string>& samplerRoles() {
   static const std::vector<std::string> roles = {"kick", "bass", "hat", "openhat", "accent", "perc", "impact", "riser"};
-  return roles;
-}
-
-const std::vector<std::string>& browseSampleRoles() {
-  static const std::vector<std::string> roles = [] {
-    std::vector<std::string> r = samplerRoles();
-    for (const char* k : {"fx", "synth", "pad", "vox"}) r.push_back(k);
-    return r;
-  }();
   return roles;
 }
 
@@ -1399,74 +1390,6 @@ int relinkMovedSamples(Document& doc, const SampleIndex& index) {
       }
     }
   return moved;
-}
-
-// ---- the real notes of a region
-
-namespace {
-// The note starts of a track in [from, to), in ticks of the song (patterns repeat inside their clips).
-std::vector<int64_t> noteStarts(const Track& t, int64_t from, int64_t to) {
-  std::vector<int64_t> out;
-  for (const auto& c : t.clips) {
-    const Pattern* p = t.findPattern(c.patternId);
-    if (!p || p->lengthTicks <= 0 || p->notes.empty()) continue;
-    const int64_t clipEnd = c.startTick + c.lengthTicks;
-    const int64_t lo = std::max(from, c.startTick), hi = std::min(to, clipEnd);
-    if (lo >= hi) continue;
-    const int64_t origin = c.startTick - c.offsetTicks;  // where the pattern's tick 0 would be
-    for (int64_t k = std::max<int64_t>(0, (lo - origin) / p->lengthTicks - 1); origin + k * p->lengthTicks < hi; ++k)
-      for (const auto& n : p->notes) {
-        const int64_t at = origin + k * p->lengthTicks + n.tick;
-        if (at >= lo && at < hi && n.tick < p->lengthTicks) out.push_back(at);
-      }
-  }
-  std::sort(out.begin(), out.end());
-  out.erase(std::unique(out.begin(), out.end()), out.end());
-  return out;
-}
-}  // namespace
-
-RegionFit sampleFitInRegion(const Document& doc, const std::string& trackId, const LibrarySample& sample, int64_t startTick, int64_t endTick) {
-  RegionFit f;
-  const Track* track = doc.findTrack(trackId);
-  if (!track) { f.why = "no track '" + trackId + "'"; return f; }
-  const std::string role = trackSampleRole(*track);
-  if (role != "kick") { f.why = "only a kick is checked against the bass notes"; return f; }
-  SampleAnalysis a;
-  if (!analysisFromJson(sample.analysis, a) || a.sha256 != sample.sha256) { f.why = "the sample is not measured yet"; return f; }
-  if (a.silent || a.tailMs < 0) { f.why = a.silent ? "the sample is silent" : "the sample has several hits"; return f; }
-  f.soundMs = std::round(a.attackMs + a.tailMs);
-  const int64_t from = std::max<int64_t>(0, startTick), to = std::min(endTick, doc.lengthTicks);
-  const std::vector<int64_t> kicks = noteStarts(*track, from, to);
-  std::vector<int64_t> others;
-  std::vector<std::string> names;
-  for (const auto& t : doc.tracks) {
-    if (t.id == trackId || t.mix.mute || trackSampleRole(t) != "bass") continue;
-    const auto n = noteStarts(t, from, doc.lengthTicks);
-    others.insert(others.end(), n.begin(), n.end());
-    names.push_back(t.name.empty() ? t.id : t.name);
-  }
-  std::sort(others.begin(), others.end());
-  for (const auto& n : names) f.against += (f.against.empty() ? "" : ", ") + n;
-  f.hits = (int)kicks.size();
-  if (kicks.empty()) { f.why = "the track plays no note in the region"; return f; }
-  if (others.empty()) { f.why = "no bass note to leave room for"; return f; }
-  for (const int64_t k : kicks) {
-    const auto next = std::upper_bound(others.begin(), others.end(), k);
-    if (next == others.end()) continue;
-    const double gap = (secondsAt(doc, (double)*next) - secondsAt(doc, (double)k)) * 1000.0;
-    if (f.worstGapMs < 0 || gap < f.worstGapMs) f.worstGapMs = std::round(gap);
-    if (f.soundMs > gap) ++f.overlaps;
-  }
-  if (f.worstGapMs < 0) { f.why = "no bass note after the kicks of the region"; return f; }
-  f.known = true;
-  f.fits = f.overlaps == 0;
-  char b[200];
-  std::snprintf(b, sizeof b, f.fits ? "sounds %.0f ms; the bass comes %.0f ms after a kick at the soonest"
-                                    : "sounds %.0f ms, the bass comes %.0f ms after a kick at the soonest: %d of %d kicks run into it",
-                f.soundMs, f.worstGapMs, f.overlaps, f.hits);
-  f.why = b;
-  return f;
 }
 
 Document withPreviewTrack(const Document& doc, const SampleIndex& index, const LibrarySample& sample, const std::string& role,
