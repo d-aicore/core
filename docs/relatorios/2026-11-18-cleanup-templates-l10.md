@@ -145,6 +145,9 @@ Commands and exit codes:
 - `ci/gate.ps1 … -Desktop` → **VERDE**, rc 0, 38 s, **21/21** (merge + desktop); `desktop_self_test` Passed 21.14 s,
   report `ok … loudest=0.735 … build=0.7.0+4409418645` (51 logged steps, null device).
 - `core-engine --version` = `0.7.0+4409418645` == HEAD `4409418645`, **no `.modified`** (clean tree).
+- The final clean HEAD (this docs commit, code-identical to the product tip `4409418`) was **re-gated VERDE
+  merge 20/20 + desktop 21/21**, `core-engine --version` == final HEAD, no `.modified`
+  (`gate-merge-resumo.txt` / `gate-desktop-resumo.txt` name the gated commit).
 - `ctest -V -L merge` → rc 0; per-suite counts below.
 - L10 red: lightweight `engine_tests` (old demo) exit 1, 3 failures; green: exit 0, 28/139/0.
 - Telemetry: `core-engine render legacy-builtin-song.json` exit 0 (peak 0, 3 conversionNotes);
