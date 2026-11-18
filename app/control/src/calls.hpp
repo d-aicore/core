@@ -54,13 +54,13 @@ struct CoreFunction {
   std::vector<std::string> tags;
   std::vector<FunctionArg> args;
   bool instrument = false;  // replaces the track's instrument (a bass Style FX)
-  bool rises = false;       // rises over a section (F-Core): "section" makes the rise
+  bool rises = false;       // rises over a section (the old intent FX): "section" makes the rise
   bool native = false;      // a Style FX: Core's own devices with their presets (no macros)
   bool available = true;
   std::string unavailable;  // why not
   std::vector<std::string> presets;  // an effect's presets by name ("preset" in a call); "set" takes any effect's
   std::map<std::string, std::vector<std::string>> options;  // text choices ("intent", "style", "mode", "mood"): the allowed values
-  json extra = json::object();       // written as is into the function's state (preset details, F-Core's presets by intent)
+  json extra = json::object();       // written as is into the function's state (preset details, the old intent-FX presets)
 
   const FunctionArg* findArg(const std::string& id) const;
 };
