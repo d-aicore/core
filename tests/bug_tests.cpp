@@ -15,6 +15,8 @@
 #include "storage.hpp"
 #include "templates.hpp"
 #include "translation.hpp"
+#include "core/project.hpp"
+#include "core/tempo_map.hpp"
 
 using namespace core::doc;
 namespace fs = std::filesystem;
@@ -502,16 +504,17 @@ TEST("reset: o menu da chain oferece TODOS os efeitos (os proprios incluidos) e 
   CHECK(curvesGone);
 }
 
-// Auditoria 2026-11-17, item 4: duplicateSection empurrava as mudancas de tempo de depois da seccao mas nao
-// copiava as de dentro, por isso a seccao duplicada perdia o tempo (e o ramp) que o randomizador EIXO J escreve.
-TEST("duplicar uma seccao copia tambem as mudancas de tempo que ha dentro dela") {
+// Audit 2026-11-17, item 4: duplicateSection pushed the tempo changes after the section but did not copy
+// the ones inside it, so the duplicated section lost the tempo (and the ramp) randomize axis J writes.
+// BUG-SWEEP-22 grew this: the copy also pins the section's effective start tempo (one more point).
+TEST("duplicating a section copies the tempo changes inside it") {
   Document d = newEmptyDocument();
   const std::string a = addSection(d, "Build", 0, 4 * kBar);
   addSection(d, "Drop", 4 * kBar, 4 * kBar);
   setTempoMap(d, {{1 * kBar, 200, json::object(), false}, {3 * kBar, 160, json::object(), true}, {6 * kBar, 120, json::object(), false}});
   const size_t before = d.tempoMap.size();
   const std::string dup = duplicateSection(d, a);
-  CHECK_EQ(d.tempoMap.size(), before + 2);  // os dois pontos de dentro tem copia na seccao nova
+  CHECK_EQ(d.tempoMap.size(), before + 3);  // the two interior points are copied, plus the copy's start pin
   const auto at = [&](int64_t tick) -> const TempoPoint* {
     for (const auto& p : d.tempoMap) if (p.tick == tick) return &p;
     return nullptr;
@@ -526,19 +529,93 @@ TEST("duplicar uma seccao copia tambem as mudancas de tempo que ha dentro dela")
   CHECK(glide != nullptr);
   if (glide) {
     CHECK_NEAR(glide->bpm, 160, 1e-9);
-    CHECK(glide->ramp);  // o ramp tambem
+    CHECK(glide->ramp);  // the ramp too
   }
-  const TempoPoint* later = at(10 * kBar);  // o que ja ia para depois move-se uma seccao
+  const TempoPoint* later = at(10 * kBar);  // what already went after moves on by one section
   CHECK(later != nullptr);
   if (later) CHECK_NEAR(later->bpm, 120, 1e-9);
-  // O tempo que toca na seccao duplicada e o da seccao original, nao o ultimo de antes.
-  CHECK_NEAR(bpmAt(d, 5 * kBar), 200, 1e-9);   // antes: 160, o ponto de 3 compassos, que ficava a valer
+  // The tempo playing in the duplicated section is the original section's, not the last one before it.
+  CHECK_NEAR(bpmAt(d, 4 * kBar), 145, 1e-9);   // BUG-SWEEP-22: the copy starts at the song's own start tempo
+  CHECK_NEAR(bpmAt(d, 5 * kBar), 200, 1e-9);   // before: 160, the 3-bar point, which kept playing
   CHECK_NEAR(bpmAt(d, 7 * kBar), 160, 1e-9);
   CHECK(!dup.empty());
   const Section* moved = nullptr;
   for (const auto& s : d.sections) if (s.id == dup) moved = &s;
   CHECK(moved != nullptr);
   if (moved) CHECK_EQ(moved->startTick, 4 * kBar);
+}
+
+// BUG-SWEEP-22..25 (external audit 2026-11-18, "report (3).md"): timeline edits must keep the tempo
+// continuous. Each case below was measured red on ed4642e before its fix. Engine seconds come from the
+// projection the app sends (core::fromJson + core::TempoMap at 48 kHz), the same conversion the engine plays.
+namespace tempo_sweep {
+double engineSeconds(const Document& doc, int64_t tick) {
+  const core::Project p = core::fromJson(toProjection(doc));
+  const core::TempoMap map(p.bpm, p.tempoMap, 48000);
+  return map.sampleAt((double)tick) / 48000.0;
+}
+bool validSavedForm(const Document& doc) {
+  try { (void)parseDocument(toJson(doc)); return true; } catch (...) { return false; }
+}
+}  // namespace tempo_sweep
+
+TEST("BUG-SWEEP-22: a duplicated section starts at its own tempo, boundary ramps keep their shape") {
+  using namespace tempo_sweep;
+  // The probe's song: the copy used to inherit the original's final BPM (160) instead of its start (120).
+  Document d = newEmptyDocument();
+  d.bpm = 120;
+  const std::string a = addSection(d, "A", 0, 4 * kBar);
+  addSection(d, "B", 4 * kBar, 4 * kBar);
+  setTempoMap(d, {{1 * kBar, 200, json::object(), false}, {3 * kBar, 160, json::object(), true}});
+  const Document original = d;
+  const double firstInterval = engineSeconds(original, 1 * kBar) - engineSeconds(original, 0);
+  duplicateSection(d, a);
+  CHECK_NEAR(bpmAt(d, 4 * kBar), 120, 1e-9);                        // before the fix: 160
+  CHECK_NEAR(bpmAt(d, 5 * kBar), 200, 1e-9);
+  CHECK_NEAR(bpmAt(d, 7 * kBar), 160, 1e-9);
+  CHECK_NEAR(bpmAt(d, 8 * kBar), bpmAt(original, 4 * kBar), 1e-9);  // the follower keeps its effective start
+  CHECK_NEAR(engineSeconds(d, 5 * kBar) - engineSeconds(d, 4 * kBar), firstInterval, 1e-4);
+  CHECK(validSavedForm(d));
+
+  // A glide crossing both edges of the section: the original keeps its curve, the copy is self-contained,
+  // and the follower starts at the value the music had at the section's end. One extra step is not enough.
+  Document g = newEmptyDocument();
+  g.bpm = 120;
+  const std::string ga = addSection(g, "A", 2 * kBar, 2 * kBar);
+  addSection(g, "B", 4 * kBar, 4 * kBar);
+  setTempoMap(g, {{6 * kBar, 240, json::object(), true}});
+  const Document gOrig = g;
+  duplicateSection(g, ga);
+  for (int64_t t : {(int64_t)0, (int64_t)kBar, (int64_t)(2 * kBar), (int64_t)(3 * kBar), (int64_t)(4 * kBar - 1)})
+    CHECK_NEAR(bpmAt(g, t), bpmAt(gOrig, t), 1e-6);
+  CHECK_NEAR(bpmAt(g, 4 * kBar), bpmAt(gOrig, 2 * kBar), 1e-9);     // the copy's first tick
+  CHECK_NEAR(bpmAt(g, 5 * kBar), bpmAt(gOrig, 3 * kBar), 1e-6);
+  CHECK_NEAR(bpmAt(g, 6 * kBar - 1), bpmAt(gOrig, 4 * kBar - 1), 1e-6);
+  CHECK_NEAR(bpmAt(g, 6 * kBar), bpmAt(gOrig, 4 * kBar), 1e-6);     // the follower's first tick
+  CHECK_NEAR(bpmAt(g, 7 * kBar), bpmAt(gOrig, 5 * kBar), 1e-6);
+  CHECK_NEAR(bpmAt(g, 8 * kBar), bpmAt(gOrig, 6 * kBar), 1e-6);
+  CHECK_NEAR(engineSeconds(g, 6 * kBar) - engineSeconds(g, 4 * kBar),
+             engineSeconds(gOrig, 4 * kBar) - engineSeconds(gOrig, 2 * kBar), 1e-4);
+  CHECK(validSavedForm(g));
+
+  // Step control: no interpolation involved, the copy still starts at the section's own start tempo.
+  Document s = newEmptyDocument();
+  s.bpm = 120;
+  const std::string sa = addSection(s, "A", 0, 4 * kBar);
+  addSection(s, "B", 4 * kBar, 4 * kBar);
+  setTempoMap(s, {{1 * kBar, 200, json::object(), false}, {3 * kBar, 160, json::object(), false}});
+  duplicateSection(s, sa);
+  CHECK_NEAR(bpmAt(s, 4 * kBar), 120, 1e-9);                        // before the fix: 160
+  CHECK_NEAR(bpmAt(s, 5 * kBar), 200, 1e-9);
+  CHECK_NEAR(bpmAt(s, 8 * kBar), 160, 1e-9);
+  CHECK(validSavedForm(s));
+
+  // No tempo map: nothing is pinned, the constant tempo carries (a song without a map plays as before).
+  Document e = newEmptyDocument();
+  const std::string ea = addSection(e, "A", 0, 4 * kBar);
+  duplicateSection(e, ea);
+  CHECK(e.tempoMap.empty());
+  CHECK_NEAR(bpmAt(e, 4 * kBar), e.bpm, 1e-9);
 }
 
 CORE_TEST_MAIN
