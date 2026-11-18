@@ -719,4 +719,54 @@ TEST("protocol: a song with more than 8 MB of plugin state is read, loaded and a
   CHECK(answer.rfind("{\"id\":2,", 0) == 0);               // an answer starts with its id: the client relies on it
 }
 
+// BUG-SWEEP-21 (ratified 2026-11-18), owner verbatim: «split em clip congelado = recusa com mensagem + oferta de
+// unfreeze (um Undo); nunca meio-congelado.» The domain refuses the split of a frozen clip; the sanctioned path is
+// unfreeze (one Undo) then split. This is the null proof of that path: the two unfrozen pieces render sample for
+// sample identical to the unsplit clip (the engine's split offset re-anchor, graph.cpp). It also measures WHY the
+// frozen split is refused: the old re-anchor moved the held piece (freezeSeconds kept, offsetSeconds += cut), so
+// the second piece sounded a different part of the file.
+TEST("freeze split BUG-SWEEP-21: unfreeze then split is null-identical; the old frozen split changed the held source") {
+  const std::string path = (tempDir() / "split-null.wav").string();
+  const auto s = sine(440, kSr, (int64_t)(0.5 * kSr), 0.6f);
+  writeWav(path, s, s, (int)kSr, 32);
+  AssetStore assets;
+  auto render = [&](const json& clips) {
+    json track = {{"id", "audio"}, {"name", "Audio"}, {"instrument", "audio"}, {"audioClips", clips}};
+    json p = {{"format", kProjectFormat}, {"version", 2}, {"name", "split-null"}, {"bpm", 150.0},
+              {"lengthTicks", 4 * 4 * kPpq}, {"masterGainDb", 0.0}, {"tracks", json::array({track})}};
+    return renderProject(fromJson(p), kSr, 512, false, 0.05, nullptr, &assets, nullptr, 0);
+  };
+  // 0.2 s at 150 bpm = tick 480 (kPpq 960): the split point the domain test uses.
+  const double cut = 0.2, whole = 0.5;
+  json one = json::array({{{"startTick", 0}, {"path", path}, {"offsetSeconds", 0.0}, {"durationSeconds", whole}, {"gainDb", 0.0}}});
+  json split = json::array({
+      {{"startTick", 0}, {"path", path}, {"offsetSeconds", 0.0}, {"durationSeconds", cut}, {"gainDb", 0.0}},
+      {{"startTick", 480}, {"path", path}, {"offsetSeconds", cut}, {"durationSeconds", whole - cut}, {"gainDb", 0.0}}});
+  const RenderResult a = render(one);
+  const RenderResult b = render(split);
+  CHECK_EQ(a.L.size(), b.L.size());
+  CHECK_EQ(a.R.size(), b.R.size());
+  CHECK(allFinite(a.L));
+  float nullL = 0, nullR = 0;
+  for (size_t i = 0; i < a.L.size() && i < b.L.size(); ++i) {
+    nullL = std::max(nullL, std::fabs(a.L[i] - b.L[i]));
+    nullR = std::max(nullR, std::fabs(a.R[i] - b.R[i]));
+  }
+  CHECK_NEAR(nullL, 0.0, 0.0);  // bit-identical: the unfreeze+split path loses nothing
+  CHECK_NEAR(nullR, 0.0, 0.0);
+  CHECK(peakOf(a.L) > 0.1f);  // the file really sounded (a null of silence would prove nothing)
+  // The old frozen split: freezeSeconds kept on both pieces, the second's offset re-anchored (+cut).
+  json frozenOne = one;
+  frozenOne[0]["freezeSeconds"] = 0.05;
+  json frozenSplit = split;
+  frozenSplit[0]["freezeSeconds"] = 0.05;
+  frozenSplit[1]["freezeSeconds"] = 0.05;
+  const RenderResult f1 = render(frozenOne);
+  const RenderResult f2 = render(frozenSplit);
+  CHECK_EQ(f1.L.size(), f2.L.size());
+  float drift = 0;
+  for (size_t i = 0; i < f1.L.size() && i < f2.L.size(); ++i) drift = std::max(drift, std::fabs(f1.L[i] - f2.L[i]));
+  CHECK(drift > 0.01f);  // the half-frozen second piece held a different part of the file: audible corruption
+}
+
 CORE_TEST_MAIN

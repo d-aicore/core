@@ -2105,6 +2105,13 @@ void trimAudioClipEnd(Document& doc, const std::string& trackId, const std::stri
 std::string splitAudioClip(Document& doc, const std::string& trackId, const std::string& clipId, int64_t atTick) {
   Track& t = trackById(doc, trackId);
   AudioClip& c = audioClipById(t, clipId);
+  // BUG-SWEEP-21 (owner ratified 2026-11-18): «split em clip congelado = recusa com mensagem + oferta de unfreeze
+  // (um Undo); nunca meio-congelado.» A frozen clip holds the piece of the file from offsetSeconds for its whole
+  // length (clip_grains.hpp); the split's offset re-anchor (offsetSeconds += cut below) would make the second
+  // piece hold a DIFFERENT piece — a half-frozen state. Refuse with the unfreeze offer; unfreezeAudioClip (one
+  // Undo step in the app) then split plays the file sample for sample (engine_tests null proof).
+  if (c.freezeSeconds > 0)
+    throw DocumentError("audioClips", "the clip is frozen: splitting it is refused (the second piece would hold a different part of the file). Unfreeze it first (one Undo), then split.");
   const double cut = secondsBetween(doc, (double)c.startTick, (double)atTick);
   if (cut < kMinClipSeconds || c.durationSeconds - cut < kMinClipSeconds) throw DocumentError("audioClips", "the split point must be inside the clip");
   if (t.audioClips.size() >= 1024) throw DocumentError("audioClips", "the track has the maximum of 1024 audio clips");
@@ -2120,6 +2127,12 @@ std::string splitAudioClip(Document& doc, const std::string& trackId, const std:
   c.fadeInSeconds = std::min(c.fadeInSeconds, c.durationSeconds);  // a fade longer than the piece ends with it
   t.audioClips.push_back(second);  // c may move: take the id from the copy
   return second.id;
+}
+
+void unfreezeAudioClip(Document& doc, const std::string& trackId, const std::string& clipId) {
+  // BUG-SWEEP-21: the unfreeze the split refusal offers. The clip plays its file normally again (the held piece
+  // is let go); one Undo step in the app brings the freeze back. A plain clip is unchanged (no step).
+  audioClipById(trackById(doc, trackId), clipId).freezeSeconds = 0;
 }
 
 std::string duplicateAudioClip(Document& doc, const std::string& trackId, const std::string& clipId, int64_t startTick) {

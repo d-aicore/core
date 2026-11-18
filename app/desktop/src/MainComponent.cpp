@@ -1195,6 +1195,8 @@ private:
     if (!c) return;
     const int64_t at = hasSelection() ? tickOf(selFrom_) : (int64_t)owner_.snap_.positionTick;
     const std::string t = trackId_, id = clipId_;
+    // A frozen clip refuses the split (BUG-SWEEP-21): offer the unfreeze (one Undo) then split.
+    if (c->freezeSeconds > 0) { owner_.offerUnfreezeSplit(t, id, at); return; }
     owner_.edit([&](doc::Document& d) { doc::splitAudioClip(d, t, id, at); }, u8("Split audio clip"));
     selFrom_ = selTo_ = 0;
     documentChanged();
@@ -3300,6 +3302,25 @@ void MainComponent::filesDropped(const juce::StringArray& files, int x, int y) {
   importFiles(wavs, t ? t->id : std::string(), row ? row->dropTick(screen) : -1);
 }
 
+// BUG-SWEEP-21 (owner ratified 2026-11-18): «split em clip congelado = recusa com mensagem + oferta de unfreeze
+// (um Undo); nunca meio-congelado.» The domain refuses the split of a frozen clip; this is the offer: unfreeze
+// as its own Undo step, then the split the user asked for (its own step). Undo walks back through both.
+void MainComponent::offerUnfreezeSplit(const std::string& trackId, const std::string& clipId, int64_t atTick) {
+  auto* w = new juce::AlertWindow(u8("Frozen clip"),
+      u8("This clip is frozen: it holds a piece of the file for its whole length. Splitting it is refused, because the second piece would hold a different part of the file.\n\nUnfreeze it (one Undo) and split?"),
+      juce::MessageBoxIconType::QuestionIcon, this);
+  w->addButton(u8("Unfreeze and split"), 1, juce::KeyPress(juce::KeyPress::returnKey));
+  w->addButton(u8("Cancel"), 0, juce::KeyPress(juce::KeyPress::escapeKey));
+  juce::Component::SafePointer<juce::AlertWindow> safe(w);
+  w->enterModalState(true, juce::ModalCallbackFunction::create([this, safe, trackId, clipId, atTick](int result) {
+    if (result != 1 || safe == nullptr) return;
+    edit([&](doc::Document& d) { doc::unfreezeAudioClip(d, trackId, clipId); }, u8("Unfreeze audio clip"));
+    std::string second;
+    edit([&](doc::Document& d) { second = doc::splitAudioClip(d, trackId, clipId, atTick); }, u8("Split audio clip"));
+    if (!second.empty()) selectClip(trackId, second);
+  }), true);
+}
+
 void MainComponent::showAudioClipMenu(const std::string& trackId, const std::string& clipId, int64_t tick) {
   const doc::Track* t = history_.current().findTrack(trackId);
   if (!t) return;
@@ -3327,6 +3348,11 @@ void MainComponent::showAudioClipMenu(const std::string& trackId, const std::str
       edit([&](doc::Document& d) { for (auto& c : doc::trackById(d, trackId).audioClips) if (c.id == clipId) f(c); }, label);
     };
     if (chosen == 1) {
+      // A frozen clip refuses the split (BUG-SWEEP-21): offer the unfreeze (one Undo) then split.
+      const doc::Track* tr = history_.current().findTrack(trackId);
+      const doc::AudioClip* c = nullptr;
+      if (tr) for (const auto& x : tr->audioClips) if (x.id == clipId) c = &x;
+      if (c && c->freezeSeconds > 0) { offerUnfreezeSplit(trackId, clipId, splitAt); return; }
       std::string second;
       edit([&](doc::Document& d) { second = doc::splitAudioClip(d, trackId, clipId, splitAt); }, u8("Split audio clip"));
       if (!second.empty()) selectClip(trackId, second);

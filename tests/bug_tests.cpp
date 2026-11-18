@@ -1,6 +1,7 @@
 // Testes dos bugs medios e pequenos corrigidos a 2026-11-16 (lista do sweep antigo revista contra o main 06e0882).
 // Cada teste falhava antes da correcao.
 #include <algorithm>
+#include <cctype>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
@@ -9,6 +10,7 @@
 #include "assets.hpp"
 #include "edit.hpp"
 #include "follow.hpp"
+#include "history.hpp"
 #include "pattern_rack.hpp"
 #include "pattern_tools.hpp"
 #include "pcore.hpp"
@@ -1327,6 +1329,108 @@ TEST("write safety BUG-SWEEP-16: a late write failure on the roles file throws a
   CHECK_EQ(loadRoleMap(file).roles.size(), (size_t)2);
   CHECK_EQ(bytesIn(backupPath(file)), before);
   CHECK(noEmptyFileUnder(dir));
+}
+
+// ---------------------------------------------------------------- BUG-SWEEP-21 (ratified 2026-11-18)
+// Owner, verbatim: «split em clip congelado = recusa com mensagem + oferta de unfreeze (um Undo); nunca meio-congelado.»
+// A frozen clip (freezeSeconds > 0) holds a piece of the file from offsetSeconds for its whole length
+// (engine clip_grains.hpp). The old split re-anchored the second piece's offset (offsetSeconds += cut) and
+// kept freezeSeconds: the second piece held a DIFFERENT piece of the file — a half-frozen state. The split
+// is refused with an unfreeze offer; unfreeze (one Undo) then split plays exactly the unsplit file.
+
+namespace {
+// One audio track with one clip (no file needed: the split is document math). 150 bpm, so tick 480 = 0.2 s.
+Document clipSong(double freezeSeconds, double offsetSeconds = 0.1, double duration = 1.0) {
+  Document d = newEmptyDocument();
+  d.bpm = 150;
+  const std::string tid = addAudioTrack(d, "take");
+  AudioClip c;
+  c.id = "x1";
+  c.assetId = "a1";
+  c.startTick = 0;
+  c.offsetSeconds = offsetSeconds;
+  c.durationSeconds = duration;
+  c.fadeInSeconds = 0.02;
+  c.fadeOutSeconds = 0.03;
+  c.freezeSeconds = freezeSeconds;
+  trackById(d, tid).audioClips.push_back(c);
+  return d;
+}
+bool mentionsUnfreeze(const std::string& message) {
+  std::string lower;
+  for (char ch : message) lower += (char)std::tolower((unsigned char)ch);
+  return lower.find("unfreeze") != std::string::npos;
+}
+}  // namespace
+
+TEST("freeze split BUG-SWEEP-21: a frozen clip refuses the split with an unfreeze offer and stays whole") {
+  Document d = clipSong(0.05);
+  const std::string tid = d.tracks.back().id;
+  const AudioClip before = trackById(d, tid).audioClips[0];
+  bool refused = false;
+  std::string message;
+  try { (void)splitAudioClip(d, tid, "x1", 480); } catch (const DocumentError& e) { refused = true; message = e.what(); }
+  CHECK(refused);  // before: the split went through, the second piece holding a different part of the file
+  CHECK(mentionsUnfreeze(message));  // the refusal carries the offer
+  const auto& clips = trackById(d, tid).audioClips;
+  CHECK_EQ(clips.size(), (size_t)1);  // never half-frozen: no second piece
+  CHECK_NEAR(clips[0].freezeSeconds, before.freezeSeconds, 0);
+  CHECK_NEAR(clips[0].offsetSeconds, before.offsetSeconds, 0);
+  CHECK_NEAR(clips[0].durationSeconds, before.durationSeconds, 0);
+  CHECK_NEAR(clips[0].fadeInSeconds, before.fadeInSeconds, 0);
+  CHECK_NEAR(clips[0].fadeOutSeconds, before.fadeOutSeconds, 0);
+  // Every split-based cut refuses the same way: slice and range removal never leave half-frozen pieces.
+  Document s = clipSong(0.05);
+  CHECK_THROWS(sliceAudioClip(s, tid, "x1", 240));
+  CHECK_EQ(trackById(s, tid).audioClips.size(), (size_t)1);
+  CHECK_NEAR(trackById(s, tid).audioClips[0].freezeSeconds, 0.05, 0);
+  Document r = clipSong(0.05);
+  CHECK_THROWS(removeAudioRange(r, tid, "x1", 240, 720));
+  CHECK_EQ(trackById(r, tid).audioClips.size(), (size_t)1);
+  CHECK_NEAR(trackById(r, tid).audioClips[0].freezeSeconds, 0.05, 0);
+  // Control: an unfrozen clip splits normally (the refusal is only for the frozen hold).
+  Document u = clipSong(0);
+  const std::string second = splitAudioClip(u, tid, "x1", 480);
+  CHECK(!second.empty());
+  CHECK_EQ(trackById(u, tid).audioClips.size(), (size_t)2);
+}
+
+TEST("freeze split BUG-SWEEP-21: unfreeze is one Undo step, then the split succeeds normally") {
+  Document d = clipSong(0.05);
+  const std::string tid = d.tracks.back().id;
+  History h(d);
+  auto held = [&]() -> const AudioClip& { return h.current().findTrack(tid)->audioClips[0]; };
+  Document next = h.current();
+  unfreezeAudioClip(next, tid, "x1");
+  h.commit(next, "Unfreeze audio clip");
+  CHECK_NEAR(held().freezeSeconds, 0.0, 0);
+  CHECK(h.canUndo());
+  CHECK_EQ(h.undoLabel(), std::string("Unfreeze audio clip"));
+  CHECK(h.undo());  // one Undo brings the frozen hold back, whole
+  CHECK_NEAR(held().freezeSeconds, 0.05, 0);
+  CHECK_EQ(h.current().findTrack(tid)->audioClips.size(), (size_t)1);
+  CHECK(h.redo());
+  // Unfrozen, the split works normally: two plain pieces that play the file sample for sample
+  // (the null proof is engine_tests' "freeze split BUG-SWEEP-21").
+  Document s = h.current();
+  const std::string second = splitAudioClip(s, tid, "x1", 480);
+  CHECK(!second.empty());
+  const auto& clips = trackById(s, tid).audioClips;
+  CHECK_EQ(clips.size(), (size_t)2);
+  CHECK_NEAR(clips[0].durationSeconds, 0.2, 1e-9);
+  CHECK_NEAR(clips[0].freezeSeconds, 0.0, 0);
+  CHECK_EQ(clips[1].id, second);
+  CHECK_EQ(clips[1].startTick, (int64_t)480);
+  CHECK_NEAR(clips[1].offsetSeconds, 0.3, 1e-9);  // 0.1 + 0.2: the file continues where the first piece stopped
+  CHECK_NEAR(clips[1].durationSeconds, 0.8, 1e-9);
+  CHECK_NEAR(clips[1].freezeSeconds, 0.0, 0);
+  // Unfreeze of a plain clip alters nothing: History adds no step for it.
+  History p(clipSong(0));
+  const std::string ptid = p.current().tracks.back().id;
+  Document q = p.current();
+  unfreezeAudioClip(q, ptid, "x1");
+  p.commit(q, "Unfreeze audio clip");
+  CHECK(!p.canUndo());
 }
 
 CORE_TEST_MAIN
