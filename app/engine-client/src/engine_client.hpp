@@ -73,6 +73,9 @@ public:
 
   // Tests only: kills the process as a crash would.
   void killForTest();
+  // Tests only: a lower limit than the engine's, so a message over the limit can be made without a huge song.
+  void setMaxMessageBytesForTest(size_t bytes) { maxMessageBytes_ = bytes; }
+  size_t maxMessageBytes() const { return maxMessageBytes_; }
 
 private:
   struct Process;
@@ -98,7 +101,10 @@ private:
   std::map<int64_t, std::promise<json>> pending_;
   std::deque<std::string> outbox_;
   size_t outboxBytes_ = 0;
-  std::atomic<size_t> maxMessageBytes_{8u << 20};
+  void failPending(int64_t id, const EngineError& error);
+  // The longest line either way. The engine's own limit (the hello's limits.maxMessageBytes, Server::kMaxMessageBytes)
+  // replaces this as soon as the session starts; the value here is the same one, for an engine that does not say.
+  std::atomic<size_t> maxMessageBytes_{256u << 20};
 };
 
 } // namespace core::client

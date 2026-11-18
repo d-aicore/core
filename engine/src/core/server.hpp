@@ -57,7 +57,14 @@ public:
 class Server {
 public:
   static constexpr int kProtocolVersion = 1;
-  static constexpr size_t kMaxMessageBytes = 8u << 20;  // one JSON line, either direction
+  // The longest JSON line, either direction. It only bounds what a broken peer can make the other side hold in
+  // memory; it must never be what a real song hits. One line carries the state of every plugin of the song
+  // (project.load one way, plugins.states and project.get the other), and the old 8 MB did not cover that:
+  // measured, 27 tracks of Vital with its default patch (318 128 bytes of base64 each) answer plugins.states with
+  // 8 589 883 bytes. 256 MB is 64 instances with 4 MB of state each (patches that embed wavetables or samples,
+  // as Serum 2 and Vital can), or 800 of those default patches. The client takes this value from the hello
+  // (limits.maxMessageBytes), so both sides always use the same one.
+  static constexpr size_t kMaxMessageBytes = 256u << 20;
   using OutputFactory = std::function<std::unique_ptr<AudioOutput>()>;
   explicit Server(OutputFactory makeOutput, double sampleRate = 48000, PluginHost* plugins = nullptr);
   ~Server();

@@ -1,5 +1,7 @@
 #include "engine_client.hpp"
 #include "engine_protocol.hpp"
+#include <algorithm>
+#include <cstring>
 #include <fstream>
 #ifndef _WIN32
 #error "The engine client is Windows only for now (the first qualified platform)."
@@ -12,8 +14,22 @@ namespace core::client {
 
 namespace {
 
-constexpr size_t kMaxOutboxBytes = 64u << 20;  // the engine stopped reading long before this
+constexpr size_t kMaxOutboxBytes = 64u << 20;  // the engine stopped reading long before this (or one message, if larger)
 constexpr size_t kStderrTail = 8192;
+
+// The id of an answer, read from the start of its line without the rest: {"id":N,... (the engine writes the keys of
+// an answer in alphabetical order, so a successful one starts with its id). False if the line does not start so.
+bool replyIdAtStart(const std::string& line, int64_t& id) {
+  static const char prefix[] = "{\"id\":";
+  const size_t n = sizeof prefix - 1;
+  if (line.compare(0, n, prefix) != 0) return false;
+  size_t i = n;
+  int64_t value = 0;
+  for (; i < line.size() && i < n + 18 && line[i] >= '0' && line[i] <= '9'; ++i) value = value * 10 + (line[i] - '0');
+  if (i == n || i >= line.size() || line[i] != ',') return false;
+  id = value;
+  return true;
+}
 
 std::wstring widen(const std::string& s) {
   if (s.empty()) return {};
@@ -187,7 +203,8 @@ std::future<json> EngineClient::enqueue(const std::string& cmd, const json& args
         "'" + cmd + "' is too large to send (" + std::to_string(line.size()) + " bytes, limit " + std::to_string(maxMessageBytes_.load()) + ").")));
     return future;
   }
-  if (outboxBytes_ + line.size() > kMaxOutboxBytes) {
+  // Room for one message of the largest size at least: the outbox limit must never be what refuses a song.
+  if (outboxBytes_ + line.size() > std::max(kMaxOutboxBytes, maxMessageBytes_.load())) {
     promise.set_exception(std::make_exception_ptr(EngineError(EngineError::Kind::Protocol, "The engine is not reading its commands.")));
     return future;
   }
@@ -256,11 +273,23 @@ void EngineClient::readLoop() {
   std::vector<char> buffer(1 << 16);
   DWORD n = 0;
   bool tooLarge = false;
+  bool skipping = false;  // inside an answer that was over the limit: dropped up to the end of its line
   std::string protocolError;
   while (ReadFile(process_->stdoutRead, buffer.data(), (DWORD)buffer.size(), &n, nullptr) && n > 0) {
-    partial.append(buffer.data(), n);
-    size_t start = 0, end;
-    while ((end = partial.find('\n', start)) != std::string::npos) {
+    const char* data = buffer.data();
+    size_t count = n;
+    if (skipping) {
+      const char* newline = static_cast<const char*>(std::memchr(data, '\n', count));
+      if (!newline) continue;
+      count -= (size_t)(newline + 1 - data);
+      data = newline + 1;
+      skipping = false;
+    }
+    // A newline can only be in what just arrived: a long line is never searched again from its start (it was, for
+    // every 64 KB read or less, which made a line of many megabytes take seconds, then minutes).
+    size_t start = 0, end, from = partial.size();
+    partial.append(data, count);
+    while ((end = partial.find('\n', std::max(start, from))) != std::string::npos) {
       std::string line = partial.substr(start, end - start);
       if (!line.empty() && line.back() == '\r') line.pop_back();
       if (!line.empty()) {
@@ -282,7 +311,20 @@ void EngineClient::readLoop() {
       break;
     }
     partial.erase(0, start);
-    if (partial.size() > maxMessageBytes_) {  // a broken engine: end the session, never grow without limit
+    if (partial.size() > maxMessageBytes_) {
+      // A line over the limit is never kept. When it is the answer to a command, that command fails with a clear
+      // error and the rest of the line is dropped: the engine is alive and well (it holds the song and the live
+      // state of every plugin), so the session goes on and the caller can tell the user (a Save or an Export that
+      // fails with a message, not an engine that vanishes). Anything else that long is a broken engine: the
+      // session ends, as before.
+      int64_t id = 0;
+      if (replyIdAtStart(partial, id)) {
+        failPending(id, EngineError(EngineError::Kind::Protocol,
+            "The engine's answer is too large to read (more than " + std::to_string(maxMessageBytes_.load()) + " bytes)."));
+        std::string().swap(partial);
+        skipping = true;
+        continue;
+      }
       tooLarge = true;
       TerminateProcess(process_->process, 1);
       break;
@@ -294,6 +336,18 @@ void EngineClient::readLoop() {
   disconnect(!protocolError.empty() ? protocolError
              : tooLarge ? "The engine sent a message larger than the protocol allows."
                         : "The engine exited (code " + std::to_string(code) + ").");
+}
+
+void EngineClient::failPending(int64_t id, const EngineError& error) {
+  std::promise<json> promise;
+  {
+    std::lock_guard<std::mutex> g(mutex_);
+    auto it = pending_.find(id);
+    if (it == pending_.end()) return;  // timed out already
+    promise = std::move(it->second);
+    pending_.erase(it);
+  }
+  promise.set_exception(std::make_exception_ptr(error));
 }
 
 void EngineClient::onLine(const std::string& line) {

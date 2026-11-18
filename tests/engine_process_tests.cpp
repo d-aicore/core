@@ -152,4 +152,92 @@ TEST("serve: after a plugin crashes in processBlock the engine still answers, re
 }
 #endif
 
+// M2 (2026-11-18): one protocol line carries the state of every plugin of the song. The limit was 8 MB and 27 tracks
+// of Vital with its default patch (318 128 bytes of base64 each) pass it: the client refused to send the song, and
+// ended the engine when an answer (plugins.states on Save or Export) was that large.
+namespace {
+// A song of plugin tracks that carry a state each. The plugins have no file, so they are not loaded (the tracks are
+// silent): what is tested is the song and its states going through the pipes, both ways.
+json stateSong(int tracks, size_t stateBytes) {
+  json list = json::array();
+  for (int i = 0; i < tracks; ++i) {
+    std::string state(stateBytes, 'A');
+    state[0] = (char)('B' + i % 20);  // each track its own
+    list.push_back({{"id", "t" + std::to_string(i)}, {"name", "Synth"}, {"instrument", "plugin"},
+                    {"plugin", {{"format", "vst3"}, {"id", "not-installed"}, {"state", std::move(state)}}},
+                    {"patternTicks", 3840}, {"notes", json::array()}});
+  }
+  return {{"format", "core-project"}, {"version", 2}, {"name", "states"}, {"bpm", 120.0},
+          {"lengthTicks", 64 * 960}, {"masterGainDb", 0.0}, {"tracks", list}};
+}
+
+bool sameStates(const json& sent, const json& got) {
+  if (!got.is_object() || !got.contains("tracks") || got["tracks"].size() != sent["tracks"].size()) return false;
+  for (size_t i = 0; i < sent["tracks"].size(); ++i)
+    if (got["tracks"][i].value("plugin", json::object()).value("state", std::string()) != sent["tracks"][i]["plugin"]["state"].get<std::string>()) return false;
+  return true;
+}
+}  // namespace
+
+TEST("serve: a song with more than 8 MB of plugin state reaches the engine and comes back whole (M2)") {
+  const json song = stateSong(27, 318128);
+  EndReason end;
+  EngineClient engine(engineOptions());
+  end.attach(engine);
+  engine.start();
+  CHECK(engine.maxMessageBytes() >= (size_t)(64u << 20));  // the engine's limit, from its hello
+  CHECK_EQ(engine.maxMessageBytes(), engine.hello()["limits"]["maxMessageBytes"].get<size_t>());
+
+  json loaded, got;
+  const double in = answersWithin(engine, "project.load", {{"project", song}}, 30000ms, &loaded);  // 8.6 MB to the engine
+  CHECK(in >= 0);
+  if (in < 0) return;  // not sent or not answered: nothing below can be read
+  CHECK_EQ(loaded.value("tracks", (size_t)0), (size_t)27);
+  const double out = answersWithin(engine, "project.get", json::object(), 30000ms, &got);         // and 8.6 MB back
+  CHECK(out >= 0);
+  CHECK(got.dump().size() > (size_t)(8u << 20));
+  CHECK(sameStates(song, got));
+  CHECK(engine.running());
+  CHECK(answersWithin(engine, "engine.stats", json::object(), 2000ms) >= 0);
+  std::printf("  project.load %.0f ms, project.get %.0f ms\n", in, out);
+  engine.close();
+  CHECK_EQ(end.get(), std::string("The engine exited (code 0)."));
+}
+
+TEST("serve: a message over the limit fails that command with a clear error and the engine stays alive (M2)") {
+  const json song = stateSong(4, 500000);  // 2 MB
+  EndReason end;
+  EngineClient engine(engineOptions());
+  end.attach(engine);
+  engine.start();
+  const size_t limit = engine.maxMessageBytes();
+  engine.command("project.load", {{"project", song}}, 30000ms);
+  engine.setMaxMessageBytesForTest(1u << 20);
+
+  // An answer over the limit: that command fails, saying why; the session is not ended.
+  bool protocol = false;
+  std::string why;
+  try { engine.command("project.get", json::object(), 10000ms); }
+  catch (const EngineError& e) { protocol = e.kind == EngineError::Kind::Protocol; why = e.what(); }
+  CHECK(protocol);
+  CHECK(why.find("too large") != std::string::npos);
+  CHECK(engine.running());
+  CHECK(answersWithin(engine, "engine.stats", json::object(), 2000ms) >= 0);  // the next answer is read from its own line
+
+  // A command over the limit: not sent, the same kind of error, the engine untouched.
+  protocol = false;
+  try { engine.command("project.load", {{"project", song}}, 10000ms); }
+  catch (const EngineError& e) { protocol = e.kind == EngineError::Kind::Protocol; }
+  CHECK(protocol);
+  CHECK(engine.running());
+
+  // With the engine's own limit again the song it holds is still there, whole.
+  engine.setMaxMessageBytesForTest(limit);
+  json got;
+  CHECK(answersWithin(engine, "project.get", json::object(), 10000ms, &got) >= 0);
+  CHECK(sameStates(song, got));
+  engine.close();
+  CHECK_EQ(end.get(), std::string("The engine exited (code 0)."));
+}
+
 CORE_TEST_MAIN

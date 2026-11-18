@@ -6,11 +6,13 @@
 #include <filesystem>
 #include <memory>
 #include <new>
+#include <sstream>
 #include <string>
 #include <vector>
 #include "support/check.hpp"
 #include "support/signals.hpp"
 #include "app/measure.hpp"
+#include "app/protocol.hpp"
 #include "core/assets.hpp"
 #include "core/engine.hpp"
 #include "core/graph.hpp"
@@ -592,6 +594,73 @@ TEST("A-009: canção com instrument='elastic' abre em 'none', conversão report
   std::vector<float> L(512), R(512);
   for (int64_t pos = 0; pos < 48000; pos += 512) g.process(L.data(), R.data(), 512, pos, false);
   g.allNotesOff();
+}
+
+// M2 (2026-11-18): one protocol line carries the state of every plugin of the song (project.load one way,
+// plugins.states the other). The limit was 8 MB; measured, 27 tracks of Vital with its default patch (318 128 bytes
+// of base64 each) answer plugins.states with 8 589 883 bytes, so a Save or an Export ended the engine.
+namespace {
+// A plugin host that holds a state for every place of the song it loaded, as the JUCE host does.
+struct StateHost final : PluginHost {
+  std::string state;
+  std::vector<std::string> keys;
+  std::shared_ptr<PluginProcessor> get(const std::string& key, const json&, double, bool offline, std::string* why) override {
+    if (why) why->clear();
+    if (!offline && std::find(keys.begin(), keys.end(), key) == keys.end()) keys.push_back(key);
+    return std::make_shared<FakeProc>();
+  }
+  void keepOnly(const std::vector<std::string>&) override {}
+  json captureStates() override {
+    json out = json::object();
+    for (const auto& k : keys) out[k] = state;
+    return out;
+  }
+  bool showEditor(const std::string&, bool, std::string*) override { return false; }
+  bool takeChanged() override { return false; }
+  void releaseAll() override { keys.clear(); }
+};
+}  // namespace
+
+TEST("protocol: a song with more than 8 MB of plugin state is read, loaded and answered whole (M2)") {
+  const int kTracks = 27;
+  const std::string state(318128, 'A');  // one Vital default patch, as measured
+  json tracks = json::array();
+  for (int i = 0; i < kTracks; ++i)
+    tracks.push_back({{"id", "t" + std::to_string(i)}, {"name", "Synth"}, {"instrument", "plugin"},
+                      {"plugin", {{"format", "vst3"}, {"id", "fake"}, {"state", state}}}, {"patternTicks", 4 * kPpq}, {"notes", json::array()}});
+  const json song = {{"format", kProjectFormat}, {"version", 2}, {"name", "big"}, {"bpm", 120.0},
+                     {"lengthTicks", 16LL * 4 * kPpq}, {"masterGainDb", 0.0}, {"tracks", tracks}};
+  const std::string load = protocolLine({{"id", 1}, {"cmd", "project.load"}, {"args", {{"project", song}}}});
+  CHECK(load.size() > (size_t)(8u << 20));                 // the case that failed: more than the old limit
+  CHECK(load.size() <= Server::kMaxMessageBytes);          // and inside the protocol's limit now
+
+  // The engine's reader (serve) takes the line whole and the next one after it.
+  std::istringstream in(load + "\n" + protocolLine({{"id", 2}, {"cmd", "plugins.states"}}) + "\n");
+  std::string line;
+  bool tooLarge = true;
+  CHECK(readProtocolLine(in, line, Server::kMaxMessageBytes, tooLarge));
+  CHECK(!tooLarge);
+  CHECK_EQ(line.size(), load.size());
+  if (tooLarge || line.size() != load.size()) return;  // cut short: nothing below can be read
+
+  StateHost host;
+  host.state = state;
+  Server server(nullptr, kSr, &host);
+  CHECK_EQ(server.hello()["limits"]["maxMessageBytes"].get<size_t>(), Server::kMaxMessageBytes);  // what the client obeys
+  const json loaded = server.handle(json::parse(line));
+  CHECK(loaded.value("ok", false));
+  CHECK_EQ(loaded["result"].value("tracks", (size_t)0), (size_t)kTracks);
+
+  CHECK(readProtocolLine(in, line, Server::kMaxMessageBytes, tooLarge));
+  CHECK(!tooLarge);
+  const json states = server.handle(json::parse(line));
+  CHECK(states.value("ok", false));
+  CHECK_EQ(states["result"].size(), (size_t)kTracks);
+  CHECK(states["result"].value("track:t26", std::string()) == state);
+  const std::string answer = protocolLine(states);
+  CHECK(answer.size() > (size_t)(8u << 20));               // the answer that ended the engine
+  CHECK(answer.size() <= Server::kMaxMessageBytes);
+  CHECK(answer.rfind("{\"id\":2,", 0) == 0);               // an answer starts with its id: the client relies on it
 }
 
 CORE_TEST_MAIN
