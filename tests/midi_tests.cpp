@@ -3,6 +3,7 @@
 #include <filesystem>
 #include "support/check.hpp"
 #include "edit.hpp"
+#include "groove.hpp"
 #include "midi.hpp"
 
 using namespace core::doc;
@@ -221,6 +222,77 @@ TEST("MIDI ler: o cabecalho a prometer mais pistas do que as que o ficheiro tem 
   listed.insert(listed.end(), chunk.begin(), chunk.end());
   const MidiFile both = parseMidi(listed);
   CHECK_EQ(both.tracks.size(), (size_t)2);
+}
+
+// BUG-SWEEP-30 (external audit 2026-11-18): Louder/Softer (scaleVelocities) moved a roll note's base
+// velocity but not the envelope the exporter and the engine actually play (roll.velocityFrom/To when
+// count > 1), so the edit was silent on rolls: the exported MIDI stayed byte-identical. The envelope
+// must scale by the same factor the base moved by (proportional, shape-preserving), clamped to [0,1].
+TEST("MIDI SWEEP-30: Louder and Softer scale a roll's played hit velocities with its base") {
+  // Louder (1.15) on the 4-hit roll: base 0.5 -> 0.57 (2dp), envelope 0.25..1 -> 0.285..1 (to clamped).
+  Document d = rollSong();
+  Pattern& p = d.tracks[0].patterns[0];
+  const std::vector<uint8_t> before = exportMidi(d);
+  CHECK_EQ(scaleVelocities(p, {}, 1.15), 1);  // n1 is already at 1.0: only the roll note moves
+  CHECK_NEAR(p.notes[1].velocity, 0.57, 1e-9);
+  CHECK_NEAR(p.notes[1].roll.velocityFrom, 0.285, 1e-9);  // 0.25 * (0.57 / 0.5)
+  CHECK_NEAR(p.notes[1].roll.velocityTo, 1.0, 1e-9);      // 1.0 * 1.14 clamped at 1
+  const std::vector<uint8_t> after = exportMidi(d);
+  CHECK(before != after);  // the bug: the exported bytes were identical after Louder on a roll
+  const MidiFile f = songToMidi(d);  // named copy: a reference into the temporary would dangle
+  const auto& n = f.tracks[0].notes;
+  CHECK_EQ(n.size(), (size_t)10);
+  CHECK_EQ(n[0].velocity, 127);  // the ordinary note at 1.0 stays
+  const int louder[4] = {36, 66, 97, 127};  // 0.285..1 interpolated over 4 hits, * 127 rounded
+  for (int i = 0; i < 4; ++i) {
+    CHECK_EQ(n[(size_t)1 + i].velocity, louder[i]);
+    CHECK_EQ(n[(size_t)6 + i].velocity, louder[i]);  // the loop repeats the same hits (n[5] is bar 2's ordinary note)
+  }
+  // Softer (0.85) from the original: base 0.5 -> 0.43, envelope 0.25..1 -> 0.215..0.86 (no clamp).
+  Document s = rollSong();
+  Pattern& q = s.tracks[0].patterns[0];
+  CHECK_EQ(scaleVelocities(q, {}, 0.85), 2);
+  CHECK_NEAR(q.notes[1].roll.velocityFrom, 0.215, 1e-9);
+  CHECK_NEAR(q.notes[1].roll.velocityTo, 0.86, 1e-9);
+  const MidiFile g = songToMidi(s);
+  const auto& m = g.tracks[0].notes;
+  const int softer[4] = {27, 55, 82, 109};
+  for (int i = 0; i < 4; ++i) CHECK_EQ(m[(size_t)1 + i].velocity, softer[i]);
+  CHECK_EQ(m[0].velocity, 108);  // the ordinary note scales too: 0.85 * 127
+}
+
+TEST("MIDI SWEEP-30: the ordinary-note control and the single-hit velocity contract stay intact") {
+  // Control: the same note with the roll cleared (hasRoll AND the payload: a stale count alone still
+  // expands, BUG-SWEEP-19) is an ordinary note; Louder must keep changing its exported MIDI.
+  Document d = rollSong();
+  Pattern& p = d.tracks[0].patterns[0];
+  p.notes[1].hasRoll = false;
+  p.notes[1].roll = Roll{};
+  const std::vector<uint8_t> before = exportMidi(d);
+  CHECK_EQ(scaleVelocities(p, {}, 1.15), 1);
+  CHECK(before != exportMidi(d));
+  const MidiFile f = songToMidi(d);
+  const auto& n = f.tracks[0].notes;
+  CHECK_EQ(n.size(), (size_t)4);  // two ordinary notes per bar, two bars
+  CHECK_EQ(n[1].velocity, 72);    // 0.57 * 127
+  CHECK_EQ(n[1].length, (int64_t)kPpq);  // the whole note, not 85% roll steps
+  CHECK(!p.notes[1].hasRoll);
+  CHECK_EQ(p.notes[1].roll.count, 0);
+  // Single-hit contract: count 0 or 1 plays n.velocity once; the envelope is dead data and stays untouched.
+  for (int count : {0, 1}) {
+    Document s = rollSong();
+    Pattern& q = s.tracks[0].patterns[0];
+    q.notes[1].roll.count = count;  // hasRoll stays true: the consumers read count alone
+    CHECK_EQ(scaleVelocities(q, {}, 1.15), 1);
+    CHECK_NEAR(q.notes[1].velocity, 0.57, 1e-9);
+    CHECK_NEAR(q.notes[1].roll.velocityFrom, 0.25, 1e-9);  // not scaled: count <= 1
+    CHECK_NEAR(q.notes[1].roll.velocityTo, 1.0, 1e-9);
+    const MidiFile g = songToMidi(s);
+    const auto& m = g.tracks[0].notes;
+    CHECK_EQ(m.size(), (size_t)4);
+    CHECK_EQ(m[1].velocity, 72);
+    CHECK_EQ(m[1].length, (int64_t)kPpq);
+  }
 }
 
 CORE_TEST_MAIN

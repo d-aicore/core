@@ -85,7 +85,7 @@ int normalizeNotes(Pattern& pattern, const NoteScope& scope, const NormalizeOpti
         v = base * o.accents[step % o.accents.size()];
       }
       v = vel(v);
-      if (v != n->velocity) { n->velocity = v; changed.insert(n); }
+      if (v != n->velocity) { setNoteVelocity(*n, v); changed.insert(n); }
     }
   if (o.length) {
     const int64_t want = std::max<int64_t>(1, (int64_t)std::llround(std::clamp(o.gate, 0.01, 4.0) * (double)o.grid));

@@ -161,7 +161,7 @@ int scaleVelocities(Pattern& pattern, const std::set<std::string>& ids, double f
   for (auto& n : pattern.notes) {
     if (!chosen(ids, n)) continue;
     const double v = std::clamp(std::round(n.velocity * std::max(0.0, factor) * 100.0) / 100.0, 0.05, 1.0);
-    if (v != n.velocity) { n.velocity = v; ++changed; }
+    if (v != n.velocity) { setNoteVelocity(n, v); ++changed; }
   }
   return changed;
 }
