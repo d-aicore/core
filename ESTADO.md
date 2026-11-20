@@ -205,6 +205,8 @@ Registo abaixo a grafia e a fonte medidas.
 | D112 | 18/11 **13:32:04.454Z** (e referências 13:06–13:29) | «tentar usar isso para nosso beneficio , vou trabalhar continuem» | Qoder `613ad19e` **L2579** (`humanInput`); referências coladas por ele: **L2420** pulse/src, **L2448** pulse/tests, **L2463/L2470** OpenDaw (+src/engine), **L2487** klang, **L2537** iPlug2, **L2544** dspguide, **L2546** thinkdsp.pdf, **L2548** PortAudio, **L2514** Roche slides, **L2563** 28247361.pdf; na DSH: seq **1233/1248/1271** (melatonin: testes DSP, dicas JUCE, `melatonin_perfetto`), **1353** libsonare | as referências externas são para **aproveitar conceitos em benefício do Core**, não para transcrever código (copyleft fora) nem para criar instrumentos próprios (D104) | **ratificada** | não altera a fronteira; `melatonin_perfetto` fica como opção de build desligada por omissão (proposta do plano, não decisão) |
 | D113 | 18/11 **06:33:30.196Z** | «sim» — resposta a **L1484** (06:30:22.870Z): «**Continua a precisar de ti:** item 1-D — autorização para o patch vendored no JUCE pinned (deadlock do `restartComponent`). Tudo o resto avança sem bloqueio.» | Qoder `613ad19e` **L1491** (`humanInput`), pergunta em **L1484** | autorização explícita para **patch vendored no JUCE pinned** (item 1-D: deadlock do `restartComponent` no thread de mensagens) | **ratificada** | é a autorização de uma alteração a dependência (D48/D50 exigiam palavra do dono). Implementada em `cc5b874` + `ci/patches/juce-failed-plugin-restart.patch`. **Pendência de infraestrutura:** o patch vive como modificação da árvore do JUCE, nunca commitada lá |
 | D114 | 18/11 **05:37:42.694Z** | «ok» — resposta a **L1000** (05:36:10.200Z), que propunha «no `ci/gate.ps1` (linha 37: `core-gate-<pid>.bat` em vez do path fixo) — fix CI permanente que elimina esta classe de colisão para os dois streams, mesmo sem lock. Implemento assim que disseres.» | Qoder `613ad19e` **L1007** (`humanInput`), proposta em **L1000** | fix do gate: bat único por invocação, para gates concorrentes não se corromperem | **ratificada** | implementado em `fffbb41` (e cherry-picks). Não é activação de CI nem tokens novos (proibidos por `AGENTS.md`); é o script local de gate |
+| D115 | 20/11 ~00:20 | «Core — Passagem para o coordenador dos Qwens»: «Quero que organizes o trabalho para tornar o Core fiável em projetos reais. A ordem que deves usar para decidir prioridades é **dados > tempo real > performance > compatibilidade**.» + contratos explícitos S11/S1/S5/S4/S2/S3/S6/S7 (cada um com prova vermelho→verde) + «Faz o commit apenas se já estiver autorizado» (etapa 0) + «Mantém esta investigação [Debug 259] numa tarefa própria» | DSH sessão lead `a69b320fbfab`, dispatch do dono colado 2026-11-20 | mandato da ronda S: prioridades D54 reafirmadas; âmbito explícito por item (S11 JUCE reproduzível, S1 exportação incompleta, S5 samples do utilizador, S4 WAV float, S2/S3 estado de plugins, S6/S7 motor RT); ENV-03 tarefa própria | **ratificada** | governa a ronda S 2026-11-20 (entregue abaixo). Q1–Q8 do plano original `1c6238b` não consultáveis (clone não localizável local nem remote — busca exaustiva arquivada); os contratos explícitos do dispatch prevalecem como instrução atual (AGENTS.md) |
+| D116 | 20/11 **12:52** | «acaba o que tem feito para fazer commit» + «update ao estado o que foi feito, testes criados a sua finalidade, proximo agente a pegar no projecto tem de saber tudo» | DSH sessão lead `a69b320fbfab`, mensagens do dono 2026-11-20 12:52 e ~13:00 | autorização para **commitar o trabalho entregue** da ronda S e para **o coordenador escrever esta atualização do ESTADO** (instrução direta do dono que dispensa o escrivão-only D72/D80 nesta entrega) | **ratificada** | commits `0d7d8ce` (build), `587bf5b` (dados), `234f956` (motor), `aacc6d1` (docs) + este commit do ledger; re-gate version==sha após commit. Trabalho de outras sessões preservado por commitar (2 linhas README 17/11 + relatórios; `.qoderignore`/`environment.yml` pré-existentes) |
 
 **Números atribuídos nesta ronda: D99–D114** (16). Método: maior `D` vivo = D98 (esta página, por commitar até
 esta entrega); D94/D95 continuam ocupados pelas propostas não ratificadas; `grep` por `D99`…`D114` dava **0**
@@ -663,3 +665,138 @@ builtins antigos são silenciosas **por construção** desde 16/11, e **D104** r
 governança, **cânone por número**. Predecessor B = `D:\Qwen work\ESTADO.md` (SHA-256
 `a154a264728cd978…`, 1845 linhas; cópia byte-idêntica em `D:\Core Master\historico\ESTADO-2026-11-14.md`) —
 motor/Serum, arquivado com prefixo `M-` (D74/D82).
+
+---
+
+## Ronda S de 2026-11-20 — coordenador `lead` (DSH `a69b320fbfab`), autorizado por D115/D116
+
+**Escrito pelo coordenador por instrução direta do dono (D116: «update ao estado… proximo agente a pegar no
+projecto tem de saber tudo»), dispensando o escrivão-only D72/D80 nesta entrega.** Append-only: nada acima foi
+editado. O escrivão pode reconciliar D115/D116 na tabela principal e este bloco no formato canónico.
+
+### Ponto de partida e commits
+
+- Base: `main @ a9a038430d781959829f8510067ce59afffaad62` (= `origin/main`, pull ff de 86 commits desde
+  `8c6837e8`, 19/11). Ambiente consolidado + validação SHA-bound + retoma provada em sessão nova (etapa 0,
+  relatório `2026-11-19-pull-a9a0384-environment-refresh.md`).
+- **Commits desta ronda** (por commitar → commitados sob D116): `0d7d8ce` Build (ENV-01 + D113 JUCE +
+  `ci/review-env`), `587bf5b` Data (S1/S4/S5/S2/S3), `234f956` Engine (S6/S7/S9/timing + registos),
+  `aacc6d1` Docs (17 relatórios + evidência + índice). Este commit do ledger segue.
+- **Gate final integrado** (`ci/gate.ps1 -Desktop`, Release, pasta nova `gate-final`, D113 verificado):
+  **merge 29/29 + desktop 1/1 = 30/30 VERDE**, 531 s. A única falha no run de todos os labels é
+  `s7_rt_strict_tests` (label `rt_strict`, **fora de merge**), VERMELHA POR DESIGN = porta de decisão do dono
+  (locks MidiEventList, ver abaixo), padrão ENV-03. **version==sha**: re-gate em árvore limpa após o commit
+  (pendente no momento desta escrita; o gate acima correu com `.modified` por commitar).
+- Denominador: `a9a0384` 21 merge + 1 desktop → **29 merge + 1 desktop** (+8 suites novas; nada removido ou
+  enfraquecido; os 18 nomes originais da lista merge preservados; `cli_plugin_crash_render` reescrito para o
+  contrato de recusa S1 — mudança sancionada, o assert antigo codificava o defeito).
+
+### O que foi entregue (vermelho→verde, cada um com relatório + evidência)
+
+| Item | O que corrige/prova | Vermelho medido → Verde | Relatório |
+| --- | --- | --- | --- |
+| **S11** JUCE reproduzível | CMake aplica o patch D113 à cópia descarregada (idempotente) e verifica a local (falha cedo, nunca modifica); prova de patch completo `git apply --check -R` | fetch limpo + local sem patch → C2039 `markCrashedByHost` juce_host.cpp:136; 5 casos verdes, Release crash/restart 3/3+3/3+1/1 | `2026-11-20-s11-juce-reproducible-build.md` |
+| **S1** exportação | recusa export com plugin necessário falhado (load/render), nome/pista/razão; bypass≠falha; stems conjunto todo; WAV anterior intacto | export degradado byte-idêntico ao saudável publicado como sucesso; **WAV anterior substituído + backup apagado no sucesso**; regressão 5/54 33→0 + CLI real 5 casos | `2026-11-20-s1-export-refusal.md` |
+| **S5** samples | propriedade por hash de conteúdo (cópia E desinstalação); legacy conservador; Audit-27 preservado | editado sobrescrito; ficheiro do utilizador sobrescrito+apagado; manifesto apaga conteúdo do utilizador; 70 checks 29→70/70 ×2 | `2026-11-20-s5-installer-sample-protection.md` |
+| **S4** WAV float | rejeição NaN/±Inf/overflow por bit-patterns inteiros à prova de /fp:fast (Debug+Release); mensagem nomeia ficheiro/frame; nada registado | NaN/±Inf raw, overflow f64→float, asset totalmente cached; 16/360 22→0 Debug E Release | `2026-11-20-s4-float-wav-rejection.md` |
+| **S2/S3** estado plugins | estado inválido recusado com why via canal missing (original nunca sobrescrito); aviso missing name+why; relinkPlugins ligado (open+rescan, estado+automação preservados) | perda do estado original provada byte-a-byte (captureStates→applyPluginStates no Save); 7/68 16→0 | `2026-11-20-s2s3-state-recovery.md` |
+| **3A** ENV-03 | **causa PROVADA** (não é hang): motor sai sempre código 0; Debug ~2.7–3.3 s no leak dump automático do CRT em exit (instâncias leaked por design M1); cliente espera 2000 ms hardcoded → 259 | Debug 3/3 «259», Release 3/3 passa; stacks ao vivo em `_CrtDumpMemoryLeaks`; controlos 0/1/2 leaks | `2026-11-20-env03-debug-259.md` |
+| **S6** motor RT | serial≡M5(2)≡M5(4) **bit-a-bit** (4 blocos, um SHA); paralelo provado (workerJobs); watchdog medido | matriz 2/129 verde; watchdog Stop 2205 ms, reset+3000 ms 3008 ms (limite documentado) | `2026-11-20-s6-engine-rt-proofs.md` |
+| **S7** motor RT | instrumentação alloc/lock/IO com controlos negativos que disparam; baseline dispositivo real | **0 overruns ≤72 instâncias @64**, rutura em 96; M5 p99 2.3× melhor; **locks ~3.7 pares CS/processBlock + realloc raro no RT** (critério 3 não cumprido) | `2026-11-20-s7-rt-measurement.md` |
+| **S8** undo | **medição**: serialização ≈98% do commit (151 ms @32×318KB → ~3.3 ms possível); ceiling só preço dumps (memória real ~1.7×) | probe 10 configs × 3 reps, integridade 0 falhas; proposta shared-blob (não implementada) | `2026-11-20-s8-undo-cost.md` |
+| **S9** mute/bloco | **medição**: mute paga CPU total; bloco-128 = latência de gather constante +128 (não chamadas extra); quatro coberturas | 5/194 verde; propostas mute-suspend/block-match (não implementadas) | `2026-11-20-s9-mute-block.md` |
+| **Timing** | PDC compensa atraso conhecido exatamente (48k dev 480→0); MIDI sample-accurate (dev 0 ambos SR); automação no grid; paralelo M7a alinhado; mudança de latência re-alinha | 8/577 verde; **defeito clip-offset descoberto** (ver abaixo) | `2026-11-20-timing-latency-proof.md` |
+| **VST3 host** | EchoBoy/Decapitator 5.5.5: scan/load/editor/bypass/render/automação/cauda PASS; **defeito recall** (ver abaixo); VST2 recusado pelo engine | cauda 5.49 s/11 ecos; recall headless→defaults, editor-init restaura | `2026-11-20-vst3-host-soundtoys.md` |
+| **Chain série** | série EB→DEC ≠ inversa; bypass isola; save/reopen bit-idêntico; duplicados independentes; paralelo M7a alinhado; sidechain M7c dormente | **defeito clique em edições live** (ver abaixo) | `2026-11-20-chain-series.md` |
+| **CSV dono** | 10 achados confirmados @ a9a0384 (9 confirmados + 1 parcial) | só leitura; mapeiam para S1/S2/S3/S4/S5/S6/S8/S9/S11 | `2026-11-20-csv-10-findings-confirmation.md` |
+
+Coordenação completa: `2026-11-20-round1-coordination.md` (gate, mapa de commits, decisões consolidadas,
+manutenção de disco, addenda datados).
+
+### Testes criados — finalidade e como correr (o próximo agente precisa disto)
+
+Todos em `tests/`, registados em `tests/CMakeLists.txt` (LABELS merge salvo indicação). Correr:
+`ctest --test-dir <build> -L merge -V` (gate: `ci/gate.ps1 -Build <dir> [-Desktop]`). Build de referência:
+`D:\Core-build\gate-final` (Release) ou `D:\Core-build\s1-fix\build` (Debug integrado).
+
+| Suite | Finalidade | Contagens | Notas |
+| --- | --- | --- | --- |
+| `export_plugin_failure_tests` | S1: recusar export com plugin necessário falhado (load E render), nome/pista/razão; bypass≠falha; stems conjunto todo; WAV anterior byte-idêntico na recusa | 5/54 | in-process offline (fake providers) + CLI plugins reais via `cli_plugin_crash_render` |
+| `wav_float_tests` | S4: rejeitar NaN/±Inf/overflow float WAV na importação, mensagem com ficheiro/frame/canal/tipo; AssetStore nada regista; válidos bit-idênticos | 16/360 | **corre em Debug E Release** (/fp:fast incondicional); fixtures gerados no teste |
+| `installer_samples` | S5: fluxo silent real do `Core Setup.exe` — samples editados/do utilizador protegidos na reinstalação E desinstalação; propriedade por hash; legacy sem source nunca apaga; Audit-27 | 70 checks | teste cmake (`installer_samples.cmake`), RUN_SERIAL, guard WIN32+APP+CoreSetup |
+| `state_recovery_tests` | S2/S3: aviso missing name+why; relink preserva estado+automação/no-match recuperável/duplicados; estado inválido reportado + original preservado através de save/reopen | 7/68 | serve harness + EngineSession snapshot + save/reopen |
+| `m5_bitexact_tests` | S6: serial≡M5(2)≡M5(4) bit-a-bit em blocos 128/333/512/1024; prova de uso do paralelo (workerJobs); controlo de determinismo | 2/129 | M5 opt-in RAII (D51 default OFF intacto); plugins reais determinísticos |
+| `s7_rt_probe_tests` | S7: wiring do detetor alloc/lock/IO + 3 controlos negativos (TÊM de disparar) + caracterização do caminho do motor (contagens como dados) | 6/77 | seam `core::rtProbe` (device.hpp, null por omissão = 1 relaxed load); IAT hooks + new/delete overrides |
+| `s7_rt_strict_tests` | S7: porta ESTRITA 0/0/0 (locks/allocs/IO no audio thread) = **decisão do dono** | 1/12, **VERMELHO por design** | **label `rt_strict`, FORA de merge**; verde só quando os locks MidiEventList forem removidos ou aceites |
+| `s9_mute_block_tests` | S9: mute paga CPU total (gate só no fader); bloco-128 = latência gather +128 constante; quatro coberturas (cauda drena/sidechain dormente/PDC invariante/retoma bit-exact warm sem clique) | 5/194 | caracterização; propostas mute-suspend/block-match pendentes |
+| `timing_proof_tests` | timing: PDC antes/depois (dev 480→0), independência de bloco, serial≡paralelo, MIDI sample-accurate (dev 0 ambos SR), automação grid 32, paralelo M7a alinhado, mudança de latência re-alinha, determinismo; **+ pin OPEN do defeito clip-offset** | 8/577 | o caso PDC estrito é 48k; o clip-offset 44.1k é pin nomeado (flip quando corrigido) |
+| `engine_process_tests` (+3 casos) | S6 watchdog: Stop com plugin preso 2205 ms (bounded), reset+300 ms 332 ms, reset+3000 ms 3008 ms (limite: não interrompe código de plugin dentro do reset) | +3 casos | Debug: caso crash/retry falha com ENV-03 259 (pré-existente, causa provada, correção pendente) |
+| `cli_plugin_crash_render` (reescrito) | S1: contrato de recusa (anti-hang TIMEOUT + prova de crash real + controlo saudável) | 1 | mudança de contrato sancionada (o assert antigo codificava o defeito) |
+
+Ambiente (fora do ctest): `ci/review-env/{run-all.ps1,run-wsl.sh,verify.ps1}` — validação SHA-bound
+(fp1 sha+local+juce+script+cfg), gate de checkout WSL rígido, provas de reuso/invalidação. Ver
+`ci/review-env/README.md` e `2026-11-19-pull-a9a0384-environment-refresh.md`.
+
+### Defeitos descobertos (propostos, NÃO corrigidos — decisão do dono)
+
+- **BUG-RT-LOCKS** (S7): `juce::MidiEventList` `Array<Vst::Event,CriticalSection>` (juce_VST3Common.h:1289,
+  JUCE estática) → ~3.7 pares CS/processBlock + realloc raro no audio thread/workers. Critério 3 da barra
+  («no lock on the audio thread») não cumprido como escrito. CS não-contendido = fast path user-mode.
+  Proposta: patch vendored (array single-threaded/lock-free + capacidade pré-reservada) ou aceitar. Porta
+  `rt_strict` vermelha até decisão. Precedente D113 para vendored JUCE.
+- **BUG-TIMING-CLIP-OFFSET**: clip `offsetSeconds=0` em start fracionário → `c.offset=llround(0.5)=1`
+  (graph.cpp:438) salta frame 0 do WAV (impulso @44.1k silencioso). PDC correto; é o rounding do offset.
+  Proposta: offset 0 quando offsetSeconds==0, ou floor. Pin OPEN no `timing_proof_tests`.
+- **BUG-CHAIN-EDIT-CLICK**: edições live reorder/bypass trocam o caminho sem ramp/crossfade
+  (graph.cpp:641-649/:868) → transiente (tailMaxDiff 0.340); estado final correto (bit-idêntico). Proposta:
+  ramp/crossfade como no mute. Sem gesto reorder na app hoje.
+- **BUG-VST3-ST-RECALL**: estado Soundtoys capturado sem move com editor aberto → defaults no reopen (ambos
+  os plugins); editor-init restaura; fluxo Core são (controlo bit-idêntico). Atribuição suspeita plugin-side,
+  **não confirmada** (segundo host por fazer — Bitwig/Ableton/Cakewalk disponíveis). Impacto: configuração
+  só host-side (macros/randomize/live writes) perde settings. 4 mitigações propostas.
+- **BUG-S8-MEM-ACCOUNTING**: ceiling do undo preço só os dumps dos passos; memória real ~1.7× o nominal
+  (gap 158 MB @t64_s318128, peak WS 1727.6 MB vs 1 GB). Proposta shared-blob (COW + contadores) com as 3
+  provas (independência/integridade/limite). Conservação do ceiling verificada (D-a refutado).
+- **ENV-03** (3A): causa provada (CRT leak dump ~3 s > espera 2 s do cliente, engine_client.cpp:333).
+  Proposta A (1 linha: esperar closeTimeout — recomendada), A2 (default app 2000 ms), B (leak-check off Debug).
+
+### Decisões pendentes do dono (nenhuma bloqueia provas; todas para implementação)
+
+D-commit (feito sob D116; falta re-gate version==sha + push) · ENV-03 A/A2/B · RT-LOCKS (patch vendored vs
+aceitar) · M5 default-ON (soak 8 h + bit-a-bit no PC do dono, D51; bit-a-bit offline já provado) · S8
+shared-blob · S9 mute-suspend (política de cauda) + block-match (latência vs amortização) · VST3-RECALL
+(mitigação + segundo host) · CHAIN-EDIT-CLICK (ramp) · CLIP-OFFSET (offset 0/floor) · **D-CHAIN-ARCH**
+(sidechain M7c para plugins não implementado — decisão de arquitetura numerada; paralelo M7a bus já existe e
+alinha) · Chain parâmetros (Delay Drive → Mix+Drive, sistema de macros) · S10 VST2 (caso concreto + SDK/licença;
+engine recusa vst2, project.cpp:387) · S12 restos/Q8 (sample_host dormente; projeto antigo + render de
+referência antes de remover) · S13 UX (revisão do dono à slice A) · menores: retenção de backup no sucesso do
+publish, `.part` legacy CLI (SWEEP-02), stems crash-atómicos, starvation exclusive (hardware), subnormais
+f64→f32, modified() dirty-flag (08).
+
+### Ambiente e reprodução (o próximo agente)
+
+- Scripts no repo: `ci/review-env/` (cópia canónica de trabalho `D:\Core-build\core-review`).
+  `powershell -NoProfile -ExecutionPolicy Bypass -File ci\review-env\run-all.ps1` (Windows),
+  `wsl.exe -e bash ci/review-env/run-wsl.sh` (WSL), `verify.ps1` (health check read-only, NÃO é suite).
+- Builds out-of-tree: `D:\Core-build\core-review\{debug,asan}`; WSL `~/core-review-build/{debug,asanubsan,tsan,tidy}`.
+  Gate: `ci/gate.ps1 -Build <dir> -Desktop` (Release, merge+desktop). Builds desta ronda em
+  `D:\Core-build\{gate-final,s1-fix,s2s3,s6,s7,s9,timing(C:),chain-series,vst3-host}` (árvores superseded
+  libertadas — 56 GB, manutenção registada na coordenação).
+- JUCE: `D:\Core-deps\JUCE-9.0.5` com patch D113 aplicado (CMake aplica/verifica desde S11).
+- Pré-requisitos: VS 18 BuildTools (vcvars64), CMake ≥4.4, Ninja; WSL2 Ubuntu 24.04 GCC 13/clang-tidy 18
+  (sem gdb, sem rede apt); TSan precisa `setarch -R` (automático no run-wsl.sh).
+- Evidência verbatim: `docs/relatorios/evidencia/2026-11-20-*/` (logs, CSVs, probes, WAVs, stacks, transcripts).
+
+### Retoma — por onde o próximo agente começa
+
+1. Este bloco + `docs/relatorios/2026-11-20-round1-coordination.md` (mapa de commits, decisões, addenda).
+2. `ci/review-env/README.md` + `verify.ps1` para o ambiente; `ci/gate.ps1` para o gate.
+3. Relatórios por item (tabela acima) para o detalhe vermelho→verde de cada correção/prova.
+4. **Decisões pendentes** (acima) — implementar só com autorização do dono (D48/D50); arquitetura nova exige
+   decisão numerada. Os defeitos descobertos estão medidos e propostos, não corrigidos.
+5. Trabalho de outras sessões por commitar preservado: 2 linhas README 17/11 (Plano interface / Teste real) +
+   relatórios/evidência 17/11; `.qoderignore`, `environment.yml` pré-existentes. Não commitar sem dono.
+6. O que NÃO foi feito/verificado: dispositivo real sob ASan/VST3 reais; soak M5 8 h; UI click-through das
+   correções (headless + código); segundo host VST3; sidechain/Chain-parâmetros (decisão); S10/S12/S13.
+   Linux não prova Windows e vice-versa (AGENTS.md).
+
