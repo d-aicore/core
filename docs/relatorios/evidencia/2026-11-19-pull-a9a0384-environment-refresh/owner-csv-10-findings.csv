@@ -1,0 +1,11 @@
+﻿Onde,O que está aberto
+render_job.cpp:363-367,Exportação diz """Exported""" com plugin falhado ou não carregado — só verifica áudio em falta
+EngineSession.cpp:644-648,O motor diz porquê" que cada plugin não carregou; a app só usa isso para desactivar ""Open…"" — "nunca avisa
+plugin_refs.cpp:63,relinkPlugins existe e tem zero chamadas
+"juce_host.cpp:348,351",Estado de plugin inválido é engolido em silêncio (plugin volta aos valores de fábrica)
+audio_file.cpp:115-140,Sem verificação de NaN/Inf na importação de WAV float
+Setup.cpp:88-93,Instalador ainda sobrescreve um sample que o utilizador editou
+engine_tests.cpp,Não existe" teste bit-a-bit serial≡M5, nem teste do watchdog de reset"
+ci/patches/…patch,O patch do JUCE (D113) não é aplicado por nada no repo → risco de gate falso-verde num fetch novo
+graph.cpp:1239/1302,Faixas em mute pagam CPU total; bloco de plugin fixo em 128
+"history.cpp:9,14-18",Undo copia o documento inteiro e serializa-o em JSON a cada commit só para lhe calcular o preço

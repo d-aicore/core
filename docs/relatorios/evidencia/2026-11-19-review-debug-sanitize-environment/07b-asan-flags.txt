@@ -1,0 +1,4 @@
+﻿compile db: D:\Core-build\core-review\compile_commands-asan.json
+total translation units: 68
+with /fsanitize=address: 67
+without the flag: miniaudio_impl.c

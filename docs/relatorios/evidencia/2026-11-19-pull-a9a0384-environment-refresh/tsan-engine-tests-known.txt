@@ -1,0 +1,46 @@
+core: realtime audio priority refused (Invalid operation); reopening the device at normal priority (BUG-SWEEP-06)
+core: realtime audio priority refused (Invalid operation); reopening the device at normal priority (BUG-SWEEP-06)
+core: realtime audio priority refused (Invalid operation); reopening the device at normal priority (BUG-SWEEP-06)
+core: realtime audio priority refused (Invalid operation); reopening the device at normal priority (BUG-SWEEP-06)
+core: realtime audio priority refused (Invalid operation); reopening the device at normal priority (BUG-SWEEP-06)
+ok   wav: escrever e ler um seno de 32 bits devolve as mesmas amostras
+ok   wav: 24 bits fica a menos de 2 passos de quantizacao (-132 dBFS)
+ok   wav: ficheiro inexistente da erro, nao audio vazio
+ok   tempo: samplesPerTick a 150 BPM / 48 kHz
+ok   projecto: toJson(fromJson(x)) e estavel
+ok   projecto: entrada invalida e recusada
+ok   project: an old song with automation on a built-in instrument opens
+ok   render: a silent song gives finite silence with the right duration
+ok   render: clip de audio toca no sitio, ao nivel certo e sem NaN
+ok   render: ganho do clip de -6 dB baixa o pico para metade
+ok   render: o tamanho do bloco nao muda o resultado
+ok   render: deterministico na mesma build (duas vezes igual)
+ok   render: ficheiro em falta nao parte o render
+ok   sample host: a note plays the user's file at its level, to the file's end (not silence)
+ok   sample host: the level and the velocity scale the file's gain
+ok   sample host: a pitched zone follows the key (an octave up reads twice as fast)
+ok   sample host: a held zone loops while the note is held and releases after it
+ok   sample host: the block size does not change the render
+ok   sample host: a missing file is silent and reported, the song plays on
+ok   render: the demo sounds (amplitude > 0), not silence-by-conversion
+ok   render: generated audio and the test synth sound out (amplitude > 0)
+ok   render: note-ons land on the exact grid (scheduling accuracy)
+ok   loop: posto no tempo novo antes de o audio aplicar o grafo novo nao e convertido outra vez
+ok   audio: o limite de memoria recusa antes de ler o ficheiro que nao cabe (audit 10)
+ok   audio: um ficheiro ao ritmo do projecto nao e copiado outra vez (audit 10)
+ok   freeze: o congelamento fica dentro do pedaco pedido (audit 11)
+ok   adopt: a mudanca de tempo nao desloca o arranque do envelope (audit 12)
+ok   adopt: os note-offs que ficaram na reserva passam para o grafo novo (audit 13)
+ok   engine.start: uma saída que falha não deixa a app sem som (audit 14)
+ok   engine.start: a device switch that fails after a rate change puts the engine, the rate and the output back (FL-3)
+ok   engine.start: M5 fica 0 (serial) por omissão, sem CORE_LIVE_THREADS nem liveThreads (FL-1, D51)
+ok   engine.start: the null device opens and reopens; a refused realtime priority falls back to normal (BUG-SWEEP-06)
+ok   ART-003: o Server reporta uma saída que parou ou mudou (dispositivo desligado / rerouted)
+ok   A-009: canção com instrument='elastic' abre em 'none', conversão reportada, e o grafo não crasha
+ok   protocol: a song with more than 8 MB of plugin state is read, loaded and answered whole (M2)
+ok   M5: a worker that was late once is re-armed after the cooldown; a stalling plugin stays serial (budget)
+ok   A-004: swapping a plugin instance keeps the held note sounding (re-chased into the fresh instance)
+ok   protocol: project.load asks for the state it needs and edits carry none (STATE-PER-EDIT)
+ok   freeze split BUG-SWEEP-21: unfreeze then split is null-identical; the old frozen split changed the held source
+39 testes, 221 verificacoes, 0 falhas
+engine_tests(tsan) exit=0 (at 8c6837e: 1, FL-1 audio device)

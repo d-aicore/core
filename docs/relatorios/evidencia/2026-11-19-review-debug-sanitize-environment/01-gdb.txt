@@ -1,0 +1,43 @@
+installing gdb via apt-get (passwordless sudo available)
+Reading package lists...
+Building dependency tree...
+Reading state information...
+The following additional packages will be installed:
+  libbabeltrace1 libdebuginfod-common libdebuginfod1t64 libipt2
+  libsource-highlight-common libsource-highlight4t64
+Suggested packages:
+  gdb-doc gdbserver
+Recommended packages:
+  libc-dbg
+The following NEW packages will be installed:
+  gdb libbabeltrace1 libdebuginfod-common libdebuginfod1t64 libipt2
+  libsource-highlight-common libsource-highlight4t64
+0 upgraded, 7 newly installed, 0 to remove and 32 not upgraded.
+Need to get 4646 kB of archives.
+After this operation, 12.4 MB of additional disk space will be used.
+Ign:1 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libdebuginfod-common all 0.190-1.1ubuntu0.1
+Err:2 http://archive.ubuntu.com/ubuntu noble/main amd64 libbabeltrace1 amd64 1.5.11-3build3
+  Cannot initiate the connection to archive.ubuntu.com:80 (2606:4700:10::6814:1cf6). - connect (101: Network is unreachable) Cannot initiate the connection to archive.ubuntu.com:80 (2606:4700:10::ac42:98b0). - connect (101: Network is unreachable)
+Ign:3 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libdebuginfod1t64 amd64 0.190-1.1ubuntu0.1
+Err:4 http://archive.ubuntu.com/ubuntu noble/main amd64 libipt2 amd64 2.0.6-1build1
+  Cannot initiate the connection to archive.ubuntu.com:80 (2606:4700:10::6814:1cf6). - connect (101: Network is unreachable) Cannot initiate the connection to archive.ubuntu.com:80 (2606:4700:10::ac42:98b0). - connect (101: Network is unreachable)
+Err:5 http://archive.ubuntu.com/ubuntu noble/main amd64 libsource-highlight-common all 3.1.9-4.3build1
+  Cannot initiate the connection to archive.ubuntu.com:80 (2606:4700:10::6814:1cf6). - connect (101: Network is unreachable) Cannot initiate the connection to archive.ubuntu.com:80 (2606:4700:10::ac42:98b0). - connect (101: Network is unreachable)
+Err:6 http://archive.ubuntu.com/ubuntu noble/main amd64 libsource-highlight4t64 amd64 3.1.9-4.3build1
+  Cannot initiate the connection to archive.ubuntu.com:80 (2606:4700:10::6814:1cf6). - connect (101: Network is unreachable) Cannot initiate the connection to archive.ubuntu.com:80 (2606:4700:10::ac42:98b0). - connect (101: Network is unreachable)
+Err:7 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 gdb amd64 15.1-1ubuntu1~24.04.1
+  Cannot initiate the connection to archive.ubuntu.com:80 (2606:4700:10::6814:1cf6). - connect (101: Network is unreachable) Cannot initiate the connection to archive.ubuntu.com:80 (2606:4700:10::ac42:98b0). - connect (101: Network is unreachable)
+Err:1 http://security.ubuntu.com/ubuntu noble-updates/main amd64 libdebuginfod-common all 0.190-1.1ubuntu0.1
+  Cannot initiate the connection to archive.ubuntu.com:80 (2606:4700:10::6814:1cf6). - connect (101: Network is unreachable) Cannot initiate the connection to archive.ubuntu.com:80 (2606:4700:10::ac42:98b0). - connect (101: Network is unreachable) Could not connect to archive.ubuntu.com:80 (172.66.152.176), connection timed out Could not connect to archive.ubuntu.com:80 (104.20.28.246), connection timed out
+Err:3 http://security.ubuntu.com/ubuntu noble-updates/main amd64 libdebuginfod1t64 amd64 0.190-1.1ubuntu0.1
+  Cannot initiate the connection to archive.ubuntu.com:80 (2606:4700:10::6814:1cf6). - connect (101: Network is unreachable) Cannot initiate the connection to archive.ubuntu.com:80 (2606:4700:10::ac42:98b0). - connect (101: Network is unreachable)
+E: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/e/elfutils/libdebuginfod-common_0.190-1.1ubuntu0.1_all.deb  Cannot initiate the connection to archive.ubuntu.com:80 (2606:4700:10::6814:1cf6). - connect (101: Network is unreachable) Cannot initiate the connection to archive.ubuntu.com:80 (2606:4700:10::ac42:98b0). - connect (101: Network is unreachable) Could not connect to archive.ubuntu.com:80 (172.66.152.176), connection timed out Could not connect to archive.ubuntu.com:80 (104.20.28.246), connection timed out
+E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/b/babeltrace/libbabeltrace1_1.5.11-3build3_amd64.deb  Cannot initiate the connection to archive.ubuntu.com:80 (2606:4700:10::6814:1cf6). - connect (101: Network is unreachable) Cannot initiate the connection to archive.ubuntu.com:80 (2606:4700:10::ac42:98b0). - connect (101: Network is unreachable)
+E: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/e/elfutils/libdebuginfod1t64_0.190-1.1ubuntu0.1_amd64.deb  Cannot initiate the connection to archive.ubuntu.com:80 (2606:4700:10::6814:1cf6). - connect (101: Network is unreachable) Cannot initiate the connection to archive.ubuntu.com:80 (2606:4700:10::ac42:98b0). - connect (101: Network is unreachable)
+E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/i/intel-processor-trace/libipt2_2.0.6-1build1_amd64.deb  Cannot initiate the connection to archive.ubuntu.com:80 (2606:4700:10::6814:1cf6). - connect (101: Network is unreachable) Cannot initiate the connection to archive.ubuntu.com:80 (2606:4700:10::ac42:98b0). - connect (101: Network is unreachable)
+E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/s/source-highlight/libsource-highlight-common_3.1.9-4.3build1_all.deb  Cannot initiate the connection to archive.ubuntu.com:80 (2606:4700:10::6814:1cf6). - connect (101: Network is unreachable) Cannot initiate the connection to archive.ubuntu.com:80 (2606:4700:10::ac42:98b0). - connect (101: Network is unreachable)
+E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/s/source-highlight/libsource-highlight4t64_3.1.9-4.3build1_amd64.deb  Cannot initiate the connection to archive.ubuntu.com:80 (2606:4700:10::6814:1cf6). - connect (101: Network is unreachable) Cannot initiate the connection to archive.ubuntu.com:80 (2606:4700:10::ac42:98b0). - connect (101: Network is unreachable)
+E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/g/gdb/gdb_15.1-1ubuntu1%7e24.04.1_amd64.deb  Cannot initiate the connection to archive.ubuntu.com:80 (2606:4700:10::6814:1cf6). - connect (101: Network is unreachable) Cannot initiate the connection to archive.ubuntu.com:80 (2606:4700:10::ac42:98b0). - connect (101: Network is unreachable)
+E: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?
+apt rc=100
+gdb STILL MISSING (no network route to the apt mirror in this WSL)

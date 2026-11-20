@@ -1,0 +1,23 @@
+config: asanubsan   ctest rc=8
+94% tests passed, 1 tests failed out of 17
+Total Test time (real) = 192.47 sec
+--- sanitizer/runtime report counters (0 = clean) ---
+ERROR: AddressSanitizer          0
+runtime error:                   0
+LeakSanitizer                    0
+WARNING: ThreadSanitizer         0
+FATAL                            0
+--- per-suite case/verification totals ---
+      1 12 testes, 69 verificacoes
+      1 13 testes, 647 verificacoes
+      1 14 testes, 208 verificacoes
+      1 2 testes, 25 verificacoes
+      1 21 testes, 216 verificacoes
+      1 25 testes, 127 verificacoes
+      1 29 testes, 517 verificacoes
+      1 39 testes, 356 verificacoes
+      1 6 testes, 80 verificacoes
+      1 7 testes, 366 verificacoes
+      1 7 testes, 65 verificacoes
+      1 7 testes, 82 verificacoes
+      1 9 testes, 169 verificacoes

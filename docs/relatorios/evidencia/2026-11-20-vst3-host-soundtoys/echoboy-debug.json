@@ -1,0 +1,187 @@
+{
+ "inline_load": {
+  "load": {
+   "acceptedRevision": null,
+   "lengthSamples": 96000,
+   "missing": [],
+   "missingAssets": [],
+   "statesNeeded": [],
+   "tracks": 1
+  },
+  "missing": [],
+  "Mix": {
+   "default": 0.5,
+   "id": "3",
+   "name": "Mix",
+   "steps": 0,
+   "text": "50.0",
+   "value": 0.5
+  },
+  "Feedback": {
+   "default": 0.0,
+   "id": "11",
+   "name": "Feedback",
+   "steps": 0,
+   "text": "0.00",
+   "value": 0.0
+  }
+ },
+ "live_after_param": {
+  "Mix": {
+   "default": 0.5,
+   "id": "3",
+   "name": "Mix",
+   "steps": 0,
+   "text": "80.0",
+   "value": 0.800000011920929
+  },
+  "Feedback": {
+   "default": 0.0,
+   "id": "11",
+   "name": "Feedback",
+   "steps": 0,
+   "text": "0.75",
+   "value": 0.6000000238418579
+  }
+ },
+ "states_arg_flow": {
+  "Mix": {
+   "default": 0.5,
+   "id": "3",
+   "name": "Mix",
+   "steps": 0,
+   "text": "80.0",
+   "value": 0.800000011920929
+  },
+  "Feedback": {
+   "default": 0.0,
+   "id": "11",
+   "name": "Feedback",
+   "steps": 0,
+   "text": "0.75",
+   "value": 0.6000000238418579
+  },
+  "sha_s1": "1ebb7664b6b11d536fff9e757470099bc028f8f753e6ba35816429cf3eab2c23",
+  "sha_s2": "410086f2f57b057f5b3113a49883678753efcabd1c07e56043a9109166e5e5b5",
+  "bitIdentical": false
+ },
+ "release_reopen_states_arg": {
+  "load": {
+   "acceptedRevision": null,
+   "lengthSamples": 96000,
+   "missing": [],
+   "missingAssets": [],
+   "statesNeeded": [],
+   "tracks": 1
+  },
+  "Mix": {
+   "default": 0.5,
+   "id": "3",
+   "name": "Mix",
+   "steps": 0,
+   "text": "50.0",
+   "value": 0.5
+  },
+  "Feedback": {
+   "default": 0.0,
+   "id": "11",
+   "name": "Feedback",
+   "steps": 0,
+   "text": "0.00",
+   "value": 0.0
+  },
+  "bitIdentical": false
+ },
+ "release_reopen_inline": {
+  "Mix": {
+   "default": 0.5,
+   "id": "3",
+   "name": "Mix",
+   "steps": 0,
+   "text": "50.0",
+   "value": 0.5
+  },
+  "Feedback": {
+   "default": 0.0,
+   "id": "11",
+   "name": "Feedback",
+   "steps": 0,
+   "text": "0.00",
+   "value": 0.0
+  }
+ },
+ "tail_params_live": {
+  "Mix": {
+   "default": 0.5,
+   "id": "3",
+   "name": "Mix",
+   "steps": 0,
+   "text": "100.0",
+   "value": 1.0
+  },
+  "Feedback": {
+   "default": 0.0,
+   "id": "11",
+   "name": "Feedback",
+   "steps": 0,
+   "text": "0.75",
+   "value": 0.6000000238418579
+  }
+ },
+ "tail_render": {
+  "channels": 2,
+  "denseEventBlocks": 0,
+  "path": "D:\\Core-build\\vst3-host\\dbg-tail.wav",
+  "peak": 0.3918937146663666,
+  "realtimeFactor": 47.55371786854726,
+  "renderMs": 168.2308,
+  "sampleRate": 48000.0,
+  "seconds": 8.0,
+  "stems": []
+ },
+ "tail_last": {
+  "threshold": 0.0001,
+  "lastAboveS": 0.4001,
+  "firstAboveS": 0.0
+ },
+ "tail_peaks": [
+  {
+   "t": 0.02,
+   "rms": 0.241512
+  },
+  {
+   "t": 0.31,
+   "rms": 0.219025
+  }
+ ],
+ "auto_envelopes_in_project": [
+  {
+   "param": "fx:eb:vst:3",
+   "points": [
+    {
+     "tick": 0,
+     "value": 0.0
+    },
+    {
+     "tick": 960,
+     "value": 0.0
+    },
+    {
+     "tick": 2880,
+     "value": 1.0
+    }
+   ]
+  }
+ ],
+ "auto_compare": {
+  "early_A_B": 0.003681,
+  "late_A_C": 0.764308,
+  "late_A_B": 0.764308,
+  "sha": {
+   "A": "05da066cf53c98e8b66a7bb55e6dfeb35a78bd2965fed5b8ec9e86f661b891c9",
+   "B": "979a42fced7653058026958917ef8299934f7cfbf92c5d927ee3933005f32839",
+   "C": "979a42fced7653058026958917ef8299934f7cfbf92c5d927ee3933005f32839"
+  }
+ },
+ "engine_exit": 0
+}

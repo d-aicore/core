@@ -1,0 +1,130 @@
+﻿Test project D:/Core-build/s5-fix/build
+    Start 20: installer_samples
+1/1 Test #20: installer_samples ................***Failed    4.74 sec
+-- PASS fixture kick hash
+-- PASS fixture snare hash
+-- PASS fixture bass hash
+-- PASS fixture keys hash
+-- === target-main: (i) edited distributed, (ii) user-owned at distributed path, (iii) intact, (iv) user-owned same size+date previously listed ===
+-- PASS main install kick
+-- PASS main install snare
+-- PASS main install bass
+-- PASS main install keys
+-- PASS main _core-plan never copied
+-- FAIL main manifest kick hash: samples.txt has no tab+sha256 entry for Drums/kick-a.wav (legacy plain line?)
+-- FAIL main manifest snare hash: samples.txt has no tab+sha256 entry for Drums/snare-a.wav (legacy plain line?)
+-- FAIL main manifest bass hash: samples.txt has no tab+sha256 entry for Bass/bass-a.wav (legacy plain line?)
+-- FAIL main manifest keys hash: samples.txt has no tab+sha256 entry for Keys/keys-a.wav (legacy plain line?)
+-- PASS main pre-reinstall user kick
+-- PASS main pre-reinstall user snare
+-- PASS main pre-reinstall user keys
+-- FAIL (i) reinstall keeps the user edit: D:/Core-build/s5-fix/build/tests/installer-samples/target-main/Samples/Drums/kick-a.wav sha256=a91a20315c4ab9d646d1b99fe28c56f8717f8a11cde2d5ec13a24f52b2a2a387, expected 9cd4d1e9ae56718879bf510e36cde3c6b5f156f094ba46b21e51ff9afc38bb0a
+-- FAIL (ii) reinstall keeps the user-owned snare: D:/Core-build/s5-fix/build/tests/installer-samples/target-main/Samples/Drums/snare-a.wav sha256=2b3b64a24d6ec96692361e4794f858c39a6984f48b078576902710c105e2bee2, expected 7d592e6daaef379260815e7d6fbcfeeb8fb43b9a0d7647d2c0d17688db3ccd9e
+-- PASS (iii) intact bass unchanged
+-- PASS (iv) reinstall keeps the user-owned keys
+-- FAIL (i) edited kick dropped from manifest: Drums/kick-a.wav must not be listed in D:/Core-build/s5-fix/build/tests/installer-samples/target-main/samples.txt (user content)
+-- FAIL (ii) user snare dropped from manifest: Drums/snare-a.wav must not be listed in D:/Core-build/s5-fix/build/tests/installer-samples/target-main/samples.txt (user content)
+-- FAIL (iv) user keys dropped from manifest: Keys/keys-a.wav must not be listed in D:/Core-build/s5-fix/build/tests/installer-samples/target-main/samples.txt (user content)
+-- PASS (iii) intact bass stays listed
+-- FAIL (iii) bass entry keeps the installed hash: samples.txt has no tab+sha256 entry for Bass/bass-a.wav (legacy plain line?)
+-- FAIL (i) message names the preserved kick: installer output does not name the preserved file ('D:/Core-build/s5-fix/build/tests/installer-samples/target-main/Samples/Drums/kick-a.wav') -- got: 
+-- FAIL (ii) message names the preserved snare: installer output does not name the preserved file ('D:/Core-build/s5-fix/build/tests/installer-samples/target-main/Samples/Drums/snare-a.wav') -- got: 
+-- FAIL (iv) message names the preserved keys: installer output does not name the preserved file ('D:/Core-build/s5-fix/build/tests/installer-samples/target-main/Samples/Keys/keys-a.wav') -- got: 
+-- FAIL (i) uninstall keeps the user edit: file is gone: D:/Core-build/s5-fix/build/tests/installer-samples/target-main/Samples/Drums/kick-a.wav
+-- FAIL (ii) uninstall keeps the user-owned snare: file is gone: D:/Core-build/s5-fix/build/tests/installer-samples/target-main/Samples/Drums/snare-a.wav
+-- FAIL (iv) uninstall keeps the user-owned keys: file is gone: D:/Core-build/s5-fix/build/tests/installer-samples/target-main/Samples/Keys/keys-a.wav
+-- PASS (iii) uninstall removes the intact distributed bass
+-- PASS main samples.txt removed
+-- FAIL main Samples stays (user content): missing: D:/Core-build/s5-fix/build/tests/installer-samples/target-main/Samples
+-- FAIL main folder stays (user content): missing: D:/Core-build/s5-fix/build/tests/installer-samples/target-main
+-- === target-fresh: (v) never-listed exact size+date match (Audit-27), (vi) non-distributed path ===
+-- PASS (v) never-listed user snare not overwritten
+-- PASS (v) never-listed user snare stays unlisted
+-- PASS (vi) non-distributed user take untouched
+-- PASS fresh bass listed
+-- PASS fresh kick listed
+-- PASS fresh keys listed
+-- PASS (v) uninstall keeps the never-listed user snare
+-- PASS (vi) uninstall keeps the non-distributed user take
+-- PASS fresh distributed bass removed
+-- PASS fresh distributed kick removed
+-- PASS fresh distributed keys removed
+-- PASS fresh samples.txt removed
+-- PASS fresh folder stays (user content)
+-- === target-evidence: (vii) listed user content vs non-listed user file; legacy manifest at uninstall ===
+-- FAIL (vii) uninstall keeps the listed user-content keys: file is gone: D:/Core-build/s5-fix/build/tests/installer-samples/target-evidence/Samples/Keys/keys-a.wav
+-- PASS (vii) non-listed user take survives byte-identical
+-- PASS (vii) legacy intact bass removed
+-- PASS (vii) legacy intact kick removed
+-- PASS (vii) legacy intact snare removed
+-- PASS evidence samples.txt removed
+-- FAIL (vii) message names the preserved keys: installer output does not name the preserved file ('D:/Core-build/s5-fix/build/tests/installer-samples/target-evidence/Samples/Keys/keys-a.wav') -- got: 
+-- PASS evidence MyRecordings stays
+-- === target-revalidate: hashed manifest entry re-validated at uninstall ===
+-- FAIL revalidate bass hashed entry: samples.txt has no tab+sha256 entry for Bass/bass-a.wav (legacy plain line?)
+-- FAIL revalidate uninstall keeps the edited bass: file is gone: D:/Core-build/s5-fix/build/tests/installer-samples/target-revalidate/Samples/Bass/bass-a.wav
+-- PASS revalidate intact kick removed
+-- PASS revalidate intact snare removed
+-- PASS revalidate intact keys removed
+-- PASS revalidate samples.txt removed
+-- FAIL revalidate message names the preserved bass: installer output does not name the preserved file ('D:/Core-build/s5-fix/build/tests/installer-samples/target-revalidate/Samples/Bass/bass-a.wav') -- got: 
+-- === target-legacy-nosrc: legacy manifest, source unavailable at uninstall -> all preserved ===
+-- FAIL nosrc legacy bass preserved: file is gone: D:/Core-build/s5-fix/build/tests/installer-samples/target-legacy-nosrc/Samples/Bass/bass-a.wav
+-- FAIL nosrc legacy kick preserved: file is gone: D:/Core-build/s5-fix/build/tests/installer-samples/target-legacy-nosrc/Samples/Drums/kick-a.wav
+-- FAIL nosrc legacy snare preserved: file is gone: D:/Core-build/s5-fix/build/tests/installer-samples/target-legacy-nosrc/Samples/Drums/snare-a.wav
+-- FAIL nosrc legacy keys preserved: file is gone: D:/Core-build/s5-fix/build/tests/installer-samples/target-legacy-nosrc/Samples/Keys/keys-a.wav
+-- PASS nosrc samples.txt removed (entries dropped)
+-- FAIL nosrc folder stays (samples preserved): missing: D:/Core-build/s5-fix/build/tests/installer-samples/target-legacy-nosrc
+-- FAIL nosrc message names the preserved bass: installer output does not name the preserved file ('D:/Core-build/s5-fix/build/tests/installer-samples/target-legacy-nosrc/Samples/Bass/bass-a.wav') -- got: 
+CMake Error at D:/CORE/CORE/tests/installer_samples.cmake:334 (message):
+  installer_samples: 29 of 70 checks FAILED:
+
+    main manifest kick hash: samples.txt has no tab+sha256 entry for Drums/kick-a.wav (legacy plain line?)
+    main manifest snare hash: samples.txt has no tab+sha256 entry for Drums/snare-a.wav (legacy plain line?)
+    main manifest bass hash: samples.txt has no tab+sha256 entry for Bass/bass-a.wav (legacy plain line?)
+    main manifest keys hash: samples.txt has no tab+sha256 entry for Keys/keys-a.wav (legacy plain line?)
+    (i) reinstall keeps the user edit: D:/Core-build/s5-fix/build/tests/installer-samples/target-main/Samples/Drums/kick-a.wav sha256=a91a20315c4ab9d646d1b99fe28c56f8717f8a11cde2d5ec13a24f52b2a2a387, expected 9cd4d1e9ae56718879bf510e36cde3c6b5f156f094ba46b21e51ff9afc38bb0a
+    (ii) reinstall keeps the user-owned snare: D:/Core-build/s5-fix/build/tests/installer-samples/target-main/Samples/Drums/snare-a.wav sha256=2b3b64a24d6ec96692361e4794f858c39a6984f48b078576902710c105e2bee2, expected 7d592e6daaef379260815e7d6fbcfeeb8fb43b9a0d7647d2c0d17688db3ccd9e
+    (i) edited kick dropped from manifest: Drums/kick-a.wav must not be listed in D:/Core-build/s5-fix/build/tests/installer-samples/target-main/samples.txt (user content)
+    (ii) user snare dropped from manifest: Drums/snare-a.wav must not be listed in D:/Core-build/s5-fix/build/tests/installer-samples/target-main/samples.txt (user content)
+    (iv) user keys dropped from manifest: Keys/keys-a.wav must not be listed in D:/Core-build/s5-fix/build/tests/installer-samples/target-main/samples.txt (user content)
+    (iii) bass entry keeps the installed hash: samples.txt has no tab+sha256 entry for Bass/bass-a.wav (legacy plain line?)
+    (i) message names the preserved kick: installer output does not name the preserved file ('D:/Core-build/s5-fix/build/tests/installer-samples/target-main/Samples/Drums/kick-a.wav') -- got: 
+    (ii) message names the preserved snare: installer output does not name the preserved file ('D:/Core-build/s5-fix/build/tests/installer-samples/target-main/Samples/Drums/snare-a.wav') -- got: 
+    (iv) message names the preserved keys: installer output does not name the preserved file ('D:/Core-build/s5-fix/build/tests/installer-samples/target-main/Samples/Keys/keys-a.wav') -- got: 
+    (i) uninstall keeps the user edit: file is gone: D:/Core-build/s5-fix/build/tests/installer-samples/target-main/Samples/Drums/kick-a.wav
+    (ii) uninstall keeps the user-owned snare: file is gone: D:/Core-build/s5-fix/build/tests/installer-samples/target-main/Samples/Drums/snare-a.wav
+    (iv) uninstall keeps the user-owned keys: file is gone: D:/Core-build/s5-fix/build/tests/installer-samples/target-main/Samples/Keys/keys-a.wav
+    main Samples stays (user content): missing: D:/Core-build/s5-fix/build/tests/installer-samples/target-main/Samples
+    main folder stays (user content): missing: D:/Core-build/s5-fix/build/tests/installer-samples/target-main
+    (vii) uninstall keeps the listed user-content keys: file is gone: D:/Core-build/s5-fix/build/tests/installer-samples/target-evidence/Samples/Keys/keys-a.wav
+    (vii) message names the preserved keys: installer output does not name the preserved file ('D:/Core-build/s5-fix/build/tests/installer-samples/target-evidence/Samples/Keys/keys-a.wav') -- got: 
+    revalidate bass hashed entry: samples.txt has no tab+sha256 entry for Bass/bass-a.wav (legacy plain line?)
+    revalidate uninstall keeps the edited bass: file is gone: D:/Core-build/s5-fix/build/tests/installer-samples/target-revalidate/Samples/Bass/bass-a.wav
+    revalidate message names the preserved bass: installer output does not name the preserved file ('D:/Core-build/s5-fix/build/tests/installer-samples/target-revalidate/Samples/Bass/bass-a.wav') -- got: 
+    nosrc legacy bass preserved: file is gone: D:/Core-build/s5-fix/build/tests/installer-samples/target-legacy-nosrc/Samples/Bass/bass-a.wav
+    nosrc legacy kick preserved: file is gone: D:/Core-build/s5-fix/build/tests/installer-samples/target-legacy-nosrc/Samples/Drums/kick-a.wav
+    nosrc legacy snare preserved: file is gone: D:/Core-build/s5-fix/build/tests/installer-samples/target-legacy-nosrc/Samples/Drums/snare-a.wav
+    nosrc legacy keys preserved: file is gone: D:/Core-build/s5-fix/build/tests/installer-samples/target-legacy-nosrc/Samples/Keys/keys-a.wav
+    nosrc folder stays (samples preserved): missing: D:/Core-build/s5-fix/build/tests/installer-samples/target-legacy-nosrc
+    nosrc message names the preserved bass: installer output does not name the preserved file ('D:/Core-build/s5-fix/build/tests/installer-samples/target-legacy-nosrc/Samples/Bass/bass-a.wav') -- got: 
+
+
+
+
+0% tests passed, 1 tests failed out of 1
+
+Label Time Summary:
+merge    =   4.74 sec*proc (1 test)
+
+Total Test time (real) =   4.74 sec
+
+The following tests FAILED:
+	 20 - installer_samples (Failed)                        merge
+ctest : Errors while running CTest
+At line:1 char:129
++ ... ew($false); ctest --test-dir D:\Core-build\s5-fix\build -R installer_ ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Errors while running CTest:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

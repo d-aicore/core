@@ -1,0 +1,2 @@
+ok   serve: a crashed plugin that asks to restart the component does not deadlock the message thread
+1 testes, 17 verificacoes, 0 falhas

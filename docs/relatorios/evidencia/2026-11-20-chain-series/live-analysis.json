@@ -1,0 +1,986 @@
+{
+ "steadySlewContA": 0.027277156710624695,
+ "steadySlewContB": 0.028969503939151764,
+ "scenarios": {
+  "refAB-cont": {
+   "frames": 192000,
+   "peak": 0.27318355441093445,
+   "swaps": [],
+   "actions": [],
+   "transitions": [],
+   "paramsAfter": {
+    "fx:src:dec": {
+     "Drive": {
+      "text": "7.0",
+      "value": 0.699999988079071
+     }
+    },
+    "fx:src:eb": {
+     "Feedback": {
+      "text": "0.75",
+      "value": 0.6000000238418579
+     },
+     "Mix": {
+      "text": "100.0",
+      "value": 1.0
+     }
+    }
+   },
+   "silentRuns": [],
+   "stats": {
+    "callbacks": 1503,
+    "overruns": 0,
+    "callbackErrors": 0,
+    "graphSwaps": 1,
+    "maxEditToAudioMs": 0.5246999999999999,
+    "maxRenderMs": 0.7698999999999999,
+    "avgRenderMs": 0.09891856287425149,
+    "failedPlugins": [],
+    "liveFallback": false
+   },
+   "latencyStart": {
+    "deviceMs": 5.333333333333333,
+    "graphMs": 9.958333333333334,
+    "masterSamples": 0,
+    "totalMs": 15.291666666666668,
+    "tracksSamples": 478
+   },
+   "tailBitExactVsRef": null,
+   "tailMaxDiffVsRef": null
+  },
+  "reorder-cont": {
+   "frames": 192000,
+   "peak": 0.47515374422073364,
+   "swaps": [
+    72192
+   ],
+   "actions": [
+    {
+     "fx": "",
+     "ignored": [],
+     "kind": "reorder",
+     "latencyAfter": {
+      "deviceMs": 5.333333333333333,
+      "graphMs": 9.958333333333334,
+      "masterSamples": 0,
+      "totalMs": 15.291666666666668,
+      "tracksSamples": 478
+     },
+     "latencyBefore": {
+      "deviceMs": 5.333333333333333,
+      "graphMs": 9.958333333333334,
+      "masterSamples": 0,
+      "totalMs": 15.291666666666668,
+      "tracksSamples": 478
+     },
+     "positionAtApply": 72192,
+     "requestedAt": 72000
+    }
+   ],
+   "transitions": [
+    {
+     "fx": "",
+     "kind": "reorder",
+     "maxSlewWindow": 0.07455168664455414,
+     "maxSlewWindowR": 0.07415254414081573,
+     "rmsAfter": 0.258303806261797,
+     "rmsBefore": 0.21618163583236488,
+     "swapAt": 72192,
+     "slewRatioVsSteady": 2.573
+    }
+   ],
+   "paramsAfter": {
+    "fx:src:dec": {
+     "Drive": {
+      "text": "7.0",
+      "value": 0.699999988079071
+     }
+    },
+    "fx:src:eb": {
+     "Feedback": {
+      "text": "0.75",
+      "value": 0.6000000238418579
+     },
+     "Mix": {
+      "text": "100.0",
+      "value": 1.0
+     }
+    }
+   },
+   "silentRuns": [],
+   "stats": {
+    "callbacks": 1502,
+    "overruns": 0,
+    "callbackErrors": 0,
+    "graphSwaps": 2,
+    "maxEditToAudioMs": 7.9939,
+    "maxRenderMs": 0.4138,
+    "avgRenderMs": 0.1011922103861518,
+    "failedPlugins": [],
+    "liveFallback": false
+   },
+   "latencyStart": {
+    "deviceMs": 5.333333333333333,
+    "graphMs": 9.958333333333334,
+    "masterSamples": 0,
+    "totalMs": 15.291666666666668,
+    "tracksSamples": 478
+   },
+   "tailBitExactVsRef": false,
+   "tailMaxDiffVsRef": 0.028117477893829346
+  },
+  "refBA-cont": {
+   "frames": 192000,
+   "peak": 0.4853062629699707,
+   "swaps": [],
+   "actions": [],
+   "transitions": [],
+   "paramsAfter": {
+    "fx:src:dec": {
+     "Drive": {
+      "text": "7.0",
+      "value": 0.699999988079071
+     }
+    },
+    "fx:src:eb": {
+     "Feedback": {
+      "text": "0.75",
+      "value": 0.6000000238418579
+     },
+     "Mix": {
+      "text": "100.0",
+      "value": 1.0
+     }
+    }
+   },
+   "silentRuns": [
+    {
+     "from": 1536,
+     "to": 11776,
+     "ms": 213.33
+    }
+   ],
+   "stats": {
+    "callbacks": 1505,
+    "overruns": 0,
+    "callbackErrors": 0,
+    "graphSwaps": 1,
+    "maxEditToAudioMs": 0.45849999999999996,
+    "maxRenderMs": 0.4662,
+    "avgRenderMs": 0.10263774086378737,
+    "failedPlugins": [],
+    "liveFallback": false
+   },
+   "latencyStart": {
+    "deviceMs": 5.333333333333333,
+    "graphMs": 9.958333333333334,
+    "masterSamples": 0,
+    "totalMs": 15.291666666666668,
+    "tracksSamples": 478
+   },
+   "tailBitExactVsRef": null,
+   "tailMaxDiffVsRef": null
+  },
+  "bypassEB-cont": {
+   "frames": 192000,
+   "peak": 0.27318355441093445,
+   "swaps": [
+    72064,
+    120192
+   ],
+   "actions": [
+    {
+     "fx": "eb",
+     "ignored": [],
+     "kind": "bypass",
+     "latencyAfter": {
+      "deviceMs": 5.333333333333333,
+      "graphMs": 6.625,
+      "masterSamples": 0,
+      "totalMs": 11.958333333333332,
+      "tracksSamples": 318
+     },
+     "latencyBefore": {
+      "deviceMs": 5.333333333333333,
+      "graphMs": 9.958333333333334,
+      "masterSamples": 0,
+      "totalMs": 15.291666666666668,
+      "tracksSamples": 478
+     },
+     "positionAtApply": 72064,
+     "requestedAt": 72000
+    },
+    {
+     "fx": "eb",
+     "ignored": [],
+     "kind": "unbypass",
+     "latencyAfter": {
+      "deviceMs": 5.333333333333333,
+      "graphMs": 9.958333333333334,
+      "masterSamples": 0,
+      "totalMs": 15.291666666666668,
+      "tracksSamples": 478
+     },
+     "latencyBefore": {
+      "deviceMs": 5.333333333333333,
+      "graphMs": 6.625,
+      "masterSamples": 0,
+      "totalMs": 11.958333333333332,
+      "tracksSamples": 318
+     },
+     "positionAtApply": 120192,
+     "requestedAt": 120000
+    }
+   ],
+   "transitions": [
+    {
+     "fx": "eb",
+     "kind": "bypass",
+     "maxSlewWindow": 0.3112700581550598,
+     "maxSlewWindowR": 0.32105159759521484,
+     "rmsAfter": 0.2109340576413505,
+     "rmsBefore": 0.2162867919741616,
+     "swapAt": 72064,
+     "slewRatioVsSteady": 11.411
+    },
+    {
+     "fx": "eb",
+     "kind": "unbypass",
+     "maxSlewWindow": 0.3286283612251282,
+     "maxSlewWindowR": 0.3346574306488037,
+     "rmsAfter": 0.21739323504075203,
+     "rmsBefore": 0.2130046714997872,
+     "swapAt": 120192,
+     "slewRatioVsSteady": 12.048
+    }
+   ],
+   "paramsAfter": {
+    "fx:src:dec": {
+     "Drive": {
+      "text": "7.0",
+      "value": 0.699999988079071
+     }
+    },
+    "fx:src:eb": {
+     "Feedback": {
+      "text": "0.75",
+      "value": 0.6000000238418579
+     },
+     "Mix": {
+      "text": "100.0",
+      "value": 1.0
+     }
+    }
+   },
+   "silentRuns": [],
+   "stats": {
+    "callbacks": 1504,
+    "overruns": 0,
+    "callbackErrors": 0,
+    "graphSwaps": 3,
+    "maxEditToAudioMs": 8.0566,
+    "maxRenderMs": 0.5609999999999999,
+    "avgRenderMs": 0.0979345079787234,
+    "failedPlugins": [],
+    "liveFallback": false
+   },
+   "latencyStart": {
+    "deviceMs": 5.333333333333333,
+    "graphMs": 9.958333333333334,
+    "masterSamples": 0,
+    "totalMs": 15.291666666666668,
+    "tracksSamples": 478
+   },
+   "tailBitExactVsRef": false,
+   "tailMaxDiffVsRef": 0.3403146266937256
+  },
+  "bypassDEC-cont": {
+   "frames": 192000,
+   "peak": 0.3774105906486511,
+   "swaps": [
+    72064,
+    120192
+   ],
+   "actions": [
+    {
+     "fx": "dec",
+     "ignored": [],
+     "kind": "bypass",
+     "latencyAfter": {
+      "deviceMs": 5.333333333333333,
+      "graphMs": 6.0,
+      "masterSamples": 0,
+      "totalMs": 11.333333333333332,
+      "tracksSamples": 288
+     },
+     "latencyBefore": {
+      "deviceMs": 5.333333333333333,
+      "graphMs": 9.958333333333334,
+      "masterSamples": 0,
+      "totalMs": 15.291666666666668,
+      "tracksSamples": 478
+     },
+     "positionAtApply": 72064,
+     "requestedAt": 72000
+    },
+    {
+     "fx": "dec",
+     "ignored": [],
+     "kind": "unbypass",
+     "latencyAfter": {
+      "deviceMs": 5.333333333333333,
+      "graphMs": 9.958333333333334,
+      "masterSamples": 0,
+      "totalMs": 15.291666666666668,
+      "tracksSamples": 478
+     },
+     "latencyBefore": {
+      "deviceMs": 5.333333333333333,
+      "graphMs": 6.0,
+      "masterSamples": 0,
+      "totalMs": 11.333333333333332,
+      "tracksSamples": 288
+     },
+     "positionAtApply": 120192,
+     "requestedAt": 120000
+    }
+   ],
+   "transitions": [
+    {
+     "fx": "dec",
+     "kind": "bypass",
+     "maxSlewWindow": 0.054804135113954544,
+     "maxSlewWindowR": 0.034002333879470825,
+     "rmsAfter": 0.2591200330076623,
+     "rmsBefore": 0.2162867919741616,
+     "swapAt": 72064,
+     "slewRatioVsSteady": 2.009
+    },
+    {
+     "fx": "dec",
+     "kind": "unbypass",
+     "maxSlewWindow": 0.5300149917602539,
+     "maxSlewWindowR": 0.46205395460128784,
+     "rmsAfter": 0.2149817066711349,
+     "rmsBefore": 0.2351278697249503,
+     "swapAt": 120192,
+     "slewRatioVsSteady": 19.431
+    }
+   ],
+   "paramsAfter": {
+    "fx:src:dec": {
+     "Drive": {
+      "text": "7.0",
+      "value": 0.699999988079071
+     }
+    },
+    "fx:src:eb": {
+     "Feedback": {
+      "text": "0.75",
+      "value": 0.6000000238418579
+     },
+     "Mix": {
+      "text": "100.0",
+      "value": 1.0
+     }
+    }
+   },
+   "silentRuns": [],
+   "stats": {
+    "callbacks": 1502,
+    "overruns": 0,
+    "callbackErrors": 0,
+    "graphSwaps": 3,
+    "maxEditToAudioMs": 8.1228,
+    "maxRenderMs": 0.7227,
+    "avgRenderMs": 0.09755765645805592,
+    "failedPlugins": [],
+    "liveFallback": false
+   },
+   "latencyStart": {
+    "deviceMs": 5.333333333333333,
+    "graphMs": 9.958333333333334,
+    "masterSamples": 0,
+    "totalMs": 15.291666666666668,
+    "tracksSamples": 478
+   },
+   "tailBitExactVsRef": false,
+   "tailMaxDiffVsRef": 5.960464477539063e-08
+  },
+  "refAB-imp": {
+   "frames": 192000,
+   "peak": 0.27986520528793335,
+   "swaps": [],
+   "actions": [],
+   "transitions": [],
+   "paramsAfter": {
+    "fx:src:dec": {
+     "Drive": {
+      "text": "7.0",
+      "value": 0.699999988079071
+     }
+    },
+    "fx:src:eb": {
+     "Feedback": {
+      "text": "0.75",
+      "value": 0.6000000238418579
+     },
+     "Mix": {
+      "text": "100.0",
+      "value": 1.0
+     }
+    }
+   },
+   "silentRuns": [
+    {
+     "from": 189440,
+     "to": 189952,
+     "ms": 10.67
+    },
+    {
+     "from": 191488,
+     "to": 192000,
+     "ms": 10.67
+    }
+   ],
+   "stats": {
+    "callbacks": 1504,
+    "overruns": 0,
+    "callbackErrors": 0,
+    "graphSwaps": 1,
+    "maxEditToAudioMs": 0.4957,
+    "maxRenderMs": 0.5336,
+    "avgRenderMs": 0.10152273936170213,
+    "failedPlugins": [],
+    "liveFallback": false
+   },
+   "latencyStart": {
+    "deviceMs": 5.333333333333333,
+    "graphMs": 9.958333333333334,
+    "masterSamples": 0,
+    "totalMs": 15.291666666666668,
+    "tracksSamples": 478
+   },
+   "tailBitExactVsRef": null,
+   "tailMaxDiffVsRef": null
+  },
+  "reorder-imp": {
+   "frames": 192000,
+   "peak": 0.28004732728004456,
+   "swaps": [
+    24064
+   ],
+   "actions": [
+    {
+     "fx": "",
+     "ignored": [],
+     "kind": "reorder",
+     "latencyAfter": {
+      "deviceMs": 5.333333333333333,
+      "graphMs": 9.958333333333334,
+      "masterSamples": 0,
+      "totalMs": 15.291666666666668,
+      "tracksSamples": 478
+     },
+     "latencyBefore": {
+      "deviceMs": 5.333333333333333,
+      "graphMs": 9.958333333333334,
+      "masterSamples": 0,
+      "totalMs": 15.291666666666668,
+      "tracksSamples": 478
+     },
+     "positionAtApply": 24064,
+     "requestedAt": 24000
+    }
+   ],
+   "transitions": [
+    {
+     "fx": "",
+     "kind": "reorder",
+     "maxSlewWindow": 0.0018679089844226837,
+     "maxSlewWindowR": 0.06336773186922073,
+     "rmsAfter": 0.19021377190326821,
+     "rmsBefore": 0.015074866354578232,
+     "swapAt": 24064,
+     "slewRatioVsSteady": 0.068
+    }
+   ],
+   "paramsAfter": {
+    "fx:src:dec": {
+     "Drive": {
+      "text": "7.0",
+      "value": 0.699999988079071
+     }
+    },
+    "fx:src:eb": {
+     "Feedback": {
+      "text": "0.75",
+      "value": 0.6000000238418579
+     },
+     "Mix": {
+      "text": "100.0",
+      "value": 1.0
+     }
+    }
+   },
+   "silentRuns": [
+    {
+     "from": 34304,
+     "to": 35840,
+     "ms": 32.0
+    },
+    {
+     "from": 70656,
+     "to": 71680,
+     "ms": 21.33
+    },
+    {
+     "from": 82432,
+     "to": 83968,
+     "ms": 32.0
+    },
+    {
+     "from": 94208,
+     "to": 95744,
+     "ms": 32.0
+    },
+    {
+     "from": 105984,
+     "to": 107520,
+     "ms": 32.0
+    },
+    {
+     "from": 118272,
+     "to": 119808,
+     "ms": 32.0
+    },
+    {
+     "from": 129536,
+     "to": 131584,
+     "ms": 42.67
+    },
+    {
+     "from": 141824,
+     "to": 143872,
+     "ms": 42.67
+    },
+    {
+     "from": 153088,
+     "to": 155648,
+     "ms": 53.33
+    },
+    {
+     "from": 164864,
+     "to": 167936,
+     "ms": 64.0
+    },
+    {
+     "from": 177152,
+     "to": 179712,
+     "ms": 53.33
+    },
+    {
+     "from": 188416,
+     "to": 191488,
+     "ms": 64.0
+    }
+   ],
+   "stats": {
+    "callbacks": 1502,
+    "overruns": 0,
+    "callbackErrors": 0,
+    "graphSwaps": 2,
+    "maxEditToAudioMs": 8.3172,
+    "maxRenderMs": 0.5043,
+    "avgRenderMs": 0.09805472703062583,
+    "failedPlugins": [],
+    "liveFallback": false
+   },
+   "latencyStart": {
+    "deviceMs": 5.333333333333333,
+    "graphMs": 9.958333333333334,
+    "masterSamples": 0,
+    "totalMs": 15.291666666666668,
+    "tracksSamples": 478
+   },
+   "tailBitExactVsRef": false,
+   "tailMaxDiffVsRef": 0.0013489372795447707
+  },
+  "refBA-imp": {
+   "frames": 192000,
+   "peak": 0.2659550905227661,
+   "swaps": [],
+   "actions": [],
+   "transitions": [],
+   "paramsAfter": {
+    "fx:src:dec": {
+     "Drive": {
+      "text": "7.0",
+      "value": 0.699999988079071
+     }
+    },
+    "fx:src:eb": {
+     "Feedback": {
+      "text": "0.75",
+      "value": 0.6000000238418579
+     },
+     "Mix": {
+      "text": "100.0",
+      "value": 1.0
+     }
+    }
+   },
+   "silentRuns": [
+    {
+     "from": 1536,
+     "to": 11776,
+     "ms": 213.33
+    }
+   ],
+   "stats": {
+    "callbacks": 1505,
+    "overruns": 0,
+    "callbackErrors": 0,
+    "graphSwaps": 1,
+    "maxEditToAudioMs": 0.44039999999999996,
+    "maxRenderMs": 0.5594,
+    "avgRenderMs": 0.10559063122923587,
+    "failedPlugins": [],
+    "liveFallback": false
+   },
+   "latencyStart": {
+    "deviceMs": 5.333333333333333,
+    "graphMs": 9.958333333333334,
+    "masterSamples": 0,
+    "totalMs": 15.291666666666668,
+    "tracksSamples": 478
+   },
+   "tailBitExactVsRef": null,
+   "tailMaxDiffVsRef": null
+  },
+  "reorder-cont-m5": {
+   "frames": 192000,
+   "peak": 0.47561338543891907,
+   "swaps": [
+    72576
+   ],
+   "actions": [
+    {
+     "fx": "",
+     "ignored": [],
+     "kind": "reorder",
+     "latencyAfter": {
+      "deviceMs": 5.333333333333333,
+      "graphMs": 9.958333333333334,
+      "masterSamples": 0,
+      "totalMs": 15.291666666666668,
+      "tracksSamples": 478
+     },
+     "latencyBefore": {
+      "deviceMs": 5.333333333333333,
+      "graphMs": 9.958333333333334,
+      "masterSamples": 0,
+      "totalMs": 15.291666666666668,
+      "tracksSamples": 478
+     },
+     "positionAtApply": 72576,
+     "requestedAt": 72000
+    }
+   ],
+   "transitions": [
+    {
+     "fx": "",
+     "kind": "reorder",
+     "maxSlewWindow": 0.09340636432170868,
+     "maxSlewWindowR": 0.04369990527629852,
+     "rmsAfter": 0.2587356051746856,
+     "rmsBefore": 0.2163413895219453,
+     "swapAt": 72576,
+     "slewRatioVsSteady": 3.224
+    }
+   ],
+   "paramsAfter": {
+    "fx:src:dec": {
+     "Drive": {
+      "text": "7.0",
+      "value": 0.699999988079071
+     }
+    },
+    "fx:src:eb": {
+     "Feedback": {
+      "text": "0.75",
+      "value": 0.6000000238418579
+     },
+     "Mix": {
+      "text": "100.0",
+      "value": 1.0
+     }
+    }
+   },
+   "silentRuns": [],
+   "stats": {
+    "callbacks": 1506,
+    "overruns": 0,
+    "callbackErrors": 0,
+    "graphSwaps": 2,
+    "maxEditToAudioMs": 8.8954,
+    "maxRenderMs": 0.4411,
+    "avgRenderMs": 0.10202616201859228,
+    "failedPlugins": [],
+    "liveFallback": false
+   },
+   "latencyStart": {
+    "deviceMs": 5.333333333333333,
+    "graphMs": 9.958333333333334,
+    "masterSamples": 0,
+    "totalMs": 15.291666666666668,
+    "tracksSamples": 478
+   },
+   "tailBitExactVsRef": false,
+   "tailMaxDiffVsRef": 0.027137428522109985
+  }
+ },
+ "finalRenderBitIdentical": {
+  "reorder-cont==refBA-cont": true,
+  "reorder-cont-m5==refBA-cont": true,
+  "reorder-imp==refBA-imp": true,
+  "bypassEB-cont==refAB-cont": true,
+  "bypassDEC-cont==refAB-cont": true
+ },
+ "finalRenderSha": {
+  "reorder-cont": "eed705391954c72fa5f348251cb45579dee788991e0b9f2db12526b11d0b60dc",
+  "refBA-cont": "eed705391954c72fa5f348251cb45579dee788991e0b9f2db12526b11d0b60dc",
+  "reorder-cont-m5": "eed705391954c72fa5f348251cb45579dee788991e0b9f2db12526b11d0b60dc",
+  "reorder-imp": "4c37a3d844690d7a18c625b4671e5140df3b4ee928277bddf3b9e2df654f420c",
+  "refBA-imp": "4c37a3d844690d7a18c625b4671e5140df3b4ee928277bddf3b9e2df654f420c",
+  "bypassEB-cont": "4163e1ca93a5a8f348cab4b2de8ca729bf0f8c80b3c621672b0f4e1aa829aa8d",
+  "refAB-cont": "4163e1ca93a5a8f348cab4b2de8ca729bf0f8c80b3c621672b0f4e1aa829aa8d",
+  "bypassDEC-cont": "4163e1ca93a5a8f348cab4b2de8ca729bf0f8c80b3c621672b0f4e1aa829aa8d"
+ },
+ "reorderImpEchoPeaks": [
+  {
+   "t": 0.01,
+   "rms": 0.14693
+  },
+  {
+   "t": 0.27,
+   "rms": 0.22757
+  },
+  {
+   "t": 0.31,
+   "rms": 0.22236
+  },
+  {
+   "t": 0.34,
+   "rms": 0.21809
+  },
+  {
+   "t": 0.36,
+   "rms": 0.2181
+  },
+  {
+   "t": 0.53,
+   "rms": 0.2012
+  },
+  {
+   "t": 0.58,
+   "rms": 0.20061
+  },
+  {
+   "t": 0.62,
+   "rms": 0.20135
+  },
+  {
+   "t": 0.78,
+   "rms": 0.12483
+  },
+  {
+   "t": 0.82,
+   "rms": 0.12569
+  },
+  {
+   "t": 0.86,
+   "rms": 0.1262
+  },
+  {
+   "t": 1.03,
+   "rms": 0.09407
+  },
+  {
+   "t": 1.08,
+   "rms": 0.09382
+  },
+  {
+   "t": 1.12,
+   "rms": 0.09415
+  },
+  {
+   "t": 1.28,
+   "rms": 0.05838
+  },
+  {
+   "t": 1.32,
+   "rms": 0.05878
+  },
+  {
+   "t": 1.36,
+   "rms": 0.05901
+  },
+  {
+   "t": 1.53,
+   "rms": 0.04398
+  },
+  {
+   "t": 1.58,
+   "rms": 0.04388
+  },
+  {
+   "t": 1.62,
+   "rms": 0.04402
+  },
+  {
+   "t": 1.78,
+   "rms": 0.02731
+  },
+  {
+   "t": 1.82,
+   "rms": 0.02749
+  },
+  {
+   "t": 1.86,
+   "rms": 0.02759
+  },
+  {
+   "t": 2.03,
+   "rms": 0.02056
+  },
+  {
+   "t": 2.08,
+   "rms": 0.02052
+  },
+  {
+   "t": 2.12,
+   "rms": 0.02059
+  }
+ ],
+ "refBAImpEchoPeaks": [
+  {
+   "t": 0.01,
+   "rms": 0.05634
+  },
+  {
+   "t": 0.28,
+   "rms": 0.18684
+  },
+  {
+   "t": 0.31,
+   "rms": 0.18483
+  },
+  {
+   "t": 0.35,
+   "rms": 0.18215
+  },
+  {
+   "t": 0.53,
+   "rms": 0.14119
+  },
+  {
+   "t": 0.57,
+   "rms": 0.13716
+  },
+  {
+   "t": 0.61,
+   "rms": 0.1351
+  },
+  {
+   "t": 0.78,
+   "rms": 0.08645
+  },
+  {
+   "t": 0.81,
+   "rms": 0.08581
+  },
+  {
+   "t": 0.85,
+   "rms": 0.08447
+  },
+  {
+   "t": 1.03,
+   "rms": 0.06547
+  },
+  {
+   "t": 1.07,
+   "rms": 0.06375
+  },
+  {
+   "t": 1.11,
+   "rms": 0.06271
+  },
+  {
+   "t": 1.28,
+   "rms": 0.04005
+  },
+  {
+   "t": 1.31,
+   "rms": 0.0399
+  },
+  {
+   "t": 1.35,
+   "rms": 0.03924
+  },
+  {
+   "t": 1.53,
+   "rms": 0.03045
+  },
+  {
+   "t": 1.57,
+   "rms": 0.02966
+  },
+  {
+   "t": 1.62,
+   "rms": 0.02916
+  }
+ ],
+ "reorderImpSilentRunsMid": [
+  {
+   "from": 34304,
+   "to": 35840
+  },
+  {
+   "from": 70656,
+   "to": 71680
+  },
+  {
+   "from": 82432,
+   "to": 83968
+  },
+  {
+   "from": 94208,
+   "to": 95744
+  },
+  {
+   "from": 105984,
+   "to": 107520
+  },
+  {
+   "from": 118272,
+   "to": 119808
+  },
+  {
+   "from": 129536,
+   "to": 131584
+  },
+  {
+   "from": 141824,
+   "to": 143872
+  },
+  {
+   "from": 153088,
+   "to": 155648
+  },
+  {
+   "from": 164864,
+   "to": 167936
+  }
+ ]
+}

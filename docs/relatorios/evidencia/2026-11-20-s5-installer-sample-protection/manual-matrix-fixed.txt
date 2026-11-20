@@ -1,0 +1,375 @@
+-- snapshot: library-A source (D:\Core-build\s5-fix\manual-matrix\library-A)
+   _core-plan\plan.txt  44 B  2026-11-20T00:51:30.591  ea0c96083ed756ec7a3f6c0f968604a37d42665a1f66e5fa8960ebcc6587d99d
+   Bass\bass-a.wav  6144 B  2026-11-01T10:00:00.000  9eab42dbcbbb40788d48464162740d48c77099332d789960d114729655737bd4
+   Drums\kick-a.wav  4096 B  2026-11-01T10:00:00.000  a91a20315c4ab9d646d1b99fe28c56f8717f8a11cde2d5ec13a24f52b2a2a387
+   Drums\snare-a.wav  5120 B  2026-11-01T10:00:00.000  2b3b64a24d6ec96692361e4794f858c39a6984f48b078576902710c105e2bee2
+   Keys\keys-a.wav  4608 B  2026-11-01T10:00:00.000  5f824df53a2f86abdfccf4e2a0448ca69d3edbd6ab160b8bd7c1a797e777c958
+== 01 install A (exit 0)
+args: --install D:\Core-build\s5-fix\manual-matrix\target-main --no-shortcuts --samples D:\Core-build\s5-fix\manual-matrix\library-A
+stdout: 
+stderr: 
+-- snapshot: 02 after install A (D:\Core-build\s5-fix\manual-matrix\target-main)
+   app-0.7.0\.core-installed-files.txt  1685 B  2026-11-20T00:51:31.110  732ab1e430616d833684c1a97be5b2660bd5e5ad558a00c923fede632649d362
+   app-0.7.0\Core.exe  42388992 B  2026-11-20T00:42:02.000  4715cf68397ecf357016e4d6eb8e77b8427cb266a1b7a02af095f2c77845d4cc
+   app-0.7.0\core-engine.exe  32890368 B  2026-11-20T00:42:02.000  c32632b35e75c409da8115926d2b61c3e852d8b421a0663ac027dba16f5947f0
+   app-0.7.0\demo.core-document.json  7687 B  2026-11-20T00:42:02.000  0e2ef4629bcc1a4bd9258e08f19544c5ae9385eb1a832dc5b57320c68ae663b8
+   app-0.7.0\lang\pt-PT.json  183931 B  2026-11-20T00:42:02.000  dd5165cdc866dc38e571ff305351e36b9abd19d091811cfedaf586fd5622bb04
+   app-0.7.0\patterns\bass\kbbb-accent-wave.json  1543 B  2026-11-20T00:42:02.000  174f0fb5813abc585ca1d84ec4bda01836f41de75a90376cb51b4aac9aab8b71
+   app-0.7.0\patterns\bass\kbbb-anchor.json  1508 B  2026-11-20T00:42:02.000  ce4bce86d2f24c4bdbd20ebac21466d485a8d5b5b59d127bef7d36fac211c0c1
+   app-0.7.0\patterns\bass\kbbb-breath.json  1436 B  2026-11-20T00:42:02.000  fd86c7910c600bb7335541e44c7d4f5cfe62074b1b1755f91950a76d823e4b38
+   app-0.7.0\patterns\bass\kbbb-eight-bar-evolution.json  8660 B  2026-11-20T00:42:02.000  90db10606074442de46668757b7aa990252f483fee7845e824126ce3f4124ff5
+   app-0.7.0\patterns\bass\kbbb-fifth-turn.json  1518 B  2026-11-20T00:42:02.000  a85e959dd23f64b1cb2c3403ebcc973cd1f8de0a429e78a6007bbe4a4397fda2
+   app-0.7.0\patterns\bass\kbbb-gate-wave.json  1527 B  2026-11-20T00:42:02.000  673f5e600feb29112e121e225ceca704d4657dbcfd4fec9a9b5a2169e6191165
+   app-0.7.0\patterns\bass\kbbb-microbounce.json  1526 B  2026-11-20T00:42:02.000  c1423ad3c4d1c1c87a0ea670213d43845b0a912db17843665d1ca308175b1405
+   app-0.7.0\patterns\bass\kbbb-octave-answer.json  1528 B  2026-11-20T00:42:02.000  dd0c493a6619e0d9fc33f0f12b68faec231c24d6655fdabab3862038cd04c9de
+   app-0.7.0\patterns\bass\kbbb-two-bar-answer.json  2462 B  2026-11-20T00:42:02.000  723360709a4ccdc4f712d22d08acba67c8a5f43b74cb4a2a231ec57bd4d25526
+   app-0.7.0\patterns\bass\kbb-spaced.json  1161 B  2026-11-20T00:42:02.000  c4f2066cb32f1bb6c2b1b5eb33901b3bb75037d4f4906e291ae5e0f3f3793693
+   app-0.7.0\patterns\bass\kb-b-syncopated.json  1176 B  2026-11-20T00:42:02.000  5e2cb2ac8aca8ea12c9081e1e6a9fa3b48d355a213caba96b668a98c5965a047
+   app-0.7.0\patterns\bass\triplet-contrast.json  1173 B  2026-11-20T00:42:02.000  321c006a1cde4182cafec793576e77e2d0e8e467818cc782de5b311234c92ace
+   app-0.7.0\patterns\break\dnb-32nd-bursts.json  3168 B  2026-11-20T00:42:02.000  69ae0c71bdbd6afa10a9ecd539b16a271ef8d7870a9450998f2fc2e0b49d7d5a
+   app-0.7.0\patterns\break\dnb-chopped-4.json  6831 B  2026-11-20T00:42:02.000  a8c71530a32e6d8cb838edb30d608827b923830695b3257cc7413df810d30391
+   app-0.7.0\patterns\break\dnb-double-kicks.json  2943 B  2026-11-20T00:42:02.000  91deef0996ff5bb4ce06beaebf35fe2bd20fc000a0abd72580d1973593e9abe8
+   app-0.7.0\patterns\break\dnb-halftime.json  1825 B  2026-11-20T00:42:02.000  942e3ab37f2f27ab2fec2a2ff2cdb2519c82707b29a95c588743aa517f1ef09a
+   app-0.7.0\patterns\break\dnb-neuro.json  2855 B  2026-11-20T00:42:02.000  53e7ea815dd0d3799ecc8597bbc4002cc5aad75707b15904fe9ed3389fc8774e
+   app-0.7.0\patterns\break\dnb-two-step.json  2480 B  2026-11-20T00:42:02.000  e10995a194511954201a95ac52ca4563c58deb57ee2cf9f11e95eb4b6ca19010
+   app-0.7.0\patterns\break\hitech-hats-thin-out.json  3920 B  2026-11-20T00:42:02.000  aa2ecf40066cb7cd10fe5a9ebaad3cb00208700fce78b936062e1eec63ed8918
+   app-0.7.0\patterns\break\hitech-offbeat-zaps.json  2788 B  2026-11-20T00:42:02.000  f2bc164a0dd7d81b77400779985b09cf8fa9eaffe6680ebd6fb60330ac325612
+   app-0.7.0\patterns\build\snare-roll-2.json  3140 B  2026-11-20T00:42:02.000  9b16ef5e1600f33e47a44f9ede6da4e8e8dc7642e95f53047976a39f08a94677
+   app-0.7.0\patterns\build\snare-roll-4.json  5742 B  2026-11-20T00:42:02.000  bec23803df8f91d17fd2993a3a6bca2be97871631833e837ea2550b3a6e47b5e
+   app-0.7.0\patterns\build\snare-roll-4-gap.json  5070 B  2026-11-20T00:42:02.000  a368018dcec9f281598c345cc40e0c0acd0104423789054c624ac41e0f4f32ff
+   app-0.7.0\patterns\build\snare-roll-8.json  10933 B  2026-11-20T00:42:02.000  ef51b86fc807e27dfec5ec635195ba416caa534c69457e14bf5d1c2f854e0120
+   app-0.7.0\patterns\build\snare-roll-gradual-4.json  11760 B  2026-11-20T00:42:02.000  4f3616de84249b1458a4aa3044d4528a3d6ba7f6e1b02d54a4c306185cf2a1b7
+   app-0.7.0\patterns\build\tom-riser-2.json  2096 B  2026-11-20T00:42:02.000  069af9f07b6d979b8fdd6bb761adb1cc2d07bcdc03e9b1dafb9f211398a0ddde
+   app-0.7.0\patterns\cymbals\crash-every-4.json  611 B  2026-11-20T00:42:02.000  7c2dc995c00cdf7ad980972de4cad104299d37dbb94eac152a0836c97b5dc28f
+   app-0.7.0\patterns\cymbals\crash-every-8.json  612 B  2026-11-20T00:42:02.000  3e6f8d7bf466b6d4cb8e7beed7b279c94391db1dc2e2fb6f87196171d502bfcc
+   app-0.7.0\patterns\cymbals\ride-offbeat.json  849 B  2026-11-20T00:42:02.000  04ff1a822a42261e07345ae9481377acfb7bafa7c3c5e5a9469ce9846258b582
+   app-0.7.0\patterns\cymbals\ride-quarters.json  834 B  2026-11-20T00:42:02.000  ef3f3df4b4318541190b220ecce5500effa21686a4efb2fe23d6b0f5110ad401
+   app-0.7.0\patterns\drop\crash-kick-hats.json  2024 B  2026-11-20T00:42:02.000  5e2f910d386c32f3b7494ca069ca7739a33936fd75dda882d709513fb1bdb6de
+   app-0.7.0\patterns\drop\hitech-slam.json  1068 B  2026-11-20T00:42:02.000  3d454e1eff7a9a1ac060b4e434972e32b1c2fe41dd425ea6ab3ac3c620cbb518
+   app-0.7.0\patterns\drums\kick-four.json  821 B  2026-11-20T00:42:02.000  3092e803b73f12fbc327fbbbd1b9b0efa11dfc5816bdbf7de6a17e329236708c
+   app-0.7.0\patterns\drums\kick-four-last-off.json  1855 B  2026-11-20T00:42:02.000  e22fd98ef68eb7f734074521ea60e415e14008e617bcf46cbc8c14fe65d0b2a8
+   app-0.7.0\patterns\hats\eighths.json  1172 B  2026-11-20T00:42:02.000  a9f1b43e029cb67851685f486e8860610b5edd6ed4bba36843e95a7a19582fc8
+   app-0.7.0\patterns\hats\hitech-gallop.json  1449 B  2026-11-20T00:42:02.000  149b5ad0527f9dce655555d2bf42867d09f2ce3962e4e56cd96a405570ce8778
+   app-0.7.0\patterns\hats\offbeat-open.json  860 B  2026-11-20T00:42:02.000  d515921c60d3fd7524a4325356884097bc465ad7056643f26dbac0e254e6e7cc
+   app-0.7.0\patterns\hats\sixteenths-accent.json  1936 B  2026-11-20T00:42:02.000  3c22d625b71d412caa8bbed71cabe9dd2d1bb493e01648544c0b69aae83ae0ea
+   app-0.7.0\patterns\lead\acid-line.json  1366 B  2026-11-20T00:42:02.000  8654cd4ace06dfaebba37cd541b999ccaa000f63c1bb9714e022fec7a359326b
+   app-0.7.0\patterns\lead\arp-minor-down.json  1902 B  2026-11-20T00:42:02.000  83c9d64a3527298c395944170d0614abdf9a7acd6015a4dfc75eec218bafe134
+   app-0.7.0\patterns\lead\arp-minor-up.json  1896 B  2026-11-20T00:42:02.000  ca6e5fdeeb40be9928b4295742a9524a3e8a0c3cb726e140f0a1e57b303f014d
+   app-0.7.0\patterns\lead\arp-minor-up-down.json  1911 B  2026-11-20T00:42:02.000  8c6d001877c1b35c9f759540a2e1c1b720913c544bb5e089f3ab38c8598c2ffd
+   app-0.7.0\patterns\perc\clap-two-four.json  655 B  2026-11-20T00:42:02.000  5b2714e757daa2852240d953822591a833fd8d7f058e906e222031c923ce8278
+   app-0.7.0\patterns\perc\snare-sparse.json  700 B  2026-11-20T00:42:02.000  48fc533d57ce81202b47a6b184dd877286efcf253207747f96afb4cbefccb8d7
+   app-0.7.0\patterns\perc\zap-answer.json  796 B  2026-11-20T00:42:02.000  86c258560bfae277d55b4be149922fdca11acaf6dc97483985b6701b1f96247c
+   app-0.7.0\pcore\styles.json  28689 B  2026-11-20T00:42:02.000  e0dd2dc47363a7a3f4ee30dde2237b1a0f6af24e14f42eaf25d141a19a4b8a26
+   current.txt  5 B  2026-11-20T00:51:31.110  b0cb276cde517779ca43a5f8fe94adcd6b1ca3b4e7da5e97f2ccd9c3b4381df8
+   samples.txt  331 B  2026-11-20T00:51:31.125  130cac2f09c46a856506dd996589c4ac3669db5a7eec39bc0f1e263df0dbba84
+   Samples\Bass\bass-a.wav  6144 B  2026-11-01T10:00:00.000  9eab42dbcbbb40788d48464162740d48c77099332d789960d114729655737bd4
+   Samples\Drums\kick-a.wav  4096 B  2026-11-01T10:00:00.000  a91a20315c4ab9d646d1b99fe28c56f8717f8a11cde2d5ec13a24f52b2a2a387
+   Samples\Drums\snare-a.wav  5120 B  2026-11-01T10:00:00.000  2b3b64a24d6ec96692361e4794f858c39a6984f48b078576902710c105e2bee2
+   Samples\Keys\keys-a.wav  4608 B  2026-11-01T10:00:00.000  5f824df53a2f86abdfccf4e2a0448ca69d3edbd6ab160b8bd7c1a797e777c958
+   Uninstall.exe  45207040 B  2026-11-20T00:50:35.547  c05940face2ee65a4bf4e621dd85281d963ec23016431112fb3e6c2c8de6001b
+   samples.txt content:
+Bass/bass-a.wav	9eab42dbcbbb40788d48464162740d48c77099332d789960d114729655737bd4
+Drums/kick-a.wav	a91a20315c4ab9d646d1b99fe28c56f8717f8a11cde2d5ec13a24f52b2a2a387
+Drums/snare-a.wav	2b3b64a24d6ec96692361e4794f858c39a6984f48b078576902710c105e2bee2
+Keys/keys-a.wav	5f824df53a2f86abdfccf4e2a0448ca69d3edbd6ab160b8bd7c1a797e777c958
+
+-- snapshot: 03 after user mutations (i,ii,iv; iii intact) (D:\Core-build\s5-fix\manual-matrix\target-main)
+   app-0.7.0\.core-installed-files.txt  1685 B  2026-11-20T00:51:31.110  732ab1e430616d833684c1a97be5b2660bd5e5ad558a00c923fede632649d362
+   app-0.7.0\Core.exe  42388992 B  2026-11-20T00:42:02.000  4715cf68397ecf357016e4d6eb8e77b8427cb266a1b7a02af095f2c77845d4cc
+   app-0.7.0\core-engine.exe  32890368 B  2026-11-20T00:42:02.000  c32632b35e75c409da8115926d2b61c3e852d8b421a0663ac027dba16f5947f0
+   app-0.7.0\demo.core-document.json  7687 B  2026-11-20T00:42:02.000  0e2ef4629bcc1a4bd9258e08f19544c5ae9385eb1a832dc5b57320c68ae663b8
+   app-0.7.0\lang\pt-PT.json  183931 B  2026-11-20T00:42:02.000  dd5165cdc866dc38e571ff305351e36b9abd19d091811cfedaf586fd5622bb04
+   app-0.7.0\patterns\bass\kbbb-accent-wave.json  1543 B  2026-11-20T00:42:02.000  174f0fb5813abc585ca1d84ec4bda01836f41de75a90376cb51b4aac9aab8b71
+   app-0.7.0\patterns\bass\kbbb-anchor.json  1508 B  2026-11-20T00:42:02.000  ce4bce86d2f24c4bdbd20ebac21466d485a8d5b5b59d127bef7d36fac211c0c1
+   app-0.7.0\patterns\bass\kbbb-breath.json  1436 B  2026-11-20T00:42:02.000  fd86c7910c600bb7335541e44c7d4f5cfe62074b1b1755f91950a76d823e4b38
+   app-0.7.0\patterns\bass\kbbb-eight-bar-evolution.json  8660 B  2026-11-20T00:42:02.000  90db10606074442de46668757b7aa990252f483fee7845e824126ce3f4124ff5
+   app-0.7.0\patterns\bass\kbbb-fifth-turn.json  1518 B  2026-11-20T00:42:02.000  a85e959dd23f64b1cb2c3403ebcc973cd1f8de0a429e78a6007bbe4a4397fda2
+   app-0.7.0\patterns\bass\kbbb-gate-wave.json  1527 B  2026-11-20T00:42:02.000  673f5e600feb29112e121e225ceca704d4657dbcfd4fec9a9b5a2169e6191165
+   app-0.7.0\patterns\bass\kbbb-microbounce.json  1526 B  2026-11-20T00:42:02.000  c1423ad3c4d1c1c87a0ea670213d43845b0a912db17843665d1ca308175b1405
+   app-0.7.0\patterns\bass\kbbb-octave-answer.json  1528 B  2026-11-20T00:42:02.000  dd0c493a6619e0d9fc33f0f12b68faec231c24d6655fdabab3862038cd04c9de
+   app-0.7.0\patterns\bass\kbbb-two-bar-answer.json  2462 B  2026-11-20T00:42:02.000  723360709a4ccdc4f712d22d08acba67c8a5f43b74cb4a2a231ec57bd4d25526
+   app-0.7.0\patterns\bass\kbb-spaced.json  1161 B  2026-11-20T00:42:02.000  c4f2066cb32f1bb6c2b1b5eb33901b3bb75037d4f4906e291ae5e0f3f3793693
+   app-0.7.0\patterns\bass\kb-b-syncopated.json  1176 B  2026-11-20T00:42:02.000  5e2cb2ac8aca8ea12c9081e1e6a9fa3b48d355a213caba96b668a98c5965a047
+   app-0.7.0\patterns\bass\triplet-contrast.json  1173 B  2026-11-20T00:42:02.000  321c006a1cde4182cafec793576e77e2d0e8e467818cc782de5b311234c92ace
+   app-0.7.0\patterns\break\dnb-32nd-bursts.json  3168 B  2026-11-20T00:42:02.000  69ae0c71bdbd6afa10a9ecd539b16a271ef8d7870a9450998f2fc2e0b49d7d5a
+   app-0.7.0\patterns\break\dnb-chopped-4.json  6831 B  2026-11-20T00:42:02.000  a8c71530a32e6d8cb838edb30d608827b923830695b3257cc7413df810d30391
+   app-0.7.0\patterns\break\dnb-double-kicks.json  2943 B  2026-11-20T00:42:02.000  91deef0996ff5bb4ce06beaebf35fe2bd20fc000a0abd72580d1973593e9abe8
+   app-0.7.0\patterns\break\dnb-halftime.json  1825 B  2026-11-20T00:42:02.000  942e3ab37f2f27ab2fec2a2ff2cdb2519c82707b29a95c588743aa517f1ef09a
+   app-0.7.0\patterns\break\dnb-neuro.json  2855 B  2026-11-20T00:42:02.000  53e7ea815dd0d3799ecc8597bbc4002cc5aad75707b15904fe9ed3389fc8774e
+   app-0.7.0\patterns\break\dnb-two-step.json  2480 B  2026-11-20T00:42:02.000  e10995a194511954201a95ac52ca4563c58deb57ee2cf9f11e95eb4b6ca19010
+   app-0.7.0\patterns\break\hitech-hats-thin-out.json  3920 B  2026-11-20T00:42:02.000  aa2ecf40066cb7cd10fe5a9ebaad3cb00208700fce78b936062e1eec63ed8918
+   app-0.7.0\patterns\break\hitech-offbeat-zaps.json  2788 B  2026-11-20T00:42:02.000  f2bc164a0dd7d81b77400779985b09cf8fa9eaffe6680ebd6fb60330ac325612
+   app-0.7.0\patterns\build\snare-roll-2.json  3140 B  2026-11-20T00:42:02.000  9b16ef5e1600f33e47a44f9ede6da4e8e8dc7642e95f53047976a39f08a94677
+   app-0.7.0\patterns\build\snare-roll-4.json  5742 B  2026-11-20T00:42:02.000  bec23803df8f91d17fd2993a3a6bca2be97871631833e837ea2550b3a6e47b5e
+   app-0.7.0\patterns\build\snare-roll-4-gap.json  5070 B  2026-11-20T00:42:02.000  a368018dcec9f281598c345cc40e0c0acd0104423789054c624ac41e0f4f32ff
+   app-0.7.0\patterns\build\snare-roll-8.json  10933 B  2026-11-20T00:42:02.000  ef51b86fc807e27dfec5ec635195ba416caa534c69457e14bf5d1c2f854e0120
+   app-0.7.0\patterns\build\snare-roll-gradual-4.json  11760 B  2026-11-20T00:42:02.000  4f3616de84249b1458a4aa3044d4528a3d6ba7f6e1b02d54a4c306185cf2a1b7
+   app-0.7.0\patterns\build\tom-riser-2.json  2096 B  2026-11-20T00:42:02.000  069af9f07b6d979b8fdd6bb761adb1cc2d07bcdc03e9b1dafb9f211398a0ddde
+   app-0.7.0\patterns\cymbals\crash-every-4.json  611 B  2026-11-20T00:42:02.000  7c2dc995c00cdf7ad980972de4cad104299d37dbb94eac152a0836c97b5dc28f
+   app-0.7.0\patterns\cymbals\crash-every-8.json  612 B  2026-11-20T00:42:02.000  3e6f8d7bf466b6d4cb8e7beed7b279c94391db1dc2e2fb6f87196171d502bfcc
+   app-0.7.0\patterns\cymbals\ride-offbeat.json  849 B  2026-11-20T00:42:02.000  04ff1a822a42261e07345ae9481377acfb7bafa7c3c5e5a9469ce9846258b582
+   app-0.7.0\patterns\cymbals\ride-quarters.json  834 B  2026-11-20T00:42:02.000  ef3f3df4b4318541190b220ecce5500effa21686a4efb2fe23d6b0f5110ad401
+   app-0.7.0\patterns\drop\crash-kick-hats.json  2024 B  2026-11-20T00:42:02.000  5e2f910d386c32f3b7494ca069ca7739a33936fd75dda882d709513fb1bdb6de
+   app-0.7.0\patterns\drop\hitech-slam.json  1068 B  2026-11-20T00:42:02.000  3d454e1eff7a9a1ac060b4e434972e32b1c2fe41dd425ea6ab3ac3c620cbb518
+   app-0.7.0\patterns\drums\kick-four.json  821 B  2026-11-20T00:42:02.000  3092e803b73f12fbc327fbbbd1b9b0efa11dfc5816bdbf7de6a17e329236708c
+   app-0.7.0\patterns\drums\kick-four-last-off.json  1855 B  2026-11-20T00:42:02.000  e22fd98ef68eb7f734074521ea60e415e14008e617bcf46cbc8c14fe65d0b2a8
+   app-0.7.0\patterns\hats\eighths.json  1172 B  2026-11-20T00:42:02.000  a9f1b43e029cb67851685f486e8860610b5edd6ed4bba36843e95a7a19582fc8
+   app-0.7.0\patterns\hats\hitech-gallop.json  1449 B  2026-11-20T00:42:02.000  149b5ad0527f9dce655555d2bf42867d09f2ce3962e4e56cd96a405570ce8778
+   app-0.7.0\patterns\hats\offbeat-open.json  860 B  2026-11-20T00:42:02.000  d515921c60d3fd7524a4325356884097bc465ad7056643f26dbac0e254e6e7cc
+   app-0.7.0\patterns\hats\sixteenths-accent.json  1936 B  2026-11-20T00:42:02.000  3c22d625b71d412caa8bbed71cabe9dd2d1bb493e01648544c0b69aae83ae0ea
+   app-0.7.0\patterns\lead\acid-line.json  1366 B  2026-11-20T00:42:02.000  8654cd4ace06dfaebba37cd541b999ccaa000f63c1bb9714e022fec7a359326b
+   app-0.7.0\patterns\lead\arp-minor-down.json  1902 B  2026-11-20T00:42:02.000  83c9d64a3527298c395944170d0614abdf9a7acd6015a4dfc75eec218bafe134
+   app-0.7.0\patterns\lead\arp-minor-up.json  1896 B  2026-11-20T00:42:02.000  ca6e5fdeeb40be9928b4295742a9524a3e8a0c3cb726e140f0a1e57b303f014d
+   app-0.7.0\patterns\lead\arp-minor-up-down.json  1911 B  2026-11-20T00:42:02.000  8c6d001877c1b35c9f759540a2e1c1b720913c544bb5e089f3ab38c8598c2ffd
+   app-0.7.0\patterns\perc\clap-two-four.json  655 B  2026-11-20T00:42:02.000  5b2714e757daa2852240d953822591a833fd8d7f058e906e222031c923ce8278
+   app-0.7.0\patterns\perc\snare-sparse.json  700 B  2026-11-20T00:42:02.000  48fc533d57ce81202b47a6b184dd877286efcf253207747f96afb4cbefccb8d7
+   app-0.7.0\patterns\perc\zap-answer.json  796 B  2026-11-20T00:42:02.000  86c258560bfae277d55b4be149922fdca11acaf6dc97483985b6701b1f96247c
+   app-0.7.0\pcore\styles.json  28689 B  2026-11-20T00:42:02.000  e0dd2dc47363a7a3f4ee30dde2237b1a0f6af24e14f42eaf25d141a19a4b8a26
+   current.txt  5 B  2026-11-20T00:51:31.110  b0cb276cde517779ca43a5f8fe94adcd6b1ca3b4e7da5e97f2ccd9c3b4381df8
+   samples.txt  331 B  2026-11-20T00:51:31.125  130cac2f09c46a856506dd996589c4ac3669db5a7eec39bc0f1e263df0dbba84
+   Samples\Bass\bass-a.wav  6144 B  2026-11-01T10:00:00.000  9eab42dbcbbb40788d48464162740d48c77099332d789960d114729655737bd4
+   Samples\Drums\kick-a.wav  4352 B  2026-11-20T00:51:32.269  9cd4d1e9ae56718879bf510e36cde3c6b5f156f094ba46b21e51ff9afc38bb0a
+   Samples\Drums\snare-a.wav  3000 B  2026-11-20T00:51:32.270  7d592e6daaef379260815e7d6fbcfeeb8fb43b9a0d7647d2c0d17688db3ccd9e
+   Samples\Keys\keys-a.wav  4608 B  2026-11-01T10:00:00.000  b47b6017af29abd844ee03a8166947ee8228c291f2c12b0dba8dde538476d67b
+   Uninstall.exe  45207040 B  2026-11-20T00:50:35.547  c05940face2ee65a4bf4e621dd85281d963ec23016431112fb3e6c2c8de6001b
+   samples.txt content:
+Bass/bass-a.wav	9eab42dbcbbb40788d48464162740d48c77099332d789960d114729655737bd4
+Drums/kick-a.wav	a91a20315c4ab9d646d1b99fe28c56f8717f8a11cde2d5ec13a24f52b2a2a387
+Drums/snare-a.wav	2b3b64a24d6ec96692361e4794f858c39a6984f48b078576902710c105e2bee2
+Keys/keys-a.wav	5f824df53a2f86abdfccf4e2a0448ca69d3edbd6ab160b8bd7c1a797e777c958
+
+== 04 reinstall A (exit 0)
+args: --install D:\Core-build\s5-fix\manual-matrix\target-main --no-shortcuts --samples D:\Core-build\s5-fix\manual-matrix\library-A
+stdout: Kept your file (not Core's installed copy): D:\Core-build\s5-fix\manual-matrix\target-main\Samples\Drums\kick-a.wav
+Kept your file (not Core's installed copy): D:\Core-build\s5-fix\manual-matrix\target-main\Samples\Drums\snare-a.wav
+Kept your file (not Core's installed copy): D:\Core-build\s5-fix\manual-matrix\target-main\Samples\Keys\keys-a.wav
+
+stderr: 
+-- snapshot: 05 after reinstall A (D:\Core-build\s5-fix\manual-matrix\target-main)
+   app-0.7.0\.core-installed-files.txt  1685 B  2026-11-20T00:51:33.006  732ab1e430616d833684c1a97be5b2660bd5e5ad558a00c923fede632649d362
+   app-0.7.0\Core.exe  42388992 B  2026-11-20T00:42:02.000  4715cf68397ecf357016e4d6eb8e77b8427cb266a1b7a02af095f2c77845d4cc
+   app-0.7.0\core-engine.exe  32890368 B  2026-11-20T00:42:02.000  c32632b35e75c409da8115926d2b61c3e852d8b421a0663ac027dba16f5947f0
+   app-0.7.0\demo.core-document.json  7687 B  2026-11-20T00:42:02.000  0e2ef4629bcc1a4bd9258e08f19544c5ae9385eb1a832dc5b57320c68ae663b8
+   app-0.7.0\lang\pt-PT.json  183931 B  2026-11-20T00:42:02.000  dd5165cdc866dc38e571ff305351e36b9abd19d091811cfedaf586fd5622bb04
+   app-0.7.0\patterns\bass\kbbb-accent-wave.json  1543 B  2026-11-20T00:42:02.000  174f0fb5813abc585ca1d84ec4bda01836f41de75a90376cb51b4aac9aab8b71
+   app-0.7.0\patterns\bass\kbbb-anchor.json  1508 B  2026-11-20T00:42:02.000  ce4bce86d2f24c4bdbd20ebac21466d485a8d5b5b59d127bef7d36fac211c0c1
+   app-0.7.0\patterns\bass\kbbb-breath.json  1436 B  2026-11-20T00:42:02.000  fd86c7910c600bb7335541e44c7d4f5cfe62074b1b1755f91950a76d823e4b38
+   app-0.7.0\patterns\bass\kbbb-eight-bar-evolution.json  8660 B  2026-11-20T00:42:02.000  90db10606074442de46668757b7aa990252f483fee7845e824126ce3f4124ff5
+   app-0.7.0\patterns\bass\kbbb-fifth-turn.json  1518 B  2026-11-20T00:42:02.000  a85e959dd23f64b1cb2c3403ebcc973cd1f8de0a429e78a6007bbe4a4397fda2
+   app-0.7.0\patterns\bass\kbbb-gate-wave.json  1527 B  2026-11-20T00:42:02.000  673f5e600feb29112e121e225ceca704d4657dbcfd4fec9a9b5a2169e6191165
+   app-0.7.0\patterns\bass\kbbb-microbounce.json  1526 B  2026-11-20T00:42:02.000  c1423ad3c4d1c1c87a0ea670213d43845b0a912db17843665d1ca308175b1405
+   app-0.7.0\patterns\bass\kbbb-octave-answer.json  1528 B  2026-11-20T00:42:02.000  dd0c493a6619e0d9fc33f0f12b68faec231c24d6655fdabab3862038cd04c9de
+   app-0.7.0\patterns\bass\kbbb-two-bar-answer.json  2462 B  2026-11-20T00:42:02.000  723360709a4ccdc4f712d22d08acba67c8a5f43b74cb4a2a231ec57bd4d25526
+   app-0.7.0\patterns\bass\kbb-spaced.json  1161 B  2026-11-20T00:42:02.000  c4f2066cb32f1bb6c2b1b5eb33901b3bb75037d4f4906e291ae5e0f3f3793693
+   app-0.7.0\patterns\bass\kb-b-syncopated.json  1176 B  2026-11-20T00:42:02.000  5e2cb2ac8aca8ea12c9081e1e6a9fa3b48d355a213caba96b668a98c5965a047
+   app-0.7.0\patterns\bass\triplet-contrast.json  1173 B  2026-11-20T00:42:02.000  321c006a1cde4182cafec793576e77e2d0e8e467818cc782de5b311234c92ace
+   app-0.7.0\patterns\break\dnb-32nd-bursts.json  3168 B  2026-11-20T00:42:02.000  69ae0c71bdbd6afa10a9ecd539b16a271ef8d7870a9450998f2fc2e0b49d7d5a
+   app-0.7.0\patterns\break\dnb-chopped-4.json  6831 B  2026-11-20T00:42:02.000  a8c71530a32e6d8cb838edb30d608827b923830695b3257cc7413df810d30391
+   app-0.7.0\patterns\break\dnb-double-kicks.json  2943 B  2026-11-20T00:42:02.000  91deef0996ff5bb4ce06beaebf35fe2bd20fc000a0abd72580d1973593e9abe8
+   app-0.7.0\patterns\break\dnb-halftime.json  1825 B  2026-11-20T00:42:02.000  942e3ab37f2f27ab2fec2a2ff2cdb2519c82707b29a95c588743aa517f1ef09a
+   app-0.7.0\patterns\break\dnb-neuro.json  2855 B  2026-11-20T00:42:02.000  53e7ea815dd0d3799ecc8597bbc4002cc5aad75707b15904fe9ed3389fc8774e
+   app-0.7.0\patterns\break\dnb-two-step.json  2480 B  2026-11-20T00:42:02.000  e10995a194511954201a95ac52ca4563c58deb57ee2cf9f11e95eb4b6ca19010
+   app-0.7.0\patterns\break\hitech-hats-thin-out.json  3920 B  2026-11-20T00:42:02.000  aa2ecf40066cb7cd10fe5a9ebaad3cb00208700fce78b936062e1eec63ed8918
+   app-0.7.0\patterns\break\hitech-offbeat-zaps.json  2788 B  2026-11-20T00:42:02.000  f2bc164a0dd7d81b77400779985b09cf8fa9eaffe6680ebd6fb60330ac325612
+   app-0.7.0\patterns\build\snare-roll-2.json  3140 B  2026-11-20T00:42:02.000  9b16ef5e1600f33e47a44f9ede6da4e8e8dc7642e95f53047976a39f08a94677
+   app-0.7.0\patterns\build\snare-roll-4.json  5742 B  2026-11-20T00:42:02.000  bec23803df8f91d17fd2993a3a6bca2be97871631833e837ea2550b3a6e47b5e
+   app-0.7.0\patterns\build\snare-roll-4-gap.json  5070 B  2026-11-20T00:42:02.000  a368018dcec9f281598c345cc40e0c0acd0104423789054c624ac41e0f4f32ff
+   app-0.7.0\patterns\build\snare-roll-8.json  10933 B  2026-11-20T00:42:02.000  ef51b86fc807e27dfec5ec635195ba416caa534c69457e14bf5d1c2f854e0120
+   app-0.7.0\patterns\build\snare-roll-gradual-4.json  11760 B  2026-11-20T00:42:02.000  4f3616de84249b1458a4aa3044d4528a3d6ba7f6e1b02d54a4c306185cf2a1b7
+   app-0.7.0\patterns\build\tom-riser-2.json  2096 B  2026-11-20T00:42:02.000  069af9f07b6d979b8fdd6bb761adb1cc2d07bcdc03e9b1dafb9f211398a0ddde
+   app-0.7.0\patterns\cymbals\crash-every-4.json  611 B  2026-11-20T00:42:02.000  7c2dc995c00cdf7ad980972de4cad104299d37dbb94eac152a0836c97b5dc28f
+   app-0.7.0\patterns\cymbals\crash-every-8.json  612 B  2026-11-20T00:42:02.000  3e6f8d7bf466b6d4cb8e7beed7b279c94391db1dc2e2fb6f87196171d502bfcc
+   app-0.7.0\patterns\cymbals\ride-offbeat.json  849 B  2026-11-20T00:42:02.000  04ff1a822a42261e07345ae9481377acfb7bafa7c3c5e5a9469ce9846258b582
+   app-0.7.0\patterns\cymbals\ride-quarters.json  834 B  2026-11-20T00:42:02.000  ef3f3df4b4318541190b220ecce5500effa21686a4efb2fe23d6b0f5110ad401
+   app-0.7.0\patterns\drop\crash-kick-hats.json  2024 B  2026-11-20T00:42:02.000  5e2f910d386c32f3b7494ca069ca7739a33936fd75dda882d709513fb1bdb6de
+   app-0.7.0\patterns\drop\hitech-slam.json  1068 B  2026-11-20T00:42:02.000  3d454e1eff7a9a1ac060b4e434972e32b1c2fe41dd425ea6ab3ac3c620cbb518
+   app-0.7.0\patterns\drums\kick-four.json  821 B  2026-11-20T00:42:02.000  3092e803b73f12fbc327fbbbd1b9b0efa11dfc5816bdbf7de6a17e329236708c
+   app-0.7.0\patterns\drums\kick-four-last-off.json  1855 B  2026-11-20T00:42:02.000  e22fd98ef68eb7f734074521ea60e415e14008e617bcf46cbc8c14fe65d0b2a8
+   app-0.7.0\patterns\hats\eighths.json  1172 B  2026-11-20T00:42:02.000  a9f1b43e029cb67851685f486e8860610b5edd6ed4bba36843e95a7a19582fc8
+   app-0.7.0\patterns\hats\hitech-gallop.json  1449 B  2026-11-20T00:42:02.000  149b5ad0527f9dce655555d2bf42867d09f2ce3962e4e56cd96a405570ce8778
+   app-0.7.0\patterns\hats\offbeat-open.json  860 B  2026-11-20T00:42:02.000  d515921c60d3fd7524a4325356884097bc465ad7056643f26dbac0e254e6e7cc
+   app-0.7.0\patterns\hats\sixteenths-accent.json  1936 B  2026-11-20T00:42:02.000  3c22d625b71d412caa8bbed71cabe9dd2d1bb493e01648544c0b69aae83ae0ea
+   app-0.7.0\patterns\lead\acid-line.json  1366 B  2026-11-20T00:42:02.000  8654cd4ace06dfaebba37cd541b999ccaa000f63c1bb9714e022fec7a359326b
+   app-0.7.0\patterns\lead\arp-minor-down.json  1902 B  2026-11-20T00:42:02.000  83c9d64a3527298c395944170d0614abdf9a7acd6015a4dfc75eec218bafe134
+   app-0.7.0\patterns\lead\arp-minor-up.json  1896 B  2026-11-20T00:42:02.000  ca6e5fdeeb40be9928b4295742a9524a3e8a0c3cb726e140f0a1e57b303f014d
+   app-0.7.0\patterns\lead\arp-minor-up-down.json  1911 B  2026-11-20T00:42:02.000  8c6d001877c1b35c9f759540a2e1c1b720913c544bb5e089f3ab38c8598c2ffd
+   app-0.7.0\patterns\perc\clap-two-four.json  655 B  2026-11-20T00:42:02.000  5b2714e757daa2852240d953822591a833fd8d7f058e906e222031c923ce8278
+   app-0.7.0\patterns\perc\snare-sparse.json  700 B  2026-11-20T00:42:02.000  48fc533d57ce81202b47a6b184dd877286efcf253207747f96afb4cbefccb8d7
+   app-0.7.0\patterns\perc\zap-answer.json  796 B  2026-11-20T00:42:02.000  86c258560bfae277d55b4be149922fdca11acaf6dc97483985b6701b1f96247c
+   app-0.7.0\pcore\styles.json  28689 B  2026-11-20T00:42:02.000  e0dd2dc47363a7a3f4ee30dde2237b1a0f6af24e14f42eaf25d141a19a4b8a26
+   current.txt  5 B  2026-11-20T00:51:33.017  b0cb276cde517779ca43a5f8fe94adcd6b1ca3b4e7da5e97f2ccd9c3b4381df8
+   samples.txt  82 B  2026-11-20T00:51:33.034  0740bc725eeef62f098ff5f683962cb3cf6400ceefc95b278977d953b0de6485
+   Samples\Bass\bass-a.wav  6144 B  2026-11-01T10:00:00.000  9eab42dbcbbb40788d48464162740d48c77099332d789960d114729655737bd4
+   Samples\Drums\kick-a.wav  4352 B  2026-11-20T00:51:32.269  9cd4d1e9ae56718879bf510e36cde3c6b5f156f094ba46b21e51ff9afc38bb0a
+   Samples\Drums\snare-a.wav  3000 B  2026-11-20T00:51:32.270  7d592e6daaef379260815e7d6fbcfeeb8fb43b9a0d7647d2c0d17688db3ccd9e
+   Samples\Keys\keys-a.wav  4608 B  2026-11-01T10:00:00.000  b47b6017af29abd844ee03a8166947ee8228c291f2c12b0dba8dde538476d67b
+   Uninstall.exe  45207040 B  2026-11-20T00:50:35.547  c05940face2ee65a4bf4e621dd85281d963ec23016431112fb3e6c2c8de6001b
+   samples.txt content:
+Bass/bass-a.wav	9eab42dbcbbb40788d48464162740d48c77099332d789960d114729655737bd4
+
+== 06 uninstall (exit 0)
+args: --uninstall D:\Core-build\s5-fix\manual-matrix\target-main --no-shortcuts --samples D:\Core-build\s5-fix\manual-matrix\library-A
+stdout: 
+stderr: 
+-- snapshot: 07 after uninstall (D:\Core-build\s5-fix\manual-matrix\target-main)
+   Samples\Drums\kick-a.wav  4352 B  2026-11-20T00:51:32.269  9cd4d1e9ae56718879bf510e36cde3c6b5f156f094ba46b21e51ff9afc38bb0a
+   Samples\Drums\snare-a.wav  3000 B  2026-11-20T00:51:32.270  7d592e6daaef379260815e7d6fbcfeeb8fb43b9a0d7647d2c0d17688db3ccd9e
+   Samples\Keys\keys-a.wav  4608 B  2026-11-01T10:00:00.000  b47b6017af29abd844ee03a8166947ee8228c291f2c12b0dba8dde538476d67b
+-- snapshot: 08 fresh pre-install (v,vi) (D:\Core-build\s5-fix\manual-matrix\target-fresh)
+   Samples\Drums\snare-a.wav  5120 B  2026-11-01T10:00:00.000  710877b7c59e202770b8cfb195b3eabe59dd420802a21afae7df16282f944aea
+   Samples\MyRecordings\user-take.wav  2048 B  2026-11-20T00:51:35.206  331a995aa832ff6626eb62e9cf85e6b9e29d3d22b84438ce930e763923d77c0b
+== 09 fresh install A (exit 0)
+args: --install D:\Core-build\s5-fix\manual-matrix\target-fresh --no-shortcuts --samples D:\Core-build\s5-fix\manual-matrix\library-A
+stdout: 
+stderr: 
+-- snapshot: 10 fresh after install A (D:\Core-build\s5-fix\manual-matrix\target-fresh)
+   app-0.7.0\.core-installed-files.txt  1685 B  2026-11-20T00:51:35.696  732ab1e430616d833684c1a97be5b2660bd5e5ad558a00c923fede632649d362
+   app-0.7.0\Core.exe  42388992 B  2026-11-20T00:42:02.000  4715cf68397ecf357016e4d6eb8e77b8427cb266a1b7a02af095f2c77845d4cc
+   app-0.7.0\core-engine.exe  32890368 B  2026-11-20T00:42:02.000  c32632b35e75c409da8115926d2b61c3e852d8b421a0663ac027dba16f5947f0
+   app-0.7.0\demo.core-document.json  7687 B  2026-11-20T00:42:02.000  0e2ef4629bcc1a4bd9258e08f19544c5ae9385eb1a832dc5b57320c68ae663b8
+   app-0.7.0\lang\pt-PT.json  183931 B  2026-11-20T00:42:02.000  dd5165cdc866dc38e571ff305351e36b9abd19d091811cfedaf586fd5622bb04
+   app-0.7.0\patterns\bass\kbbb-accent-wave.json  1543 B  2026-11-20T00:42:02.000  174f0fb5813abc585ca1d84ec4bda01836f41de75a90376cb51b4aac9aab8b71
+   app-0.7.0\patterns\bass\kbbb-anchor.json  1508 B  2026-11-20T00:42:02.000  ce4bce86d2f24c4bdbd20ebac21466d485a8d5b5b59d127bef7d36fac211c0c1
+   app-0.7.0\patterns\bass\kbbb-breath.json  1436 B  2026-11-20T00:42:02.000  fd86c7910c600bb7335541e44c7d4f5cfe62074b1b1755f91950a76d823e4b38
+   app-0.7.0\patterns\bass\kbbb-eight-bar-evolution.json  8660 B  2026-11-20T00:42:02.000  90db10606074442de46668757b7aa990252f483fee7845e824126ce3f4124ff5
+   app-0.7.0\patterns\bass\kbbb-fifth-turn.json  1518 B  2026-11-20T00:42:02.000  a85e959dd23f64b1cb2c3403ebcc973cd1f8de0a429e78a6007bbe4a4397fda2
+   app-0.7.0\patterns\bass\kbbb-gate-wave.json  1527 B  2026-11-20T00:42:02.000  673f5e600feb29112e121e225ceca704d4657dbcfd4fec9a9b5a2169e6191165
+   app-0.7.0\patterns\bass\kbbb-microbounce.json  1526 B  2026-11-20T00:42:02.000  c1423ad3c4d1c1c87a0ea670213d43845b0a912db17843665d1ca308175b1405
+   app-0.7.0\patterns\bass\kbbb-octave-answer.json  1528 B  2026-11-20T00:42:02.000  dd0c493a6619e0d9fc33f0f12b68faec231c24d6655fdabab3862038cd04c9de
+   app-0.7.0\patterns\bass\kbbb-two-bar-answer.json  2462 B  2026-11-20T00:42:02.000  723360709a4ccdc4f712d22d08acba67c8a5f43b74cb4a2a231ec57bd4d25526
+   app-0.7.0\patterns\bass\kbb-spaced.json  1161 B  2026-11-20T00:42:02.000  c4f2066cb32f1bb6c2b1b5eb33901b3bb75037d4f4906e291ae5e0f3f3793693
+   app-0.7.0\patterns\bass\kb-b-syncopated.json  1176 B  2026-11-20T00:42:02.000  5e2cb2ac8aca8ea12c9081e1e6a9fa3b48d355a213caba96b668a98c5965a047
+   app-0.7.0\patterns\bass\triplet-contrast.json  1173 B  2026-11-20T00:42:02.000  321c006a1cde4182cafec793576e77e2d0e8e467818cc782de5b311234c92ace
+   app-0.7.0\patterns\break\dnb-32nd-bursts.json  3168 B  2026-11-20T00:42:02.000  69ae0c71bdbd6afa10a9ecd539b16a271ef8d7870a9450998f2fc2e0b49d7d5a
+   app-0.7.0\patterns\break\dnb-chopped-4.json  6831 B  2026-11-20T00:42:02.000  a8c71530a32e6d8cb838edb30d608827b923830695b3257cc7413df810d30391
+   app-0.7.0\patterns\break\dnb-double-kicks.json  2943 B  2026-11-20T00:42:02.000  91deef0996ff5bb4ce06beaebf35fe2bd20fc000a0abd72580d1973593e9abe8
+   app-0.7.0\patterns\break\dnb-halftime.json  1825 B  2026-11-20T00:42:02.000  942e3ab37f2f27ab2fec2a2ff2cdb2519c82707b29a95c588743aa517f1ef09a
+   app-0.7.0\patterns\break\dnb-neuro.json  2855 B  2026-11-20T00:42:02.000  53e7ea815dd0d3799ecc8597bbc4002cc5aad75707b15904fe9ed3389fc8774e
+   app-0.7.0\patterns\break\dnb-two-step.json  2480 B  2026-11-20T00:42:02.000  e10995a194511954201a95ac52ca4563c58deb57ee2cf9f11e95eb4b6ca19010
+   app-0.7.0\patterns\break\hitech-hats-thin-out.json  3920 B  2026-11-20T00:42:02.000  aa2ecf40066cb7cd10fe5a9ebaad3cb00208700fce78b936062e1eec63ed8918
+   app-0.7.0\patterns\break\hitech-offbeat-zaps.json  2788 B  2026-11-20T00:42:02.000  f2bc164a0dd7d81b77400779985b09cf8fa9eaffe6680ebd6fb60330ac325612
+   app-0.7.0\patterns\build\snare-roll-2.json  3140 B  2026-11-20T00:42:02.000  9b16ef5e1600f33e47a44f9ede6da4e8e8dc7642e95f53047976a39f08a94677
+   app-0.7.0\patterns\build\snare-roll-4.json  5742 B  2026-11-20T00:42:02.000  bec23803df8f91d17fd2993a3a6bca2be97871631833e837ea2550b3a6e47b5e
+   app-0.7.0\patterns\build\snare-roll-4-gap.json  5070 B  2026-11-20T00:42:02.000  a368018dcec9f281598c345cc40e0c0acd0104423789054c624ac41e0f4f32ff
+   app-0.7.0\patterns\build\snare-roll-8.json  10933 B  2026-11-20T00:42:02.000  ef51b86fc807e27dfec5ec635195ba416caa534c69457e14bf5d1c2f854e0120
+   app-0.7.0\patterns\build\snare-roll-gradual-4.json  11760 B  2026-11-20T00:42:02.000  4f3616de84249b1458a4aa3044d4528a3d6ba7f6e1b02d54a4c306185cf2a1b7
+   app-0.7.0\patterns\build\tom-riser-2.json  2096 B  2026-11-20T00:42:02.000  069af9f07b6d979b8fdd6bb761adb1cc2d07bcdc03e9b1dafb9f211398a0ddde
+   app-0.7.0\patterns\cymbals\crash-every-4.json  611 B  2026-11-20T00:42:02.000  7c2dc995c00cdf7ad980972de4cad104299d37dbb94eac152a0836c97b5dc28f
+   app-0.7.0\patterns\cymbals\crash-every-8.json  612 B  2026-11-20T00:42:02.000  3e6f8d7bf466b6d4cb8e7beed7b279c94391db1dc2e2fb6f87196171d502bfcc
+   app-0.7.0\patterns\cymbals\ride-offbeat.json  849 B  2026-11-20T00:42:02.000  04ff1a822a42261e07345ae9481377acfb7bafa7c3c5e5a9469ce9846258b582
+   app-0.7.0\patterns\cymbals\ride-quarters.json  834 B  2026-11-20T00:42:02.000  ef3f3df4b4318541190b220ecce5500effa21686a4efb2fe23d6b0f5110ad401
+   app-0.7.0\patterns\drop\crash-kick-hats.json  2024 B  2026-11-20T00:42:02.000  5e2f910d386c32f3b7494ca069ca7739a33936fd75dda882d709513fb1bdb6de
+   app-0.7.0\patterns\drop\hitech-slam.json  1068 B  2026-11-20T00:42:02.000  3d454e1eff7a9a1ac060b4e434972e32b1c2fe41dd425ea6ab3ac3c620cbb518
+   app-0.7.0\patterns\drums\kick-four.json  821 B  2026-11-20T00:42:02.000  3092e803b73f12fbc327fbbbd1b9b0efa11dfc5816bdbf7de6a17e329236708c
+   app-0.7.0\patterns\drums\kick-four-last-off.json  1855 B  2026-11-20T00:42:02.000  e22fd98ef68eb7f734074521ea60e415e14008e617bcf46cbc8c14fe65d0b2a8
+   app-0.7.0\patterns\hats\eighths.json  1172 B  2026-11-20T00:42:02.000  a9f1b43e029cb67851685f486e8860610b5edd6ed4bba36843e95a7a19582fc8
+   app-0.7.0\patterns\hats\hitech-gallop.json  1449 B  2026-11-20T00:42:02.000  149b5ad0527f9dce655555d2bf42867d09f2ce3962e4e56cd96a405570ce8778
+   app-0.7.0\patterns\hats\offbeat-open.json  860 B  2026-11-20T00:42:02.000  d515921c60d3fd7524a4325356884097bc465ad7056643f26dbac0e254e6e7cc
+   app-0.7.0\patterns\hats\sixteenths-accent.json  1936 B  2026-11-20T00:42:02.000  3c22d625b71d412caa8bbed71cabe9dd2d1bb493e01648544c0b69aae83ae0ea
+   app-0.7.0\patterns\lead\acid-line.json  1366 B  2026-11-20T00:42:02.000  8654cd4ace06dfaebba37cd541b999ccaa000f63c1bb9714e022fec7a359326b
+   app-0.7.0\patterns\lead\arp-minor-down.json  1902 B  2026-11-20T00:42:02.000  83c9d64a3527298c395944170d0614abdf9a7acd6015a4dfc75eec218bafe134
+   app-0.7.0\patterns\lead\arp-minor-up.json  1896 B  2026-11-20T00:42:02.000  ca6e5fdeeb40be9928b4295742a9524a3e8a0c3cb726e140f0a1e57b303f014d
+   app-0.7.0\patterns\lead\arp-minor-up-down.json  1911 B  2026-11-20T00:42:02.000  8c6d001877c1b35c9f759540a2e1c1b720913c544bb5e089f3ab38c8598c2ffd
+   app-0.7.0\patterns\perc\clap-two-four.json  655 B  2026-11-20T00:42:02.000  5b2714e757daa2852240d953822591a833fd8d7f058e906e222031c923ce8278
+   app-0.7.0\patterns\perc\snare-sparse.json  700 B  2026-11-20T00:42:02.000  48fc533d57ce81202b47a6b184dd877286efcf253207747f96afb4cbefccb8d7
+   app-0.7.0\patterns\perc\zap-answer.json  796 B  2026-11-20T00:42:02.000  86c258560bfae277d55b4be149922fdca11acaf6dc97483985b6701b1f96247c
+   app-0.7.0\pcore\styles.json  28689 B  2026-11-20T00:42:02.000  e0dd2dc47363a7a3f4ee30dde2237b1a0f6af24e14f42eaf25d141a19a4b8a26
+   current.txt  5 B  2026-11-20T00:51:35.697  b0cb276cde517779ca43a5f8fe94adcd6b1ca3b4e7da5e97f2ccd9c3b4381df8
+   samples.txt  247 B  2026-11-20T00:51:35.710  08c65c19b0dd3bec5d8202b75064605296b1c7779cce6152545ebcfc1c6a9180
+   Samples\Bass\bass-a.wav  6144 B  2026-11-01T10:00:00.000  9eab42dbcbbb40788d48464162740d48c77099332d789960d114729655737bd4
+   Samples\Drums\kick-a.wav  4096 B  2026-11-01T10:00:00.000  a91a20315c4ab9d646d1b99fe28c56f8717f8a11cde2d5ec13a24f52b2a2a387
+   Samples\Drums\snare-a.wav  5120 B  2026-11-01T10:00:00.000  710877b7c59e202770b8cfb195b3eabe59dd420802a21afae7df16282f944aea
+   Samples\Keys\keys-a.wav  4608 B  2026-11-01T10:00:00.000  5f824df53a2f86abdfccf4e2a0448ca69d3edbd6ab160b8bd7c1a797e777c958
+   Samples\MyRecordings\user-take.wav  2048 B  2026-11-20T00:51:35.206  331a995aa832ff6626eb62e9cf85e6b9e29d3d22b84438ce930e763923d77c0b
+   Uninstall.exe  45207040 B  2026-11-20T00:50:35.547  c05940face2ee65a4bf4e621dd85281d963ec23016431112fb3e6c2c8de6001b
+   samples.txt content:
+Bass/bass-a.wav	9eab42dbcbbb40788d48464162740d48c77099332d789960d114729655737bd4
+Drums/kick-a.wav	a91a20315c4ab9d646d1b99fe28c56f8717f8a11cde2d5ec13a24f52b2a2a387
+Keys/keys-a.wav	5f824df53a2f86abdfccf4e2a0448ca69d3edbd6ab160b8bd7c1a797e777c958
+
+== 11 fresh uninstall (exit 0)
+args: --uninstall D:\Core-build\s5-fix\manual-matrix\target-fresh --no-shortcuts --samples D:\Core-build\s5-fix\manual-matrix\library-A
+stdout: 
+stderr: 
+-- snapshot: 12 fresh after uninstall (D:\Core-build\s5-fix\manual-matrix\target-fresh)
+   Samples\Drums\snare-a.wav  5120 B  2026-11-01T10:00:00.000  710877b7c59e202770b8cfb195b3eabe59dd420802a21afae7df16282f944aea
+   Samples\MyRecordings\user-take.wav  2048 B  2026-11-20T00:51:35.206  331a995aa832ff6626eb62e9cf85e6b9e29d3d22b84438ce930e763923d77c0b
+== 13 evidence install A (exit 0)
+args: --install D:\Core-build\s5-fix\manual-matrix\target-evidence --no-shortcuts --samples D:\Core-build\s5-fix\manual-matrix\library-A
+stdout: 
+stderr: 
+-- snapshot: 14 evidence pre-uninstall (D:\Core-build\s5-fix\manual-matrix\target-evidence)
+   app-0.7.0\.core-installed-files.txt  1685 B  2026-11-20T00:51:38.289  732ab1e430616d833684c1a97be5b2660bd5e5ad558a00c923fede632649d362
+   app-0.7.0\Core.exe  42388992 B  2026-11-20T00:42:02.000  4715cf68397ecf357016e4d6eb8e77b8427cb266a1b7a02af095f2c77845d4cc
+   app-0.7.0\core-engine.exe  32890368 B  2026-11-20T00:42:02.000  c32632b35e75c409da8115926d2b61c3e852d8b421a0663ac027dba16f5947f0
+   app-0.7.0\demo.core-document.json  7687 B  2026-11-20T00:42:02.000  0e2ef4629bcc1a4bd9258e08f19544c5ae9385eb1a832dc5b57320c68ae663b8
+   app-0.7.0\lang\pt-PT.json  183931 B  2026-11-20T00:42:02.000  dd5165cdc866dc38e571ff305351e36b9abd19d091811cfedaf586fd5622bb04
+   app-0.7.0\patterns\bass\kbbb-accent-wave.json  1543 B  2026-11-20T00:42:02.000  174f0fb5813abc585ca1d84ec4bda01836f41de75a90376cb51b4aac9aab8b71
+   app-0.7.0\patterns\bass\kbbb-anchor.json  1508 B  2026-11-20T00:42:02.000  ce4bce86d2f24c4bdbd20ebac21466d485a8d5b5b59d127bef7d36fac211c0c1
+   app-0.7.0\patterns\bass\kbbb-breath.json  1436 B  2026-11-20T00:42:02.000  fd86c7910c600bb7335541e44c7d4f5cfe62074b1b1755f91950a76d823e4b38
+   app-0.7.0\patterns\bass\kbbb-eight-bar-evolution.json  8660 B  2026-11-20T00:42:02.000  90db10606074442de46668757b7aa990252f483fee7845e824126ce3f4124ff5
+   app-0.7.0\patterns\bass\kbbb-fifth-turn.json  1518 B  2026-11-20T00:42:02.000  a85e959dd23f64b1cb2c3403ebcc973cd1f8de0a429e78a6007bbe4a4397fda2
+   app-0.7.0\patterns\bass\kbbb-gate-wave.json  1527 B  2026-11-20T00:42:02.000  673f5e600feb29112e121e225ceca704d4657dbcfd4fec9a9b5a2169e6191165
+   app-0.7.0\patterns\bass\kbbb-microbounce.json  1526 B  2026-11-20T00:42:02.000  c1423ad3c4d1c1c87a0ea670213d43845b0a912db17843665d1ca308175b1405
+   app-0.7.0\patterns\bass\kbbb-octave-answer.json  1528 B  2026-11-20T00:42:02.000  dd0c493a6619e0d9fc33f0f12b68faec231c24d6655fdabab3862038cd04c9de
+   app-0.7.0\patterns\bass\kbbb-two-bar-answer.json  2462 B  2026-11-20T00:42:02.000  723360709a4ccdc4f712d22d08acba67c8a5f43b74cb4a2a231ec57bd4d25526
+   app-0.7.0\patterns\bass\kbb-spaced.json  1161 B  2026-11-20T00:42:02.000  c4f2066cb32f1bb6c2b1b5eb33901b3bb75037d4f4906e291ae5e0f3f3793693
+   app-0.7.0\patterns\bass\kb-b-syncopated.json  1176 B  2026-11-20T00:42:02.000  5e2cb2ac8aca8ea12c9081e1e6a9fa3b48d355a213caba96b668a98c5965a047
+   app-0.7.0\patterns\bass\triplet-contrast.json  1173 B  2026-11-20T00:42:02.000  321c006a1cde4182cafec793576e77e2d0e8e467818cc782de5b311234c92ace
+   app-0.7.0\patterns\break\dnb-32nd-bursts.json  3168 B  2026-11-20T00:42:02.000  69ae0c71bdbd6afa10a9ecd539b16a271ef8d7870a9450998f2fc2e0b49d7d5a
+   app-0.7.0\patterns\break\dnb-chopped-4.json  6831 B  2026-11-20T00:42:02.000  a8c71530a32e6d8cb838edb30d608827b923830695b3257cc7413df810d30391
+   app-0.7.0\patterns\break\dnb-double-kicks.json  2943 B  2026-11-20T00:42:02.000  91deef0996ff5bb4ce06beaebf35fe2bd20fc000a0abd72580d1973593e9abe8
+   app-0.7.0\patterns\break\dnb-halftime.json  1825 B  2026-11-20T00:42:02.000  942e3ab37f2f27ab2fec2a2ff2cdb2519c82707b29a95c588743aa517f1ef09a
+   app-0.7.0\patterns\break\dnb-neuro.json  2855 B  2026-11-20T00:42:02.000  53e7ea815dd0d3799ecc8597bbc4002cc5aad75707b15904fe9ed3389fc8774e
+   app-0.7.0\patterns\break\dnb-two-step.json  2480 B  2026-11-20T00:42:02.000  e10995a194511954201a95ac52ca4563c58deb57ee2cf9f11e95eb4b6ca19010
+   app-0.7.0\patterns\break\hitech-hats-thin-out.json  3920 B  2026-11-20T00:42:02.000  aa2ecf40066cb7cd10fe5a9ebaad3cb00208700fce78b936062e1eec63ed8918
+   app-0.7.0\patterns\break\hitech-offbeat-zaps.json  2788 B  2026-11-20T00:42:02.000  f2bc164a0dd7d81b77400779985b09cf8fa9eaffe6680ebd6fb60330ac325612
+   app-0.7.0\patterns\build\snare-roll-2.json  3140 B  2026-11-20T00:42:02.000  9b16ef5e1600f33e47a44f9ede6da4e8e8dc7642e95f53047976a39f08a94677
+   app-0.7.0\patterns\build\snare-roll-4.json  5742 B  2026-11-20T00:42:02.000  bec23803df8f91d17fd2993a3a6bca2be97871631833e837ea2550b3a6e47b5e
+   app-0.7.0\patterns\build\snare-roll-4-gap.json  5070 B  2026-11-20T00:42:02.000  a368018dcec9f281598c345cc40e0c0acd0104423789054c624ac41e0f4f32ff
+   app-0.7.0\patterns\build\snare-roll-8.json  10933 B  2026-11-20T00:42:02.000  ef51b86fc807e27dfec5ec635195ba416caa534c69457e14bf5d1c2f854e0120
+   app-0.7.0\patterns\build\snare-roll-gradual-4.json  11760 B  2026-11-20T00:42:02.000  4f3616de84249b1458a4aa3044d4528a3d6ba7f6e1b02d54a4c306185cf2a1b7
+   app-0.7.0\patterns\build\tom-riser-2.json  2096 B  2026-11-20T00:42:02.000  069af9f07b6d979b8fdd6bb761adb1cc2d07bcdc03e9b1dafb9f211398a0ddde
+   app-0.7.0\patterns\cymbals\crash-every-4.json  611 B  2026-11-20T00:42:02.000  7c2dc995c00cdf7ad980972de4cad104299d37dbb94eac152a0836c97b5dc28f
+   app-0.7.0\patterns\cymbals\crash-every-8.json  612 B  2026-11-20T00:42:02.000  3e6f8d7bf466b6d4cb8e7beed7b279c94391db1dc2e2fb6f87196171d502bfcc
+   app-0.7.0\patterns\cymbals\ride-offbeat.json  849 B  2026-11-20T00:42:02.000  04ff1a822a42261e07345ae9481377acfb7bafa7c3c5e5a9469ce9846258b582
+   app-0.7.0\patterns\cymbals\ride-quarters.json  834 B  2026-11-20T00:42:02.000  ef3f3df4b4318541190b220ecce5500effa21686a4efb2fe23d6b0f5110ad401
+   app-0.7.0\patterns\drop\crash-kick-hats.json  2024 B  2026-11-20T00:42:02.000  5e2f910d386c32f3b7494ca069ca7739a33936fd75dda882d709513fb1bdb6de
+   app-0.7.0\patterns\drop\hitech-slam.json  1068 B  2026-11-20T00:42:02.000  3d454e1eff7a9a1ac060b4e434972e32b1c2fe41dd425ea6ab3ac3c620cbb518
+   app-0.7.0\patterns\drums\kick-four.json  821 B  2026-11-20T00:42:02.000  3092e803b73f12fbc327fbbbd1b9b0efa11dfc5816bdbf7de6a17e329236708c
+   app-0.7.0\patterns\drums\kick-four-last-off.json  1855 B  2026-11-20T00:42:02.000  e22fd98ef68eb7f734074521ea60e415e14008e617bcf46cbc8c14fe65d0b2a8
+   app-0.7.0\patterns\hats\eighths.json  1172 B  2026-11-20T00:42:02.000  a9f1b43e029cb67851685f486e8860610b5edd6ed4bba36843e95a7a19582fc8
+   app-0.7.0\patterns\hats\hitech-gallop.json  1449 B  2026-11-20T00:42:02.000  149b5ad0527f9dce655555d2bf42867d09f2ce3962e4e56cd96a405570ce8778
+   app-0.7.0\patterns\hats\offbeat-open.json  860 B  2026-11-20T00:42:02.000  d515921c60d3fd7524a4325356884097bc465ad7056643f26dbac0e254e6e7cc
+   app-0.7.0\patterns\hats\sixteenths-accent.json  1936 B  2026-11-20T00:42:02.000  3c22d625b71d412caa8bbed71cabe9dd2d1bb493e01648544c0b69aae83ae0ea
+   app-0.7.0\patterns\lead\acid-line.json  1366 B  2026-11-20T00:42:02.000  8654cd4ace06dfaebba37cd541b999ccaa000f63c1bb9714e022fec7a359326b
+   app-0.7.0\patterns\lead\arp-minor-down.json  1902 B  2026-11-20T00:42:02.000  83c9d64a3527298c395944170d0614abdf9a7acd6015a4dfc75eec218bafe134
+   app-0.7.0\patterns\lead\arp-minor-up.json  1896 B  2026-11-20T00:42:02.000  ca6e5fdeeb40be9928b4295742a9524a3e8a0c3cb726e140f0a1e57b303f014d
+   app-0.7.0\patterns\lead\arp-minor-up-down.json  1911 B  2026-11-20T00:42:02.000  8c6d001877c1b35c9f759540a2e1c1b720913c544bb5e089f3ab38c8598c2ffd
+   app-0.7.0\patterns\perc\clap-two-four.json  655 B  2026-11-20T00:42:02.000  5b2714e757daa2852240d953822591a833fd8d7f058e906e222031c923ce8278
+   app-0.7.0\patterns\perc\snare-sparse.json  700 B  2026-11-20T00:42:02.000  48fc533d57ce81202b47a6b184dd877286efcf253207747f96afb4cbefccb8d7
+   app-0.7.0\patterns\perc\zap-answer.json  796 B  2026-11-20T00:42:02.000  86c258560bfae277d55b4be149922fdca11acaf6dc97483985b6701b1f96247c
+   app-0.7.0\pcore\styles.json  28689 B  2026-11-20T00:42:02.000  e0dd2dc47363a7a3f4ee30dde2237b1a0f6af24e14f42eaf25d141a19a4b8a26
+   current.txt  5 B  2026-11-20T00:51:38.289  b0cb276cde517779ca43a5f8fe94adcd6b1ca3b4e7da5e97f2ccd9c3b4381df8
+   samples.txt  331 B  2026-11-20T00:51:38.306  130cac2f09c46a856506dd996589c4ac3669db5a7eec39bc0f1e263df0dbba84
+   Samples\Bass\bass-a.wav  6144 B  2026-11-01T10:00:00.000  9eab42dbcbbb40788d48464162740d48c77099332d789960d114729655737bd4
+   Samples\Drums\kick-a.wav  4096 B  2026-11-01T10:00:00.000  a91a20315c4ab9d646d1b99fe28c56f8717f8a11cde2d5ec13a24f52b2a2a387
+   Samples\Drums\snare-a.wav  5120 B  2026-11-01T10:00:00.000  2b3b64a24d6ec96692361e4794f858c39a6984f48b078576902710c105e2bee2
+   Samples\Keys\keys-a.wav  4608 B  2026-11-01T10:00:00.000  b47b6017af29abd844ee03a8166947ee8228c291f2c12b0dba8dde538476d67b
+   Samples\MyRecordings\user-take.wav  2048 B  2026-11-20T00:51:38.824  b996cb27e86c2fc5945b5198167d111fc679149e83d6b0481df1f7b8a62596f9
+   Uninstall.exe  45207040 B  2026-11-20T00:50:35.547  c05940face2ee65a4bf4e621dd85281d963ec23016431112fb3e6c2c8de6001b
+   samples.txt content:
+Bass/bass-a.wav	9eab42dbcbbb40788d48464162740d48c77099332d789960d114729655737bd4
+Drums/kick-a.wav	a91a20315c4ab9d646d1b99fe28c56f8717f8a11cde2d5ec13a24f52b2a2a387
+Drums/snare-a.wav	2b3b64a24d6ec96692361e4794f858c39a6984f48b078576902710c105e2bee2
+Keys/keys-a.wav	5f824df53a2f86abdfccf4e2a0448ca69d3edbd6ab160b8bd7c1a797e777c958
+
+== 15 evidence uninstall (exit 0)
+args: --uninstall D:\Core-build\s5-fix\manual-matrix\target-evidence --no-shortcuts --samples D:\Core-build\s5-fix\manual-matrix\library-A
+stdout: Kept your file at uninstall (not proven to be Core's copy): D:\Core-build\s5-fix\manual-matrix\target-evidence\Samples\Keys\keys-a.wav
+
+stderr: 
+-- snapshot: 16 evidence after uninstall (D:\Core-build\s5-fix\manual-matrix\target-evidence)
+   Samples\Keys\keys-a.wav  4608 B  2026-11-01T10:00:00.000  b47b6017af29abd844ee03a8166947ee8228c291f2c12b0dba8dde538476d67b
+   Samples\MyRecordings\user-take.wav  2048 B  2026-11-20T00:51:38.824  b996cb27e86c2fc5945b5198167d111fc679149e83d6b0481df1f7b8a62596f9
+MANUAL-MATRIX-DONE

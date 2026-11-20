@@ -1,0 +1,273 @@
+{
+  "cpu": {
+    "intervalMs": 60013.2045,
+    "load": {
+      "avgPct": 4.342220160468397,
+      "marginPct": 76.5663,
+      "maxPct": 23.4337
+    },
+    "master": {
+      "cpuPct": 0.0,
+      "effects": []
+    },
+    "totalPct": 3.5528897644517556,
+    "tracks": [
+      {
+        "cpuPct": 0.7707250493514306,
+        "effects": [
+          {
+            "cpuPct": 0.25345738703221554,
+            "id": "g0",
+            "name": "Core Test Gain"
+          }
+        ],
+        "id": "t0",
+        "instrument": {
+          "cpuPct": 0.5172676623192151,
+          "name": "Core Test Synth"
+        }
+      },
+      {
+        "cpuPct": 0.576209524022334,
+        "effects": [
+          {
+            "cpuPct": 0.20971551352502762,
+            "id": "g1",
+            "name": "Core Test Gain"
+          }
+        ],
+        "id": "t1",
+        "instrument": {
+          "cpuPct": 0.36649401049730645,
+          "name": "Core Test Synth"
+        }
+      },
+      {
+        "cpuPct": 0.5568577828567711,
+        "effects": [
+          {
+            "cpuPct": 0.20575638483027514,
+            "id": "g2",
+            "name": "Core Test Gain"
+          }
+        ],
+        "id": "t2",
+        "instrument": {
+          "cpuPct": 0.351101398026496,
+          "name": "Core Test Synth"
+        }
+      },
+      {
+        "cpuPct": 0.5492992796277025,
+        "effects": [
+          {
+            "cpuPct": 0.20394961578830537,
+            "id": "g3",
+            "name": "Core Test Gain"
+          }
+        ],
+        "id": "t3",
+        "instrument": {
+          "cpuPct": 0.3453496638393972,
+          "name": "Core Test Synth"
+        }
+      },
+      {
+        "cpuPct": 0.5561181123064342,
+        "effects": [
+          {
+            "cpuPct": 0.2027980358889184,
+            "id": "g4",
+            "name": "Core Test Gain"
+          }
+        ],
+        "id": "t4",
+        "instrument": {
+          "cpuPct": 0.3533200764175157,
+          "name": "Core Test Synth"
+        }
+      },
+      {
+        "cpuPct": 0.5436800162870823,
+        "effects": [
+          {
+            "cpuPct": 0.20129103420897979,
+            "id": "g5",
+            "name": "Core Test Gain"
+          }
+        ],
+        "id": "t5",
+        "instrument": {
+          "cpuPct": 0.3423889820781025,
+          "name": "Core Test Synth"
+        }
+      }
+    ]
+  },
+  "deliveredSeconds": 60.016,
+  "device": {
+    "backend": "WASAPI",
+    "blockSize": 128,
+    "device": "Auscultadores (USB-C Audio)",
+    "exclusive": true,
+    "internalSampleRate": 48000,
+    "latency": {
+      "deviceMs": 5.333333333333333,
+      "graphMs": 5.333333333333333,
+      "masterSamples": 0,
+      "totalMs": 10.666666666666666,
+      "tracksSamples": 256
+    },
+    "latencyMs": 5.333333333333333,
+    "periods": 2,
+    "sampleRate": 48000.0,
+    "scheduling": "Pro Audio"
+  },
+  "error": "",
+  "liveThreads": 0,
+  "pluginInstances": 12,
+  "plugins": [
+    {
+      "file": "D:\\Core-build\\s7\\build\\app\\selftest-plugins\\CoreTestSynth_artefacts\\Release\\VST3\\Core Test Synth.vst3",
+      "id": "VST3-Core Test Synth-458c357b-bc3b5f3e",
+      "name": "Core Test Synth",
+      "role": "instrument",
+      "vendor": "Core",
+      "version": "1.0.0"
+    },
+    {
+      "file": "D:\\Core-build\\s7\\build\\app\\selftest-plugins\\CoreTestGain_artefacts\\Release\\VST3\\Core Test Gain.vst3",
+      "id": "VST3-Core Test Gain-e64fbaf9-bc3b5333",
+      "name": "Core Test Gain",
+      "role": "insert",
+      "vendor": "Core",
+      "version": "1.0.0"
+    }
+  ],
+  "requestedBlock": 128,
+  "scenario": "load12-b128",
+  "secondsRequested": 60.0,
+  "stats": {
+    "auditionSteals": 0,
+    "avgLoadPct": 4.342220160468397,
+    "avgRenderMs": 0.11579250866435616,
+    "callbackErrors": 0,
+    "callbacks": 22506,
+    "denseEventBlocks": 0,
+    "device": {
+      "backend": "WASAPI",
+      "blockSize": 128,
+      "device": "Auscultadores (USB-C Audio)",
+      "exclusive": true,
+      "internalSampleRate": 48000,
+      "latencyMs": 5.333333333333333,
+      "periods": 2,
+      "sampleRate": 48000.0,
+      "scheduling": "Pro Audio"
+    },
+    "deviceDriftPpm": -59.209063814847674,
+    "deviceNotification": 0,
+    "droppedNotes": 0,
+    "failedPlugins": [],
+    "failedUnits": [],
+    "graphSwaps": 0,
+    "lastRebuildMs": 53.486999999999995,
+    "latency": {
+      "deviceMs": 5.333333333333333,
+      "graphMs": 5.333333333333333,
+      "masterSamples": 0,
+      "totalMs": 10.666666666666666,
+      "tracksSamples": 256
+    },
+    "leakedGraphs": 0,
+    "liveFallback": false,
+    "liveNotesRejected": 0,
+    "liveOffAllTracks": 0,
+    "liveOffOverflows": 0,
+    "liveStallBlocks": 0,
+    "liveStalls": 0,
+    "liveThreads": 0,
+    "loadP50Pct": 5.0,
+    "loadP95Pct": 7.0,
+    "loadP99Pct": 9.0,
+    "maxCallbackFrames": 128,
+    "maxEditToAudioMs": 0.0,
+    "maxLoadPct": 23.4337,
+    "maxRenderMs": 0.6249,
+    "minCallbackFrames": 128,
+    "nativeFailures": 0,
+    "nonFiniteBlocks": 0,
+    "overruns": 0,
+    "pluginFailures": 0,
+    "pluginNotesDropped": 0,
+    "starvations": 2917
+  },
+  "timing": {
+    "blocks": 22506,
+    "maxLoadPct": 23.433755858438964,
+    "maxMs": 0.6249,
+    "meanLoadPct": 4.342220160468434,
+    "meanMs": 0.11579250866435617,
+    "overBudget": 0,
+    "p50Ms": 0.1097,
+    "p95Ms": 0.1673,
+    "p99LoadPct": 8.30625207656302,
+    "p99Ms": 0.2215
+  },
+  "tracks": 6,
+  "violations": {
+    "audioExact": {
+      "allocs": 6,
+      "io": 0,
+      "locks": 1899128,
+      "locksPerCallback": 84.38318670576736
+    },
+    "ringTail": {
+      "audio": 65116,
+      "control": 283,
+      "kinds": {
+        "AcquireSRWLockExclusive": {
+          "audio": 0,
+          "control": 16,
+          "other": 34
+        },
+        "EnterCriticalSection": {
+          "audio": 32558,
+          "control": 119,
+          "other": 32
+        },
+        "HeapAlloc": {
+          "audio": 0,
+          "control": 0,
+          "other": 8
+        },
+        "HeapFree": {
+          "audio": 0,
+          "control": 8,
+          "other": 0
+        },
+        "LeaveCriticalSection": {
+          "audio": 32558,
+          "control": 119,
+          "other": 32
+        },
+        "ReleaseSRWLockExclusive": {
+          "audio": 0,
+          "control": 16,
+          "other": 31
+        },
+        "Sleep": {
+          "audio": 0,
+          "control": 5,
+          "other": 0
+        },
+        "lostToRingWrap": 1843983
+      },
+      "lost": 1843983,
+      "other": 137
+    },
+    "total": 1909519
+  },
+  "wallSeconds": 62.1560578,
+  "workerJobs": 0
+}

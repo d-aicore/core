@@ -1,0 +1,158 @@
+{
+  "bypassFx": false,
+  "cpu": {
+    "intervalMs": 3014.9354,
+    "load": {
+      "avgPct": 1.4496533591545717,
+      "marginPct": 97.8147,
+      "maxPct": 2.1853000000000002
+    },
+    "master": {
+      "cpuPct": 0.0,
+      "effects": []
+    },
+    "totalPct": 0.8521044928524837,
+    "tracks": [
+      {
+        "cpuPct": 0.24421418780647838,
+        "effects": [],
+        "id": "kick",
+        "instrument": {
+          "cpuPct": 0.24421418780647838,
+          "name": "Core Test Synth"
+        }
+      },
+      {
+        "cpuPct": 0.35455817726641836,
+        "effects": [
+          {
+            "cpuPct": 0.0823599736166818,
+            "id": "gainfx",
+            "name": "Core Test Gain"
+          }
+        ],
+        "id": "bass",
+        "instrument": {
+          "cpuPct": 0.27219820364973657,
+          "name": "Core Test Synth"
+        }
+      },
+      {
+        "cpuPct": 0.2533321277795869,
+        "effects": [],
+        "id": "lead",
+        "instrument": {
+          "cpuPct": 0.2533321277795869,
+          "name": "Core Test Synth"
+        }
+      }
+    ]
+  },
+  "deliveredSeconds": 3.018666666666667,
+  "device": {
+    "backend": "Null",
+    "blockSize": 512,
+    "device": "NULL Playback Device",
+    "exclusive": false,
+    "internalSampleRate": 48000,
+    "latency": {
+      "deviceMs": 21.333333333333332,
+      "graphMs": 5.333333333333333,
+      "masterSamples": 0,
+      "totalMs": 26.666666666666664,
+      "tracksSamples": 256
+    },
+    "latencyMs": 21.333333333333332,
+    "periods": 2,
+    "sampleRate": 48000.0,
+    "scheduling": "Pro Audio"
+  },
+  "error": "",
+  "expectedPluginCalls": 4528.0,
+  "liveThreads": 4,
+  "muted": [],
+  "pluginCallsPerCallback": 4.0,
+  "plugins": [
+    {
+      "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestSynth_artefacts\\Release\\VST3\\Core Test Synth.vst3",
+      "name": "Core Test Synth",
+      "role": "instrument"
+    },
+    {
+      "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestGain_artefacts\\Release\\VST3\\Core Test Gain.vst3",
+      "name": "Core Test Gain",
+      "role": "insert"
+    }
+  ],
+  "scenario": "b-t4-512",
+  "stats": {
+    "auditionSteals": 0,
+    "avgLoadPct": 1.4496533591545717,
+    "avgRenderMs": 0.1546296819787986,
+    "callbackErrors": 0,
+    "callbacks": 283,
+    "denseEventBlocks": 0,
+    "device": {
+      "backend": "Null",
+      "blockSize": 512,
+      "device": "NULL Playback Device",
+      "exclusive": false,
+      "internalSampleRate": 48000,
+      "latencyMs": 21.333333333333332,
+      "periods": 2,
+      "sampleRate": 48000.0,
+      "scheduling": "Pro Audio"
+    },
+    "deviceDriftPpm": 0.0,
+    "deviceNotification": 0,
+    "droppedNotes": 0,
+    "failedPlugins": [],
+    "failedUnits": [],
+    "graphSwaps": 0,
+    "lastRebuildMs": 0.0662,
+    "latency": {
+      "deviceMs": 21.333333333333332,
+      "graphMs": 5.333333333333333,
+      "masterSamples": 0,
+      "totalMs": 26.666666666666664,
+      "tracksSamples": 256
+    },
+    "leakedGraphs": 0,
+    "liveFallback": false,
+    "liveNotesRejected": 0,
+    "liveOffAllTracks": 0,
+    "liveOffOverflows": 0,
+    "liveStallBlocks": 0,
+    "liveStalls": 0,
+    "liveThreads": 4,
+    "loadP50Pct": 2.0,
+    "loadP95Pct": 2.0,
+    "loadP99Pct": 2.0,
+    "maxCallbackFrames": 512,
+    "maxEditToAudioMs": 0.0,
+    "maxLoadPct": 2.1853000000000002,
+    "maxRenderMs": 0.2331,
+    "minCallbackFrames": 512,
+    "nativeFailures": 0,
+    "nonFiniteBlocks": 0,
+    "overruns": 0,
+    "pluginFailures": 0,
+    "pluginNotesDropped": 0,
+    "starvations": 0
+  },
+  "timing": {
+    "blocks": 283,
+    "framesTotal": 144896,
+    "maxLoadPct": 2.1853126365820397,
+    "maxMs": 0.2331,
+    "meanLoadPct": 1.4496533591545726,
+    "meanMs": 0.1546296819787986,
+    "overBudget": 0,
+    "p50Ms": 0.1565,
+    "p95Ms": 0.188,
+    "p99LoadPct": 1.9453126215820389,
+    "p99Ms": 0.2075
+  },
+  "wallSeconds": 5.0678603,
+  "workerJobs": 562
+}

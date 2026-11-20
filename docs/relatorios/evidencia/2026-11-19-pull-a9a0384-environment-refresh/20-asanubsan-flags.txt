@@ -1,0 +1,6 @@
+compile db: /home/diogo/core-review-build/asanubsan/compile_commands.json
+total translation units: 67
+entries containing '-fsanitize=address,undefined': 66
+  without it: miniaudio_impl.c
+entries containing '-fno-omit-frame-pointer': 66
+  without it: miniaudio_impl.c

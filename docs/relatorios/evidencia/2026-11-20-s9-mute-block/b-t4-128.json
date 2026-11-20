@@ -1,0 +1,158 @@
+{
+  "bypassFx": false,
+  "cpu": {
+    "intervalMs": 3019.4051999999997,
+    "load": {
+      "avgPct": 1.7545358368640478,
+      "marginPct": 90.6363,
+      "maxPct": 9.3637
+    },
+    "master": {
+      "cpuPct": 0.0,
+      "effects": []
+    },
+    "totalPct": 0.9464115647677893,
+    "tracks": [
+      {
+        "cpuPct": 0.26221058372688766,
+        "effects": [],
+        "id": "kick",
+        "instrument": {
+          "cpuPct": 0.26221058372688766,
+          "name": "Core Test Synth"
+        }
+      },
+      {
+        "cpuPct": 0.39697884868185296,
+        "effects": [
+          {
+            "cpuPct": 0.09957921513813382,
+            "id": "gainfx",
+            "name": "Core Test Gain"
+          }
+        ],
+        "id": "bass",
+        "instrument": {
+          "cpuPct": 0.2973996335437191,
+          "name": "Core Test Synth"
+        }
+      },
+      {
+        "cpuPct": 0.2872221323590487,
+        "effects": [],
+        "id": "lead",
+        "instrument": {
+          "cpuPct": 0.2872221323590487,
+          "name": "Core Test Synth"
+        }
+      }
+    ]
+  },
+  "deliveredSeconds": 3.013333333333333,
+  "device": {
+    "backend": "Null",
+    "blockSize": 128,
+    "device": "NULL Playback Device",
+    "exclusive": false,
+    "internalSampleRate": 48000,
+    "latency": {
+      "deviceMs": 5.333333333333333,
+      "graphMs": 5.333333333333333,
+      "masterSamples": 0,
+      "totalMs": 10.666666666666666,
+      "tracksSamples": 256
+    },
+    "latencyMs": 5.333333333333333,
+    "periods": 2,
+    "sampleRate": 48000.0,
+    "scheduling": "Pro Audio"
+  },
+  "error": "",
+  "expectedPluginCalls": 4520.0,
+  "liveThreads": 4,
+  "muted": [],
+  "pluginCallsPerCallback": 1.0,
+  "plugins": [
+    {
+      "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestSynth_artefacts\\Release\\VST3\\Core Test Synth.vst3",
+      "name": "Core Test Synth",
+      "role": "instrument"
+    },
+    {
+      "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestGain_artefacts\\Release\\VST3\\Core Test Gain.vst3",
+      "name": "Core Test Gain",
+      "role": "insert"
+    }
+  ],
+  "scenario": "b-t4-128",
+  "stats": {
+    "auditionSteals": 0,
+    "avgLoadPct": 1.7545358368640478,
+    "avgRenderMs": 0.046787610619469025,
+    "callbackErrors": 0,
+    "callbacks": 1130,
+    "denseEventBlocks": 0,
+    "device": {
+      "backend": "Null",
+      "blockSize": 128,
+      "device": "NULL Playback Device",
+      "exclusive": false,
+      "internalSampleRate": 48000,
+      "latencyMs": 5.333333333333333,
+      "periods": 2,
+      "sampleRate": 48000.0,
+      "scheduling": "Pro Audio"
+    },
+    "deviceDriftPpm": 0.0,
+    "deviceNotification": 0,
+    "droppedNotes": 0,
+    "failedPlugins": [],
+    "failedUnits": [],
+    "graphSwaps": 0,
+    "lastRebuildMs": 0.0919,
+    "latency": {
+      "deviceMs": 5.333333333333333,
+      "graphMs": 5.333333333333333,
+      "masterSamples": 0,
+      "totalMs": 10.666666666666666,
+      "tracksSamples": 256
+    },
+    "leakedGraphs": 0,
+    "liveFallback": false,
+    "liveNotesRejected": 0,
+    "liveOffAllTracks": 0,
+    "liveOffOverflows": 0,
+    "liveStallBlocks": 0,
+    "liveStalls": 0,
+    "liveThreads": 4,
+    "loadP50Pct": 2.0,
+    "loadP95Pct": 3.0,
+    "loadP99Pct": 3.0,
+    "maxCallbackFrames": 128,
+    "maxEditToAudioMs": 0.0,
+    "maxLoadPct": 9.3637,
+    "maxRenderMs": 0.24969999999999998,
+    "minCallbackFrames": 128,
+    "nativeFailures": 0,
+    "nonFiniteBlocks": 0,
+    "overruns": 0,
+    "pluginFailures": 0,
+    "pluginNotesDropped": 0,
+    "starvations": 281
+  },
+  "timing": {
+    "blocks": 1130,
+    "framesTotal": 144640,
+    "maxLoadPct": 9.363752340938085,
+    "maxMs": 0.2497,
+    "meanLoadPct": 1.754535836864048,
+    "meanMs": 0.04678761061946903,
+    "overBudget": 0,
+    "p50Ms": 0.0461,
+    "p95Ms": 0.0596,
+    "p99LoadPct": 2.493750623437656,
+    "p99Ms": 0.0665
+  },
+  "wallSeconds": 5.0765809,
+  "workerJobs": 2180
+}

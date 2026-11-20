@@ -1,0 +1,11 @@
+/home/diogo/core-review-src/tests/canary.cpp:20:32: runtime error: signed integer overflow: 2147483647 + 1 cannot be represented in type 'int'
+-2147483648
+ubsan-wsl run1 exit=0
+/home/diogo/core-review-src/tests/canary.cpp:20:32: runtime error: signed integer overflow: 2147483647 + 1 cannot be represented in type 'int'
+-2147483648
+ubsan-wsl run2 exit=0
+/home/diogo/core-review-src/tests/canary.cpp:20:32: runtime error: signed integer overflow: 2147483647 + 1 cannot be represented in type 'int'
+-2147483648
+ubsan-wsl run3 exit=0
+ubsan-wsl: non-zero exits 0/3
+ubsan-wsl: report matched /runtime error:/

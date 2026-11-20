@@ -1,0 +1,17 @@
+﻿=== git branch / SHA / local changes ===
+main
+8c6837e80030e2185d5f6016f0365bae2c3f52bd
+ M docs/relatorios/README.md
+stash@{0}: On flawless-crash: flawless-deadcode domain edits - recovered from cross-worktree stash collision by flawless-crash session
+=== toolchain ===
+Microsoft (R) C/C++ Optimizing Compiler Version 19.51.36260 for x64
+cmake version 4.4.4
+
+CMake suite maintained and supported by Kitware (kitware.com/cmake).
+1.13.2
+clangd version 23.1.0 (https://github.com/llvm/llvm-project ea7d852a70e8bdfaf601d6626a760f9771b2c4b4)
+Features: windows+grpc
+Platform: x86_64-pc-windows-msvc
+=== host ===
+
+Microsoft Windows [Version 10.0.26300.9974]

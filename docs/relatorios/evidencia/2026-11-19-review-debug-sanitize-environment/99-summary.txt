@@ -1,0 +1,7 @@
+Core review environment - WSL run (run-wsl.sh)
+windows src: /mnt/d/CORE/CORE @ 8c6837e80030e2185d5f6016f0365bae2c3f52bd
+clone:       /home/diogo/core-review-src @ 8c6837e80030e2185d5f6016f0365bae2c3f52bd
+builds:      /home/diogo/core-review-build
+steps done:
+  00-probe: toolchain recorded
+  01-clone: 8c6837e80030e2185d5f6016f0365bae2c3f52bd

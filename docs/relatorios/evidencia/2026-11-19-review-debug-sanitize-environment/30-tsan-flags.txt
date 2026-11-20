@@ -1,0 +1,6 @@
+compile db: /home/diogo/core-review-build/tsan/compile_commands.json
+total translation units: 66
+entries containing '-fsanitize=thread': 65
+  without it: miniaudio_impl.c
+entries containing '-fno-omit-frame-pointer': 65
+  without it: miniaudio_impl.c

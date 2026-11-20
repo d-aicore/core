@@ -1,0 +1,77 @@
+{
+ "tailRender": {
+  "channels": 2,
+  "denseEventBlocks": 0,
+  "path": "D:\\Core-build\\vst3-host\\eb-tail.wav",
+  "peak": 0.3918937146663666,
+  "realtimeFactor": 34.153821983449056,
+  "renderMs": 234.2344,
+  "sampleRate": 48000.0,
+  "seconds": 8.0,
+  "stems": []
+ },
+ "dryRender": {
+  "channels": 2,
+  "denseEventBlocks": 0,
+  "path": "D:\\Core-build\\vst3-host\\eb-tail-dry.wav",
+  "peak": 0.37766310572624207,
+  "realtimeFactor": 34.04450893987527,
+  "renderMs": 234.98649999999998,
+  "sampleRate": 48000.0,
+  "seconds": 8.0,
+  "stems": []
+ },
+ "tailStats": {
+  "path": "D:\\Core-build\\vst3-host\\eb-tail.wav",
+  "sha256": "1827b88239062f59781f68e711daa93bbb3650bea7423d6baff7771764074fc9",
+  "sampleRate": 48000,
+  "frames": 384000,
+  "channels": 2,
+  "seconds": 8.0,
+  "peak": 0.391894,
+  "peakDb": -8.14,
+  "rms": 0.036513
+ },
+ "dryStats": {
+  "path": "D:\\Core-build\\vst3-host\\eb-tail-dry.wav",
+  "sha256": "cd925cd08a009c522b23a2a0e3015dad7b19a0a23f7f5c77c958c57c9b3d7e57",
+  "sampleRate": 48000,
+  "frames": 384000,
+  "channels": 2,
+  "seconds": 8.0,
+  "peak": 0.377663,
+  "peakDb": -8.46,
+  "rms": 0.04227
+ },
+ "lastAbove": {
+  "tail": {
+   "threshold": 0.0001,
+   "lastAboveS": 0.4001,
+   "firstAboveS": 0.0
+  },
+  "dry": {
+   "threshold": 0.0001,
+   "lastAboveS": 5.6373,
+   "firstAboveS": 0.0034
+  }
+ },
+ "echoPeaks": [
+  {
+   "t": 0.02,
+   "rms": 0.241512
+  },
+  {
+   "t": 0.31,
+   "rms": 0.219025
+  }
+ ],
+ "spacingsS": [
+  0.29
+ ],
+ "noteEndS": 0.145,
+ "tailLengthS": 0.2551,
+ "expectedDelayS": 0.25,
+ "feedback": 0.6,
+ "mix": 1.0,
+ "tailMs": 6000
+}

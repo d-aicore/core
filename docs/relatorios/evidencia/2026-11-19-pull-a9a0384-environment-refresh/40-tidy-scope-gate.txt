@@ -1,0 +1,14 @@
+TUs no banco: 48 | windows=False juce=False
+scope: 49 pedidos -> 47 analisados, 2 excluidos, 0 em falta
+  EXCLUIDO app/engine-client/src/engine_client.cpp (Windows-only target; #error at engine_client.cpp:5)
+  EXCLUIDO engine/src/plugins/juce_host.cpp (JUCE target absent from this build (CORE_BUILD_APP/WIN32 gate))
+lista escrita: /home/diogo/core-review-build/40-tidy-scope.txt
+scope gate rc=0
+--- negative control (must fail, rc=1) ---
+TUs no banco: 48 | windows=False juce=False
+scope: 50 pedidos -> 47 analisados, 2 excluidos, 1 em falta
+  EXCLUIDO app/engine-client/src/engine_client.cpp (Windows-only target; #error at engine_client.cpp:5)
+  EXCLUIDO engine/src/plugins/juce_host.cpp (JUCE target absent from this build (CORE_BUILD_APP/WIN32 gate))
+  EM FALTA app/desktop/src/MainComponent.cpp
+SCOPE INCOMPLETO: ['app/desktop/src/MainComponent.cpp']
+negative control rc=1 (expected 1)

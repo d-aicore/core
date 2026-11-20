@@ -1,0 +1,72 @@
+﻿D:\Core-build\core-review\debug\app\control\CMakeFiles\core_control.dir\core_control.pdb	2748416
+D:\Core-build\core-review\debug\app\desktop\CMakeFiles\CoreApp.dir\vc140.pdb	51056640
+D:\Core-build\core-review\debug\app\desktop\CoreApp_artefacts\Debug\Core.pdb	213094400
+D:\Core-build\core-review\debug\app\domain\CMakeFiles\core_domain.dir\core_domain.pdb	10375168
+D:\Core-build\core-review\debug\app\engine-client\CMakeFiles\core_engine_client.dir\core_engine_client.pdb	2125824
+D:\Core-build\core-review\debug\app\installer\CMakeFiles\CoreSetup.dir\vc140.pdb	32673792
+D:\Core-build\core-review\debug\app\installer\CMakeFiles\CoreSetupData.dir\CoreSetupData.pdb	61440
+D:\Core-build\core-review\debug\app\installer\CoreSetup_artefacts\Debug\Core Setup.pdb	115937280
+D:\Core-build\core-review\debug\app\sampling\CMakeFiles\core_sampling.dir\core_sampling.pdb	1642496
+D:\Core-build\core-review\debug\app\selftest-plugins\CMakeFiles\CoreTestCrash.dir\CoreTestCrash.pdb	44118016
+D:\Core-build\core-review\debug\app\selftest-plugins\CMakeFiles\CoreTestCrashRestart.dir\CoreTestCrashRestart.pdb	41209856
+D:\Core-build\core-review\debug\app\selftest-plugins\CMakeFiles\CoreTestCrashRestart_VST3.dir\vc140.pdb	8957952
+D:\Core-build\core-review\debug\app\selftest-plugins\CMakeFiles\CoreTestCrash_VST3.dir\vc140.pdb	8957952
+D:\Core-build\core-review\debug\app\selftest-plugins\CMakeFiles\CoreTestFault.dir\CoreTestFault.pdb	41177088
+D:\Core-build\core-review\debug\app\selftest-plugins\CMakeFiles\CoreTestFault_VST3.dir\vc140.pdb	8957952
+D:\Core-build\core-review\debug\app\selftest-plugins\CMakeFiles\CoreTestGain.dir\CoreTestGain.pdb	41168896
+D:\Core-build\core-review\debug\app\selftest-plugins\CMakeFiles\CoreTestGain_VST3.dir\vc140.pdb	8957952
+D:\Core-build\core-review\debug\app\selftest-plugins\CMakeFiles\CoreTestSynth.dir\CoreTestSynth.pdb	41193472
+D:\Core-build\core-review\debug\app\selftest-plugins\CMakeFiles\CoreTestSynth_VST3.dir\vc140.pdb	8957952
+D:\Core-build\core-review\debug\app\selftest-plugins\CMakeFiles\CoreTestThrow.dir\CoreTestThrow.pdb	41168896
+D:\Core-build\core-review\debug\app\selftest-plugins\CMakeFiles\CoreTestThrow_VST3.dir\vc140.pdb	8957952
+D:\Core-build\core-review\debug\app\selftest-plugins\CoreTestCrashRestart_artefacts\Debug\VST3\Core Test Crash Restart.pdb	140201984
+D:\Core-build\core-review\debug\app\selftest-plugins\CoreTestCrash_artefacts\Debug\VST3\Core Test Crash.pdb	140193792
+D:\Core-build\core-review\debug\app\selftest-plugins\CoreTestFault_artefacts\Debug\VST3\Core Test Fault.pdb	140169216
+D:\Core-build\core-review\debug\app\selftest-plugins\CoreTestGain_artefacts\Debug\VST3\Core Test Gain.pdb	140169216
+D:\Core-build\core-review\debug\app\selftest-plugins\CoreTestSynth_artefacts\Debug\VST3\Core Test Synth.pdb	140201984
+D:\Core-build\core-review\debug\app\selftest-plugins\CoreTestThrow_artefacts\Debug\VST3\Core Test Throw.pdb	140161024
+D:\Core-build\core-review\debug\engine\core-engine.pdb	159625216
+D:\Core-build\core-review\debug\engine\CMakeFiles\core-engine.dir\vc140.pdb	3207168
+D:\Core-build\core-review\debug\engine\CMakeFiles\core_engine_lib.dir\core_engine_lib.pdb	4812800
+D:\Core-build\core-review\debug\engine\CMakeFiles\core_plugin_host.dir\core_plugin_host.pdb	42520576
+D:\Core-build\core-review\debug\engine\CMakeFiles\miniaudio_impl.dir\miniaudio_impl.pdb	290816
+D:\Core-build\core-review\debug\tests\audit2_tests.pdb	33443840
+D:\Core-build\core-review\debug\tests\audit_tests.pdb	41791488
+D:\Core-build\core-review\debug\tests\bitwig_tests.pdb	28274688
+D:\Core-build\core-review\debug\tests\bug_tests.pdb	44134400
+D:\Core-build\core-review\debug\tests\calls_tests.pdb	35090432
+D:\Core-build\core-review\debug\tests\domain_tests.pdb	48836608
+D:\Core-build\core-review\debug\tests\engine_process_tests.pdb	20230144
+D:\Core-build\core-review\debug\tests\engine_tests.pdb	31641600
+D:\Core-build\core-review\debug\tests\hunt_tests.pdb	48336896
+D:\Core-build\core-review\debug\tests\legacy_guard_tests.pdb	45633536
+D:\Core-build\core-review\debug\tests\menu_tests.pdb	9793536
+D:\Core-build\core-review\debug\tests\midi_tests.pdb	28602368
+D:\Core-build\core-review\debug\tests\role_tests.pdb	31723520
+D:\Core-build\core-review\debug\tests\round3_tests.pdb	31150080
+D:\Core-build\core-review\debug\tests\CMakeFiles\audit2_tests.dir\vc140.pdb	2625536
+D:\Core-build\core-review\debug\tests\CMakeFiles\audit_tests.dir\vc140.pdb	2879488
+D:\Core-build\core-review\debug\tests\CMakeFiles\bitwig_tests.dir\vc140.pdb	1855488
+D:\Core-build\core-review\debug\tests\CMakeFiles\bug_tests.dir\vc140.pdb	2854912
+D:\Core-build\core-review\debug\tests\CMakeFiles\calls_tests.dir\vc140.pdb	2109440
+D:\Core-build\core-review\debug\tests\CMakeFiles\domain_tests.dir\vc140.pdb	2953216
+D:\Core-build\core-review\debug\tests\CMakeFiles\engine_process_tests.dir\vc140.pdb	2093056
+D:\Core-build\core-review\debug\tests\CMakeFiles\engine_tests.dir\vc140.pdb	3256320
+D:\Core-build\core-review\debug\tests\CMakeFiles\hunt_tests.dir\vc140.pdb	2920448
+D:\Core-build\core-review\debug\tests\CMakeFiles\legacy_guard_tests.dir\vc140.pdb	3026944
+D:\Core-build\core-review\debug\tests\CMakeFiles\menu_tests.dir\vc140.pdb	454656
+D:\Core-build\core-review\debug\tests\CMakeFiles\midi_tests.dir\vc140.pdb	1921024
+D:\Core-build\core-review\debug\tests\CMakeFiles\role_tests.dir\vc140.pdb	2158592
+D:\Core-build\core-review\debug\tests\CMakeFiles\round3_tests.dir\vc140.pdb	1970176
+D:\Core-build\core-review\debug\vst3_helpers\CoreTestCrash\vst3_helper.pdb	5615616
+D:\Core-build\core-review\debug\vst3_helpers\CoreTestCrash\CMakeFiles\vst3_helper.dir\vc140.pdb	1159168
+D:\Core-build\core-review\debug\vst3_helpers\CoreTestCrashRestart\vst3_helper.pdb	5615616
+D:\Core-build\core-review\debug\vst3_helpers\CoreTestCrashRestart\CMakeFiles\vst3_helper.dir\vc140.pdb	1159168
+D:\Core-build\core-review\debug\vst3_helpers\CoreTestFault\vst3_helper.pdb	5615616
+D:\Core-build\core-review\debug\vst3_helpers\CoreTestFault\CMakeFiles\vst3_helper.dir\vc140.pdb	1159168
+D:\Core-build\core-review\debug\vst3_helpers\CoreTestGain\vst3_helper.pdb	5615616
+D:\Core-build\core-review\debug\vst3_helpers\CoreTestGain\CMakeFiles\vst3_helper.dir\vc140.pdb	1159168
+D:\Core-build\core-review\debug\vst3_helpers\CoreTestSynth\vst3_helper.pdb	5615616
+D:\Core-build\core-review\debug\vst3_helpers\CoreTestSynth\CMakeFiles\vst3_helper.dir\vc140.pdb	1159168
+D:\Core-build\core-review\debug\vst3_helpers\CoreTestThrow\vst3_helper.pdb	5615616
+D:\Core-build\core-review\debug\vst3_helpers\CoreTestThrow\CMakeFiles\vst3_helper.dir\vc140.pdb	1159168

@@ -1,0 +1,96 @@
+{
+ "envelope": [
+  {
+   "param": "fx:eb:vst:3",
+   "points": [
+    {
+     "tick": 0,
+     "value": 0.0
+    },
+    {
+     "tick": 960,
+     "value": 0.0
+    },
+    {
+     "tick": 2880,
+     "value": 1.0
+    }
+   ]
+  }
+ ],
+ "stats": {
+  "A": {
+   "path": "D:\\Core-build\\vst3-host\\eb2-automix.wav",
+   "sha256": "05da066cf53c98e8b66a7bb55e6dfeb35a78bd2965fed5b8ec9e86f661b891c9",
+   "sampleRate": 48000,
+   "frames": 240000,
+   "channels": 2,
+   "seconds": 5.0,
+   "peak": 0.448819,
+   "peakDb": -6.96,
+   "rms": 0.153543
+  },
+  "B": {
+   "path": "D:\\Core-build\\vst3-host\\eb2-mix0.wav",
+   "sha256": "979a42fced7653058026958917ef8299934f7cfbf92c5d927ee3933005f32839",
+   "sampleRate": 48000,
+   "frames": 240000,
+   "channels": 2,
+   "seconds": 5.0,
+   "peak": 0.448819,
+   "peakDb": -6.96,
+   "rms": 0.200981
+  },
+  "C": {
+   "path": "D:\\Core-build\\vst3-host\\eb2-mix1.wav",
+   "sha256": "d27e7afd6c52786322d798344b114c1a28e2175583b8d65268cdc5352704a725",
+   "sampleRate": 48000,
+   "frames": 240000,
+   "channels": 2,
+   "seconds": 5.0,
+   "peak": 0.374887,
+   "peakDb": -8.52,
+   "rms": 0.136939
+  }
+ },
+ "maxAbsDiff": {
+  "early_A_B": 0.003681,
+  "late_A_C": 0.0,
+  "late_A_B": 0.764308
+ },
+ "renders": {
+  "A": {
+   "channels": 2,
+   "denseEventBlocks": 0,
+   "path": "D:\\Core-build\\vst3-host\\eb2-automix.wav",
+   "peak": 0.4488188922405243,
+   "realtimeFactor": 31.34984926992471,
+   "renderMs": 159.4904,
+   "sampleRate": 48000.0,
+   "seconds": 5.0,
+   "stems": []
+  },
+  "B": {
+   "channels": 2,
+   "denseEventBlocks": 0,
+   "path": "D:\\Core-build\\vst3-host\\eb2-mix0.wav",
+   "peak": 0.4488188922405243,
+   "realtimeFactor": 21.503054939015186,
+   "renderMs": 232.52509999999998,
+   "sampleRate": 48000.0,
+   "seconds": 5.0,
+   "stems": []
+  },
+  "C": {
+   "channels": 2,
+   "denseEventBlocks": 0,
+   "path": "D:\\Core-build\\vst3-host\\eb2-mix1.wav",
+   "peak": 0.37488681077957153,
+   "realtimeFactor": 22.14368594938839,
+   "renderMs": 225.798,
+   "sampleRate": 48000.0,
+   "seconds": 5.0,
+   "stems": []
+  }
+ }
+}

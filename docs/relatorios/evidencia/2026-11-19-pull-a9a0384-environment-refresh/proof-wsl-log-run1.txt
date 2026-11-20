@@ -1,0 +1,65 @@
+
+=== W1 (WIN_SRC=/mnt/d/CORE/CORE ONLY=02-clone) rc=0 ===
+context: fp1 sha=a9a038430d781959829f8510067ce59afffaad62 local=783a67432596336c20037550c2702c9b66f6b7ffd2d270580b9121341caaf851 script=f893bc3e0106fbd5db80541d492c42ac256e0548e1cd2ec2cab6f10fb2f3b7c3 cfg=<per step>
+
+===== 02 clone/refresh /home/diogo/core-review-proof-src @ a9a038430d781959829f8510067ce59afffaad62 =====
+reusing /home/diogo/core-review-proof-src
+HEAD is now at a9a0384 Docs: fill GATE section with measured per-suite table (253 cases/0 fails over 21 suites), desktop self-test 66 transitions single exit, gate commands + build dir; record the two residual pendências (dormant engine sample_host, inert restoreBuiltinTemplates) as non-blocking follow-ups. Code-identical to VERDE tip 92fb173
+--- resulting state ---
+a9a038430d781959829f8510067ce59afffaad62
+checkout verified: /home/diogo/core-review-proof-src @ a9a038430d781959829f8510067ce59afffaad62 == Windows HEAD
+synced CMakeLists.txt from the Windows working tree
+run-wsl.sh finished
+
+=== W2 (WIN_SRC=/mnt/d/CORE/CORE ONLY=02-clone) rc=0 ===
+context: fp1 sha=a9a038430d781959829f8510067ce59afffaad62 local=783a67432596336c20037550c2702c9b66f6b7ffd2d270580b9121341caaf851 script=f893bc3e0106fbd5db80541d492c42ac256e0548e1cd2ec2cab6f10fb2f3b7c3 cfg=<per step>
+SKIP(reuse) 02-clone
+checkout verified: /home/diogo/core-review-proof-src @ a9a038430d781959829f8510067ce59afffaad62 == Windows HEAD
+run-wsl.sh finished
+
+=== W3 (WIN_SRC=/mnt/d/Core-build/core-review/proof-src-old ONLY=02-clone) rc=1 ===
+FATAL: cannot read HEAD of /mnt/d/Core-build/core-review/proof-src-old
+
+=== W4 (WIN_SRC=/mnt/d/CORE/CORE ONLY=02-clone) rc=0 ===
+context: fp1 sha=a9a038430d781959829f8510067ce59afffaad62 local=783a67432596336c20037550c2702c9b66f6b7ffd2d270580b9121341caaf851 script=f893bc3e0106fbd5db80541d492c42ac256e0548e1cd2ec2cab6f10fb2f3b7c3 cfg=<per step>
+SKIP(reuse) 02-clone
+checkout verified: /home/diogo/core-review-proof-src @ a9a038430d781959829f8510067ce59afffaad62 == Windows HEAD
+run-wsl.sh finished
+
+=== W5 (WIN_SRC=/mnt/d/CORE/CORE ONLY=10-debug) rc=0 ===
+context: fp1 sha=a9a038430d781959829f8510067ce59afffaad62 local=783a67432596336c20037550c2702c9b66f6b7ffd2d270580b9121341caaf851 script=f893bc3e0106fbd5db80541d492c42ac256e0548e1cd2ec2cab6f10fb2f3b7c3 cfg=<per step>
+checkout verified: /home/diogo/core-review-proof-src @ a9a038430d781959829f8510067ce59afffaad62 == Windows HEAD
+
+===== configure debug =====
+configure rc=0
+
+===== build debug =====
+build rc=0
+
+===== 10 gdb breakpoint proof (engine_tests, Debug -O0 -g) =====
+run-wsl.sh finished
+
+=== W6 (WIN_SRC=/mnt/d/CORE/CORE ONLY=10-debug) rc=0 ===
+context: fp1 sha=a9a038430d781959829f8510067ce59afffaad62 local=783a67432596336c20037550c2702c9b66f6b7ffd2d270580b9121341caaf851 script=f893bc3e0106fbd5db80541d492c42ac256e0548e1cd2ec2cab6f10fb2f3b7c3 cfg=<per step>
+checkout verified: /home/diogo/core-review-proof-src @ a9a038430d781959829f8510067ce59afffaad62 == Windows HEAD
+SKIP(reuse) cfg-debug (fingerprint matches)
+
+===== 10 gdb breakpoint proof (engine_tests, Debug -O0 -g) =====
+run-wsl.sh finished
+
+stage 0.2 WSL proof summary (expected -> observed)
+W1 checkout at intended SHA + hard gate: PASS
+W2 same context reuses: PASS
+W3: FAIL
+W4: FAIL
+W5 fresh debug configure+build: PASS
+W6 same config reuses build: PASS
+
+marker fingerprints (first line of each snapshot):
+W1-02-clone.done: fp1 sha=a9a038430d781959829f8510067ce59afffaad62 local=783a67432596336c20037550c2702c9b66f6b7ffd2d270580b9121341caaf851 script=f893bc3e0106fbd5db80541d492c42ac256e0548e1cd2ec2cab6f10fb2f3b7c3 cfg=clone
+W2-02-clone.done: fp1 sha=a9a038430d781959829f8510067ce59afffaad62 local=783a67432596336c20037550c2702c9b66f6b7ffd2d270580b9121341caaf851 script=f893bc3e0106fbd5db80541d492c42ac256e0548e1cd2ec2cab6f10fb2f3b7c3 cfg=clone
+W3-02-clone.done: fp1 sha=a9a038430d781959829f8510067ce59afffaad62 local=783a67432596336c20037550c2702c9b66f6b7ffd2d270580b9121341caaf851 script=f893bc3e0106fbd5db80541d492c42ac256e0548e1cd2ec2cab6f10fb2f3b7c3 cfg=clone
+W4-02-clone.done: fp1 sha=a9a038430d781959829f8510067ce59afffaad62 local=783a67432596336c20037550c2702c9b66f6b7ffd2d270580b9121341caaf851 script=f893bc3e0106fbd5db80541d492c42ac256e0548e1cd2ec2cab6f10fb2f3b7c3 cfg=clone
+W5-02-clone.done: fp1 sha=a9a038430d781959829f8510067ce59afffaad62 local=783a67432596336c20037550c2702c9b66f6b7ffd2d270580b9121341caaf851 script=f893bc3e0106fbd5db80541d492c42ac256e0548e1cd2ec2cab6f10fb2f3b7c3 cfg=clone
+W6-02-clone.done: fp1 sha=a9a038430d781959829f8510067ce59afffaad62 local=783a67432596336c20037550c2702c9b66f6b7ffd2d270580b9121341caaf851 script=f893bc3e0106fbd5db80541d492c42ac256e0548e1cd2ec2cab6f10fb2f3b7c3 cfg=clone
+W5-cfg-debug.done: fp1 sha=a9a038430d781959829f8510067ce59afffaad62 local=783a67432596336c20037550c2702c9b66f6b7ffd2d270580b9121341caaf851 script=f893bc3e0106fbd5db80541d492c42ac256e0548e1cd2ec2cab6f10fb2f3b7c3 cfg=debug-testsON-nosan

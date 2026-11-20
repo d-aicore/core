@@ -1,0 +1,356 @@
+﻿UpdateCTestConfiguration  from :D:/Core-build/core-review/asan/DartConfiguration.tcl
+Test project D:/Core-build/core-review/asan
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 1
+      Start  1: engine_tests
+
+1: Test command: D:\Core-build\core-review\asan\tests\engine_tests.exe
+1: Working Directory: D:/Core-build/core-review/asan/tests
+1: Test timeout computed to be: 300
+1: ok   wav: escrever e ler um seno de 32 bits devolve as mesmas amostras
+1: ok   wav: 24 bits fica a menos de 2 passos de quantizacao (-132 dBFS)
+1: ok   wav: ficheiro inexistente da erro, nao audio vazio
+1: ok   tempo: samplesPerTick a 150 BPM / 48 kHz
+1: ok   projecto: toJson(fromJson(x)) e estavel
+1: ok   projecto: entrada invalida e recusada
+1: ok   projecto: musica antiga com automacao num instrumento proprio abre
+1: ok   render: musica sem som da silencio finito com a duracao certa
+1: ok   render: clip de audio toca no sitio, ao nivel certo e sem NaN
+1: ok   render: ganho do clip de -6 dB baixa o pico para metade
+1: ok   render: o tamanho do bloco nao muda o resultado
+1: ok   render: deterministico na mesma build (duas vezes igual)
+1: ok   render: ficheiro em falta nao parte o render
+1: ok   loop: posto no tempo novo antes de o audio aplicar o grafo novo nao e convertido outra vez
+1: ok   audio: o limite de memoria recusa antes de ler o ficheiro que nao cabe (audit 10)
+1: ok   audio: um ficheiro ao ritmo do projecto nao e copiado outra vez (audit 10)
+1: ok   freeze: o congelamento fica dentro do pedaco pedido (audit 11)
+1: ok   adopt: a mudanca de tempo nao desloca o arranque do envelope (audit 12)
+1: ok   adopt: os note-offs que ficaram na reserva passam para o grafo novo (audit 13)
+1: ok   engine.start: uma saída que falha não deixa a app sem som (audit 14)
+1: ok   engine.start: a device switch that fails after a rate change puts the engine, the rate and the output back (FL-3)
+1: ok   engine.start: M5 fica 0 (serial) por omissão, sem CORE_LIVE_THREADS nem liveThreads (FL-1, D51)
+1: ok   ART-003: o Server reporta uma saída que parou ou mudou (dispositivo desligado / rerouted)
+1: ok   A-009: canção com instrument='elastic' abre em 'none', conversão reportada, e o grafo não crasha
+1: ok   protocol: a song with more than 8 MB of plugin state is read, loaded and answered whole (M2)
+1: 25 testes, 130 verificacoes, 0 falhas
+ 1/18 Test  #1: engine_tests .....................   Passed    7.36 sec
+test 2
+      Start  2: domain_tests
+
+2: Test command: D:\Core-build\core-review\asan\tests\domain_tests.exe
+2: Working Directory: D:/Core-build/core-review/asan/tests
+2: Test timeout computed to be: 300
+2: ok   documento: novo documento vazio e valido e estavel
+2: ok   documento: o template basico tem kick, bass e hats a espera de plugin
+2: ok   guardar/reabrir: o ficheiro reaberto e igual ao guardado
+2: ok   guardar/reabrir: ficheiro estragado da erro e nao apaga nada
+2: ok   dados D3: o Save ve que o ficheiro mudou em disco desde que esta janela o abriu ou gravou
+2: ok   data loss D4: ReplaceFileW fails half way (1177) and neither version is lost; the file opens
+2: ok   data loss D4: 1177 and the new file cannot be moved in either -> the error says where each version is, the temporary file stays
+2: ok   data loss D4: the normal path is as it was (new in place, previous in the .bak, no temporary files)
+2:      (message: Cannot replace C:\Users\vk_do\AppData\Local\Temp\core-domain-tests\d4-bak-locked.core: Não foi possível remover o ficheiro a ser substituído (1175))
+2: ok   data loss D4: locked .bak -> refused with an error, the previous file intact, no temporary file left, the error has words
+2: ok   data loss BUG-SWEEP-01: a rejected save leaves every retained recovery copy byte-identical
+2: ok   data loss BUG-SWEEP-01: a successful save does not consume a retained recovery copy
+2: ok   undo/redo: adicionar e remover pistas volta exactamente atras
+2: ok   undo/redo: um gesto (arrastar) e um so passo
+2: ok   modificado: guardar limpa, editar suja, undo ate ao guardado limpa
+2: ok   undo/redo: a large plugin state does not shrink the history below the minimum number of steps
+2: ok   undo/redo: beyond the minimum number of steps the byte budget still drops the oldest
+2: ok   undo/redo: above the hard ceiling the oldest steps go even below the minimum, but one undo always stays
+2: ok   plugins: droppedPluginKeys names the plugins a change takes away, and nothing for other changes
+2: ok   plugins: keepLivePluginStates never takes back the state of a plugin that stays alive
+2: ok   templates: todos abrem e o motor toca-os sem erro
+2: ok   plugins por fabricante: todos entram num grupo, sem fabricante vai para Other, ordem alfabetica
+2:      (round-trip: length=3500 patterns=1 equal=1)
+2: ok   tempo round-trip BUG-SWEEP-07: separate edits 145 -> 300 -> 145 restore the song exactly
+2: ok   tempo round-trip BUG-SWEEP-07: a single drag with the baseline reset restores the song
+2: ok   tempo round-trip BUG-SWEEP-07: a walk 145 -> 300 -> 400 -> 145 still restores the original gates
+2: ok   tempo round-trip BUG-SWEEP-07: an edited copy is retimed, never taken back to the source
+2: ok   tempo round-trip BUG-SWEEP-07: an edited source is never restored over the copy
+2: ok   tempo round-trip BUG-SWEEP-07: short gates keep their ms one way and come back exactly
+2: ok   tempo round-trip BUG-SWEEP-07: a saved tempo copy reopens and still restores exactly
+2: ok   randomize: tempo-only keeps an unarranged Patterns-window idea (BUG-SWEEP-29)
+2: ok   score: Stage Core's live operations (song shape, arrange, cell on/off) on the template song
+2: 30 testes, 525 verificacoes, 0 falhas
+ 2/18 Test  #2: domain_tests .....................   Passed  223.20 sec
+test 3
+      Start  3: legacy_guard_tests
+
+3: Test command: D:\Core-build\core-review\asan\tests\legacy_guard_tests.exe
+3: Working Directory: D:/Core-build/core-review/asan/tests
+3: Test timeout computed to be: 300
+3: ok   legacy guard: an old song opens and keeps every stored sound datum
+3: ok   legacy guard: the projection sends none of the removed built-ins to the engine
+3: ok   legacy guard: the five visible templates open, project and render finite
+3: ok   legacy guard: the engine loads a legacy project (sampler zones, synth, bus with samples)
+3: ok   legacy guard: a legacy song with audio renders bit for bit at any block size
+3: ok   legacy guard L2: modulator, sidechain and A/B sound data survive a save/reopen
+3: ok   legacy guard L2: the live effect and instrument paths still work
+3: ok   legacy guard L2: the pattern catalogue loads and the kick/bass/cymbal alignment keeps its rules
+3: ok   legacy guard L2: the sample role catalogue and the live fit rules are unchanged
+3: 9 testes, 169 verificacoes, 0 falhas
+ 3/18 Test  #3: legacy_guard_tests ...............   Passed   44.33 sec
+test 4
+      Start  4: role_tests
+
+4: Test command: D:\Core-build\core-review\asan\tests\role_tests.exe
+4: Working Directory: D:/Core-build/core-review/asan/tests
+4: Test timeout computed to be: 300
+4: ok   papeis: o catalogo tem efeitos com macros e instrumentos sem macros
+4: ok   papeis: as macros adivinham-se pelos nomes dos parametros, palavras inteiras
+4: ok   papeis: o ficheiro guarda e reabre igual; ficheiro estragado da mapa vazio e diz porque
+4: ok   papeis: ensureRoleEffect poe o plugin uma vez, marcado com o papel, e toca no motor
+4: ok   papeis: um papel sem plugin, ou do tipo errado, e recusado sem mexer na musica
+4: ok   papeis: addRoleTrack e setTrackRole poem o plugin do papel como instrumento
+4: ok   SUCK: o reverb abre ate ao drop e volta ao repouso no drop; o filtro fecha
+4: ok   PUM: o volume do plugin de sidechain desce em cada nota do kick e volta antes da seguinte
+4: ok   build-up: o filtro abre, o reverb e o delay crescem ate ao drop; papeis em falta sao saltados
+4: ok   pistas mudas: o papel adivinha-se pelo nome e pelo som antigo
+4: ok   pistas mudas: as builtin e none com papel no mapa passam a tocar o plugin; as outras ficam e sao listadas
+4: ok   pistas mudas: pistas de audio, bus e com plugin nao mudam
+4: ok   toolSharedBus: um so bus com o plugin do papel, sends sem duplicar, mais baixo nos drops
+4: ok   toolSharedBus: sem plugin no papel, ou preset errado, recusa sem mudar a musica
+4: ok   toolIntentFx: cada intencao escreve as macros dos papeis; papel em falta e saltado e dito
+4: ok   toolIntentFxTracks: a intencao escreve em TODAS as pistas com notas, nao so na primeira
+4: ok   toolRoll: um padrao novo que acelera ate ao drop, os clips do sitio saem; valores errados recusam
+4: ok   catalogo das tools: ids unicos, cada uma com o que faz e parametros com nome
+4: ok   cartoes das tools: a lista esta certa, sem S-Core, e acha-se por id e pelos nomes da AI
+4: ok   SUCK: uma cadeia de efeitos cheia recusa-se antes de escrever seja o que for
+4: ok   build-up e fx por intencao: cadeia cheia nao deixa metade escrita
+4: 21 testes, 216 verificacoes, 0 falhas
+ 4/18 Test  #4: role_tests .......................   Passed    1.44 sec
+test 5
+      Start  5: midi_tests
+
+5: Test command: D:\Core-build\core-review\asan\tests\midi_tests.exe
+5: Working Directory: D:/Core-build/core-review/asan/tests
+5: Test timeout computed to be: 300
+5: ok   MIDI exportar: os rolls saem expandidos como o motor os toca, em cada repeticao do loop
+5: ok   MIDI exportar: o fim da musica corta, pistas mudas ficam de fora, o tempo e as rampas vao no ficheiro
+5: ok   MIDI: escrever e ler da as mesmas notas e o mesmo tempo
+5: ok   MIDI ler: running status, note-on com velocidade 0, formato 0 com dois canais, 96 ticks por seminima
+5: ok   MIDI importar: cada pista vira uma pista do Core com padroes; compassos iguais sao o mesmo padrao
+5: ok   MIDI importar: nomes estragados ficam validos; sem notas e recusado sem mexer em nada
+5: ok   MIDI importar para um padrao: notas no padrao a partir de um ponto, as de fora ficam de fora
+5: ok   MIDI ler: o cabecalho a prometer mais pistas do que as que o ficheiro tem da erro
+5: ok   MIDI import BUG-SWEEP-18: overlong, surrogate and above-U+10FFFF names keep the song savable
+5: ok   rename BUG-SWEEP-18: a track name that is not valid UTF-8 is refused, the song stays savable
+5: ok   MIDI SWEEP-30: Louder and Softer scale a roll's played hit velocities with its base
+5: ok   MIDI SWEEP-30: the ordinary-note control and the single-hit velocity contract stay intact
+5: ok   MIDI export: a late write failure throws and the previous file stays byte-identical
+5: ok   MIDI export: a successful overwrite reads back the same bytes and keeps the previous export as .bak
+5: 14 testes, 208 verificacoes, 0 falhas
+ 5/18 Test  #5: midi_tests .......................   Passed    0.46 sec
+test 6
+      Start  6: bug_tests
+
+6: Test command: D:\Core-build\core-review\asan\tests\bug_tests.exe
+6: Working Directory: D:/Core-build/core-review/asan/tests
+6: Test timeout computed to be: 300
+6: ok   dados D1: o audio de outra cancao da mesma pasta nao e 'stray'
+6: ok   dados D1: um .core da pasta que nao se le -> nada e 'stray' (na duvida nao se apaga nada)
+6: ok   dados D1: um .wav que nenhuma cancao da pasta refere continua a ser devolvido
+6: ok   dados D1: contam tambem o .core.bak, um ficheiro de schema 1 e um 'core-project' da pasta
+6: ok   dados D1: o mesmo audio importado em duas cancoes (um so ficheiro) nao sai quando uma delas o deixa de usar
+6: ok   dados D1: o texto da pergunta do Remove unused tem traducao
+6: ok   dados D3: a pergunta 'o ficheiro mudou em disco' tem traducao
+6: ok   data loss D4: the error 'the file is not in its place' has a translation
+6: ok   data loss D5: the corrections of an index of another version are salvaged (the reader gives an error and none)
+6: ok   data loss D5: salvaging is tolerant - what cannot be read is left out, and nothing throws
+6: ok   data loss D5: the index that could not be read is set aside, never written over, and the new one has the corrections
+6: ok   data loss D5: what the window says about an index it could not read has a translation
+6: ok   sweep: addPattern recusa um padrao de comprimento 0 (dividia por zero na projeccao)
+6: ok   sweep: ids enormes num ficheiro nao dao a volta ao gerar o seguinte
+6: ok   sweep: um padrao aprovado guarda o 'approval' e volta a ler; um id longo com sufixo cabe nos 80
+6: ok   sweep: schemaVersion 2^32 + 1 de um template nao e lido como 1
+6: ok   sweep: P-Core com numeros enormes nao tem cast indefinido (recusado ou limitado)
+6: ok   sweep: isolateRegion guarda os campos extra do clip cortado e o nome da copia nao parte um caracter
+6: ok   sweep: STUTTER numa zona apanha as notas das repeticoes de um clip em loop
+6: ok   sweep: FOLLOW grava o corte da nota que atravessa o inicio da zona
+6: ok   reset: o menu da chain oferece TODOS os efeitos (os proprios incluidos) e o Remove leva o FX proprio e as curvas dele
+6: ok   duplicating a section copies the tempo changes inside it
+6: ok   work preservation BUG-SWEEP-17: a retained .saving-N copy keeps the audio only it references
+6: ok   work preservation BUG-SWEEP-17: an unreadable retained .saving-N copy is doubt; a non-song copy does not block
+6: ok   BUG-SWEEP-22: a duplicated section starts at its own tempo, boundary ramps keep their shape
+6: ok   BUG-SWEEP-23: swapping sections moves the tempo with the music
+6: ok   BUG-SWEEP-24: inserted empty bars hold the tempo, the ramp keeps its shape on both sides
+6: ok   BUG-SWEEP-25: shortening the song keeps the retained ramp with a derived endpoint
+6: ok   sweep-26: a template loaded into a swung slot plays swung and the next swing change works
+6: ok   sweep-26 control: swing back to zero then 0.75 lands at 330
+6: ok   sweep-26 builtin: a P-Core style loaded into a swung slot keeps the swing
+6: ok   sweep-27: malformed patternSlots metadata is read with defaults, not thrown at the consumer
+6: ok   sweep-27: unknown song and slot properties survive the parse and save round-trip
+6: ok   sweep-28: conflicting names and parts map by part first, as the header contract says
+6: ok   sweep-28: one row of a part goes to the first track of that part only
+6: ok   sweep-28: unambiguous name-only and part-only matches keep working
+6: ok   write safety BUG-SWEEP-16: a late write failure on a pattern preset throws and leaves no empty file
+6: ok   write safety BUG-SWEEP-16: a late write failure on a rack template throws and leaves no empty file
+6: ok   write safety BUG-SWEEP-16: a late write failure on the roles file throws and the previous map stays byte-identical
+6: 39 testes, 356 verificacoes, 0 falhas
+ 6/18 Test  #6: bug_tests ........................   Passed    1.86 sec
+test 7
+      Start  7: bitwig_tests
+
+7: Test command: D:\Core-build\core-review\asan\tests\bitwig_tests.exe
+7: Working Directory: D:/Core-build/core-review/asan/tests
+7: Test timeout computed to be: 300
+7: ok   Bitwig: cada pista com notas e o seu MIDI track, o instrumento e os efeitos plugin dao um preset cada
+7: ok   Bitwig: nomes de ficheiro sem caracteres que o Windows recusa e sem cortar um caracter a meio
+7: 2 testes, 25 verificacoes, 0 falhas
+ 7/18 Test  #7: bitwig_tests .....................   Passed    0.10 sec
+test 8
+      Start  8: audit_tests
+
+8: Test command: D:\Core-build\core-review\asan\tests\audit_tests.exe
+8: Working Directory: D:/Core-build/core-review/asan/tests
+8: Test timeout computed to be: 300
+8: ok   auditoria B01: importar take..1.wav deixa guardar e fazer autosave; um '..' a sair da pasta continua recusado
+8: ok   auditoria B02: uma pista chamada master nao partilha os estados de plugin do master
+8: ok   auditoria B03: recortar um template a meio de uma rampa de tempo guarda a rampa
+8: ok   auditoria B04: exportar em mono mede o que o ficheiro mono leva, nao o pico estereo
+8: ok   auditoria B06: render com endTick 0 e uma regiao vazia e e recusado, como no render.start
+8: ok   amostras: um wav trocado por dentro, com os mesmos bytes e a mesma data, le de novo
+8: ok   motor: um wav trocado por dentro, com os mesmos bytes e a mesma data, sai do cache
+8: 7 testes, 65 verificacoes, 0 falhas
+ 8/18 Test  #8: audit_tests ......................   Passed    0.53 sec
+test 9
+      Start  9: audit2_tests
+
+9: Test command: D:\Core-build\core-review\asan\tests\audit2_tests.exe
+9: Working Directory: D:/Core-build/core-review/asan/tests
+9: Test timeout computed to be: 300
+9: ok   auditoria 2, bug 1: uma linha do motor com tipos errados nunca lanca no cliente
+9: ok   auditoria 2, ponto 4: uma resposta sem id valido termina a sessao logo, com o motivo
+9: ok   auditoria 2, bug 2: um project.load sem resposta volta a ser enviado sozinho, com uma revisao nova
+9: ok   auditoria 2, bug 3: o espaco do export conta os mono como mono e cada volume por si
+9: ok   auditoria 2, observacao: um autosave estragado diz que esta estragado, sem excecao do JSON
+9: ok   dados D2: o autosave de um Core que morreu e oferecido mesmo que o id dele ja seja de outro processo
+9: 6 testes, 80 verificacoes, 0 falhas
+ 9/18 Test  #9: audit2_tests .....................   Passed    0.13 sec
+test 10
+      Start 10: hunt_tests
+
+10: Test command: D:\Core-build\core-review\asan\tests\hunt_tests.exe
+10: Working Directory: D:/Core-build/core-review/asan/tests
+10: Test timeout computed to be: 300
+10: ok   caca P01: o bounce de uma pista com nome comprido (72+ bytes, com acentos) guarda e faz autosave
+10: ok   caca P02: render e render.start tem a mesma cauda por omissao
+10: ok   caca P03: ids de efeito repetidos ou com ':' sao limpos ao abrir, e o motor ja nao renomeia nada
+10: ok   caca P04: efeitos proprios e moduladores ficam no .core e fora do motor; os plugins e as suas curvas tocam
+10: ok   caca P06: apagar a pista mostrada nao mete na selecao uma pista que ninguem escolheu
+10: ok   caca 2, P05: converter 44,1 kHz para 48 kHz da o numero certo de frames
+10: ok   caca 2, IPC: uma resposta com um campo event continua a ser a resposta
+10: ok   caca 2, U-8: os tres textos que faltavam tem traducao
+10: ok   caca 2, P08: um clip so de NaN e um ficheiro estragado, nao silencio
+10: ok   caca 2, seccao 4: um ppq que nao e 960 tem uma mensagem que se entende
+10: ok   caca audit 2026-11-17 #1: os nomes que o randomizador da aos padroes entram no leitor e guardam-se
+10: ok   caca audit #1 (irmao): os nomes que o rack da aos padroes entram no leitor
+10: ok   caca audit #1 (irmao): duplicar com o nome todo cheio da um nome diferente
+10: 13 testes, 647 verificacoes, 0 falhas
+10/18 Test #10: hunt_tests .......................   Passed  130.32 sec
+test 11
+      Start 11: round3_tests
+
+11: Test command: D:\Core-build\core-review\asan\tests\round3_tests.exe
+11: Working Directory: D:/Core-build/core-review/asan/tests
+11: Test timeout computed to be: 300
+11: ok   ronda 3, R3-A: toolRoll numa pista cheia (64 padroes) recusa e nao corta nada
+11: ok   ronda 3, R3-D: um reverb sem tamanho diz que o huge nao teve tamanho
+11: ok   ronda 3, R3-E: uma pista com 8 sends fica como estava e e dita pelo nome; quem ja tinha um R-Core muda sem o perder
+11: ok   ronda 3, R3-F: kind e style aceitam maiusculas, como preset, intent e section
+11: ok   ronda 3, R3-G: seccoes que o hall nao conhece nao fazem a frase dizer 'quieter in the drops'
+11: ok   ronda 3, R3-B: o F-Core so promete o que escreveu (impact sem drive nao fala de grit)
+11: ok   ronda 3, R3-C: os textos novos do painel Tools e dos menus tem traducao
+11: 7 testes, 82 verificacoes, 0 falhas
+11/18 Test #11: round3_tests .....................   Passed    0.64 sec
+test 12
+      Start 12: calls_tests
+
+12: Test command: D:\Core-build\core-review\asan\tests\calls_tests.exe
+12: Working Directory: D:/Core-build/core-review/asan/tests
+12: Test timeout computed to be: 300
+12: ok   audit 22: um on que e o id de uma faixa ganha a outra que se chama assim
+12: ok   audit 22: duas faixas com o mesmo nome fica a primeira
+12: ok   audit 22: o nome continua a servir quando so ha uma faixa com ele
+12: ok   audit 22: uma section que e o id de uma parte ganha a outra que se chama assim
+12: ok   audit 26: um Mix sem volume nem pan e deixado de fora, nao aplicado a vazio
+12: ok   audit 26: um Mix do master so com pan e deixado de fora (o master nao tem pan)
+12: ok   audit 26: um Mix so com um botao que nao existe e deixado de fora
+12: ok   audit 26: um Mix com o que o master tem fica, e so isso
+12: ok   audit 26: um Mix de faixa com volume e pan fica e aplica os dois
+12: ok   audit 26: um Open sem botoes continua a ser uma chamada que nao muda nada (de proposito)
+12: ok   BUG-SWEEP-04: malformed addon fields are refused with a reason, never a throw
+12: ok   BUG-SWEEP-04: a malformed first folder does not hide the usable add-on in the next
+12: 12 testes, 69 verificacoes, 0 falhas
+12/18 Test #12: calls_tests ......................   Passed    0.16 sec
+test 13
+      Start 13: menu_tests
+
+13: Test command: D:\Core-build\core-review\asan\tests\menu_tests.exe
+13: Working Directory: D:/Core-build/core-review/asan/tests
+13: Test timeout computed to be: 300
+13: ok   track menu: action ids route to their action at every boundary catalog size
+13: ok   track menu: plugin item ids never share an action id, at any boundary catalog size
+13: ok   track menu: the effect chain ids keep the cap-16 wrap semantics
+13: ok   track menu: unknown ids do nothing
+13: ok   add track menu: action ids route to their action at every boundary catalog size
+13: ok   add track menu: plugin item ids never share an action id, at any boundary catalog size
+13: ok   add track menu: unknown ids do nothing
+13: 7 testes, 366 verificacoes, 0 falhas
+13/18 Test #13: menu_tests .......................   Passed    0.05 sec
+test 14
+      Start 14: cli_version
+
+14: Test command: D:\Core-build\core-review\asan\engine\core-engine.exe "--version"
+14: Working Directory: D:/Core-build/core-review/asan/tests
+14: Test timeout computed to be: 300
+14: core-engine 0.7.0+8c6837e800.modified
+14/18 Test #14: cli_version ......................   Passed    0.06 sec
+test 15
+      Start 15: cli_demo_render
+
+15: Test command: C:\Users\vk_do\AppData\Local\Microsoft\WinGet\Packages\Kitware.CMake_Microsoft.Winget.Source_8wekyb3d8bbwe\cmake-4.4.4-windows-x86_64\bin\cmake.exe "-DENGINE=D:/Core-build/core-review/asan/engine/core-engine.exe" "-DWORK=D:/Core-build/core-review/asan/tests/cli" "-P" "D:/CORE/CORE/tests/cli_demo_render.cmake"
+15: Working Directory: D:/Core-build/core-review/asan/tests
+15: Test timeout computed to be: 300
+15: -- demo.wav 4389560 bytes
+15/18 Test #15: cli_demo_render ..................   Passed    0.60 sec
+test 16
+      Start 16: cli_measure
+
+16: Test command: C:\Users\vk_do\AppData\Local\Microsoft\WinGet\Packages\Kitware.CMake_Microsoft.Winget.Source_8wekyb3d8bbwe\cmake-4.4.4-windows-x86_64\bin\cmake.exe "-DENGINE=D:/Core-build/core-review/asan/engine/core-engine.exe" "-DWORK=D:/Core-build/core-review/asan/tests/cli" "-P" "D:/CORE/CORE/tests/cli_measure.cmake"
+16: Working Directory: D:/Core-build/core-review/asan/tests
+16: Test timeout computed to be: 300
+16: -- measure: allFinite, agenda 0.48999999999999999 amostras, 18 blocos sem diferenca
+16/18 Test #16: cli_measure ......................   Passed   40.30 sec
+test 17
+      Start 17: cli_unicode
+
+17: Test command: C:\Users\vk_do\AppData\Local\Microsoft\WinGet\Packages\Kitware.CMake_Microsoft.Winget.Source_8wekyb3d8bbwe\cmake-4.4.4-windows-x86_64\bin\cmake.exe "-DENGINE=D:/Core-build/core-review/asan/engine/core-engine.exe" "-DWORK=D:/Core-build/core-review/asan/tests/cli" "-P" "D:/CORE/CORE/tests/cli_unicode.cmake"
+17: Working Directory: D:/Core-build/core-review/asan/tests
+17: Test timeout computed to be: 300
+17: -- Unicode: D:/Core-build/core-review/asan/tests/cli/saída-ação-漢字.wav
+17/18 Test #17: cli_unicode ......................   Passed    0.14 sec
+test 18
+      Start 18: engine_process_tests
+
+18: Test command: D:\Core-build\core-review\asan\tests\engine_process_tests.exe
+18: Working Directory: D:/Core-build/core-review/asan/tests
+18: Test timeout computed to be: 120
+18:   project.load 3019 ms, project.get 2755 ms
+18: ok   serve: a song with more than 8 MB of plugin state reaches the engine and comes back whole (M2)
+18: ok   serve: a message over the limit fails that command with a clear error and the engine stays alive (M2)
+18: 2 testes, 19 verificacoes, 0 falhas
+18/18 Test #18: engine_process_tests .............   Passed    7.99 sec
+
+100% tests passed out of 18
+
+Label Time Summary:
+merge    = 459.67 sec*proc (18 tests)
+
+Total Test time (real) = 460.33 sec

@@ -1,0 +1,94 @@
+﻿[1/91] Core version
+[2/91] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\assets.cpp.obj
+[3/91] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\tempo_map.cpp.obj
+[4/91] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\dsp\instruments.cpp.obj
+[5/91] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\engine.cpp.obj
+[6/91] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\qualify.cpp.obj
+[7/91] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\dsp\effects.cpp.obj
+[8/91] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\dsp\registry.cpp.obj
+[9/91] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\dsp\loudness.cpp.obj
+[10/91] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\dsp\output_guard.cpp.obj
+[11/91] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\render_job.cpp.obj
+[12/91] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\graph.cpp.obj
+[13/91] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\project.cpp.obj
+[14/91] Building C object engine\CMakeFiles\miniaudio_impl.dir\src\io\miniaudio_impl.c.obj
+[15/91] Linking C static library engine\miniaudio_impl.lib
+[16/91] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\dsp\analyzer.cpp.obj
+[17/91] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\server.cpp.obj
+D:\CORE\CORE\engine\src\core\server.cpp(728): warning C4996: 'std::filesystem::u8path': warning STL4021: The std::filesystem::u8path() overloads are deprecated in C++20. The constructors of std::filesystem::path provide equivalent functionality via construction from u8string, u8string_view, or iterators with value_type char8_t. You can define _SILENCE_CXX20_U8PATH_DEPRECATION_WARNING or _SILENCE_ALL_CXX20_DEPRECATION_WARNINGS to suppress this warning.
+[18/91] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\io\wav.cpp.obj
+D:\CORE\CORE\engine\src\io\wav.cpp(33): warning C4996: '_wfopen': This function or variable may be unsafe. Consider using _wfopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+D:\CORE\CORE\engine\src\io\wav.cpp(71): warning C4996: 'strerror': This function or variable may be unsafe. Consider using strerror_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+[19/91] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\io\audio_file.cpp.obj
+[20/91] Linking CXX static library engine\core_engine_lib.lib
+[21/91] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\history.cpp.obj
+[22/91] Building CXX object engine\CMakeFiles\core-engine.dir\src\io\device.cpp.obj
+[23/91] Building CXX object engine\CMakeFiles\core-engine.dir\src\app\measure.cpp.obj
+[24/91] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\storage.cpp.obj
+[25/91] Building CXX object engine\CMakeFiles\core-engine.dir\src\app\main.cpp.obj
+[26/91] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\document.cpp.obj
+[27/91] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\assets.cpp.obj
+[28/91] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\sha256.cpp.obj
+[29/91] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\edit.cpp.obj
+[30/91] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\autosave.cpp.obj
+[31/91] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\templates.cpp.obj
+[32/91] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\sample_analysis.cpp.obj
+[33/91] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\groove.cpp.obj
+[34/91] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\score.cpp.obj
+[35/91] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\samples.cpp.obj
+[36/91] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\randomize.cpp.obj
+[37/91] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\stutter.cpp.obj
+[38/91] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\pattern_tools.cpp.obj
+[39/91] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\bounce.cpp.obj
+[40/91] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\pattern_rack.cpp.obj
+[41/91] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\pcore.cpp.obj
+[42/91] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\plugin_refs.cpp.obj
+[43/91] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\follow.cpp.obj
+[44/91] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\template_sheet.cpp.obj
+[45/91] Linking CXX executable engine\core-engine.exe
+[46/91] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\roles.cpp.obj
+[47/91] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\core_plugins.cpp.obj
+[48/91] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\role_tools.cpp.obj
+[49/91] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\bitwig.cpp.obj
+[50/91] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\midi.cpp.obj
+[51/91] Building CXX object app\domain\CMakeFiles\core_domain.dir\src\translation.cpp.obj
+[52/91] Linking CXX static library app\domain\core_domain.lib
+[53/91] Building CXX object app\engine-client\CMakeFiles\core_engine_client.dir\src\engine_client.cpp.obj
+[54/91] Linking CXX static library app\engine-client\core_engine_client.lib
+[55/91] Building CXX object app\control\CMakeFiles\core_control.dir\src\calls.cpp.obj
+[56/91] Building CXX object app\sampling\CMakeFiles\core_sampling.dir\src\sampling.cpp.obj
+[57/91] Linking CXX static library app\sampling\core_sampling.lib
+[58/91] Building CXX object app\control\CMakeFiles\core_control.dir\src\bridge.cpp.obj
+[59/91] Linking CXX static library app\control\core_control.lib
+[60/91] Building CXX object tests\CMakeFiles\engine_tests.dir\__\engine\src\io\device.cpp.obj
+[61/91] Building CXX object tests\CMakeFiles\engine_tests.dir\__\engine\src\app\measure.cpp.obj
+[62/91] Building CXX object tests\CMakeFiles\engine_tests.dir\engine_tests.cpp.obj
+[63/91] Building CXX object tests\CMakeFiles\domain_tests.dir\domain_tests.cpp.obj
+[64/91] Building CXX object tests\CMakeFiles\midi_tests.dir\midi_tests.cpp.obj
+[65/91] Building CXX object tests\CMakeFiles\role_tests.dir\role_tests.cpp.obj
+[66/91] Building CXX object tests\CMakeFiles\legacy_guard_tests.dir\legacy_guard_tests.cpp.obj
+[67/91] Building CXX object tests\CMakeFiles\menu_tests.dir\menu_tests.cpp.obj
+[68/91] Building CXX object tests\CMakeFiles\bitwig_tests.dir\bitwig_tests.cpp.obj
+[69/91] Building CXX object tests\CMakeFiles\asan_canary.dir\canary.cpp.obj
+[70/91] Building CXX object tests\CMakeFiles\bug_tests.dir\bug_tests.cpp.obj
+[71/91] Linking CXX executable tests\engine_tests.exe
+[72/91] Linking CXX executable tests\domain_tests.exe
+[73/91] Building CXX object tests\CMakeFiles\audit_tests.dir\audit_tests.cpp.obj
+[74/91] Building CXX object tests\CMakeFiles\audit2_tests.dir\audit2_tests.cpp.obj
+[75/91] Linking CXX executable tests\legacy_guard_tests.exe
+[76/91] Linking CXX executable tests\role_tests.exe
+[77/91] Building CXX object tests\CMakeFiles\round3_tests.dir\round3_tests.cpp.obj
+[78/91] Linking CXX executable tests\midi_tests.exe
+[79/91] Linking CXX executable tests\bug_tests.exe
+[80/91] Linking CXX executable tests\bitwig_tests.exe
+[81/91] Building CXX object tests\CMakeFiles\calls_tests.dir\calls_tests.cpp.obj
+[82/91] Linking CXX executable tests\audit2_tests.exe
+[83/91] Linking CXX executable tests\asan_canary.exe
+[84/91] Linking CXX executable tests\audit_tests.exe
+[85/91] Linking CXX executable tests\round3_tests.exe
+[86/91] Linking CXX executable tests\menu_tests.exe
+[87/91] Linking CXX executable tests\calls_tests.exe
+[88/91] Building CXX object tests\CMakeFiles\hunt_tests.dir\hunt_tests.cpp.obj
+[89/91] Building CXX object tests\CMakeFiles\engine_process_tests.dir\engine_process_tests.cpp.obj
+[90/91] Linking CXX executable tests\hunt_tests.exe
+[91/91] Linking CXX executable tests\engine_process_tests.exe

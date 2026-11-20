@@ -1,0 +1,97 @@
+{
+ "renders": {
+  "automation": {
+   "channels": 2,
+   "denseEventBlocks": 0,
+   "path": "D:\\Core-build\\vst3-host\\eb-automix.wav",
+   "peak": 0.3918937146663666,
+   "realtimeFactor": 21.990955559797367,
+   "renderMs": 227.3662,
+   "sampleRate": 48000.0,
+   "seconds": 5.0,
+   "stems": []
+  },
+  "mix0": {
+   "channels": 2,
+   "denseEventBlocks": 0,
+   "path": "D:\\Core-build\\vst3-host\\eb-mix0.wav",
+   "peak": 0.3918937146663666,
+   "realtimeFactor": 21.94387634186804,
+   "renderMs": 227.85399999999998,
+   "sampleRate": 48000.0,
+   "seconds": 5.0,
+   "stems": []
+  },
+  "mix1": {
+   "channels": 2,
+   "denseEventBlocks": 0,
+   "path": "D:\\Core-build\\vst3-host\\eb-mix1.wav",
+   "peak": 0.4488188922405243,
+   "realtimeFactor": 22.089176656864964,
+   "renderMs": 226.3552,
+   "sampleRate": 48000.0,
+   "seconds": 5.0,
+   "stems": []
+  }
+ },
+ "stats": {
+  "automation": {
+   "path": "D:\\Core-build\\vst3-host\\eb-automix.wav",
+   "sha256": "f7272f426f0300c8919d107ce6877f7794d94d380410fa75a8df69748be46189",
+   "sampleRate": 48000,
+   "frames": 240000,
+   "channels": 2,
+   "seconds": 5.0,
+   "peak": 0.391894,
+   "peakDb": -8.14,
+   "rms": 0.082976
+  },
+  "mix0": {
+   "path": "D:\\Core-build\\vst3-host\\eb-mix0.wav",
+   "sha256": "f7272f426f0300c8919d107ce6877f7794d94d380410fa75a8df69748be46189",
+   "sampleRate": 48000,
+   "frames": 240000,
+   "channels": 2,
+   "seconds": 5.0,
+   "peak": 0.391894,
+   "peakDb": -8.14,
+   "rms": 0.082976
+  },
+  "mix1": {
+   "path": "D:\\Core-build\\vst3-host\\eb-mix1.wav",
+   "sha256": "979a42fced7653058026958917ef8299934f7cfbf92c5d927ee3933005f32839",
+   "sampleRate": 48000,
+   "frames": 240000,
+   "channels": 2,
+   "seconds": 5.0,
+   "peak": 0.448819,
+   "peakDb": -6.96,
+   "rms": 0.200981
+  }
+ },
+ "maxAbsDiff": {
+  "early_A_vs_B": 0.0,
+  "late_A_vs_C": 0.354477,
+  "late_A_vs_B": 0.0,
+  "early_A_vs_C": 0.396286
+ },
+ "envelope": [
+  {
+   "param": "fx:eb:3",
+   "points": [
+    {
+     "tick": 0,
+     "value": 0.0
+    },
+    {
+     "tick": 960,
+     "value": 0.0
+    },
+    {
+     "tick": 2880,
+     "value": 1.0
+    }
+   ]
+  }
+ ]
+}

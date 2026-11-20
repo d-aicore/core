@@ -1,0 +1,61 @@
+{
+ "envelope": [
+  {
+   "param": "fx:dec:vst:2",
+   "points": [
+    {
+     "tick": 0,
+     "value": 0.0
+    },
+    {
+     "tick": 960,
+     "value": 0.0
+    },
+    {
+     "tick": 2880,
+     "value": 1.0
+    }
+   ]
+  }
+ ],
+ "stats": {
+  "A": {
+   "path": "D:\\Core-build\\vst3-host\\dec2-autodrive.wav",
+   "sha256": "57425ce726d8aba4ed65c9403755564f59cfdae9a48ff0b1e0b6b0cce9410b04",
+   "sampleRate": 48000,
+   "frames": 240000,
+   "channels": 2,
+   "seconds": 5.0,
+   "peak": 0.478579,
+   "peakDb": -6.4,
+   "rms": 0.152486
+  },
+  "B": {
+   "path": "D:\\Core-build\\vst3-host\\dec2-drive0.wav",
+   "sha256": "09f925f68187966b5d062767ecfa0607c7767d1aa42421a2edf336f287891323",
+   "sampleRate": 48000,
+   "frames": 240000,
+   "channels": 2,
+   "seconds": 5.0,
+   "peak": 0.373601,
+   "peakDb": -8.55,
+   "rms": 0.158582
+  },
+  "C": {
+   "path": "D:\\Core-build\\vst3-host\\dec2-drive1.wav",
+   "sha256": "11d1525c79c63c25a6e16a99ecc043d1e6ac301a51b2cb26d8725f0b5b29365b",
+   "sampleRate": 48000,
+   "frames": 240000,
+   "channels": 2,
+   "seconds": 5.0,
+   "peak": 0.17093,
+   "peakDb": -15.34,
+   "rms": 0.077934
+  }
+ },
+ "maxAbsDiff": {
+  "early_A_B": 0.0,
+  "late_A_C": 0.004531,
+  "late_A_B": 0.239022
+ }
+}

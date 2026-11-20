@@ -1,0 +1,173 @@
+=================================================================
+==3847==ERROR: AddressSanitizer: heap-use-after-free on address 0x50200000001c at pc 0x653fcfe5a31e bp 0x7ffd1984c1c0 sp 0x7ffd1984c1b0
+READ of size 4 at 0x50200000001c thread T0
+    #0 0x653fcfe5a31d in main /home/diogo/core-review-src/tests/canary.cpp:10
+    #1 0x7b4a23e2a1c9  (/lib/x86_64-linux-gnu/libc.so.6+0x2a1c9) (BuildId: 8cebda42d140fc2b09639f8b13a5d5f2e617ef09)
+    #2 0x7b4a23e2a28a in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x2a28a) (BuildId: 8cebda42d140fc2b09639f8b13a5d5f2e617ef09)
+    #3 0x653fcfe5a1a4 in _start (/home/diogo/core-review-build/asanubsan/tests/asan_canary+0x11a4) (BuildId: 6b7ce3fcfc7b40f89d2532569caa3a7abf932377)
+
+0x50200000001c is located 12 bytes inside of 16-byte region [0x502000000010,0x502000000020)
+freed by thread T0 here:
+    #0 0x7b4a24eff1f8 in operator delete[](void*) ../../../../src/libsanitizer/asan/asan_new_delete.cpp:155
+    #1 0x653fcfe5a296 in main /home/diogo/core-review-src/tests/canary.cpp:9
+    #2 0x7b4a23e2a1c9  (/lib/x86_64-linux-gnu/libc.so.6+0x2a1c9) (BuildId: 8cebda42d140fc2b09639f8b13a5d5f2e617ef09)
+    #3 0x7b4a23e2a28a in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x2a28a) (BuildId: 8cebda42d140fc2b09639f8b13a5d5f2e617ef09)
+    #4 0x653fcfe5a1a4 in _start (/home/diogo/core-review-build/asanubsan/tests/asan_canary+0x11a4) (BuildId: 6b7ce3fcfc7b40f89d2532569caa3a7abf932377)
+
+previously allocated by thread T0 here:
+    #0 0x7b4a24efe6c8 in operator new[](unsigned long) ../../../../src/libsanitizer/asan/asan_new_delete.cpp:98
+    #1 0x653fcfe5a27f in main /home/diogo/core-review-src/tests/canary.cpp:8
+    #2 0x7b4a23e2a1c9  (/lib/x86_64-linux-gnu/libc.so.6+0x2a1c9) (BuildId: 8cebda42d140fc2b09639f8b13a5d5f2e617ef09)
+    #3 0x7b4a23e2a28a in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x2a28a) (BuildId: 8cebda42d140fc2b09639f8b13a5d5f2e617ef09)
+    #4 0x653fcfe5a1a4 in _start (/home/diogo/core-review-build/asanubsan/tests/asan_canary+0x11a4) (BuildId: 6b7ce3fcfc7b40f89d2532569caa3a7abf932377)
+
+SUMMARY: AddressSanitizer: heap-use-after-free /home/diogo/core-review-src/tests/canary.cpp:10 in main
+Shadow bytes around the buggy address:
+  0x501ffffffd80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x501ffffffe00: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x501ffffffe80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x501fffffff00: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x501fffffff80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x502000000000: fa fa fd[fd]fa fa fa fa fa fa fa fa fa fa fa fa
+  0x502000000080: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x502000000100: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x502000000180: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x502000000200: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x502000000280: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==3847==ABORTING
+asan-wsl run1 exit=1
+=================================================================
+==3850==ERROR: AddressSanitizer: heap-use-after-free on address 0x50200000001c at pc 0x59143848f31e bp 0x7fff7c40cc70 sp 0x7fff7c40cc60
+READ of size 4 at 0x50200000001c thread T0
+    #0 0x59143848f31d in main /home/diogo/core-review-src/tests/canary.cpp:10
+    #1 0x735744a2a1c9  (/lib/x86_64-linux-gnu/libc.so.6+0x2a1c9) (BuildId: 8cebda42d140fc2b09639f8b13a5d5f2e617ef09)
+    #2 0x735744a2a28a in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x2a28a) (BuildId: 8cebda42d140fc2b09639f8b13a5d5f2e617ef09)
+    #3 0x59143848f1a4 in _start (/home/diogo/core-review-build/asanubsan/tests/asan_canary+0x11a4) (BuildId: 6b7ce3fcfc7b40f89d2532569caa3a7abf932377)
+
+0x50200000001c is located 12 bytes inside of 16-byte region [0x502000000010,0x502000000020)
+freed by thread T0 here:
+    #0 0x735745aff1f8 in operator delete[](void*) ../../../../src/libsanitizer/asan/asan_new_delete.cpp:155
+    #1 0x59143848f296 in main /home/diogo/core-review-src/tests/canary.cpp:9
+    #2 0x735744a2a1c9  (/lib/x86_64-linux-gnu/libc.so.6+0x2a1c9) (BuildId: 8cebda42d140fc2b09639f8b13a5d5f2e617ef09)
+    #3 0x735744a2a28a in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x2a28a) (BuildId: 8cebda42d140fc2b09639f8b13a5d5f2e617ef09)
+    #4 0x59143848f1a4 in _start (/home/diogo/core-review-build/asanubsan/tests/asan_canary+0x11a4) (BuildId: 6b7ce3fcfc7b40f89d2532569caa3a7abf932377)
+
+previously allocated by thread T0 here:
+    #0 0x735745afe6c8 in operator new[](unsigned long) ../../../../src/libsanitizer/asan/asan_new_delete.cpp:98
+    #1 0x59143848f27f in main /home/diogo/core-review-src/tests/canary.cpp:8
+    #2 0x735744a2a1c9  (/lib/x86_64-linux-gnu/libc.so.6+0x2a1c9) (BuildId: 8cebda42d140fc2b09639f8b13a5d5f2e617ef09)
+    #3 0x735744a2a28a in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x2a28a) (BuildId: 8cebda42d140fc2b09639f8b13a5d5f2e617ef09)
+    #4 0x59143848f1a4 in _start (/home/diogo/core-review-build/asanubsan/tests/asan_canary+0x11a4) (BuildId: 6b7ce3fcfc7b40f89d2532569caa3a7abf932377)
+
+SUMMARY: AddressSanitizer: heap-use-after-free /home/diogo/core-review-src/tests/canary.cpp:10 in main
+Shadow bytes around the buggy address:
+  0x501ffffffd80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x501ffffffe00: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x501ffffffe80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x501fffffff00: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x501fffffff80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x502000000000: fa fa fd[fd]fa fa fa fa fa fa fa fa fa fa fa fa
+  0x502000000080: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x502000000100: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x502000000180: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x502000000200: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x502000000280: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==3850==ABORTING
+asan-wsl run2 exit=1
+=================================================================
+==3853==ERROR: AddressSanitizer: heap-use-after-free on address 0x50200000001c at pc 0x591ad029e31e bp 0x7ffd1cf2cb90 sp 0x7ffd1cf2cb80
+READ of size 4 at 0x50200000001c thread T0
+    #0 0x591ad029e31d in main /home/diogo/core-review-src/tests/canary.cpp:10
+    #1 0x7027d762a1c9  (/lib/x86_64-linux-gnu/libc.so.6+0x2a1c9) (BuildId: 8cebda42d140fc2b09639f8b13a5d5f2e617ef09)
+    #2 0x7027d762a28a in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x2a28a) (BuildId: 8cebda42d140fc2b09639f8b13a5d5f2e617ef09)
+    #3 0x591ad029e1a4 in _start (/home/diogo/core-review-build/asanubsan/tests/asan_canary+0x11a4) (BuildId: 6b7ce3fcfc7b40f89d2532569caa3a7abf932377)
+
+0x50200000001c is located 12 bytes inside of 16-byte region [0x502000000010,0x502000000020)
+freed by thread T0 here:
+    #0 0x7027d86ff1f8 in operator delete[](void*) ../../../../src/libsanitizer/asan/asan_new_delete.cpp:155
+    #1 0x591ad029e296 in main /home/diogo/core-review-src/tests/canary.cpp:9
+    #2 0x7027d762a1c9  (/lib/x86_64-linux-gnu/libc.so.6+0x2a1c9) (BuildId: 8cebda42d140fc2b09639f8b13a5d5f2e617ef09)
+    #3 0x7027d762a28a in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x2a28a) (BuildId: 8cebda42d140fc2b09639f8b13a5d5f2e617ef09)
+    #4 0x591ad029e1a4 in _start (/home/diogo/core-review-build/asanubsan/tests/asan_canary+0x11a4) (BuildId: 6b7ce3fcfc7b40f89d2532569caa3a7abf932377)
+
+previously allocated by thread T0 here:
+    #0 0x7027d86fe6c8 in operator new[](unsigned long) ../../../../src/libsanitizer/asan/asan_new_delete.cpp:98
+    #1 0x591ad029e27f in main /home/diogo/core-review-src/tests/canary.cpp:8
+    #2 0x7027d762a1c9  (/lib/x86_64-linux-gnu/libc.so.6+0x2a1c9) (BuildId: 8cebda42d140fc2b09639f8b13a5d5f2e617ef09)
+    #3 0x7027d762a28a in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x2a28a) (BuildId: 8cebda42d140fc2b09639f8b13a5d5f2e617ef09)
+    #4 0x591ad029e1a4 in _start (/home/diogo/core-review-build/asanubsan/tests/asan_canary+0x11a4) (BuildId: 6b7ce3fcfc7b40f89d2532569caa3a7abf932377)
+
+SUMMARY: AddressSanitizer: heap-use-after-free /home/diogo/core-review-src/tests/canary.cpp:10 in main
+Shadow bytes around the buggy address:
+  0x501ffffffd80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x501ffffffe00: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x501ffffffe80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x501fffffff00: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x501fffffff80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x502000000000: fa fa fd[fd]fa fa fa fa fa fa fa fa fa fa fa fa
+  0x502000000080: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x502000000100: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x502000000180: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x502000000200: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x502000000280: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==3853==ABORTING
+asan-wsl run3 exit=1
+asan-wsl: non-zero exits 3/3
+asan-wsl: report matched /AddressSanitizer/

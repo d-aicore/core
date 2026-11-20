@@ -1,0 +1,21 @@
+# S9 probe (OUT OF REPO): builds the CORE_TEST_DELAY variant of the repo's TestPlugins.cpp as a VST3 for
+# the tail/latency characterization. No repo file is touched; the repo has no CoreTestDelay target
+# (app/selftest-plugins/CMakeLists.txt builds synth/gain/crash/crashrestart/throw/fault only).
+cmake_minimum_required(VERSION 3.22)
+project(s9_delay_probe C CXX)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+add_subdirectory(D:/Core-deps/JUCE-9.0.5 JUCE)
+juce_add_plugin(CoreTestDelayProbe
+  PRODUCT_NAME "Core Test Delay Probe"
+  COMPANY_NAME "Core"
+  VERSION 1.0.0
+  PLUGIN_MANUFACTURER_CODE Core
+  PLUGIN_CODE CTdl
+  IS_SYNTH FALSE
+  FORMATS VST3
+  COPY_PLUGIN_AFTER_BUILD FALSE
+  VST3_AUTO_MANIFEST TRUE)
+target_sources(CoreTestDelayProbe PRIVATE D:/CORE/CORE/app/selftest-plugins/TestPlugins.cpp)
+target_compile_definitions(CoreTestDelayProbe PUBLIC CORE_TEST_DELAY=1 JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0)
+target_link_libraries(CoreTestDelayProbe PRIVATE juce::juce_audio_utils PUBLIC juce::juce_recommended_config_flags)

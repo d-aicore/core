@@ -1,0 +1,35 @@
+clang-tidy output: /home/diogo/core-review-build/40-tidy-round.txt
+total warning lines: 339
+errors: 0
+--- top files by warning count ---
+     49 /home/diogo/core-review-src/engine/src/core/graph.cpp
+     31 /home/diogo/core-review-src/engine/src/core/../../third_party/json.hpp
+     22 /home/diogo/core-review-src/app/domain/src/pcore.cpp
+     22 /home/diogo/core-review-src/app/domain/src/edit.cpp
+     17 /home/diogo/core-review-src/engine/src/core/server.cpp
+     13 /home/diogo/core-review-src/app/domain/src/randomize.cpp
+     13 /home/diogo/core-review-src/app/domain/src/document.cpp
+     11 /home/diogo/core-review-src/app/domain/src/samples.cpp
+     10 /home/diogo/core-review-src/engine/src/core/project.cpp
+     10 /home/diogo/core-review-src/engine/src/app/measure.cpp
+     10 /home/diogo/core-review-src/engine/src/app/main.cpp
+     10 /home/diogo/core-review-src/app/domain/src/role_tools.cpp
+      9 /home/diogo/core-review-src/engine/src/core/engine.cpp
+      8 /home/diogo/core-review-src/engine/src/io/audio_file.cpp
+      7 /home/diogo/core-review-src/engine/src/io/wav.cpp
+--- top check names ---
+    122 [bugprone-easily-swappable-parameters]
+     63 [bugprone-narrowing-conversions]
+     53 [bugprone-implicit-widening-of-multiplication-result]
+     13 [bugprone-exception-escape]
+     12 [performance-inefficient-vector-operation]
+     11 [performance-enum-size]
+     10 [bugprone-empty-catch]
+      9 [performance-inefficient-string-concatenation]
+      7 [bugprone-misplaced-widening-cast]
+      6 [concurrency-mt-unsafe]
+      6 [bugprone-suspicious-string-compare]
+      5 [performance-avoid-endl]
+      4 [bugprone-not-null-terminated-result]
+      4 [bugprone-branch-clone]
+      3 [bugprone-assignment-in-if-condition]

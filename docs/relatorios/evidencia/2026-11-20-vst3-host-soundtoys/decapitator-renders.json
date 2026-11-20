@@ -1,0 +1,70 @@
+{
+ "files": [
+  {
+   "path": "D:\\Core-build\\vst3-host\\dec2-autodrive.wav",
+   "sha256": "57425ce726d8aba4ed65c9403755564f59cfdae9a48ff0b1e0b6b0cce9410b04",
+   "sampleRate": 48000,
+   "frames": 240000,
+   "channels": 2,
+   "seconds": 5.0,
+   "peak": 0.478579,
+   "peakDb": -6.4,
+   "rms": 0.152486
+  },
+  {
+   "path": "D:\\Core-build\\vst3-host\\dec2-drive0.wav",
+   "sha256": "09f925f68187966b5d062767ecfa0607c7767d1aa42421a2edf336f287891323",
+   "sampleRate": 48000,
+   "frames": 240000,
+   "channels": 2,
+   "seconds": 5.0,
+   "peak": 0.373601,
+   "peakDb": -8.55,
+   "rms": 0.158582
+  },
+  {
+   "path": "D:\\Core-build\\vst3-host\\dec2-drive1.wav",
+   "sha256": "11d1525c79c63c25a6e16a99ecc043d1e6ac301a51b2cb26d8725f0b5b29365b",
+   "sampleRate": 48000,
+   "frames": 240000,
+   "channels": 2,
+   "seconds": 5.0,
+   "peak": 0.17093,
+   "peakDb": -15.34,
+   "rms": 0.077934
+  },
+  {
+   "path": "D:\\Core-build\\vst3-host\\dec2-active.wav",
+   "sha256": "09f925f68187966b5d062767ecfa0607c7767d1aa42421a2edf336f287891323",
+   "sampleRate": 48000,
+   "frames": 240000,
+   "channels": 2,
+   "seconds": 5.0,
+   "peak": 0.373601,
+   "peakDb": -8.55,
+   "rms": 0.158582
+  },
+  {
+   "path": "D:\\Core-build\\vst3-host\\dec2-bypass.wav",
+   "sha256": "979a42fced7653058026958917ef8299934f7cfbf92c5d927ee3933005f32839",
+   "sampleRate": 48000,
+   "frames": 240000,
+   "channels": 2,
+   "seconds": 5.0,
+   "peak": 0.448819,
+   "peakDb": -6.96,
+   "rms": 0.200981
+  },
+  {
+   "path": "D:\\Core-build\\vst3-host\\dec2-nofx.wav",
+   "sha256": "979a42fced7653058026958917ef8299934f7cfbf92c5d927ee3933005f32839",
+   "sampleRate": 48000,
+   "frames": 240000,
+   "channels": 2,
+   "seconds": 5.0,
+   "peak": 0.448819,
+   "peakDb": -6.96,
+   "rms": 0.200981
+  }
+ ]
+}

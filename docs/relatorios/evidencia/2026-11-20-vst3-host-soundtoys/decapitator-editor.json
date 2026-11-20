@@ -1,0 +1,85 @@
+{
+ "opened": [
+  {
+   "hwnd": 81989762,
+   "title": "Decapitator",
+   "visible": true
+  },
+  {
+   "hwnd": 6228968,
+   "title": "GDI+ Window (core-engine.exe)",
+   "visible": false
+  },
+  {
+   "hwnd": 23925560,
+   "title": "JUCEWindow",
+   "visible": false
+  },
+  {
+   "hwnd": 8983362,
+   "title": "JUCEWindow",
+   "visible": false
+  },
+  {
+   "hwnd": 13766232,
+   "title": "MSCTFIME UI",
+   "visible": false
+  },
+  {
+   "hwnd": 8327138,
+   "title": "Default IME",
+   "visible": false
+  },
+  {
+   "hwnd": 17437386,
+   "title": "Default IME",
+   "visible": false
+  }
+ ],
+ "closed": [
+  {
+   "hwnd": 81989762,
+   "title": "Decapitator",
+   "visible": false
+  },
+  {
+   "hwnd": 6228968,
+   "title": "GDI+ Window (core-engine.exe)",
+   "visible": false
+  },
+  {
+   "hwnd": 23925560,
+   "title": "JUCEWindow",
+   "visible": false
+  },
+  {
+   "hwnd": 8983362,
+   "title": "JUCEWindow",
+   "visible": false
+  },
+  {
+   "hwnd": 13766232,
+   "title": "MSCTFIME UI",
+   "visible": false
+  },
+  {
+   "hwnd": 8327138,
+   "title": "Default IME",
+   "visible": false
+  },
+  {
+   "hwnd": 17437386,
+   "title": "Default IME",
+   "visible": false
+  }
+ ],
+ "visibleOpen": [
+  {
+   "hwnd": 81989762,
+   "title": "Decapitator",
+   "visible": true
+  }
+ ],
+ "visibleAfterClose": [],
+ "engineAlive": true
+}

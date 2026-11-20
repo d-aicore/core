@@ -1,0 +1,22 @@
+  FALHOU D:\CORE\CORE\tests\engine_process_tests.cpp:159: end.get() == std::string("The engine exited (code 0)."): medido The engine exited (code 259)., esperado The engine exited (code 0).
+  slowest answer after the crash: 2 ms
+FAIL serve: after a plugin crashes in processBlock the engine still answers, retries, releases it and exits
+ok   serve: a plugin change that is not a parameter is reported as pluginsChanged
+ok   serve: a crashed plugin that asks to restart the component does not deadlock the message thread
+ok   serve: a plugin that throws while playing is retried into a new instance that plays (BUG-SWEEP-05)
+ok   serve: a plugin that crashes giving its state is silenced and leaked, the engine answers and plays on
+ok   serve: a plugin that crashes loading its state is reported missing, the engine answers and plays on
+ok   serve: a plugin that crashes in reset is silenced, the engine answers and plays on
+ok   serve: a plugin that crashes in reset while the audio thread waits on its lock is silenced (wide window)
+ok   serve: a plugin stuck in processBlock does not hold Stop hostage (bounded reset)
+ok   serve: a plugin that crashes opening its editor is silenced, the engine answers and plays on
+ok   serve: a plugin that crashes in a parameter getter is silenced, the engine answers and plays on
+  project.load 977 ms, project.get 1119 ms
+ok   serve: a song with more than 8 MB of plugin state reaches the engine and comes back whole (M2)
+ok   serve: a message over the limit fails that command with a clear error and the engine stays alive (M2)
+  STATE-PER-EDIT 32 tracks x 318128 B: projection 9881 B; 20 edits: projection avg 5.18 ms, round-trip avg 36.7 ms, total avg 41.9 ms/edit (worst 45.0 ms)
+ok   serve: 32 tracks of plugin state edit without carrying the blobs (STATE-PER-EDIT)
+  sound-neutral (on demand): 1152044 bytes rendered, peak 0.201 (identity checked above)
+  sound-neutral (refreshed): 1152044 bytes rendered, peak 0.602 (identity checked above)
+ok   serve: plugin state on demand renders bit-identical to state in the song (STATE-PER-EDIT)
+15 testes, 256 verificacoes, 1 falhas

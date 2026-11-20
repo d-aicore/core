@@ -1,0 +1,2844 @@
+[
+  {
+    "bypassFx": false,
+    "cpu": {
+      "intervalMs": 3002.1265,
+      "load": {
+        "avgPct": 1.5821230580418955,
+        "marginPct": 86.845,
+        "maxPct": 13.155000000000001
+      },
+      "master": {
+        "cpuPct": 0.0,
+        "effects": []
+      },
+      "totalPct": 0.6593726147116052,
+      "tracks": [
+        {
+          "cpuPct": 0.21215295224901415,
+          "effects": [],
+          "id": "kick",
+          "instrument": {
+            "cpuPct": 0.21215295224901415,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.26072852026721727,
+          "effects": [
+            {
+              "cpuPct": 0.07044006973057264,
+              "id": "gainfx",
+              "name": "Core Test Gain"
+            }
+          ],
+          "id": "bass",
+          "instrument": {
+            "cpuPct": 0.19028845053664462,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.18649114219537385,
+          "effects": [],
+          "id": "lead",
+          "instrument": {
+            "cpuPct": 0.18649114219537385,
+            "name": "Core Test Synth"
+          }
+        }
+      ]
+    },
+    "deliveredSeconds": 2.994666666666667,
+    "device": {
+      "backend": "Null",
+      "blockSize": 128,
+      "device": "NULL Playback Device",
+      "exclusive": false,
+      "internalSampleRate": 48000,
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 10.666666666666666,
+        "tracksSamples": 256
+      },
+      "latencyMs": 5.333333333333333,
+      "periods": 2,
+      "sampleRate": 48000.0,
+      "scheduling": "Pro Audio"
+    },
+    "error": "",
+    "liveThreads": 0,
+    "muted": [],
+    "plugins": [
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestSynth_artefacts\\Release\\VST3\\Core Test Synth.vst3",
+        "name": "Core Test Synth",
+        "role": "instrument"
+      },
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestGain_artefacts\\Release\\VST3\\Core Test Gain.vst3",
+        "name": "Core Test Gain",
+        "role": "insert"
+      }
+    ],
+    "scenario": "a-none-t0",
+    "stats": {
+      "auditionSteals": 0,
+      "avgLoadPct": 1.5821230580418955,
+      "avgRenderMs": 0.04218993766696349,
+      "callbackErrors": 0,
+      "callbacks": 1123,
+      "denseEventBlocks": 0,
+      "device": {
+        "backend": "Null",
+        "blockSize": 128,
+        "device": "NULL Playback Device",
+        "exclusive": false,
+        "internalSampleRate": 48000,
+        "latencyMs": 5.333333333333333,
+        "periods": 2,
+        "sampleRate": 48000.0,
+        "scheduling": "Pro Audio"
+      },
+      "deviceDriftPpm": 0.0,
+      "deviceNotification": 0,
+      "droppedNotes": 0,
+      "failedPlugins": [],
+      "failedUnits": [],
+      "graphSwaps": 0,
+      "lastRebuildMs": 20.2003,
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 10.666666666666666,
+        "tracksSamples": 256
+      },
+      "leakedGraphs": 0,
+      "liveFallback": false,
+      "liveNotesRejected": 0,
+      "liveOffAllTracks": 0,
+      "liveOffOverflows": 0,
+      "liveStallBlocks": 0,
+      "liveStalls": 0,
+      "liveThreads": 0,
+      "loadP50Pct": 2.0,
+      "loadP95Pct": 3.0,
+      "loadP99Pct": 3.0,
+      "maxCallbackFrames": 128,
+      "maxEditToAudioMs": 0.0,
+      "maxLoadPct": 13.155000000000001,
+      "maxRenderMs": 0.3508,
+      "minCallbackFrames": 128,
+      "nativeFailures": 0,
+      "nonFiniteBlocks": 0,
+      "overruns": 0,
+      "pluginFailures": 0,
+      "pluginNotesDropped": 0,
+      "starvations": 278
+    },
+    "timing": {
+      "blocks": 1123,
+      "framesTotal": 143744,
+      "maxLoadPct": 13.155003288750823,
+      "maxMs": 0.3508,
+      "meanLoadPct": 1.5821230580418977,
+      "meanMs": 0.04218993766696349,
+      "overBudget": 0,
+      "p50Ms": 0.0422,
+      "p95Ms": 0.0602,
+      "p99LoadPct": 2.6962506740626684,
+      "p99Ms": 0.0719
+    },
+    "wallSeconds": 5.0364368,
+    "workerJobs": 0
+  },
+  {
+    "bypassFx": false,
+    "cpu": {
+      "intervalMs": 3000.4730999999997,
+      "load": {
+        "avgPct": 1.6876672368634285,
+        "marginPct": 90.5088,
+        "maxPct": 9.491200000000001
+      },
+      "master": {
+        "cpuPct": 0.0,
+        "effects": []
+      },
+      "totalPct": 0.7091848282192564,
+      "tracks": [
+        {
+          "cpuPct": 0.23072028207818293,
+          "effects": [],
+          "id": "kick",
+          "instrument": {
+            "cpuPct": 0.23072028207818293,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.27943593295337327,
+          "effects": [
+            {
+              "cpuPct": 0.07904753420385606,
+              "id": "gainfx",
+              "name": "Core Test Gain"
+            }
+          ],
+          "id": "bass",
+          "instrument": {
+            "cpuPct": 0.2003883987495172,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.1990286131877003,
+          "effects": [],
+          "id": "lead",
+          "instrument": {
+            "cpuPct": 0.1990286131877003,
+            "name": "Core Test Synth"
+          }
+        }
+      ]
+    },
+    "deliveredSeconds": 2.997333333333333,
+    "device": {
+      "backend": "Null",
+      "blockSize": 128,
+      "device": "NULL Playback Device",
+      "exclusive": false,
+      "internalSampleRate": 48000,
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 10.666666666666666,
+        "tracksSamples": 256
+      },
+      "latencyMs": 5.333333333333333,
+      "periods": 2,
+      "sampleRate": 48000.0,
+      "scheduling": "Pro Audio"
+    },
+    "error": "",
+    "liveThreads": 0,
+    "muted": [
+      "kick"
+    ],
+    "plugins": [
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestSynth_artefacts\\Release\\VST3\\Core Test Synth.vst3",
+        "name": "Core Test Synth",
+        "role": "instrument"
+      },
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestGain_artefacts\\Release\\VST3\\Core Test Gain.vst3",
+        "name": "Core Test Gain",
+        "role": "insert"
+      }
+    ],
+    "scenario": "a-mute1-t0",
+    "stats": {
+      "auditionSteals": 0,
+      "avgLoadPct": 1.6876672368634285,
+      "avgRenderMs": 0.04500444839857651,
+      "callbackErrors": 0,
+      "callbacks": 1124,
+      "denseEventBlocks": 0,
+      "device": {
+        "backend": "Null",
+        "blockSize": 128,
+        "device": "NULL Playback Device",
+        "exclusive": false,
+        "internalSampleRate": 48000,
+        "latencyMs": 5.333333333333333,
+        "periods": 2,
+        "sampleRate": 48000.0,
+        "scheduling": "Pro Audio"
+      },
+      "deviceDriftPpm": 0.0,
+      "deviceNotification": 0,
+      "droppedNotes": 0,
+      "failedPlugins": [],
+      "failedUnits": [],
+      "graphSwaps": 0,
+      "lastRebuildMs": 35.625099999999996,
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 10.666666666666666,
+        "tracksSamples": 256
+      },
+      "leakedGraphs": 0,
+      "liveFallback": false,
+      "liveNotesRejected": 0,
+      "liveOffAllTracks": 0,
+      "liveOffOverflows": 0,
+      "liveStallBlocks": 0,
+      "liveStalls": 0,
+      "liveThreads": 0,
+      "loadP50Pct": 2.0,
+      "loadP95Pct": 3.0,
+      "loadP99Pct": 3.0,
+      "maxCallbackFrames": 128,
+      "maxEditToAudioMs": 0.0,
+      "maxLoadPct": 9.491200000000001,
+      "maxRenderMs": 0.2531,
+      "minCallbackFrames": 128,
+      "nativeFailures": 0,
+      "nonFiniteBlocks": 0,
+      "overruns": 0,
+      "pluginFailures": 0,
+      "pluginNotesDropped": 0,
+      "starvations": 279
+    },
+    "timing": {
+      "blocks": 1124,
+      "framesTotal": 143872,
+      "maxLoadPct": 9.491252372813094,
+      "maxMs": 0.2531,
+      "meanLoadPct": 1.6876672368634273,
+      "meanMs": 0.04500444839857651,
+      "overBudget": 0,
+      "p50Ms": 0.0453,
+      "p95Ms": 0.0634,
+      "p99LoadPct": 2.767500691875173,
+      "p99Ms": 0.0738
+    },
+    "wallSeconds": 5.0558656,
+    "workerJobs": 0
+  },
+  {
+    "bypassFx": false,
+    "cpu": {
+      "intervalMs": 3012.2466,
+      "load": {
+        "avgPct": 1.6936307425566217,
+        "marginPct": 92.5075,
+        "maxPct": 7.492500000000001
+      },
+      "master": {
+        "cpuPct": 0.0,
+        "effects": []
+      },
+      "totalPct": 0.7044874745646654,
+      "tracks": [
+        {
+          "cpuPct": 0.2326768332977785,
+          "effects": [],
+          "id": "kick",
+          "instrument": {
+            "cpuPct": 0.2326768332977785,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.27505384187337123,
+          "effects": [
+            {
+              "cpuPct": 0.07496066225122472,
+              "id": "gainfx",
+              "name": "Core Test Gain"
+            }
+          ],
+          "id": "bass",
+          "instrument": {
+            "cpuPct": 0.20009317962214648,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.19675679939351579,
+          "effects": [],
+          "id": "lead",
+          "instrument": {
+            "cpuPct": 0.19675679939351579,
+            "name": "Core Test Synth"
+          }
+        }
+      ]
+    },
+    "deliveredSeconds": 3.008,
+    "device": {
+      "backend": "Null",
+      "blockSize": 128,
+      "device": "NULL Playback Device",
+      "exclusive": false,
+      "internalSampleRate": 48000,
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 10.666666666666666,
+        "tracksSamples": 256
+      },
+      "latencyMs": 5.333333333333333,
+      "periods": 2,
+      "sampleRate": 48000.0,
+      "scheduling": "Pro Audio"
+    },
+    "error": "",
+    "liveThreads": 0,
+    "muted": [
+      "kick",
+      "bass"
+    ],
+    "plugins": [
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestSynth_artefacts\\Release\\VST3\\Core Test Synth.vst3",
+        "name": "Core Test Synth",
+        "role": "instrument"
+      },
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestGain_artefacts\\Release\\VST3\\Core Test Gain.vst3",
+        "name": "Core Test Gain",
+        "role": "insert"
+      }
+    ],
+    "scenario": "a-mute2-t0",
+    "stats": {
+      "auditionSteals": 0,
+      "avgLoadPct": 1.6936307425566217,
+      "avgRenderMs": 0.045163475177304964,
+      "callbackErrors": 0,
+      "callbacks": 1128,
+      "denseEventBlocks": 0,
+      "device": {
+        "backend": "Null",
+        "blockSize": 128,
+        "device": "NULL Playback Device",
+        "exclusive": false,
+        "internalSampleRate": 48000,
+        "latencyMs": 5.333333333333333,
+        "periods": 2,
+        "sampleRate": 48000.0,
+        "scheduling": "Pro Audio"
+      },
+      "deviceDriftPpm": 0.0,
+      "deviceNotification": 0,
+      "droppedNotes": 0,
+      "failedPlugins": [],
+      "failedUnits": [],
+      "graphSwaps": 0,
+      "lastRebuildMs": 36.524899999999995,
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 10.666666666666666,
+        "tracksSamples": 256
+      },
+      "leakedGraphs": 0,
+      "liveFallback": false,
+      "liveNotesRejected": 0,
+      "liveOffAllTracks": 0,
+      "liveOffOverflows": 0,
+      "liveStallBlocks": 0,
+      "liveStalls": 0,
+      "liveThreads": 0,
+      "loadP50Pct": 2.0,
+      "loadP95Pct": 3.0,
+      "loadP99Pct": 3.0,
+      "maxCallbackFrames": 128,
+      "maxEditToAudioMs": 0.0,
+      "maxLoadPct": 7.492500000000001,
+      "maxRenderMs": 0.19979999999999998,
+      "minCallbackFrames": 128,
+      "nativeFailures": 0,
+      "nonFiniteBlocks": 0,
+      "overruns": 0,
+      "pluginFailures": 0,
+      "pluginNotesDropped": 0,
+      "starvations": 279
+    },
+    "timing": {
+      "blocks": 1128,
+      "framesTotal": 144384,
+      "maxLoadPct": 7.492501873125469,
+      "maxMs": 0.1998,
+      "meanLoadPct": 1.6936307425566186,
+      "meanMs": 0.045163475177304964,
+      "overBudget": 0,
+      "p50Ms": 0.0461,
+      "p95Ms": 0.0623,
+      "p99LoadPct": 2.737500684375171,
+      "p99Ms": 0.073
+    },
+    "wallSeconds": 5.0620352,
+    "workerJobs": 0
+  },
+  {
+    "bypassFx": false,
+    "cpu": {
+      "intervalMs": 3019.4723,
+      "load": {
+        "avgPct": 1.7198086310103589,
+        "marginPct": 96.0738,
+        "maxPct": 3.9262
+      },
+      "master": {
+        "cpuPct": 0.0,
+        "effects": []
+      },
+      "totalPct": 0.7111573767376506,
+      "tracks": [
+        {
+          "cpuPct": 0.2295434205506704,
+          "effects": [],
+          "id": "kick",
+          "instrument": {
+            "cpuPct": 0.2295434205506704,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.28528494863158704,
+          "effects": [
+            {
+              "cpuPct": 0.07835806276480828,
+              "id": "gainfx",
+              "name": "Core Test Gain"
+            }
+          ],
+          "id": "bass",
+          "instrument": {
+            "cpuPct": 0.2069268858667788,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.19632900755539304,
+          "effects": [],
+          "id": "lead",
+          "instrument": {
+            "cpuPct": 0.19632900755539304,
+            "name": "Core Test Synth"
+          }
+        }
+      ]
+    },
+    "deliveredSeconds": 3.024,
+    "device": {
+      "backend": "Null",
+      "blockSize": 128,
+      "device": "NULL Playback Device",
+      "exclusive": false,
+      "internalSampleRate": 48000,
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 10.666666666666666,
+        "tracksSamples": 256
+      },
+      "latencyMs": 5.333333333333333,
+      "periods": 2,
+      "sampleRate": 48000.0,
+      "scheduling": "Pro Audio"
+    },
+    "error": "",
+    "liveThreads": 0,
+    "muted": [
+      "kick",
+      "bass",
+      "lead"
+    ],
+    "plugins": [
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestSynth_artefacts\\Release\\VST3\\Core Test Synth.vst3",
+        "name": "Core Test Synth",
+        "role": "instrument"
+      },
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestGain_artefacts\\Release\\VST3\\Core Test Gain.vst3",
+        "name": "Core Test Gain",
+        "role": "insert"
+      }
+    ],
+    "scenario": "a-mute3-t0",
+    "stats": {
+      "auditionSteals": 0,
+      "avgLoadPct": 1.7198086310103589,
+      "avgRenderMs": 0.04586155202821869,
+      "callbackErrors": 0,
+      "callbacks": 1134,
+      "denseEventBlocks": 0,
+      "device": {
+        "backend": "Null",
+        "blockSize": 128,
+        "device": "NULL Playback Device",
+        "exclusive": false,
+        "internalSampleRate": 48000,
+        "latencyMs": 5.333333333333333,
+        "periods": 2,
+        "sampleRate": 48000.0,
+        "scheduling": "Pro Audio"
+      },
+      "deviceDriftPpm": 0.0,
+      "deviceNotification": 0,
+      "droppedNotes": 0,
+      "failedPlugins": [],
+      "failedUnits": [],
+      "graphSwaps": 0,
+      "lastRebuildMs": 39.3429,
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 10.666666666666666,
+        "tracksSamples": 256
+      },
+      "leakedGraphs": 0,
+      "liveFallback": false,
+      "liveNotesRejected": 0,
+      "liveOffAllTracks": 0,
+      "liveOffOverflows": 0,
+      "liveStallBlocks": 0,
+      "liveStalls": 0,
+      "liveThreads": 0,
+      "loadP50Pct": 2.0,
+      "loadP95Pct": 3.0,
+      "loadP99Pct": 3.0,
+      "maxCallbackFrames": 128,
+      "maxEditToAudioMs": 0.0,
+      "maxLoadPct": 3.9262,
+      "maxRenderMs": 0.1047,
+      "minCallbackFrames": 128,
+      "nativeFailures": 0,
+      "nonFiniteBlocks": 0,
+      "overruns": 0,
+      "pluginFailures": 0,
+      "pluginNotesDropped": 0,
+      "starvations": 282
+    },
+    "timing": {
+      "blocks": 1134,
+      "framesTotal": 145152,
+      "maxLoadPct": 3.9262509815627453,
+      "maxMs": 0.1047,
+      "meanLoadPct": 1.7198086310103562,
+      "meanMs": 0.04586155202821869,
+      "overBudget": 0,
+      "p50Ms": 0.0464,
+      "p95Ms": 0.0613,
+      "p99LoadPct": 2.7900006975001745,
+      "p99Ms": 0.0744
+    },
+    "wallSeconds": 5.0807525,
+    "workerJobs": 0
+  },
+  {
+    "bypassFx": true,
+    "cpu": {
+      "intervalMs": 3002.3347,
+      "load": {
+        "avgPct": 1.6640338526780822,
+        "marginPct": 92.9875,
+        "maxPct": 7.0125
+      },
+      "master": {
+        "cpuPct": 0.0,
+        "effects": []
+      },
+      "totalPct": 0.6336835130340399,
+      "tracks": [
+        {
+          "cpuPct": 0.23037071782836205,
+          "effects": [],
+          "id": "kick",
+          "instrument": {
+            "cpuPct": 0.23037071782836205,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.2076550625751353,
+          "effects": [
+            {
+              "cpuPct": 0.0,
+              "id": "gainfx",
+              "name": "Core Test Gain"
+            }
+          ],
+          "id": "bass",
+          "instrument": {
+            "cpuPct": 0.2076550625751353,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.1956577326305425,
+          "effects": [],
+          "id": "lead",
+          "instrument": {
+            "cpuPct": 0.1956577326305425,
+            "name": "Core Test Synth"
+          }
+        }
+      ]
+    },
+    "deliveredSeconds": 3.010666666666667,
+    "device": {
+      "backend": "Null",
+      "blockSize": 128,
+      "device": "NULL Playback Device",
+      "exclusive": false,
+      "internalSampleRate": 48000,
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 2.6666666666666665,
+        "masterSamples": 0,
+        "totalMs": 8.0,
+        "tracksSamples": 128
+      },
+      "latencyMs": 5.333333333333333,
+      "periods": 2,
+      "sampleRate": 48000.0,
+      "scheduling": "Pro Audio"
+    },
+    "error": "",
+    "liveThreads": 0,
+    "muted": [],
+    "plugins": [
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestSynth_artefacts\\Release\\VST3\\Core Test Synth.vst3",
+        "name": "Core Test Synth",
+        "role": "instrument"
+      },
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestGain_artefacts\\Release\\VST3\\Core Test Gain.vst3",
+        "name": "Core Test Gain",
+        "role": "insert"
+      }
+    ],
+    "scenario": "a-bypassfx-t0",
+    "stats": {
+      "auditionSteals": 0,
+      "avgLoadPct": 1.6640338526780822,
+      "avgRenderMs": 0.04437422497785651,
+      "callbackErrors": 0,
+      "callbacks": 1129,
+      "denseEventBlocks": 0,
+      "device": {
+        "backend": "Null",
+        "blockSize": 128,
+        "device": "NULL Playback Device",
+        "exclusive": false,
+        "internalSampleRate": 48000,
+        "latencyMs": 5.333333333333333,
+        "periods": 2,
+        "sampleRate": 48000.0,
+        "scheduling": "Pro Audio"
+      },
+      "deviceDriftPpm": 0.0,
+      "deviceNotification": 0,
+      "droppedNotes": 0,
+      "failedPlugins": [],
+      "failedUnits": [],
+      "graphSwaps": 0,
+      "lastRebuildMs": 37.6479,
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 2.6666666666666665,
+        "masterSamples": 0,
+        "totalMs": 8.0,
+        "tracksSamples": 128
+      },
+      "leakedGraphs": 0,
+      "liveFallback": false,
+      "liveNotesRejected": 0,
+      "liveOffAllTracks": 0,
+      "liveOffOverflows": 0,
+      "liveStallBlocks": 0,
+      "liveStalls": 0,
+      "liveThreads": 0,
+      "loadP50Pct": 2.0,
+      "loadP95Pct": 3.0,
+      "loadP99Pct": 3.0,
+      "maxCallbackFrames": 128,
+      "maxEditToAudioMs": 0.0,
+      "maxLoadPct": 7.0125,
+      "maxRenderMs": 0.187,
+      "minCallbackFrames": 128,
+      "nativeFailures": 0,
+      "nonFiniteBlocks": 0,
+      "overruns": 0,
+      "pluginFailures": 0,
+      "pluginNotesDropped": 0,
+      "starvations": 279
+    },
+    "timing": {
+      "blocks": 1129,
+      "framesTotal": 144512,
+      "maxLoadPct": 7.012501753125438,
+      "maxMs": 0.187,
+      "meanLoadPct": 1.6640338526780825,
+      "meanMs": 0.04437422497785651,
+      "overBudget": 0,
+      "p50Ms": 0.0463,
+      "p95Ms": 0.0601,
+      "p99LoadPct": 2.55750063937516,
+      "p99Ms": 0.0682
+    },
+    "wallSeconds": 5.0625634,
+    "workerJobs": 0
+  },
+  {
+    "bypassFx": false,
+    "cpu": {
+      "intervalMs": 3013.6756,
+      "load": {
+        "avgPct": 1.7635092904348448,
+        "marginPct": 93.31,
+        "maxPct": 6.69
+      },
+      "master": {
+        "cpuPct": 0.0,
+        "effects": []
+      },
+      "totalPct": 0.7188364932177836,
+      "tracks": [
+        {
+          "cpuPct": 0.23536707135963805,
+          "effects": [],
+          "id": "kick",
+          "instrument": {
+            "cpuPct": 0.23536707135963805,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.2860327767195647,
+          "effects": [
+            {
+              "cpuPct": 0.07818027925766131,
+              "id": "gainfx",
+              "name": "Core Test Gain"
+            }
+          ],
+          "id": "bass",
+          "instrument": {
+            "cpuPct": 0.20785249746190335,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.19743664513858095,
+          "effects": [],
+          "id": "lead",
+          "instrument": {
+            "cpuPct": 0.19743664513858095,
+            "name": "Core Test Synth"
+          }
+        }
+      ]
+    },
+    "deliveredSeconds": 3.012,
+    "device": {
+      "backend": "Null",
+      "blockSize": 64,
+      "device": "NULL Playback Device",
+      "exclusive": false,
+      "internalSampleRate": 48000,
+      "latency": {
+        "deviceMs": 2.6666666666666665,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 8.0,
+        "tracksSamples": 256
+      },
+      "latencyMs": 2.6666666666666665,
+      "periods": 2,
+      "sampleRate": 48000.0,
+      "scheduling": "Pro Audio"
+    },
+    "error": "",
+    "expectedPluginCalls": 4518.0,
+    "liveThreads": 0,
+    "muted": [],
+    "pluginCallsPerCallback": 0.5,
+    "plugins": [
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestSynth_artefacts\\Release\\VST3\\Core Test Synth.vst3",
+        "name": "Core Test Synth",
+        "role": "instrument"
+      },
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestGain_artefacts\\Release\\VST3\\Core Test Gain.vst3",
+        "name": "Core Test Gain",
+        "role": "insert"
+      }
+    ],
+    "scenario": "b-t0-64",
+    "stats": {
+      "auditionSteals": 0,
+      "avgLoadPct": 1.7635462576196321,
+      "avgRenderMs": 0.02351394422310757,
+      "callbackErrors": 0,
+      "callbacks": 2259,
+      "denseEventBlocks": 0,
+      "device": {
+        "backend": "Null",
+        "blockSize": 64,
+        "device": "NULL Playback Device",
+        "exclusive": false,
+        "internalSampleRate": 48000,
+        "latencyMs": 2.6666666666666665,
+        "periods": 2,
+        "sampleRate": 48000.0,
+        "scheduling": "Pro Audio"
+      },
+      "deviceDriftPpm": 0.0,
+      "deviceNotification": 0,
+      "droppedNotes": 0,
+      "failedPlugins": [],
+      "failedUnits": [],
+      "graphSwaps": 0,
+      "lastRebuildMs": 36.8546,
+      "latency": {
+        "deviceMs": 2.6666666666666665,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 8.0,
+        "tracksSamples": 256
+      },
+      "leakedGraphs": 0,
+      "liveFallback": false,
+      "liveNotesRejected": 0,
+      "liveOffAllTracks": 0,
+      "liveOffOverflows": 0,
+      "liveStallBlocks": 0,
+      "liveStalls": 0,
+      "liveThreads": 0,
+      "loadP50Pct": 2.0,
+      "loadP95Pct": 3.0,
+      "loadP99Pct": 4.0,
+      "maxCallbackFrames": 64,
+      "maxEditToAudioMs": 0.0,
+      "maxLoadPct": 6.69,
+      "maxRenderMs": 0.0892,
+      "minCallbackFrames": 64,
+      "nativeFailures": 0,
+      "nonFiniteBlocks": 0,
+      "overruns": 0,
+      "pluginFailures": 0,
+      "pluginNotesDropped": 0,
+      "starvations": 280
+    },
+    "timing": {
+      "blocks": 2259,
+      "framesTotal": 144576,
+      "maxLoadPct": 6.6900016725004186,
+      "maxMs": 0.0892,
+      "meanLoadPct": 1.7635462576196315,
+      "meanMs": 0.02351394422310757,
+      "overBudget": 0,
+      "p50Ms": 0.0213,
+      "p95Ms": 0.039,
+      "p99LoadPct": 3.4575008643752163,
+      "p99Ms": 0.0461
+    },
+    "wallSeconds": 5.0742484,
+    "workerJobs": 0
+  },
+  {
+    "bypassFx": false,
+    "cpu": {
+      "intervalMs": 3011.3838,
+      "load": {
+        "avgPct": 1.743368798674058,
+        "marginPct": 93.055,
+        "maxPct": 6.945
+      },
+      "master": {
+        "cpuPct": 0.0,
+        "effects": []
+      },
+      "totalPct": 0.7092818922649449,
+      "tracks": [
+        {
+          "cpuPct": 0.23017325124748297,
+          "effects": [],
+          "id": "kick",
+          "instrument": {
+            "cpuPct": 0.23017325124748297,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.28169441570350484,
+          "effects": [
+            {
+              "cpuPct": 0.07666907154113003,
+              "id": "gainfx",
+              "name": "Core Test Gain"
+            }
+          ],
+          "id": "bass",
+          "instrument": {
+            "cpuPct": 0.2050253441623748,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.197414225313957,
+          "effects": [],
+          "id": "lead",
+          "instrument": {
+            "cpuPct": 0.197414225313957,
+            "name": "Core Test Synth"
+          }
+        }
+      ]
+    },
+    "deliveredSeconds": 3.013333333333333,
+    "device": {
+      "backend": "Null",
+      "blockSize": 128,
+      "device": "NULL Playback Device",
+      "exclusive": false,
+      "internalSampleRate": 48000,
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 10.666666666666666,
+        "tracksSamples": 256
+      },
+      "latencyMs": 5.333333333333333,
+      "periods": 2,
+      "sampleRate": 48000.0,
+      "scheduling": "Pro Audio"
+    },
+    "error": "",
+    "expectedPluginCalls": 4520.0,
+    "liveThreads": 0,
+    "muted": [],
+    "pluginCallsPerCallback": 1.0,
+    "plugins": [
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestSynth_artefacts\\Release\\VST3\\Core Test Synth.vst3",
+        "name": "Core Test Synth",
+        "role": "instrument"
+      },
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestGain_artefacts\\Release\\VST3\\Core Test Gain.vst3",
+        "name": "Core Test Gain",
+        "role": "insert"
+      }
+    ],
+    "scenario": "b-t0-128",
+    "stats": {
+      "auditionSteals": 0,
+      "avgLoadPct": 1.743368798674058,
+      "avgRenderMs": 0.04648982300884955,
+      "callbackErrors": 0,
+      "callbacks": 1130,
+      "denseEventBlocks": 0,
+      "device": {
+        "backend": "Null",
+        "blockSize": 128,
+        "device": "NULL Playback Device",
+        "exclusive": false,
+        "internalSampleRate": 48000,
+        "latencyMs": 5.333333333333333,
+        "periods": 2,
+        "sampleRate": 48000.0,
+        "scheduling": "Pro Audio"
+      },
+      "deviceDriftPpm": 0.0,
+      "deviceNotification": 0,
+      "droppedNotes": 0,
+      "failedPlugins": [],
+      "failedUnits": [],
+      "graphSwaps": 0,
+      "lastRebuildMs": 35.562599999999996,
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 10.666666666666666,
+        "tracksSamples": 256
+      },
+      "leakedGraphs": 0,
+      "liveFallback": false,
+      "liveNotesRejected": 0,
+      "liveOffAllTracks": 0,
+      "liveOffOverflows": 0,
+      "liveStallBlocks": 0,
+      "liveStalls": 0,
+      "liveThreads": 0,
+      "loadP50Pct": 2.0,
+      "loadP95Pct": 3.0,
+      "loadP99Pct": 3.0,
+      "maxCallbackFrames": 128,
+      "maxEditToAudioMs": 0.0,
+      "maxLoadPct": 6.945,
+      "maxRenderMs": 0.1852,
+      "minCallbackFrames": 128,
+      "nativeFailures": 0,
+      "nonFiniteBlocks": 0,
+      "overruns": 0,
+      "pluginFailures": 0,
+      "pluginNotesDropped": 0,
+      "starvations": 281
+    },
+    "timing": {
+      "blocks": 1130,
+      "framesTotal": 144640,
+      "maxLoadPct": 6.945001736250434,
+      "maxMs": 0.1852,
+      "meanLoadPct": 1.7433687986740551,
+      "meanMs": 0.04648982300884955,
+      "overBudget": 0,
+      "p50Ms": 0.0484,
+      "p95Ms": 0.0632,
+      "p99LoadPct": 2.7562506890626723,
+      "p99Ms": 0.0735
+    },
+    "wallSeconds": 5.0640154,
+    "workerJobs": 0
+  },
+  {
+    "bypassFx": false,
+    "cpu": {
+      "intervalMs": 3005.2596,
+      "load": {
+        "avgPct": 1.6861689221115364,
+        "marginPct": 94.7144,
+        "maxPct": 5.2856000000000005
+      },
+      "master": {
+        "cpuPct": 0.0,
+        "effects": []
+      },
+      "totalPct": 0.701955997412004,
+      "tracks": [
+        {
+          "cpuPct": 0.2260004426905416,
+          "effects": [],
+          "id": "kick",
+          "instrument": {
+            "cpuPct": 0.2260004426905416,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.27941013814580273,
+          "effects": [
+            {
+              "cpuPct": 0.07661234989483104,
+              "id": "gainfx",
+              "name": "Core Test Gain"
+            }
+          ],
+          "id": "bass",
+          "instrument": {
+            "cpuPct": 0.20279778825097172,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.19654541657565955,
+          "effects": [],
+          "id": "lead",
+          "instrument": {
+            "cpuPct": 0.19654541657565955,
+            "name": "Core Test Synth"
+          }
+        }
+      ]
+    },
+    "deliveredSeconds": 2.997333333333333,
+    "device": {
+      "backend": "Null",
+      "blockSize": 256,
+      "device": "NULL Playback Device",
+      "exclusive": false,
+      "internalSampleRate": 48000,
+      "latency": {
+        "deviceMs": 10.666666666666666,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 16.0,
+        "tracksSamples": 256
+      },
+      "latencyMs": 10.666666666666666,
+      "periods": 2,
+      "sampleRate": 48000.0,
+      "scheduling": "Pro Audio"
+    },
+    "error": "",
+    "expectedPluginCalls": 4496.0,
+    "liveThreads": 0,
+    "muted": [],
+    "pluginCallsPerCallback": 2.0,
+    "plugins": [
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestSynth_artefacts\\Release\\VST3\\Core Test Synth.vst3",
+        "name": "Core Test Synth",
+        "role": "instrument"
+      },
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestGain_artefacts\\Release\\VST3\\Core Test Gain.vst3",
+        "name": "Core Test Gain",
+        "role": "insert"
+      }
+    ],
+    "scenario": "b-t0-256",
+    "stats": {
+      "auditionSteals": 0,
+      "avgLoadPct": 1.6861689221115364,
+      "avgRenderMs": 0.08992900355871886,
+      "callbackErrors": 0,
+      "callbacks": 562,
+      "denseEventBlocks": 0,
+      "device": {
+        "backend": "Null",
+        "blockSize": 256,
+        "device": "NULL Playback Device",
+        "exclusive": false,
+        "internalSampleRate": 48000,
+        "latencyMs": 10.666666666666666,
+        "periods": 2,
+        "sampleRate": 48000.0,
+        "scheduling": "Pro Audio"
+      },
+      "deviceDriftPpm": 0.0,
+      "deviceNotification": 0,
+      "droppedNotes": 0,
+      "failedPlugins": [],
+      "failedUnits": [],
+      "graphSwaps": 0,
+      "lastRebuildMs": 36.3409,
+      "latency": {
+        "deviceMs": 10.666666666666666,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 16.0,
+        "tracksSamples": 256
+      },
+      "leakedGraphs": 0,
+      "liveFallback": false,
+      "liveNotesRejected": 0,
+      "liveOffAllTracks": 0,
+      "liveOffOverflows": 0,
+      "liveStallBlocks": 0,
+      "liveStalls": 0,
+      "liveThreads": 0,
+      "loadP50Pct": 2.0,
+      "loadP95Pct": 3.0,
+      "loadP99Pct": 3.0,
+      "maxCallbackFrames": 256,
+      "maxEditToAudioMs": 0.0,
+      "maxLoadPct": 5.2856000000000005,
+      "maxRenderMs": 0.2819,
+      "minCallbackFrames": 256,
+      "nativeFailures": 0,
+      "nonFiniteBlocks": 0,
+      "overruns": 0,
+      "pluginFailures": 0,
+      "pluginNotesDropped": 0,
+      "starvations": 0
+    },
+    "timing": {
+      "blocks": 562,
+      "framesTotal": 143872,
+      "maxLoadPct": 5.285625330351583,
+      "maxMs": 0.2819,
+      "meanLoadPct": 1.6861689221115344,
+      "meanMs": 0.08992900355871886,
+      "overBudget": 0,
+      "p50Ms": 0.0934,
+      "p95Ms": 0.116,
+      "p99LoadPct": 2.4412501525781347,
+      "p99Ms": 0.1302
+    },
+    "wallSeconds": 5.0549996,
+    "workerJobs": 0
+  },
+  {
+    "bypassFx": false,
+    "cpu": {
+      "intervalMs": 3004.6724999999997,
+      "load": {
+        "avgPct": 1.7221078203976963,
+        "marginPct": 94.571,
+        "maxPct": 5.429
+      },
+      "master": {
+        "cpuPct": 0.0,
+        "effects": []
+      },
+      "totalPct": 0.6935231709945093,
+      "tracks": [
+        {
+          "cpuPct": 0.2235052239470358,
+          "effects": [],
+          "id": "kick",
+          "instrument": {
+            "cpuPct": 0.2235052239470358,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.2751614360633313,
+          "effects": [
+            {
+              "cpuPct": 0.07360203150260136,
+              "id": "gainfx",
+              "name": "Core Test Gain"
+            }
+          ],
+          "id": "bass",
+          "instrument": {
+            "cpuPct": 0.20155940456073,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.1948565109841422,
+          "effects": [],
+          "id": "lead",
+          "instrument": {
+            "cpuPct": 0.1948565109841422,
+            "name": "Core Test Synth"
+          }
+        }
+      ]
+    },
+    "deliveredSeconds": 3.008,
+    "device": {
+      "backend": "Null",
+      "blockSize": 512,
+      "device": "NULL Playback Device",
+      "exclusive": false,
+      "internalSampleRate": 48000,
+      "latency": {
+        "deviceMs": 21.333333333333332,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 26.666666666666664,
+        "tracksSamples": 256
+      },
+      "latencyMs": 21.333333333333332,
+      "periods": 2,
+      "sampleRate": 48000.0,
+      "scheduling": "Pro Audio"
+    },
+    "error": "",
+    "expectedPluginCalls": 4512.0,
+    "liveThreads": 0,
+    "muted": [],
+    "pluginCallsPerCallback": 4.0,
+    "plugins": [
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestSynth_artefacts\\Release\\VST3\\Core Test Synth.vst3",
+        "name": "Core Test Synth",
+        "role": "instrument"
+      },
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestGain_artefacts\\Release\\VST3\\Core Test Gain.vst3",
+        "name": "Core Test Gain",
+        "role": "insert"
+      }
+    ],
+    "scenario": "b-t0-512",
+    "stats": {
+      "auditionSteals": 0,
+      "avgLoadPct": 1.7221078203976963,
+      "avgRenderMs": 0.1836914893617021,
+      "callbackErrors": 0,
+      "callbacks": 282,
+      "denseEventBlocks": 0,
+      "device": {
+        "backend": "Null",
+        "blockSize": 512,
+        "device": "NULL Playback Device",
+        "exclusive": false,
+        "internalSampleRate": 48000,
+        "latencyMs": 21.333333333333332,
+        "periods": 2,
+        "sampleRate": 48000.0,
+        "scheduling": "Pro Audio"
+      },
+      "deviceDriftPpm": 0.0,
+      "deviceNotification": 0,
+      "droppedNotes": 0,
+      "failedPlugins": [],
+      "failedUnits": [],
+      "graphSwaps": 0,
+      "lastRebuildMs": 37.1458,
+      "latency": {
+        "deviceMs": 21.333333333333332,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 26.666666666666664,
+        "tracksSamples": 256
+      },
+      "leakedGraphs": 0,
+      "liveFallback": false,
+      "liveNotesRejected": 0,
+      "liveOffAllTracks": 0,
+      "liveOffOverflows": 0,
+      "liveStallBlocks": 0,
+      "liveStalls": 0,
+      "liveThreads": 0,
+      "loadP50Pct": 2.0,
+      "loadP95Pct": 3.0,
+      "loadP99Pct": 3.0,
+      "maxCallbackFrames": 512,
+      "maxEditToAudioMs": 0.0,
+      "maxLoadPct": 5.429,
+      "maxRenderMs": 0.5791,
+      "minCallbackFrames": 512,
+      "nativeFailures": 0,
+      "nonFiniteBlocks": 0,
+      "overruns": 0,
+      "pluginFailures": 0,
+      "pluginNotesDropped": 0,
+      "starvations": 0
+    },
+    "timing": {
+      "blocks": 282,
+      "framesTotal": 144384,
+      "maxLoadPct": 5.429062839316427,
+      "maxMs": 0.5791,
+      "meanLoadPct": 1.722107820397697,
+      "meanMs": 0.18369148936170213,
+      "overBudget": 0,
+      "p50Ms": 0.1916,
+      "p95Ms": 0.2316,
+      "p99LoadPct": 2.421562651347666,
+      "p99Ms": 0.2583
+    },
+    "wallSeconds": 5.0608439,
+    "workerJobs": 0
+  },
+  {
+    "bypassFx": false,
+    "cpu": {
+      "intervalMs": 3018.6106999999997,
+      "load": {
+        "avgPct": 1.7305211740248214,
+        "marginPct": 83.5,
+        "maxPct": 16.5
+      },
+      "master": {
+        "cpuPct": 0.0,
+        "effects": []
+      },
+      "totalPct": 0.9502914701786489,
+      "tracks": [
+        {
+          "cpuPct": 0.263091229352629,
+          "effects": [],
+          "id": "kick",
+          "instrument": {
+            "cpuPct": 0.263091229352629,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.40883708521936934,
+          "effects": [
+            {
+              "cpuPct": 0.10234840816008503,
+              "id": "gainfx",
+              "name": "Core Test Gain"
+            }
+          ],
+          "id": "bass",
+          "instrument": {
+            "cpuPct": 0.3064886770592843,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.2783631556066504,
+          "effects": [],
+          "id": "lead",
+          "instrument": {
+            "cpuPct": 0.2783631556066504,
+            "name": "Core Test Synth"
+          }
+        }
+      ]
+    },
+    "deliveredSeconds": 3.021333333333333,
+    "device": {
+      "backend": "Null",
+      "blockSize": 128,
+      "device": "NULL Playback Device",
+      "exclusive": false,
+      "internalSampleRate": 48000,
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 10.666666666666666,
+        "tracksSamples": 256
+      },
+      "latencyMs": 5.333333333333333,
+      "periods": 2,
+      "sampleRate": 48000.0,
+      "scheduling": "Pro Audio"
+    },
+    "error": "",
+    "liveThreads": 4,
+    "muted": [],
+    "plugins": [
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestSynth_artefacts\\Release\\VST3\\Core Test Synth.vst3",
+        "name": "Core Test Synth",
+        "role": "instrument"
+      },
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestGain_artefacts\\Release\\VST3\\Core Test Gain.vst3",
+        "name": "Core Test Gain",
+        "role": "insert"
+      }
+    ],
+    "scenario": "a-none-t4",
+    "stats": {
+      "auditionSteals": 0,
+      "avgLoadPct": 1.7305211740248214,
+      "avgRenderMs": 0.04614721977052074,
+      "callbackErrors": 0,
+      "callbacks": 1133,
+      "denseEventBlocks": 0,
+      "device": {
+        "backend": "Null",
+        "blockSize": 128,
+        "device": "NULL Playback Device",
+        "exclusive": false,
+        "internalSampleRate": 48000,
+        "latencyMs": 5.333333333333333,
+        "periods": 2,
+        "sampleRate": 48000.0,
+        "scheduling": "Pro Audio"
+      },
+      "deviceDriftPpm": 0.0,
+      "deviceNotification": 0,
+      "droppedNotes": 0,
+      "failedPlugins": [],
+      "failedUnits": [],
+      "graphSwaps": 0,
+      "lastRebuildMs": 0.1065,
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 10.666666666666666,
+        "tracksSamples": 256
+      },
+      "leakedGraphs": 0,
+      "liveFallback": false,
+      "liveNotesRejected": 0,
+      "liveOffAllTracks": 0,
+      "liveOffOverflows": 0,
+      "liveStallBlocks": 0,
+      "liveStalls": 0,
+      "liveThreads": 4,
+      "loadP50Pct": 2.0,
+      "loadP95Pct": 3.0,
+      "loadP99Pct": 3.0,
+      "maxCallbackFrames": 128,
+      "maxEditToAudioMs": 0.0,
+      "maxLoadPct": 16.5,
+      "maxRenderMs": 0.44,
+      "minCallbackFrames": 128,
+      "nativeFailures": 0,
+      "nonFiniteBlocks": 0,
+      "overruns": 0,
+      "pluginFailures": 0,
+      "pluginNotesDropped": 0,
+      "starvations": 281
+    },
+    "timing": {
+      "blocks": 1133,
+      "framesTotal": 145024,
+      "maxLoadPct": 16.50000412500103,
+      "maxMs": 0.44,
+      "meanLoadPct": 1.7305211740248212,
+      "meanMs": 0.04614721977052074,
+      "overBudget": 0,
+      "p50Ms": 0.0451,
+      "p95Ms": 0.0584,
+      "p99LoadPct": 2.572500643125161,
+      "p99Ms": 0.0686
+    },
+    "wallSeconds": 5.0784419,
+    "workerJobs": 2171
+  },
+  {
+    "bypassFx": false,
+    "cpu": {
+      "intervalMs": 3004.6994999999997,
+      "load": {
+        "avgPct": 1.7832719822300738,
+        "marginPct": 90.4788,
+        "maxPct": 9.5212
+      },
+      "master": {
+        "cpuPct": 0.0,
+        "effects": []
+      },
+      "totalPct": 0.9911373832890776,
+      "tracks": [
+        {
+          "cpuPct": 0.283019982530699,
+          "effects": [],
+          "id": "kick",
+          "instrument": {
+            "cpuPct": 0.283019982530699,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.41715319618484314,
+          "effects": [
+            {
+              "cpuPct": 0.10340135511055265,
+              "id": "gainfx",
+              "name": "Core Test Gain"
+            }
+          ],
+          "id": "bass",
+          "instrument": {
+            "cpuPct": 0.3137518410742905,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.29096420457353556,
+          "effects": [],
+          "id": "lead",
+          "instrument": {
+            "cpuPct": 0.29096420457353556,
+            "name": "Core Test Synth"
+          }
+        }
+      ]
+    },
+    "deliveredSeconds": 3.002666666666667,
+    "device": {
+      "backend": "Null",
+      "blockSize": 128,
+      "device": "NULL Playback Device",
+      "exclusive": false,
+      "internalSampleRate": 48000,
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 10.666666666666666,
+        "tracksSamples": 256
+      },
+      "latencyMs": 5.333333333333333,
+      "periods": 2,
+      "sampleRate": 48000.0,
+      "scheduling": "Pro Audio"
+    },
+    "error": "",
+    "liveThreads": 4,
+    "muted": [
+      "kick"
+    ],
+    "plugins": [
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestSynth_artefacts\\Release\\VST3\\Core Test Synth.vst3",
+        "name": "Core Test Synth",
+        "role": "instrument"
+      },
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestGain_artefacts\\Release\\VST3\\Core Test Gain.vst3",
+        "name": "Core Test Gain",
+        "role": "insert"
+      }
+    ],
+    "scenario": "a-mute1-t4",
+    "stats": {
+      "auditionSteals": 0,
+      "avgLoadPct": 1.7832719822300738,
+      "avgRenderMs": 0.047553907637655414,
+      "callbackErrors": 0,
+      "callbacks": 1126,
+      "denseEventBlocks": 0,
+      "device": {
+        "backend": "Null",
+        "blockSize": 128,
+        "device": "NULL Playback Device",
+        "exclusive": false,
+        "internalSampleRate": 48000,
+        "latencyMs": 5.333333333333333,
+        "periods": 2,
+        "sampleRate": 48000.0,
+        "scheduling": "Pro Audio"
+      },
+      "deviceDriftPpm": 0.0,
+      "deviceNotification": 0,
+      "droppedNotes": 0,
+      "failedPlugins": [],
+      "failedUnits": [],
+      "graphSwaps": 0,
+      "lastRebuildMs": 0.0781,
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 10.666666666666666,
+        "tracksSamples": 256
+      },
+      "leakedGraphs": 0,
+      "liveFallback": false,
+      "liveNotesRejected": 0,
+      "liveOffAllTracks": 0,
+      "liveOffOverflows": 0,
+      "liveStallBlocks": 0,
+      "liveStalls": 0,
+      "liveThreads": 4,
+      "loadP50Pct": 2.0,
+      "loadP95Pct": 3.0,
+      "loadP99Pct": 4.0,
+      "maxCallbackFrames": 128,
+      "maxEditToAudioMs": 0.0,
+      "maxLoadPct": 9.5212,
+      "maxRenderMs": 0.2539,
+      "minCallbackFrames": 128,
+      "nativeFailures": 0,
+      "nonFiniteBlocks": 0,
+      "overruns": 0,
+      "pluginFailures": 0,
+      "pluginNotesDropped": 0,
+      "starvations": 279
+    },
+    "timing": {
+      "blocks": 1126,
+      "framesTotal": 144128,
+      "maxLoadPct": 9.521252380313095,
+      "maxMs": 0.2539,
+      "meanLoadPct": 1.7832719822300749,
+      "meanMs": 0.047553907637655414,
+      "overBudget": 0,
+      "p50Ms": 0.0458,
+      "p95Ms": 0.0611,
+      "p99LoadPct": 3.8137509534377383,
+      "p99Ms": 0.1017
+    },
+    "wallSeconds": 5.0564719,
+    "workerJobs": 2145
+  },
+  {
+    "bypassFx": false,
+    "cpu": {
+      "intervalMs": 3007.2547,
+      "load": {
+        "avgPct": 1.7602085888563987,
+        "marginPct": 87.655,
+        "maxPct": 12.345
+      },
+      "master": {
+        "cpuPct": 0.0,
+        "effects": []
+      },
+      "totalPct": 0.9525930743411923,
+      "tracks": [
+        {
+          "cpuPct": 0.2616206734999865,
+          "effects": [],
+          "id": "kick",
+          "instrument": {
+            "cpuPct": 0.2616206734999865,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.40485762645910905,
+          "effects": [
+            {
+              "cpuPct": 0.10038724022943583,
+              "id": "gainfx",
+              "name": "Core Test Gain"
+            }
+          ],
+          "id": "bass",
+          "instrument": {
+            "cpuPct": 0.3044703862296732,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.2861147743820967,
+          "effects": [],
+          "id": "lead",
+          "instrument": {
+            "cpuPct": 0.2861147743820967,
+            "name": "Core Test Synth"
+          }
+        }
+      ]
+    },
+    "deliveredSeconds": 3.010666666666667,
+    "device": {
+      "backend": "Null",
+      "blockSize": 128,
+      "device": "NULL Playback Device",
+      "exclusive": false,
+      "internalSampleRate": 48000,
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 10.666666666666666,
+        "tracksSamples": 256
+      },
+      "latencyMs": 5.333333333333333,
+      "periods": 2,
+      "sampleRate": 48000.0,
+      "scheduling": "Pro Audio"
+    },
+    "error": "",
+    "liveThreads": 4,
+    "muted": [
+      "kick",
+      "bass"
+    ],
+    "plugins": [
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestSynth_artefacts\\Release\\VST3\\Core Test Synth.vst3",
+        "name": "Core Test Synth",
+        "role": "instrument"
+      },
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestGain_artefacts\\Release\\VST3\\Core Test Gain.vst3",
+        "name": "Core Test Gain",
+        "role": "insert"
+      }
+    ],
+    "scenario": "a-mute2-t4",
+    "stats": {
+      "auditionSteals": 0,
+      "avgLoadPct": 1.7602085888563987,
+      "avgRenderMs": 0.046938883968113375,
+      "callbackErrors": 0,
+      "callbacks": 1129,
+      "denseEventBlocks": 0,
+      "device": {
+        "backend": "Null",
+        "blockSize": 128,
+        "device": "NULL Playback Device",
+        "exclusive": false,
+        "internalSampleRate": 48000,
+        "latencyMs": 5.333333333333333,
+        "periods": 2,
+        "sampleRate": 48000.0,
+        "scheduling": "Pro Audio"
+      },
+      "deviceDriftPpm": 0.0,
+      "deviceNotification": 0,
+      "droppedNotes": 0,
+      "failedPlugins": [],
+      "failedUnits": [],
+      "graphSwaps": 0,
+      "lastRebuildMs": 0.0967,
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 10.666666666666666,
+        "tracksSamples": 256
+      },
+      "leakedGraphs": 0,
+      "liveFallback": false,
+      "liveNotesRejected": 0,
+      "liveOffAllTracks": 0,
+      "liveOffOverflows": 0,
+      "liveStallBlocks": 0,
+      "liveStalls": 0,
+      "liveThreads": 4,
+      "loadP50Pct": 2.0,
+      "loadP95Pct": 3.0,
+      "loadP99Pct": 3.0,
+      "maxCallbackFrames": 128,
+      "maxEditToAudioMs": 0.0,
+      "maxLoadPct": 12.345,
+      "maxRenderMs": 0.3292,
+      "minCallbackFrames": 128,
+      "nativeFailures": 0,
+      "nonFiniteBlocks": 0,
+      "overruns": 0,
+      "pluginFailures": 0,
+      "pluginNotesDropped": 0,
+      "starvations": 280
+    },
+    "timing": {
+      "blocks": 1129,
+      "framesTotal": 144512,
+      "maxLoadPct": 12.345003086250772,
+      "maxMs": 0.3292,
+      "meanLoadPct": 1.7602085888564003,
+      "meanMs": 0.046938883968113375,
+      "overBudget": 0,
+      "p50Ms": 0.0455,
+      "p95Ms": 0.0596,
+      "p99LoadPct": 2.670000667500167,
+      "p99Ms": 0.0712
+    },
+    "wallSeconds": 5.0645172,
+    "workerJobs": 2170
+  },
+  {
+    "bypassFx": false,
+    "cpu": {
+      "intervalMs": 3021.4179999999997,
+      "load": {
+        "avgPct": 1.7334205569208938,
+        "marginPct": 95.29,
+        "maxPct": 4.71
+      },
+      "master": {
+        "cpuPct": 0.0,
+        "effects": []
+      },
+      "totalPct": 0.9519669241395927,
+      "tracks": [
+        {
+          "cpuPct": 0.2634259807812094,
+          "effects": [],
+          "id": "kick",
+          "instrument": {
+            "cpuPct": 0.2634259807812094,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.3975484358668678,
+          "effects": [
+            {
+              "cpuPct": 0.10113132310722979,
+              "id": "gainfx",
+              "name": "Core Test Gain"
+            }
+          ],
+          "id": "bass",
+          "instrument": {
+            "cpuPct": 0.296417112759638,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.29099250749151556,
+          "effects": [],
+          "id": "lead",
+          "instrument": {
+            "cpuPct": 0.29099250749151556,
+            "name": "Core Test Synth"
+          }
+        }
+      ]
+    },
+    "deliveredSeconds": 3.021333333333333,
+    "device": {
+      "backend": "Null",
+      "blockSize": 128,
+      "device": "NULL Playback Device",
+      "exclusive": false,
+      "internalSampleRate": 48000,
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 10.666666666666666,
+        "tracksSamples": 256
+      },
+      "latencyMs": 5.333333333333333,
+      "periods": 2,
+      "sampleRate": 48000.0,
+      "scheduling": "Pro Audio"
+    },
+    "error": "",
+    "liveThreads": 4,
+    "muted": [
+      "kick",
+      "bass",
+      "lead"
+    ],
+    "plugins": [
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestSynth_artefacts\\Release\\VST3\\Core Test Synth.vst3",
+        "name": "Core Test Synth",
+        "role": "instrument"
+      },
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestGain_artefacts\\Release\\VST3\\Core Test Gain.vst3",
+        "name": "Core Test Gain",
+        "role": "insert"
+      }
+    ],
+    "scenario": "a-mute3-t4",
+    "stats": {
+      "auditionSteals": 0,
+      "avgLoadPct": 1.7334205569208938,
+      "avgRenderMs": 0.04622453662842012,
+      "callbackErrors": 0,
+      "callbacks": 1133,
+      "denseEventBlocks": 0,
+      "device": {
+        "backend": "Null",
+        "blockSize": 128,
+        "device": "NULL Playback Device",
+        "exclusive": false,
+        "internalSampleRate": 48000,
+        "latencyMs": 5.333333333333333,
+        "periods": 2,
+        "sampleRate": 48000.0,
+        "scheduling": "Pro Audio"
+      },
+      "deviceDriftPpm": 0.0,
+      "deviceNotification": 0,
+      "droppedNotes": 0,
+      "failedPlugins": [],
+      "failedUnits": [],
+      "graphSwaps": 0,
+      "lastRebuildMs": 0.08739999999999999,
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 10.666666666666666,
+        "tracksSamples": 256
+      },
+      "leakedGraphs": 0,
+      "liveFallback": false,
+      "liveNotesRejected": 0,
+      "liveOffAllTracks": 0,
+      "liveOffOverflows": 0,
+      "liveStallBlocks": 0,
+      "liveStalls": 0,
+      "liveThreads": 4,
+      "loadP50Pct": 2.0,
+      "loadP95Pct": 3.0,
+      "loadP99Pct": 3.0,
+      "maxCallbackFrames": 128,
+      "maxEditToAudioMs": 0.0,
+      "maxLoadPct": 4.71,
+      "maxRenderMs": 0.1256,
+      "minCallbackFrames": 128,
+      "nativeFailures": 0,
+      "nonFiniteBlocks": 0,
+      "overruns": 0,
+      "pluginFailures": 0,
+      "pluginNotesDropped": 0,
+      "starvations": 282
+    },
+    "timing": {
+      "blocks": 1133,
+      "framesTotal": 145024,
+      "maxLoadPct": 4.710001177500295,
+      "maxMs": 0.1256,
+      "meanLoadPct": 1.7334205569208923,
+      "meanMs": 0.046224536628420125,
+      "overBudget": 0,
+      "p50Ms": 0.0457,
+      "p95Ms": 0.0589,
+      "p99LoadPct": 2.4562506140626534,
+      "p99Ms": 0.0655
+    },
+    "wallSeconds": 5.0777319,
+    "workerJobs": 2179
+  },
+  {
+    "bypassFx": true,
+    "cpu": {
+      "intervalMs": 3018.3123,
+      "load": {
+        "avgPct": 1.7254638029458271,
+        "marginPct": 90.1,
+        "maxPct": 9.9
+      },
+      "master": {
+        "cpuPct": 0.0,
+        "effects": []
+      },
+      "totalPct": 0.8673588879454256,
+      "tracks": [
+        {
+          "cpuPct": 0.26317356225861716,
+          "effects": [],
+          "id": "kick",
+          "instrument": {
+            "cpuPct": 0.26317356225861716,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.3221568556706342,
+          "effects": [
+            {
+              "cpuPct": 0.0,
+              "id": "gainfx",
+              "name": "Core Test Gain"
+            }
+          ],
+          "id": "bass",
+          "instrument": {
+            "cpuPct": 0.3221568556706342,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.28202847001617426,
+          "effects": [],
+          "id": "lead",
+          "instrument": {
+            "cpuPct": 0.28202847001617426,
+            "name": "Core Test Synth"
+          }
+        }
+      ]
+    },
+    "deliveredSeconds": 3.021333333333333,
+    "device": {
+      "backend": "Null",
+      "blockSize": 128,
+      "device": "NULL Playback Device",
+      "exclusive": false,
+      "internalSampleRate": 48000,
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 2.6666666666666665,
+        "masterSamples": 0,
+        "totalMs": 8.0,
+        "tracksSamples": 128
+      },
+      "latencyMs": 5.333333333333333,
+      "periods": 2,
+      "sampleRate": 48000.0,
+      "scheduling": "Pro Audio"
+    },
+    "error": "",
+    "liveThreads": 4,
+    "muted": [],
+    "plugins": [
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestSynth_artefacts\\Release\\VST3\\Core Test Synth.vst3",
+        "name": "Core Test Synth",
+        "role": "instrument"
+      },
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestGain_artefacts\\Release\\VST3\\Core Test Gain.vst3",
+        "name": "Core Test Gain",
+        "role": "insert"
+      }
+    ],
+    "scenario": "a-bypassfx-t4",
+    "stats": {
+      "auditionSteals": 0,
+      "avgLoadPct": 1.7254638029458271,
+      "avgRenderMs": 0.046012356575463376,
+      "callbackErrors": 0,
+      "callbacks": 1133,
+      "denseEventBlocks": 0,
+      "device": {
+        "backend": "Null",
+        "blockSize": 128,
+        "device": "NULL Playback Device",
+        "exclusive": false,
+        "internalSampleRate": 48000,
+        "latencyMs": 5.333333333333333,
+        "periods": 2,
+        "sampleRate": 48000.0,
+        "scheduling": "Pro Audio"
+      },
+      "deviceDriftPpm": 0.0,
+      "deviceNotification": 0,
+      "droppedNotes": 0,
+      "failedPlugins": [],
+      "failedUnits": [],
+      "graphSwaps": 0,
+      "lastRebuildMs": 0.06269999999999999,
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 2.6666666666666665,
+        "masterSamples": 0,
+        "totalMs": 8.0,
+        "tracksSamples": 128
+      },
+      "leakedGraphs": 0,
+      "liveFallback": false,
+      "liveNotesRejected": 0,
+      "liveOffAllTracks": 0,
+      "liveOffOverflows": 0,
+      "liveStallBlocks": 0,
+      "liveStalls": 0,
+      "liveThreads": 4,
+      "loadP50Pct": 2.0,
+      "loadP95Pct": 3.0,
+      "loadP99Pct": 3.0,
+      "maxCallbackFrames": 128,
+      "maxEditToAudioMs": 0.0,
+      "maxLoadPct": 9.9,
+      "maxRenderMs": 0.264,
+      "minCallbackFrames": 128,
+      "nativeFailures": 0,
+      "nonFiniteBlocks": 0,
+      "overruns": 0,
+      "pluginFailures": 0,
+      "pluginNotesDropped": 0,
+      "starvations": 281
+    },
+    "timing": {
+      "blocks": 1133,
+      "framesTotal": 145024,
+      "maxLoadPct": 9.900002475000619,
+      "maxMs": 0.264,
+      "meanLoadPct": 1.7254638029458278,
+      "meanMs": 0.046012356575463376,
+      "overBudget": 0,
+      "p50Ms": 0.0444,
+      "p95Ms": 0.0557,
+      "p99LoadPct": 2.636250659062665,
+      "p99Ms": 0.0703
+    },
+    "wallSeconds": 5.0754814,
+    "workerJobs": 2146
+  },
+  {
+    "bypassFx": false,
+    "cpu": {
+      "intervalMs": 3019.357,
+      "load": {
+        "avgPct": 2.06168371647913,
+        "marginPct": 88.1125,
+        "maxPct": 11.887500000000001
+      },
+      "master": {
+        "cpuPct": 0.0,
+        "effects": []
+      },
+      "totalPct": 0.9622876658838289,
+      "tracks": [
+        {
+          "cpuPct": 0.2634501319320637,
+          "effects": [],
+          "id": "kick",
+          "instrument": {
+            "cpuPct": 0.2634501319320637,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.40739137505104567,
+          "effects": [
+            {
+              "cpuPct": 0.10427385698345708,
+              "id": "gainfx",
+              "name": "Core Test Gain"
+            }
+          ],
+          "id": "bass",
+          "instrument": {
+            "cpuPct": 0.3031175180675886,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.29144615890071957,
+          "effects": [],
+          "id": "lead",
+          "instrument": {
+            "cpuPct": 0.29144615890071957,
+            "name": "Core Test Synth"
+          }
+        }
+      ]
+    },
+    "deliveredSeconds": 3.024,
+    "device": {
+      "backend": "Null",
+      "blockSize": 64,
+      "device": "NULL Playback Device",
+      "exclusive": false,
+      "internalSampleRate": 48000,
+      "latency": {
+        "deviceMs": 2.6666666666666665,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 8.0,
+        "tracksSamples": 256
+      },
+      "latencyMs": 2.6666666666666665,
+      "periods": 2,
+      "sampleRate": 48000.0,
+      "scheduling": "Pro Audio"
+    },
+    "error": "",
+    "expectedPluginCalls": 4536.0,
+    "liveThreads": 4,
+    "muted": [],
+    "pluginCallsPerCallback": 0.5,
+    "plugins": [
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestSynth_artefacts\\Release\\VST3\\Core Test Synth.vst3",
+        "name": "Core Test Synth",
+        "role": "instrument"
+      },
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestGain_artefacts\\Release\\VST3\\Core Test Gain.vst3",
+        "name": "Core Test Gain",
+        "role": "insert"
+      }
+    ],
+    "scenario": "b-t4-64",
+    "stats": {
+      "auditionSteals": 0,
+      "avgLoadPct": 2.06168371647913,
+      "avgRenderMs": 0.02748910934744268,
+      "callbackErrors": 0,
+      "callbacks": 2268,
+      "denseEventBlocks": 0,
+      "device": {
+        "backend": "Null",
+        "blockSize": 64,
+        "device": "NULL Playback Device",
+        "exclusive": false,
+        "internalSampleRate": 48000,
+        "latencyMs": 2.6666666666666665,
+        "periods": 2,
+        "sampleRate": 48000.0,
+        "scheduling": "Pro Audio"
+      },
+      "deviceDriftPpm": 0.0,
+      "deviceNotification": 0,
+      "droppedNotes": 0,
+      "failedPlugins": [],
+      "failedUnits": [],
+      "graphSwaps": 0,
+      "lastRebuildMs": 0.0914,
+      "latency": {
+        "deviceMs": 2.6666666666666665,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 8.0,
+        "tracksSamples": 256
+      },
+      "leakedGraphs": 0,
+      "liveFallback": false,
+      "liveNotesRejected": 0,
+      "liveOffAllTracks": 0,
+      "liveOffOverflows": 0,
+      "liveStallBlocks": 0,
+      "liveStalls": 0,
+      "liveThreads": 4,
+      "loadP50Pct": 2.0,
+      "loadP95Pct": 3.0,
+      "loadP99Pct": 4.0,
+      "maxCallbackFrames": 64,
+      "maxEditToAudioMs": 0.0,
+      "maxLoadPct": 11.887500000000001,
+      "maxRenderMs": 0.1585,
+      "minCallbackFrames": 64,
+      "nativeFailures": 0,
+      "nonFiniteBlocks": 0,
+      "overruns": 0,
+      "pluginFailures": 0,
+      "pluginNotesDropped": 0,
+      "starvations": 282
+    },
+    "timing": {
+      "blocks": 2268,
+      "framesTotal": 145152,
+      "maxLoadPct": 11.887502971875742,
+      "maxMs": 0.1585,
+      "meanLoadPct": 2.0616837164791315,
+      "meanMs": 0.02748910934744268,
+      "overBudget": 0,
+      "p50Ms": 0.0263,
+      "p95Ms": 0.0397,
+      "p99LoadPct": 3.315000828750207,
+      "p99Ms": 0.0442
+    },
+    "wallSeconds": 5.0740317,
+    "workerJobs": 3201
+  },
+  {
+    "bypassFx": false,
+    "cpu": {
+      "intervalMs": 3019.4051999999997,
+      "load": {
+        "avgPct": 1.7545358368640478,
+        "marginPct": 90.6363,
+        "maxPct": 9.3637
+      },
+      "master": {
+        "cpuPct": 0.0,
+        "effects": []
+      },
+      "totalPct": 0.9464115647677893,
+      "tracks": [
+        {
+          "cpuPct": 0.26221058372688766,
+          "effects": [],
+          "id": "kick",
+          "instrument": {
+            "cpuPct": 0.26221058372688766,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.39697884868185296,
+          "effects": [
+            {
+              "cpuPct": 0.09957921513813382,
+              "id": "gainfx",
+              "name": "Core Test Gain"
+            }
+          ],
+          "id": "bass",
+          "instrument": {
+            "cpuPct": 0.2973996335437191,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.2872221323590487,
+          "effects": [],
+          "id": "lead",
+          "instrument": {
+            "cpuPct": 0.2872221323590487,
+            "name": "Core Test Synth"
+          }
+        }
+      ]
+    },
+    "deliveredSeconds": 3.013333333333333,
+    "device": {
+      "backend": "Null",
+      "blockSize": 128,
+      "device": "NULL Playback Device",
+      "exclusive": false,
+      "internalSampleRate": 48000,
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 10.666666666666666,
+        "tracksSamples": 256
+      },
+      "latencyMs": 5.333333333333333,
+      "periods": 2,
+      "sampleRate": 48000.0,
+      "scheduling": "Pro Audio"
+    },
+    "error": "",
+    "expectedPluginCalls": 4520.0,
+    "liveThreads": 4,
+    "muted": [],
+    "pluginCallsPerCallback": 1.0,
+    "plugins": [
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestSynth_artefacts\\Release\\VST3\\Core Test Synth.vst3",
+        "name": "Core Test Synth",
+        "role": "instrument"
+      },
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestGain_artefacts\\Release\\VST3\\Core Test Gain.vst3",
+        "name": "Core Test Gain",
+        "role": "insert"
+      }
+    ],
+    "scenario": "b-t4-128",
+    "stats": {
+      "auditionSteals": 0,
+      "avgLoadPct": 1.7545358368640478,
+      "avgRenderMs": 0.046787610619469025,
+      "callbackErrors": 0,
+      "callbacks": 1130,
+      "denseEventBlocks": 0,
+      "device": {
+        "backend": "Null",
+        "blockSize": 128,
+        "device": "NULL Playback Device",
+        "exclusive": false,
+        "internalSampleRate": 48000,
+        "latencyMs": 5.333333333333333,
+        "periods": 2,
+        "sampleRate": 48000.0,
+        "scheduling": "Pro Audio"
+      },
+      "deviceDriftPpm": 0.0,
+      "deviceNotification": 0,
+      "droppedNotes": 0,
+      "failedPlugins": [],
+      "failedUnits": [],
+      "graphSwaps": 0,
+      "lastRebuildMs": 0.0919,
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 10.666666666666666,
+        "tracksSamples": 256
+      },
+      "leakedGraphs": 0,
+      "liveFallback": false,
+      "liveNotesRejected": 0,
+      "liveOffAllTracks": 0,
+      "liveOffOverflows": 0,
+      "liveStallBlocks": 0,
+      "liveStalls": 0,
+      "liveThreads": 4,
+      "loadP50Pct": 2.0,
+      "loadP95Pct": 3.0,
+      "loadP99Pct": 3.0,
+      "maxCallbackFrames": 128,
+      "maxEditToAudioMs": 0.0,
+      "maxLoadPct": 9.3637,
+      "maxRenderMs": 0.24969999999999998,
+      "minCallbackFrames": 128,
+      "nativeFailures": 0,
+      "nonFiniteBlocks": 0,
+      "overruns": 0,
+      "pluginFailures": 0,
+      "pluginNotesDropped": 0,
+      "starvations": 281
+    },
+    "timing": {
+      "blocks": 1130,
+      "framesTotal": 144640,
+      "maxLoadPct": 9.363752340938085,
+      "maxMs": 0.2497,
+      "meanLoadPct": 1.754535836864048,
+      "meanMs": 0.04678761061946903,
+      "overBudget": 0,
+      "p50Ms": 0.0461,
+      "p95Ms": 0.0596,
+      "p99LoadPct": 2.493750623437656,
+      "p99Ms": 0.0665
+    },
+    "wallSeconds": 5.0765809,
+    "workerJobs": 2180
+  },
+  {
+    "bypassFx": false,
+    "cpu": {
+      "intervalMs": 3001.6279999999997,
+      "load": {
+        "avgPct": 1.5994914563511948,
+        "marginPct": 93.82,
+        "maxPct": 6.180000000000001
+      },
+      "master": {
+        "cpuPct": 0.0,
+        "effects": []
+      },
+      "totalPct": 0.9216798350761654,
+      "tracks": [
+        {
+          "cpuPct": 0.25795001912295595,
+          "effects": [],
+          "id": "kick",
+          "instrument": {
+            "cpuPct": 0.25795001912295595,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.384627941903527,
+          "effects": [
+            {
+              "cpuPct": 0.09207336818553132,
+              "id": "gainfx",
+              "name": "Core Test Gain"
+            }
+          ],
+          "id": "bass",
+          "instrument": {
+            "cpuPct": 0.2925545737179957,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.27910187404968234,
+          "effects": [],
+          "id": "lead",
+          "instrument": {
+            "cpuPct": 0.27910187404968234,
+            "name": "Core Test Synth"
+          }
+        }
+      ]
+    },
+    "deliveredSeconds": 3.008,
+    "device": {
+      "backend": "Null",
+      "blockSize": 256,
+      "device": "NULL Playback Device",
+      "exclusive": false,
+      "internalSampleRate": 48000,
+      "latency": {
+        "deviceMs": 10.666666666666666,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 16.0,
+        "tracksSamples": 256
+      },
+      "latencyMs": 10.666666666666666,
+      "periods": 2,
+      "sampleRate": 48000.0,
+      "scheduling": "Pro Audio"
+    },
+    "error": "",
+    "expectedPluginCalls": 4512.0,
+    "liveThreads": 4,
+    "muted": [],
+    "pluginCallsPerCallback": 2.0,
+    "plugins": [
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestSynth_artefacts\\Release\\VST3\\Core Test Synth.vst3",
+        "name": "Core Test Synth",
+        "role": "instrument"
+      },
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestGain_artefacts\\Release\\VST3\\Core Test Gain.vst3",
+        "name": "Core Test Gain",
+        "role": "insert"
+      }
+    ],
+    "scenario": "b-t4-256",
+    "stats": {
+      "auditionSteals": 0,
+      "avgLoadPct": 1.5994914563511948,
+      "avgRenderMs": 0.08530620567375886,
+      "callbackErrors": 0,
+      "callbacks": 564,
+      "denseEventBlocks": 0,
+      "device": {
+        "backend": "Null",
+        "blockSize": 256,
+        "device": "NULL Playback Device",
+        "exclusive": false,
+        "internalSampleRate": 48000,
+        "latencyMs": 10.666666666666666,
+        "periods": 2,
+        "sampleRate": 48000.0,
+        "scheduling": "Pro Audio"
+      },
+      "deviceDriftPpm": 0.0,
+      "deviceNotification": 0,
+      "droppedNotes": 0,
+      "failedPlugins": [],
+      "failedUnits": [],
+      "graphSwaps": 0,
+      "lastRebuildMs": 0.11349999999999999,
+      "latency": {
+        "deviceMs": 10.666666666666666,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 16.0,
+        "tracksSamples": 256
+      },
+      "leakedGraphs": 0,
+      "liveFallback": false,
+      "liveNotesRejected": 0,
+      "liveOffAllTracks": 0,
+      "liveOffOverflows": 0,
+      "liveStallBlocks": 0,
+      "liveStalls": 0,
+      "liveThreads": 4,
+      "loadP50Pct": 2.0,
+      "loadP95Pct": 2.0,
+      "loadP99Pct": 3.0,
+      "maxCallbackFrames": 256,
+      "maxEditToAudioMs": 0.0,
+      "maxLoadPct": 6.180000000000001,
+      "maxRenderMs": 0.3296,
+      "minCallbackFrames": 256,
+      "nativeFailures": 0,
+      "nonFiniteBlocks": 0,
+      "overruns": 0,
+      "pluginFailures": 0,
+      "pluginNotesDropped": 0,
+      "starvations": 0
+    },
+    "timing": {
+      "blocks": 564,
+      "framesTotal": 144384,
+      "maxLoadPct": 6.180000386250025,
+      "maxMs": 0.3296,
+      "meanLoadPct": 1.5994914563511957,
+      "meanMs": 0.08530620567375888,
+      "overBudget": 0,
+      "p50Ms": 0.0862,
+      "p95Ms": 0.1042,
+      "p99LoadPct": 2.1525001345312584,
+      "p99Ms": 0.1148
+    },
+    "wallSeconds": 5.0569456,
+    "workerJobs": 1113
+  },
+  {
+    "bypassFx": false,
+    "cpu": {
+      "intervalMs": 3014.9354,
+      "load": {
+        "avgPct": 1.4496533591545717,
+        "marginPct": 97.8147,
+        "maxPct": 2.1853000000000002
+      },
+      "master": {
+        "cpuPct": 0.0,
+        "effects": []
+      },
+      "totalPct": 0.8521044928524837,
+      "tracks": [
+        {
+          "cpuPct": 0.24421418780647838,
+          "effects": [],
+          "id": "kick",
+          "instrument": {
+            "cpuPct": 0.24421418780647838,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.35455817726641836,
+          "effects": [
+            {
+              "cpuPct": 0.0823599736166818,
+              "id": "gainfx",
+              "name": "Core Test Gain"
+            }
+          ],
+          "id": "bass",
+          "instrument": {
+            "cpuPct": 0.27219820364973657,
+            "name": "Core Test Synth"
+          }
+        },
+        {
+          "cpuPct": 0.2533321277795869,
+          "effects": [],
+          "id": "lead",
+          "instrument": {
+            "cpuPct": 0.2533321277795869,
+            "name": "Core Test Synth"
+          }
+        }
+      ]
+    },
+    "deliveredSeconds": 3.018666666666667,
+    "device": {
+      "backend": "Null",
+      "blockSize": 512,
+      "device": "NULL Playback Device",
+      "exclusive": false,
+      "internalSampleRate": 48000,
+      "latency": {
+        "deviceMs": 21.333333333333332,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 26.666666666666664,
+        "tracksSamples": 256
+      },
+      "latencyMs": 21.333333333333332,
+      "periods": 2,
+      "sampleRate": 48000.0,
+      "scheduling": "Pro Audio"
+    },
+    "error": "",
+    "expectedPluginCalls": 4528.0,
+    "liveThreads": 4,
+    "muted": [],
+    "pluginCallsPerCallback": 4.0,
+    "plugins": [
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestSynth_artefacts\\Release\\VST3\\Core Test Synth.vst3",
+        "name": "Core Test Synth",
+        "role": "instrument"
+      },
+      {
+        "file": "D:\\Core-build\\s9\\build\\app\\selftest-plugins\\CoreTestGain_artefacts\\Release\\VST3\\Core Test Gain.vst3",
+        "name": "Core Test Gain",
+        "role": "insert"
+      }
+    ],
+    "scenario": "b-t4-512",
+    "stats": {
+      "auditionSteals": 0,
+      "avgLoadPct": 1.4496533591545717,
+      "avgRenderMs": 0.1546296819787986,
+      "callbackErrors": 0,
+      "callbacks": 283,
+      "denseEventBlocks": 0,
+      "device": {
+        "backend": "Null",
+        "blockSize": 512,
+        "device": "NULL Playback Device",
+        "exclusive": false,
+        "internalSampleRate": 48000,
+        "latencyMs": 21.333333333333332,
+        "periods": 2,
+        "sampleRate": 48000.0,
+        "scheduling": "Pro Audio"
+      },
+      "deviceDriftPpm": 0.0,
+      "deviceNotification": 0,
+      "droppedNotes": 0,
+      "failedPlugins": [],
+      "failedUnits": [],
+      "graphSwaps": 0,
+      "lastRebuildMs": 0.0662,
+      "latency": {
+        "deviceMs": 21.333333333333332,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 26.666666666666664,
+        "tracksSamples": 256
+      },
+      "leakedGraphs": 0,
+      "liveFallback": false,
+      "liveNotesRejected": 0,
+      "liveOffAllTracks": 0,
+      "liveOffOverflows": 0,
+      "liveStallBlocks": 0,
+      "liveStalls": 0,
+      "liveThreads": 4,
+      "loadP50Pct": 2.0,
+      "loadP95Pct": 2.0,
+      "loadP99Pct": 2.0,
+      "maxCallbackFrames": 512,
+      "maxEditToAudioMs": 0.0,
+      "maxLoadPct": 2.1853000000000002,
+      "maxRenderMs": 0.2331,
+      "minCallbackFrames": 512,
+      "nativeFailures": 0,
+      "nonFiniteBlocks": 0,
+      "overruns": 0,
+      "pluginFailures": 0,
+      "pluginNotesDropped": 0,
+      "starvations": 0
+    },
+    "timing": {
+      "blocks": 283,
+      "framesTotal": 144896,
+      "maxLoadPct": 2.1853126365820397,
+      "maxMs": 0.2331,
+      "meanLoadPct": 1.4496533591545726,
+      "meanMs": 0.1546296819787986,
+      "overBudget": 0,
+      "p50Ms": 0.1565,
+      "p95Ms": 0.188,
+      "p99LoadPct": 1.9453126215820389,
+      "p99Ms": 0.2075
+    },
+    "wallSeconds": 5.0678603,
+    "workerJobs": 562
+  }
+]

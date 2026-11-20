@@ -1,0 +1,12 @@
+﻿D:\Core-build\s1-red\build\tests\engine_process_tests.exe :   FALHOU D:\CORE\CORE\tests\engine_process_tests.cpp:159: 
+end.get() == std::string("The engine exited (code 0)."): medido The engine exited (code 259)., esperado The engine 
+exited (code 0).
+At line:1 char:646
++ ... fixed.txt"; D:\Core-build\s1-red\build\tests\engine_process_tests.exe ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (  FALHOU D:\COR...xited (code 0).:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  slowest answer after the crash: 1 ms
+FAIL serve: after a plugin crashes in processBlock the engine still answers, retries, releases it and exits
+1 testes, 25 verificacoes, 1 falhas

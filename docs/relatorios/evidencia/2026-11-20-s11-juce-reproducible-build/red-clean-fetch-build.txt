@@ -1,0 +1,32 @@
+﻿[0/2] Re-checking globbed directories...
+[1/555] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\tempo_map.cpp.obj
+[2/555] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\engine.cpp.obj
+[3/555] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\graph.cpp.obj
+[4/555] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\project.cpp.obj
+[5/555] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\assets.cpp.obj
+[6/555] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\dsp\instruments.cpp.obj
+[7/555] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\render_job.cpp.obj
+[8/555] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\qualify.cpp.obj
+[9/555] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\server.cpp.obj
+D:\CORE\CORE\engine\src\core\server.cpp(803): warning C4996: 'std::filesystem::u8path': warning STL4021: The std::filesystem::u8path() overloads are deprecated in C++20. The constructors of std::filesystem::path provide equivalent functionality via construction from u8string, u8string_view, or iterators with value_type char8_t. You can define _SILENCE_CXX20_U8PATH_DEPRECATION_WARNING or _SILENCE_ALL_CXX20_DEPRECATION_WARNINGS to suppress this warning.
+[10/555] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\dsp\registry.cpp.obj
+[11/555] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\dsp\loudness.cpp.obj
+[12/555] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\dsp\output_guard.cpp.obj
+[13/555] Core version
+[14/555] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\dsp\analyzer.cpp.obj
+[15/555] Building C object engine\CMakeFiles\miniaudio_impl.dir\src\io\miniaudio_impl.c.obj
+[16/555] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\io\wav.cpp.obj
+D:\CORE\CORE\engine\src\io\wav.cpp(33): warning C4996: '_wfopen': This function or variable may be unsafe. Consider using _wfopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+D:\CORE\CORE\engine\src\io\wav.cpp(71): warning C4996: 'strerror': This function or variable may be unsafe. Consider using strerror_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+[17/555] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\io\audio_file.cpp.obj
+[18/555] Linking CXX static library engine\core_engine_lib.lib
+[19/555] Building CXX object engine\CMakeFiles\core_plugin_host.dir\src\plugins\juce_host.cpp.obj
+FAILED: [code=2] engine/CMakeFiles/core_plugin_host.dir/src/plugins/juce_host.cpp.obj 
+"C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Tools\MSVC\14.51.36231\bin\Hostx64\x64\cl.exe"  /nologo /TP -DDEBUG=1 -DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1 -DJUCE_MODULE_AVAILABLE_juce_audio_basics=1 -DJUCE_MODULE_AVAILABLE_juce_audio_processors=1 -DJUCE_MODULE_AVAILABLE_juce_audio_processors_headless=1 -DJUCE_MODULE_AVAILABLE_juce_core=1 -DJUCE_MODULE_AVAILABLE_juce_data_structures=1 -DJUCE_MODULE_AVAILABLE_juce_events=1 -DJUCE_MODULE_AVAILABLE_juce_graphics=1 -DJUCE_MODULE_AVAILABLE_juce_gui_basics=1 -DJUCE_MODULE_AVAILABLE_juce_gui_extra=1 -DJUCE_PLUGINHOST_AU=0 -DJUCE_PLUGINHOST_VST3=1 -DJUCE_STANDALONE_APPLICATION=1 -DJUCE_USE_CURL=0 -DJUCE_WEBVIEW_INTEROP_LIBRARY_VERSION=\"1.0.0\" -DJUCE_WEB_BROWSER=0 -D_DEBUG=1 -ID:\CORE\CORE\engine\src -ID:\CORE\CORE\engine\third_party -ID:\Core-build\s11-clean\deps\juce-src\modules -ID:\Core-build\s11-clean\deps\juce-src\modules\juce_audio_processors_headless\format_types\VST3_SDK -ID:\Core-build\s11-clean\deps\juce-src\modules\juce_audio_processors_headless\format_types\LV2_SDK -ID:\Core-build\s11-clean\deps\juce-src\modules\juce_audio_processors_headless\format_types\LV2_SDK\lv2 -ID:\Core-build\s11-clean\deps\juce-src\modules\juce_audio_processors_headless\format_types\LV2_SDK\serd -ID:\Core-build\s11-clean\deps\juce-src\modules\juce_audio_processors_headless\format_types\LV2_SDK\sord -ID:\Core-build\s11-clean\deps\juce-src\modules\juce_audio_processors_headless\format_types\LV2_SDK\sord\src -ID:\Core-build\s11-clean\deps\juce-src\modules\juce_audio_processors_headless\format_types\LV2_SDK\sratom -ID:\Core-build\s11-clean\deps\juce-src\modules\juce_audio_processors_headless\format_types\LV2_SDK\lilv -ID:\Core-build\s11-clean\deps\juce-src\modules\juce_audio_processors_headless\format_types\LV2_SDK\lilv\src /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MTd /utf-8 /W3 /fp:fast /bigobj /Od /MP /EHsc /Zi /showIncludes /Foengine\CMakeFiles\core_plugin_host.dir\src\plugins\juce_host.cpp.obj /Fdengine\CMakeFiles\core_plugin_host.dir\core_plugin_host.pdb /FS -c D:\CORE\CORE\engine\src\plugins\juce_host.cpp
+D:\CORE\CORE\engine\src\plugins\juce_host.cpp(136): error C2039: ' markCrashedByHost': não é um membro de 'juce::AudioPluginExtensions::VST3Client'
+D:\Core-build\s11-clean\deps\juce-src\modules\juce_audio_processors_headless/utilities/juce_AudioPluginExtensions.h(87): note: consulte a declaração de 'juce::AudioPluginExtensions::VST3Client'
+D:\CORE\CORE\engine\src\plugins\juce_host.cpp(523): warning C4996: 'juce::AudioProcessor::createEditorIfNeeded': Prefer createEditorAndMakeActive()
+[20/555] Building CXX object engine\CMakeFiles\core_plugin_host.dir\D_\Core-build\s11-clean\deps\juce-src\modules\juce_gui_extra\juce_gui_extra.cpp.obj
+[21/555] Building CXX object engine\CMakeFiles\core_plugin_host.dir\D_\Core-build\s11-clean\deps\juce-src\modules\juce_audio_processors\juce_audio_processors.cpp.obj
+[22/555] Building CXX object engine\CMakeFiles\core_plugin_host.dir\D_\Core-build\s11-clean\deps\juce-src\modules\juce_gui_basics\juce_gui_basics.cpp.obj
+ninja: build stopped: subcommand failed.

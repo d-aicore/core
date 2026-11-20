@@ -1,0 +1,8 @@
+{
+ "C1_headless_restore_before_editor": "100.0",
+ "C1_after_editor_on_restoring_instance": "100.0",
+ "C2_recapture_after_editor_restore_without_editor": "100.0",
+ "headlessBlobSha": "5a013011238004e32e9826311a2ecda2c2e584529bf618369cfb424f915a821c",
+ "recapturedBlobSha": "115aa19d12b15f6902d44c73aacc1f616746f18b8fba79f0969d06cd01546ce1",
+ "blobsIdentical": false
+}

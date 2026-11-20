@@ -1,0 +1,191 @@
+[
+ {
+  "build": "0.7.0+a9a038430d.modified",
+  "capabilities": [
+   "revisions",
+   "renderJobs",
+   "clips",
+   "tempoMap"
+  ],
+  "commands": [
+   {
+    "cmd": "engine.start",
+    "description": "Start the audio device {sampleRate?, blockSize?, backend?: 'wasapi'|'null'|..., exclusive?, device?, liveThreads?: workers that play tracks with the audio thread (default 0 = serial, D51; opt-in by argument or CORE_LIVE_THREADS)} -> {sampleRate, blockSize, latencyMs, latency: {tracksSamples, masterSamples, graphMs, deviceMs, totalMs}}"
+   },
+   {
+    "cmd": "engine.stop",
+    "description": "Stop the audio device"
+   },
+   {
+    "cmd": "engine.stats",
+    "description": "Timing stats: callbacks, overruns, late callbacks, render time, edit->audio delay"
+   },
+   {
+    "cmd": "engine.cpu",
+    "description": "Where the audio time went since the last call (M0b), in % of one core = % of real time -> {intervalMs, load: {avgPct, maxPct, marginPct}, totalPct, tracks: [{id, cpuPct, instrument: {name, cpuPct}, effects: [{id, name, cpuPct}]}], master: {cpuPct, effects}}"
+   },
+   {
+    "cmd": "engine.resetStats",
+    "description": "Zero the timing stats (e.g. after the device has warmed up)"
+   },
+   {
+    "cmd": "devices.list",
+    "description": "{backend?} -> {backend, devices: [{name, default}]}"
+   },
+   {
+    "cmd": "project.load",
+    "description": "Replace the whole project {project, revision?, states?: {key: base64}} (core-project v1 from the JS editor, or v2). A projection that names state instead of carrying it (hasState marks the places with state) is answered {statesNeeded: [keys]} and NOT accepted until those states arrive in 'states'; an accepted load answers statesNeeded: []"
+   },
+   {
+    "cmd": "project.get",
+    "description": "The project as core-project v2 (ticks, PPQ 960)"
+   },
+   {
+    "cmd": "tempo.set",
+    "description": "{bpm} 40-600"
+   },
+   {
+    "cmd": "track.add",
+    "description": "{track} in the v1 shape (kind synth|drums, pattern in steps) or v2 (instrument, notes in ticks, or clips: [{startTick, lengthTicks, patternTicks, notes}])"
+   },
+   {
+    "cmd": "track.remove",
+    "description": "{trackId}"
+   },
+   {
+    "cmd": "track.set",
+    "description": "{trackId, patch}: volumeDb, pan, mute, solo, name, params, pattern, bars (v1) or notes, envelopes, patternTicks (v2)"
+   },
+   {
+    "cmd": "master.set",
+    "description": "{volumeDb, chain?}"
+   },
+   {
+    "cmd": "transport.play",
+    "description": "Start playback"
+   },
+   {
+    "cmd": "transport.stop",
+    "description": "{rewind?}"
+   },
+   {
+    "cmd": "transport.seek",
+    "description": "{tick} or {position} in samples"
+   },
+   {
+    "cmd": "listen.set",
+    "description": "{db}: the listening level, -60..0 dB (default -10): what the device plays is that much quieter, fixed; exports are not touched. engine.start takes {listenDb} too"
+   },
+   {
+    "cmd": "earGuard.set",
+    "description": "{on: true}: the ear guard on the output, always on (off is refused): no peak over -1 dBFS, NaN is silence; the state event's \"earGuard\" says how far it turned the output down (dB)"
+   },
+   {
+    "cmd": "loudness.reset",
+    "description": "starts a new loudness measurement of the master (also done by transport.play from stopped)"
+   },
+   {
+    "cmd": "analysis.enable",
+    "description": "{on}: the state event carries \"analysis\" (the master's spectrum in 1/6-octave bands from 20 Hz, dB; stereo correlation)"
+   },
+   {
+    "cmd": "analysis.watch",
+    "description": "{trackId, effectId}: the state event carries \"effectSpectrum\", that effect's input in the same bands (trackId \"master\" for the master chain; no effectId stops)"
+   },
+   {
+    "cmd": "transport.loop",
+    "description": "{enabled, startTick, endTick} or {enabled, start, end} in samples"
+   },
+   {
+    "cmd": "transport.panic",
+    "description": "Release every note (sequenced, live, auditions) and drop queued live notes"
+   },
+   {
+    "cmd": "note.on",
+    "description": "{trackId, pitch, velocity} live note"
+   },
+   {
+    "cmd": "note.off",
+    "description": "{trackId, pitch}"
+   },
+   {
+    "cmd": "note.audition",
+    "description": "{trackId, pitch, velocity, durationMs?}"
+   },
+   {
+    "cmd": "render",
+    "description": "{path, bits?: 24|32, stems?, tailMs?, startTick?, endTick?} -> {path, stems, seconds, peak, renderMs, realtimeFactor, denseEventBlocks} (blocks until done)"
+   },
+   {
+    "cmd": "render.start",
+    "description": "{path | files: [{path, track?: id (none = the mix), withoutMasterGain?: bool (a stem for a bounce)}], startTick?, endTick?, bits?: 24|32, tailMs?, sampleRate?, revision?} -> job status; runs in the background, sends job events. Stems are taken before the master chain; a region plays the song before it (not written) and cuts it at endTick, tails ring out"
+   },
+   {
+    "cmd": "render.status",
+    "description": "{jobId} -> {jobId, state: queued|running|cancelling|succeeded|cancelled|failed, progress, ...}"
+   },
+   {
+    "cmd": "render.cancel",
+    "description": "{jobId}: stops the job and leaves the target file as it was (cancelRefused if the file is already being put in place)"
+   },
+   {
+    "cmd": "plugins.missing",
+    "description": "Plugin tracks/effects that are not loaded -> [{key, plugin, why}] (UI: 'Missing instrument')"
+   },
+   {
+    "cmd": "plugins.failed",
+    "description": "Plugins that failed while playing (M3b: exception, crash, NaN/Inf or runaway level) -> [{key, plugin, why}]: each is silent (its track mutes; on the master the mix goes through) until plugin.retry, the song is loaded again or the plugin replaced"
+   },
+   {
+    "cmd": "plugin.retry",
+    "description": "{key} a failed plugin gets a new instance from the song's state -> {retried, loaded}"
+   },
+   {
+    "cmd": "plugins.versions",
+    "description": "Plugins whose installed version is not the one the song was saved with -> [{key, plugin, saved, installed}]"
+   },
+   {
+    "cmd": "plugins.states",
+    "description": "{keys?: [key]} The state of the loaded plugins named (every loaded plugin when absent) -> {key: base64} (saved in the document)"
+   },
+   {
+    "cmd": "plugin.editor",
+    "description": "{key, open} opens or closes a plugin's own editor window"
+   },
+   {
+    "cmd": "plugins.release",
+    "description": "Another song: every loaded plugin is let go (the next load starts from that song's states)"
+   },
+   {
+    "cmd": "plugin.preset",
+    "description": "{key} the loaded plugin's sound as a .vstpreset file -> {preset: base64} (VST3 only)"
+   },
+   {
+    "cmd": "plugin.params",
+    "description": "{key} the parameters of a loaded plugin that can be automated -> [{id, name, value, default, steps, text}]"
+   },
+   {
+    "cmd": "plugin.param",
+    "description": "{key, id, value: 0..1} moves one parameter of a loaded plugin as its own window would (the plugin holds the value, the document does not; pluginsChanged follows)"
+   },
+   {
+    "cmd": "commands.list",
+    "description": "This list"
+   }
+  ],
+  "dsp": "plugins",
+  "event": "ready",
+  "format": "core-project",
+  "limits": {
+   "liveNoteQueue": 255,
+   "maxMessageBytes": 268435456,
+   "maxNotesPerTrack": 4096,
+   "maxTracks": 128,
+   "timedNoteOffs": 32
+  },
+  "projectVersion": 2,
+  "protocol": 1,
+  "sessionId": "6cc13f0f0445b7c0",
+  "version": "0.2.0"
+ }
+]

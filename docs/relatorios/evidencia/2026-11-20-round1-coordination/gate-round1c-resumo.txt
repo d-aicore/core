@@ -1,0 +1,7 @@
+﻿Gate do Core: VERDE
+Codigo: D:\CORE\CORE @ a9a0384 (com alteracoes por commitar)
+Build:  D:\Core-build\gate-round1c
+Testes: todos (merge + desktop)
+Tempo:  417 s
+
+100% tests passed out of 27

@@ -1,0 +1,11 @@
+config: tsan   ctest rc=8
+6% tests passed, 16 tests failed out of 17
+Total Test time (real) =   0.22 sec
+--- sanitizer/runtime report counters (0 = clean) ---
+ERROR: AddressSanitizer          0
+runtime error:                   0
+LeakSanitizer                    0
+WARNING: ThreadSanitizer         0
+FATAL                            15
+--- per-suite case/verification totals ---
+      1 6 testes, 80 verificacoes

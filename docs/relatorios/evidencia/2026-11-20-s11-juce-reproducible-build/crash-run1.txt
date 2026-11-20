@@ -1,0 +1,3 @@
+  slowest answer after the crash: 0 ms
+ok   serve: after a plugin crashes in processBlock the engine still answers, retries, releases it and exits
+1 testes, 25 verificacoes, 0 falhas

@@ -1,0 +1,74 @@
+﻿{
+    "lengthTicks":  19200,
+    "version":  2,
+    "bpm":  120,
+    "tracks":  [
+                   {
+                       "id":  "crash",
+                       "name":  "crash",
+                       "plugin":  {
+                                      "category":  "Instrument|Synth",
+                                      "file":  "D:\\Core-build\\s1-red\\build\\app\\selftest-plugins\\CoreTestCrash_artefacts\\Debug\\VST3\\Core Test Crash.vst3\\Contents\\x86_64-win\\Core Test Crash.vst3",
+                                      "format":  "vst3",
+                                      "id":  "VST3-Core Test Crash-fa11cd27-bc3b4f37",
+                                      "inputs":  0,
+                                      "instrument":  true,
+                                      "name":  "Core Test Crash",
+                                      "outputs":  2,
+                                      "vendor":  "Core",
+                                      "version":  "1.0.0"
+                                  },
+                       "patternTicks":  19200,
+                       "instrument":  "plugin",
+                       "notes":  [
+                                     {
+                                         "pitch":  60,
+                                         "velocity":  0.8,
+                                         "tick":  0,
+                                         "length":  9600
+                                     },
+                                     {
+                                         "pitch":  64,
+                                         "velocity":  0.8,
+                                         "tick":  9600,
+                                         "length":  9600
+                                     }
+                                 ]
+                   },
+                   {
+                       "id":  "synth",
+                       "name":  "synth",
+                       "plugin":  {
+                                      "category":  "Instrument|Synth",
+                                      "file":  "D:\\Core-build\\s1-red\\build\\app\\selftest-plugins\\CoreTestSynth_artefacts\\Debug\\VST3\\Core Test Synth.vst3\\Contents\\x86_64-win\\Core Test Synth.vst3",
+                                      "format":  "vst3",
+                                      "id":  "VST3-Core Test Synth-3c79fbd2-bc3b5f3e",
+                                      "inputs":  0,
+                                      "instrument":  true,
+                                      "name":  "Core Test Synth",
+                                      "outputs":  2,
+                                      "vendor":  "Core",
+                                      "version":  "1.0.0"
+                                  },
+                       "patternTicks":  19200,
+                       "instrument":  "plugin",
+                       "notes":  [
+                                     {
+                                         "pitch":  60,
+                                         "velocity":  0.8,
+                                         "tick":  0,
+                                         "length":  9600
+                                     },
+                                     {
+                                         "pitch":  64,
+                                         "velocity":  0.8,
+                                         "tick":  9600,
+                                         "length":  9600
+                                     }
+                                 ]
+                   }
+               ],
+    "name":  "S1 case e long crash song (10 s)",
+    "masterGainDb":  0,
+    "format":  "core-project"
+}

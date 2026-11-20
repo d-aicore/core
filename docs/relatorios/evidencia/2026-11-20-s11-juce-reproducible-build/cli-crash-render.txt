@@ -1,0 +1,26 @@
+UpdateCTestConfiguration  from :D:/Core-build/s11-release-fixed/build/DartConfiguration.tcl
+Test project D:/Core-build/s11-release-fixed/build
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 22
+    Start 22: cli_plugin_crash_render
+
+22: Test command: C:\Users\vk_do\AppData\Local\Microsoft\WinGet\Packages\Kitware.CMake_Microsoft.Winget.Source_8wekyb3d8bbwe\cmake-4.4.4-windows-x86_64\bin\cmake.exe "-DENGINE=D:/Core-build/s11-release-fixed/build/engine/core-engine.exe" "-DWORK=D:/Core-build/s11-release-fixed/build/tests/cli" "-DCRASH_PLUGIN=D:/Core-build/s11-release-fixed/build/app/selftest-plugins/CoreTestCrash_artefacts/Release/VST3/Core Test Crash.vst3" "-DSYNTH_PLUGIN=D:/Core-build/s11-release-fixed/build/app/selftest-plugins/CoreTestSynth_artefacts/Release/VST3/Core Test Synth.vst3" "-P" "D:/CORE/CORE/tests/cli_plugin_crash_render.cmake"
+22: Working Directory: D:/Core-build/s11-release-fixed/build/tests
+22: Test timeout computed to be: 120
+22: -- plugin-crash.wav 1728044 bytes, peak 0.40157479047775269
+1/1 Test #22: cli_plugin_crash_render ..........   Passed    0.14 sec
+
+The following tests passed:
+	cli_plugin_crash_render
+
+100% tests passed out of 1
+
+Label Time Summary:
+merge    =   0.14 sec*proc (1 test)
+
+Total Test time (real) =   0.16 sec

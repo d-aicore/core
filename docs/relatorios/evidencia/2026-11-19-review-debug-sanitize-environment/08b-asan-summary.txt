@@ -1,0 +1,10 @@
+﻿ctest result lines:
+100% tests passed out of 18
+Total Test time (real) = 460.33 sec
+
+sanitizer report counters (all must be 0 for a clean suite):
+  ERROR: AddressSanitizer = 0
+  runtime error: = 0
+  LeakSanitizer = 0
+  ThreadSanitizer = 0
+  FATAL = 0

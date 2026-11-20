@@ -1,0 +1,50 @@
+[0/2] Re-checking globbed directories...
+[1/27] Building VST3 manifest helper for CoreTestSynth
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/s2s3/build/vst3_helpers/CoreTestSynth
+ninja: no work to do.
+[2/27] Building VST3 manifest helper for CoreTestGain
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/s2s3/build/vst3_helpers/CoreTestGain
+ninja: no work to do.
+[3/27] Building VST3 manifest helper for CoreTestThrow
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/s2s3/build/vst3_helpers/CoreTestThrow
+ninja: no work to do.
+[4/27] Building VST3 manifest helper for CoreTestCrash
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/s2s3/build/vst3_helpers/CoreTestCrash
+ninja: no work to do.
+[5/27] Core version
+[6/25] Building VST3 manifest helper for CoreTestCrashRestart
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/s2s3/build/vst3_helpers/CoreTestCrashRestart
+ninja: no work to do.
+[7/25] Building VST3 manifest helper for CoreTestFault
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/s2s3/build/vst3_helpers/CoreTestFault
+ninja: no work to do.
+[8/25] Building CXX object engine\CMakeFiles\core_plugin_host.dir\src\plugins\juce_host.cpp.obj
+D:\CORE\CORE\engine\src\plugins\juce_host.cpp(537): warning C4996: 'juce::AudioProcessor::createEditorIfNeeded': Prefer createEditorAndMakeActive()
+[9/25] Linking CXX static library engine\core_plugin_host.lib
+[10/25] Linking CXX executable engine\core-engine.exe
+[11/25] Building CXX object tests\CMakeFiles\state_recovery_tests.dir\state_recovery_tests.cpp.obj
+[12/25] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\EngineSession.cpp.obj
+[13/25] Building CXX object tests\CMakeFiles\state_recovery_tests.dir\__\app\desktop\src\EngineSession.cpp.obj
+[14/25] Linking CXX executable tests\state_recovery_tests.exe
+[15/25] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\Main.cpp.obj
+[16/25] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\Settings.cpp.obj
+[17/25] Building CXX object app\desktop\CMakeFiles\CoreApp.dir\src\MainComponent.cpp.obj
+[18/25] Linking CXX executable app\desktop\CoreApp_artefacts\Debug\Core.exe
+[19/25] Packing the Core package for the installer
+[20/25] Generating juce_binarydata_CoreSetupData/JuceLibraryCode/BinaryData1.cpp, juce_binarydata_CoreSetupData/JuceLibraryCode/CoreSetupData.h
+[21/25] Building CXX object app\installer\CMakeFiles\CoreSetup.dir\Setup.cpp.obj
+[22/25] Building CXX object app\installer\CMakeFiles\CoreSetupData.dir\juce_binarydata_CoreSetupData\JuceLibraryCode\BinaryData1.cpp.obj
+[23/25] Linking CXX static library app\installer\CoreSetupData.lib
+[24/25] Linking CXX executable "app\installer\CoreSetup_artefacts\Debug\Core Setup.exe"

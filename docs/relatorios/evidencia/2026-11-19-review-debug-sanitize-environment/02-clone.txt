@@ -1,0 +1,4 @@
+reusing /home/diogo/core-review-src
+HEAD is now at 8c6837e Ledger: register the owner's 18/11 decisions (D99-D114) and the state of main
+--- resulting state ---
+8c6837e80030e2185d5f6016f0365bae2c3f52bd

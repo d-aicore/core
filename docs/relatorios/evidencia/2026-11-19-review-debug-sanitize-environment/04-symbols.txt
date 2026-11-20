@@ -1,0 +1,54 @@
+﻿stack_probe.cpp
+=== attempt 1: sampled CONTEXT of the worker thread ===
+--- stack frames (SymGetLineFromAddr64) ---
+#0  0x00007ff720bb687f  ILT+22650(??1_LockitstdQEAAXZ)              no source line
+#1  0x00007ff720bd0f3d  std::_Iterator_base12::_Adopt_locked        C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Tools\MSVC\14.51.36231\include\xmemory:1368 (+10)
+#2  0x00007ff720bd0ecc  std::_Iterator_base12::_Adopt               C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Tools\MSVC\14.51.36231\include\xmemory:1307 (+15)
+#3  0x00007ff720bd093b  std::_Vector_const_iterator<std::_Vector_val<std::_Simple_types<core::TempoMap::Seg> > >::_Vect  C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Tools\MSVC\14.51.36231\include\vector:48 (+15)
+#4  0x00007ff720bd1d5a  std::vector<core::TempoMap::Seg,std::allocator<core::TempoMap::Seg> >::begin  C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Tools\MSVC\14.51.36231\include\vector:1854 (+49)
+#5  0x00007ff720bcf1ca  core::TempoMap::segAtSample                 D:\CORE\CORE\engine\src\core\tempo_map.cpp:34 (+145)
+#6  0x00007ff720bcec8a  core::TempoMap::tickAt                      D:\CORE\CORE\engine\src\core\tempo_map.cpp:50 (+26)
+#7  0x00007ff720bcc487  worker                                      D:\Core-build\core-review\probe\stack_probe.cpp:65 (+20)
+#8  0x00007ffc0380dda7  BaseThreadInitThunk                         no source line
+#9  0x00007ffc04e19c5c  RtlUserThreadStart                          no source line
+=== attempt 2: sampled CONTEXT of the worker thread ===
+--- stack frames (SymGetLineFromAddr64) ---
+#0  0x00007ff720bd146f  std::_Iterator_base12::_Orphan_me_locked_v3  C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Tools\MSVC\14.51.36231\include\xmemory:1386 (+15)
+#1  0x00007ff720bd0b7d  std::_Iterator_base12::~_Iterator_base12    C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Tools\MSVC\14.51.36231\include\xmemory:1296 (+10)
+#2  0x00007ff720bd0b34  std::_Vector_const_iterator<std::_Vector_val<std::_Simple_types<core::TempoMap::Seg> > >::~_Vec  no source line
+#3  0x00007ff720bcf061  core::TempoMap::segAtTick                   D:\CORE\CORE\engine\src\core\tempo_map.cpp:29 (+296)
+#4  0x00007ff720bcebea  core::TempoMap::sampleAt                    D:\CORE\CORE\engine\src\core\tempo_map.cpp:47 (+42)
+#5  0x00007ff720bcc460  worker                                      D:\Core-build\core-review\probe\stack_probe.cpp:64 (+20)
+#6  0x00007ffc0380dda7  BaseThreadInitThunk                         no source line
+#7  0x00007ffc04e19c5c  RtlUserThreadStart                          no source line
+=== attempt 3: sampled CONTEXT of the worker thread ===
+--- stack frames (SymGetLineFromAddr64) ---
+#0  0x00007ff720bd0b2f  std::_Vector_const_iterator<std::_Vector_val<std::_Simple_types<core::TempoMap::Seg> > >::~_Vec  no source line
+#1  0x00007ff720bd057d  std::upper_bound<std::_Vector_const_iterator<std::_Vector_val<std::_Simple_types<core::TempoMap  C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Tools\MSVC\14.51.36231\include\xutility:7845 (+59)
+#2  0x00007ff720bcf253  core::TempoMap::segAtSample                 D:\CORE\CORE\engine\src\core\tempo_map.cpp:34 (+282)
+#3  0x00007ff720bcec8a  core::TempoMap::tickAt                      D:\CORE\CORE\engine\src\core\tempo_map.cpp:50 (+26)
+#4  0x00007ff720bcc487  worker                                      D:\Core-build\core-review\probe\stack_probe.cpp:65 (+20)
+#5  0x00007ffc0380dda7  BaseThreadInitThunk                         no source line
+#6  0x00007ffc04e19c5c  RtlUserThreadStart                          no source line
+=== attempt 4: sampled CONTEXT of the worker thread ===
+--- stack frames (SymGetLineFromAddr64) ---
+#0  0x00007ff720dd4c68  expm1                                       minkernel\crts\ucrt\src\appcrt\tran\_expm1.h:120 (+90)
+#1  0x00007ff720bced2f  core::TempoMap::tickAt                      D:\CORE\CORE\engine\src\core\tempo_map.cpp:53 (+60)
+#2  0x00007ff720bcc487  worker                                      D:\Core-build\core-review\probe\stack_probe.cpp:65 (+20)
+#3  0x00007ffc0380dda7  BaseThreadInitThunk                         no source line
+#4  0x00007ffc04e19c5c  RtlUserThreadStart                          no source line
+=== attempt 5: sampled CONTEXT of the worker thread ===
+--- stack frames (SymGetLineFromAddr64) ---
+#0  0x00007ffc04d6cef3  RtlEnterCriticalSection                     no source line
+#1  0x00007ff720d07744  _Mtxlock                                    D:\a\_work\1\s\src\vctools\crt\github\stl\src\xmtx.cpp:25 (+11)
+#2  0x00007ff720c6edd5  std::_Lockit::_Lockit                       D:\a\_work\1\s\src\vctools\crt\github\stl\src\xlock.cpp:76 (+33)
+#3  0x00007ff720bd0f24  std::_Iterator_base12::_Adopt_locked        C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Tools\MSVC\14.51.36231\include\xmemory:1367 (+0)
+#4  0x00007ff720bd0ecc  std::_Iterator_base12::_Adopt               C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Tools\MSVC\14.51.36231\include\xmemory:1307 (+15)
+#5  0x00007ff720bd093b  std::_Vector_const_iterator<std::_Vector_val<std::_Simple_types<core::TempoMap::Seg> > >::_Vect  C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Tools\MSVC\14.51.36231\include\vector:48 (+15)
+#6  0x00007ff720bd1d5a  std::vector<core::TempoMap::Seg,std::allocator<core::TempoMap::Seg> >::begin  C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Tools\MSVC\14.51.36231\include\vector:1854 (+49)
+#7  0x00007ff720bcefca  core::TempoMap::segAtTick                   D:\CORE\CORE\engine\src\core\tempo_map.cpp:29 (+145)
+#8  0x00007ff720bcebea  core::TempoMap::sampleAt                    D:\CORE\CORE\engine\src\core\tempo_map.cpp:47 (+42)
+#9  0x00007ff720bcc460  worker                                      D:\Core-build\core-review\probe\stack_probe.cpp:64 (+20)
+#10 0x00007ffc0380dda7  BaseThreadInitThunk                         no source line
+#11 0x00007ffc04e19c5c  RtlUserThreadStart                          no source line
+probe done

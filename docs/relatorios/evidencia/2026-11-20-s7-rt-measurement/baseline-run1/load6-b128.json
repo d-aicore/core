@@ -1,0 +1,220 @@
+{
+  "cpu": {
+    "intervalMs": 60006.100999999995,
+    "load": {
+      "avgPct": 2.6046704845009545,
+      "marginPct": 82.13499999999999,
+      "maxPct": 17.865000000000002
+    },
+    "master": {
+      "cpuPct": 0.0,
+      "effects": []
+    },
+    "totalPct": 1.9041092171611016,
+    "tracks": [
+      {
+        "cpuPct": 0.7616752169916855,
+        "effects": [
+          {
+            "cpuPct": 0.24668774930069193,
+            "id": "g0",
+            "name": "Core Test Gain"
+          }
+        ],
+        "id": "t0",
+        "instrument": {
+          "cpuPct": 0.5149874676909936,
+          "name": "Core Test Synth"
+        }
+      },
+      {
+        "cpuPct": 0.5844090753371894,
+        "effects": [
+          {
+            "cpuPct": 0.2086671153654859,
+            "id": "g1",
+            "name": "Core Test Gain"
+          }
+        ],
+        "id": "t1",
+        "instrument": {
+          "cpuPct": 0.3757419599717035,
+          "name": "Core Test Synth"
+        }
+      },
+      {
+        "cpuPct": 0.5580249248322267,
+        "effects": [
+          {
+            "cpuPct": 0.20376344732013166,
+            "id": "g2",
+            "name": "Core Test Gain"
+          }
+        ],
+        "id": "t2",
+        "instrument": {
+          "cpuPct": 0.35426147751209497,
+          "name": "Core Test Synth"
+        }
+      }
+    ]
+  },
+  "deliveredSeconds": 60.0,
+  "device": {
+    "backend": "WASAPI",
+    "blockSize": 128,
+    "device": "Auscultadores (USB-C Audio)",
+    "exclusive": true,
+    "internalSampleRate": 48000,
+    "latency": {
+      "deviceMs": 5.333333333333333,
+      "graphMs": 5.333333333333333,
+      "masterSamples": 0,
+      "totalMs": 10.666666666666666,
+      "tracksSamples": 256
+    },
+    "latencyMs": 5.333333333333333,
+    "periods": 2,
+    "sampleRate": 48000.0,
+    "scheduling": "Pro Audio"
+  },
+  "error": "",
+  "liveThreads": 0,
+  "pluginInstances": 6,
+  "plugins": [
+    {
+      "file": "D:\\Core-build\\s7\\build\\app\\selftest-plugins\\CoreTestSynth_artefacts\\Release\\VST3\\Core Test Synth.vst3",
+      "id": "VST3-Core Test Synth-458c357b-bc3b5f3e",
+      "name": "Core Test Synth",
+      "role": "instrument",
+      "vendor": "Core",
+      "version": "1.0.0"
+    },
+    {
+      "file": "D:\\Core-build\\s7\\build\\app\\selftest-plugins\\CoreTestGain_artefacts\\Release\\VST3\\Core Test Gain.vst3",
+      "id": "VST3-Core Test Gain-e64fbaf9-bc3b5333",
+      "name": "Core Test Gain",
+      "role": "insert",
+      "vendor": "Core",
+      "version": "1.0.0"
+    }
+  ],
+  "requestedBlock": 128,
+  "scenario": "load6",
+  "secondsRequested": 60.0,
+  "stats": {
+    "auditionSteals": 0,
+    "avgLoadPct": 2.6046704845009545,
+    "avgRenderMs": 0.06945786222222222,
+    "callbackErrors": 0,
+    "callbacks": 22500,
+    "denseEventBlocks": 0,
+    "device": {
+      "backend": "WASAPI",
+      "blockSize": 128,
+      "device": "Auscultadores (USB-C Audio)",
+      "exclusive": true,
+      "internalSampleRate": 48000,
+      "latencyMs": 5.333333333333333,
+      "periods": 2,
+      "sampleRate": 48000.0,
+      "scheduling": "Pro Audio"
+    },
+    "deviceDriftPpm": -69.62854076897662,
+    "deviceNotification": 0,
+    "droppedNotes": 0,
+    "failedPlugins": [],
+    "failedUnits": [],
+    "graphSwaps": 0,
+    "lastRebuildMs": 60.5197,
+    "latency": {
+      "deviceMs": 5.333333333333333,
+      "graphMs": 5.333333333333333,
+      "masterSamples": 0,
+      "totalMs": 10.666666666666666,
+      "tracksSamples": 256
+    },
+    "leakedGraphs": 0,
+    "liveFallback": false,
+    "liveNotesRejected": 0,
+    "liveOffAllTracks": 0,
+    "liveOffOverflows": 0,
+    "liveStallBlocks": 0,
+    "liveStalls": 0,
+    "liveThreads": 0,
+    "loadP50Pct": 3.0,
+    "loadP95Pct": 4.0,
+    "loadP99Pct": 6.0,
+    "maxCallbackFrames": 128,
+    "maxEditToAudioMs": 0.0,
+    "maxLoadPct": 17.865000000000002,
+    "maxRenderMs": 0.4764,
+    "minCallbackFrames": 128,
+    "nativeFailures": 0,
+    "nonFiniteBlocks": 0,
+    "overruns": 0,
+    "pluginFailures": 0,
+    "pluginNotesDropped": 0,
+    "starvations": 3189
+  },
+  "timing": {
+    "blocks": 22500,
+    "maxLoadPct": 17.865004466251115,
+    "maxMs": 0.4764,
+    "meanLoadPct": 2.604670484500961,
+    "meanMs": 0.06945786222222222,
+    "overBudget": 0,
+    "p50Ms": 0.0673,
+    "p95Ms": 0.1026,
+    "p99LoadPct": 5.2987513246878315,
+    "p99Ms": 0.1413
+  },
+  "tracks": 3,
+  "violations": {
+    "audio": 65045,
+    "control": 280,
+    "kinds": {
+      "AcquireSRWLockExclusive": {
+        "audio": 0,
+        "control": 27,
+        "other": 52
+      },
+      "EnterCriticalSection": {
+        "audio": 32522,
+        "control": 103,
+        "other": 50
+      },
+      "HeapAlloc": {
+        "audio": 0,
+        "control": 0,
+        "other": 10
+      },
+      "HeapFree": {
+        "audio": 0,
+        "control": 14,
+        "other": 0
+      },
+      "LeaveCriticalSection": {
+        "audio": 32523,
+        "control": 103,
+        "other": 49
+      },
+      "ReleaseSRWLockExclusive": {
+        "audio": 0,
+        "control": 28,
+        "other": 50
+      },
+      "Sleep": {
+        "audio": 0,
+        "control": 5,
+        "other": 0
+      },
+      "lostToRingWrap": 889126
+    },
+    "lost": 889126,
+    "other": 211,
+    "total": 954662
+  },
+  "wallSeconds": 62.1454601,
+  "workerJobs": 0
+}

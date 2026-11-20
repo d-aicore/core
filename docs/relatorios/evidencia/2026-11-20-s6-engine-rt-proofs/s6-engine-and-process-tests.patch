@@ -1,0 +1,158 @@
+﻿diff --git a/engine/src/core/rt_workers.hpp b/engine/src/core/rt_workers.hpp
+index d1b0aef..d73532d 100644
+--- a/engine/src/core/rt_workers.hpp
++++ b/engine/src/core/rt_workers.hpp
+@@ -110,6 +110,11 @@ public:
+     for (const auto& w : workers_) n += w->pending.load() ? 1 : 0;
+     return n;
+   }
++  // Tests/diagnostics: jobs actually executed by the worker threads (the audio thread's own take() is not
++  // counted). Proof the live path really ran in parallel: a configured pool can still play every job on the
++  // audio thread, and engine.stats only counts stalls. One relaxed add per job, on the workers only; the
++  // audio thread's path is untouched (S6, engine RT proofs).
++  uint64_t workerJobs() const { return workerJobs_.load(std::memory_order_relaxed); }
+ 
+ private:
+   struct Worker {
+@@ -146,6 +151,7 @@ private:
+         for (int i; (i = next_.fetch_add(1, std::memory_order_acq_rel)) < count_;) {
+           if (const int64_t d = testDelayNs.load(std::memory_order_relaxed)) std::this_thread::sleep_for(std::chrono::nanoseconds(d));
+           job_(context_, i);
++          workerJobs_.fetch_add(1, std::memory_order_relaxed);
+         }
+       } catch (...) {
+         failed_.store(true, std::memory_order_release);
+@@ -160,6 +166,7 @@ private:
+   int count_ = 0;
+   uint32_t mode_ = 0;
+   std::atomic<int> next_{0};
++  std::atomic<uint64_t> workerJobs_{0};  // tests/diagnostics: jobs the workers ran (see workerJobs())
+   std::atomic<bool> failed_{false};
+   std::atomic<bool> stop_{false};
+ };
+diff --git a/tests/engine_process_tests.cpp b/tests/engine_process_tests.cpp
+index c5fdbe2..1f5872d 100644
+--- a/tests/engine_process_tests.cpp
++++ b/tests/engine_process_tests.cpp
+@@ -526,6 +526,121 @@ TEST("serve: a plugin stuck in processBlock does not hold Stop hostage (bounded
+   CHECK_EQ(end.get(), std::string("The engine exited (code 0)."));
+ }
+ 
++// S6 (engine RT proofs): the bounded reset MEASURED, not just passed. The watchdog's 2 s budget
++// (juce_host.cpp resetAll) must be the reason Stop answers: not earlier (the lock wait really ran to the
++// timeout — the stall never crashes on its own) and not later than the budget plus margin (the 8 s stall
++// never holds Stop hostage). Timestamped phases, the crashed mark, and recovery: the engine keeps
++// answering and the healthy synth plays on once the stuck plugin returns.
++TEST("serve: the reset watchdog's 2 s timeout is measured, not just passed (S6 timing)") {
++  EnvVar fault("CORE_TEST_FAULT_HANG", "1");
++  const json faultPlugin = scanFirst(CORE_TEST_FAULT_VST3), synth = scanFirst(CORE_TEST_SYNTH_VST3);
++  CHECK(faultPlugin.is_object());
++  CHECK(synth.is_object());
++  if (!faultPlugin.is_object() || !synth.is_object()) return;
++
++  EndReason end;
++  EngineClient engine(engineOptions());
++  end.attach(engine);
++  engine.start();
++  const json loaded = engine.command("project.load", {{"project", song(json::array({pluginTrack("fault", faultPlugin), pluginTrack("synth", synth)}))}}, 30000ms);
++  CHECK(loaded.value("missing", json::array()).empty());
++  engine.command("engine.start", {{"backend", "null"}});
++  engine.command("transport.play");
++  std::this_thread::sleep_for(300ms);  // the stall fires on the block after the first: the audio thread is inside it now
++
++  // Phase 1 — Stop: the fade wait (bounded 200 ms, the audio thread is stuck) + the watchdog's 2 s budget
++  // for the stuck plugin + the healthy resets. Measured: ~2.2 s. Before the watchdog: the full 8 s stall.
++  const double stopMs = answersWithin(engine, "transport.stop", json::object(), 6000ms);
++  std::fprintf(stderr, "  S6 watchdog timing: transport.stop answered in %.0f ms (budget 2000 ms, stall 8000 ms)\n", stopMs);
++  CHECK(stopMs >= 1900);  // the timeout really fired: the lock wait ran to the budget (5 ms poll granularity)
++  CHECK(stopMs < 4500);   // and stopped there: the 8 s stall did not hold Stop
++  // Phase 2 — the crashed mark (the watchdog's markCrashed, reported as a crash) and the engine answering.
++  json failed;
++  const double failedMs = answersWithin(engine, "plugins.failed", json::object(), 2000ms, &failed);
++  std::fprintf(stderr, "  S6 watchdog timing: plugins.failed answered in %.0f ms\n", failedMs);
++  CHECK(failedMs >= 0);
++  CHECK(failedAsCrash(failed, "track:fault"));
++  CHECK(answersWithin(engine, "engine.stats", json::object(), 2000ms) >= 0);
++  // Phase 3 — recovery: play again; once the 8 s stall ends the healthy synth plays on (bounded wait).
++  engine.command("transport.play");
++  bool resumed = false;
++  for (int i = 0; i < 40 && !resumed; ++i) { std::this_thread::sleep_for(250ms); resumed = playingOn(engine); }
++  CHECK(resumed);
++  engine.close();
++  CHECK_EQ(end.get(), std::string("The engine exited (code 0)."));
++}
++
++// S6: a crash INSIDE reset (the Fault reset seam, 300 ms delay) answers at the plugin's own delay — below
++// the watchdog budget. This is the crash path (SEH catches it, markCrashed), not the watchdog timeout:
++// the timing separates the two mechanisms the bounded-reset case above conflates.
++TEST("serve: a crash inside reset answers at the plugin's delay, below the watchdog budget (S6 timing)") {
++  EnvVar fault("CORE_TEST_FAULT_RESET", "1");
++  EnvVar delay("CORE_TEST_FAULT_RESET_DELAY_MS", "300");
++  const json faultPlugin = scanFirst(CORE_TEST_FAULT_VST3), synth = scanFirst(CORE_TEST_SYNTH_VST3);
++  CHECK(faultPlugin.is_object());
++  CHECK(synth.is_object());
++  if (!faultPlugin.is_object() || !synth.is_object()) return;
++
++  EndReason end;
++  EngineClient engine(engineOptions());
++  end.attach(engine);
++  engine.start();
++  const json loaded = engine.command("project.load", {{"project", song(json::array({pluginTrack("fault", faultPlugin), pluginTrack("synth", synth)}))}}, 30000ms);
++  CHECK(loaded.value("missing", json::array()).empty());
++  engine.command("engine.start", {{"backend", "null"}});
++  engine.command("transport.play");
++  CHECK(playingOn(engine));
++
++  const double stopMs = answersWithin(engine, "transport.stop", json::object(), 5000ms);
++  std::fprintf(stderr, "  S6 reset-crash timing: transport.stop answered in %.0f ms (plugin delay 300 ms, budget 2000 ms)\n", stopMs);
++  CHECK(stopMs >= 250);   // the plugin really waited inside reset (its own code under the process lock)
++  CHECK(stopMs < 1900);   // the crash landed and was caught BEFORE the watchdog budget: not the timeout path
++  json failed;
++  CHECK(answersWithin(engine, "plugins.failed", json::object(), 2000ms, &failed) >= 0);
++  CHECK(failedAsCrash(failed, "track:fault"));
++  CHECK(answersWithin(engine, "engine.stats", json::object(), 2000ms) >= 0);
++  engine.command("transport.play");
++  CHECK(playingOn(engine));  // the healthy synth plays on
++  engine.close();
++  CHECK_EQ(end.get(), std::string("The engine exited (code 0)."));
++}
++
++// S6: the watchdog bounds the LOCK WAIT, not plugin code already running inside reset (documented at
++// juce_host.cpp resetAll). With a 3 s delay inside reset the watchdog fires at 2 s (markCrashed) but
++// reset() still waits for the plugin's own code: Stop answers at ~3 s, not ~2 s. Measured here so the
++// limit is evidence, not a comment; the crash is still caught and the engine plays on.
++TEST("serve: the watchdog bounds the lock wait, not plugin code inside reset (S6 timing, 3 s delay)") {
++  EnvVar fault("CORE_TEST_FAULT_RESET", "1");
++  EnvVar delay("CORE_TEST_FAULT_RESET_DELAY_MS", "3000");
++  const json faultPlugin = scanFirst(CORE_TEST_FAULT_VST3), synth = scanFirst(CORE_TEST_SYNTH_VST3);
++  CHECK(faultPlugin.is_object());
++  CHECK(synth.is_object());
++  if (!faultPlugin.is_object() || !synth.is_object()) return;
++
++  EndReason end;
++  EngineClient engine(engineOptions());
++  end.attach(engine);
++  engine.start();
++  const json loaded = engine.command("project.load", {{"project", song(json::array({pluginTrack("fault", faultPlugin), pluginTrack("synth", synth)}))}}, 30000ms);
++  CHECK(loaded.value("missing", json::array()).empty());
++  engine.command("engine.start", {{"backend", "null"}});
++  engine.command("transport.play");
++  CHECK(playingOn(engine));
++
++  const double stopMs = answersWithin(engine, "transport.stop", json::object(), 8000ms);
++  std::fprintf(stderr, "  S6 reset-code timing: transport.stop answered in %.0f ms (plugin code 3000 ms > budget 2000 ms)\n", stopMs);
++  CHECK(stopMs >= 2900);  // reset waited for the plugin's own 3 s: the watchdog cannot interrupt plugin code
++  CHECK(stopMs < 6000);   // and returned after it (the crash was caught): bounded by the plugin, never a hang
++  json failed;
++  CHECK(answersWithin(engine, "plugins.failed", json::object(), 2000ms, &failed) >= 0);
++  CHECK(failedAsCrash(failed, "track:fault"));
++  CHECK(answersWithin(engine, "engine.stats", json::object(), 2000ms) >= 0);
++  engine.command("transport.play");
++  CHECK(playingOn(engine));
++  engine.close();
++  CHECK_EQ(end.get(), std::string("The engine exited (code 0)."));
++}
++
+ TEST("serve: a plugin that crashes opening its editor is silenced, the engine answers and plays on") {
+   EnvVar fault("CORE_TEST_FAULT_EDITOR", "1");
+   const json faultPlugin = scanFirst(CORE_TEST_FAULT_VST3), synth = scanFirst(CORE_TEST_SYNTH_VST3);

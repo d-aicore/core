@@ -1,0 +1,42 @@
+﻿[0/2] Re-checking globbed directories...
+[1/5] Building VST3 manifest helper for CoreTestSynth
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: C:/Core-build/timing/build/vst3_helpers/CoreTestSynth
+ninja: no work to do.
+[2/5] Building VST3 manifest helper for CoreTestGain
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: C:/Core-build/timing/build/vst3_helpers/CoreTestGain
+ninja: no work to do.
+[3/5] Building CXX object tests\CMakeFiles\timing_proof_tests.dir\timing_proof_tests.cpp.obj
+[4/5] Linking CXX executable tests\timing_proof_tests.exe
+PDC sr=48000 BEFORE dry=2000 wet=2480 dev=480 (expect 480)
+PDC sr=48000 AFTER dry=2000 wet=2000 dev=0 ideal=2000
+PDC sr=48000 dry-vs-wet stem bitExact=1 maxDelta=0
+CLIP-OFFSET sr=44100 ideal=1838 dryPos=-1 (defect: frame0 dropped -> -1 silence)
+PDC block-independence 512 vs 64 bitExact=1 firstDiff=-1 maxDelta=0
+PDC block-independence 512 vs 128 bitExact=1 firstDiff=-1 maxDelta=0
+PDC block-independence 512 vs 256 bitExact=1 firstDiff=-1 maxDelta=0
+PDC serial-vs-parallel(2) bitExact=1 maxDelta=0
+MIDI sr=48000 events=128 maxSchedDev=0 maxOnsetDev=0
+MIDI sr=44100 events=128 maxSchedDev=0 maxOnsetDev=0
+AUTO sr=48000 Tstep=12 Sstep=60 start=64 end=95 gridStart=64 devFromStep=4 onGrid=1
+AUTO sr=48000 Tstep=13 Sstep=65 start=96 end=127 gridStart=96 devFromStep=31 onGrid=1
+AUTO sr=48000 Tstep=25 Sstep=125 start=128 end=159 gridStart=128 devFromStep=3 onGrid=1
+AUTO sr=48000 Tstep=26 Sstep=130 start=160 end=191 gridStart=160 devFromStep=30 onGrid=1
+AUTO sr=44100 Tstep=12 Sstep=55 start=64 end=95 gridStart=64 devFromStep=9 onGrid=1
+AUTO sr=44100 Tstep=13 Sstep=60 start=64 end=95 gridStart=64 devFromStep=4 onGrid=1
+AUTO sr=44100 Tstep=25 Sstep=115 start=128 end=159 gridStart=128 devFromStep=13 onGrid=1
+AUTO sr=44100 Tstep=26 Sstep=119 start=128 end=159 gridStart=128 devFromStep=9 onGrid=1
+PARALLEL bus dry=2000 wet=2000 dev=0 ideal=2000
+LATENCY-CHANGE 480->960: re-aligned wet=2000 ideal=2000
+ok   Timing PDC: impulse dry vs known-delay — BEFORE (raw) and AFTER (compensated), 48k
+ok   Timing OPEN-DEFECT clip-offset: 44.1k half-sample start drops file frame 0 (pin; fix pending owner)
+ok   Timing PDC: block-size independence (64/128/512) and serial==parallel export, bit-exact
+ok   Timing MIDI: sample-accurate scheduling near block boundaries (EventLog + click onset), 48k/44.1k
+ok   Timing automation: gainDb step lands on the 32-sample sub-block grid, buffer-independent
+ok   Timing parallel: M7a bus recombination aligns branches of different latency (stems + subtraction)
+ok   Timing latency-change: Server::checkPluginLatency detects a reported change, rebuilds, re-aligns
+ok   Timing determinism: two identical renders are bit-exact (fake, no modulation)
+8 testes, 577 verificacoes, 0 falhas

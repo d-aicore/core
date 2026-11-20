@@ -1,0 +1,32 @@
+{
+ "stateShaBefore": "4ab36c1ca9574dfb7bc8bf20cec291775a1d008a16db19fb402a1c495853caf0",
+ "stateShaAfter": "8e34ec276de73c4c4c500aa315c01fbdeaf83bb1ef0b0d31ab07a7b02dcecde2",
+ "stateBitIdentical": false,
+ "stateBytes": 4252,
+ "mixAfter": {
+  "default": 0.5,
+  "id": "3",
+  "name": "Mix",
+  "steps": 0,
+  "text": "50.0",
+  "value": 0.5
+ },
+ "feedbackAfter": {
+  "default": 0.0,
+  "id": "11",
+  "name": "Feedback",
+  "steps": 0,
+  "text": "0.00",
+  "value": 0.0
+ },
+ "renderBitIdentical": true,
+ "savedDocument": "D:\\Core-build\\vst3-host\\probe-echoboy-saved.core-project.json",
+ "loadAfter": {
+  "acceptedRevision": null,
+  "lengthSamples": 96000,
+  "missing": [],
+  "missingAssets": [],
+  "statesNeeded": [],
+  "tracks": 1
+ }
+}

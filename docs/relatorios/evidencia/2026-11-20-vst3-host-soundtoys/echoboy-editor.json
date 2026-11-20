@@ -1,0 +1,103 @@
+{
+ "pid": 63868,
+ "before": [
+  {
+   "hwnd": 59969486,
+   "title": "JUCEWindow",
+   "visible": false
+  },
+  {
+   "hwnd": 11931224,
+   "title": "JUCEWindow",
+   "visible": false
+  },
+  {
+   "hwnd": 8000322,
+   "title": "Default IME",
+   "visible": false
+  }
+ ],
+ "opened": [
+  {
+   "hwnd": 42144098,
+   "title": "EchoBoy",
+   "visible": true
+  },
+  {
+   "hwnd": 78909418,
+   "title": "GDI+ Window (core-engine.exe)",
+   "visible": false
+  },
+  {
+   "hwnd": 59969486,
+   "title": "JUCEWindow",
+   "visible": false
+  },
+  {
+   "hwnd": 11931224,
+   "title": "JUCEWindow",
+   "visible": false
+  },
+  {
+   "hwnd": 84084444,
+   "title": "MSCTFIME UI",
+   "visible": false
+  },
+  {
+   "hwnd": 8000322,
+   "title": "Default IME",
+   "visible": false
+  },
+  {
+   "hwnd": 51840740,
+   "title": "Default IME",
+   "visible": false
+  }
+ ],
+ "closed": [
+  {
+   "hwnd": 42144098,
+   "title": "EchoBoy",
+   "visible": false
+  },
+  {
+   "hwnd": 78909418,
+   "title": "GDI+ Window (core-engine.exe)",
+   "visible": false
+  },
+  {
+   "hwnd": 59969486,
+   "title": "JUCEWindow",
+   "visible": false
+  },
+  {
+   "hwnd": 11931224,
+   "title": "JUCEWindow",
+   "visible": false
+  },
+  {
+   "hwnd": 84084444,
+   "title": "MSCTFIME UI",
+   "visible": false
+  },
+  {
+   "hwnd": 8000322,
+   "title": "Default IME",
+   "visible": false
+  },
+  {
+   "hwnd": 51840740,
+   "title": "Default IME",
+   "visible": false
+  }
+ ],
+ "echoBoyVisibleOpen": [
+  {
+   "hwnd": 42144098,
+   "title": "EchoBoy",
+   "visible": true
+  }
+ ],
+ "echoBoyVisibleAfterClose": [],
+ "engineAliveAfter": true
+}

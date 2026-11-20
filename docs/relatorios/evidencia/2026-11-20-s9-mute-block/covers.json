@@ -1,0 +1,177 @@
+{
+  "backend": "null",
+  "c1Delay": {
+    "errors": [
+      "",
+      "",
+      ""
+    ],
+    "file": "D:\\Core-build\\s9\\delay-build\\CoreTestDelayProbe_artefacts\\Release\\VST3\\Core Test Delay Probe.vst3",
+    "latency": {
+      "deviceMs": 5.333333333333333,
+      "graphMs": 15.333333333333334,
+      "masterSamples": 0,
+      "totalMs": 20.666666666666668,
+      "tracksSamples": 736
+    },
+    "plugin": "Core Test Delay Probe",
+    "postUnmuteRmsMuteRun": 0.0,
+    "postUnmuteRmsReference": 0.0,
+    "tailDrainedWhileMuted": true,
+    "tailRmsMutedOverTail": 0.0,
+    "tailRmsReference": 0.22777928187058094,
+    "tailRmsStayMuted": 0.0
+  },
+  "c1c4M5": {
+    "maxSlewMuteWindow": 0.01087107416242361,
+    "maxSlewSteady": 0.010871130041778088,
+    "maxSlewUnmuteWindow": 0.010871127247810364,
+    "muteSwapAt": 48128,
+    "peakAfterResume": 0.25196850299835205,
+    "peakMuteRun": 0.25196850299835205,
+    "peakReference": 0.25196850299835205,
+    "rampToSignalSamples": 0,
+    "rampToSilenceSamples": 31,
+    "rmsMutedWindow": 0.0,
+    "steadyTailBitExact": true,
+    "swaps": [
+      48128,
+      96128
+    ],
+    "unmuteSwapAt": 96128
+  },
+  "c1c4Serial": {
+    "error": "",
+    "maxSlewMuteWindow": 0.013209894299507141,
+    "maxSlewSteady": 0.010871130041778088,
+    "maxSlewUnmuteWindow": 0.010871127247810364,
+    "muteSwapAt": 48384,
+    "peakAfterResume": 0.25196850299835205,
+    "peakMuteRun": 0.25196850299835205,
+    "peakReference": 0.25196850299835205,
+    "rampToSignalSamples": 0,
+    "rampToSilenceSamples": 31,
+    "rmsMutedWindow": 0.0,
+    "steadyTailBitExact": true,
+    "swaps": [
+      48384,
+      96128
+    ],
+    "unmuteSwapAt": 96128
+  },
+  "c2": {
+    "bitIdenticalWithAndWithoutField": true,
+    "error": "",
+    "latencyWithField": {
+      "deviceMs": 5.333333333333333,
+      "graphMs": 5.333333333333333,
+      "masterSamples": 0,
+      "totalMs": 10.666666666666666,
+      "tracksSamples": 256
+    },
+    "latencyWithoutField": {
+      "deviceMs": 5.333333333333333,
+      "graphMs": 5.333333333333333,
+      "masterSamples": 0,
+      "totalMs": 10.666666666666666,
+      "tracksSamples": 256
+    },
+    "peak": 0.40271854400634766
+  },
+  "c3": [
+    {
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 10.666666666666666,
+        "tracksSamples": 256
+      },
+      "state": "unmuted"
+    },
+    {
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 10.666666666666666,
+        "tracksSamples": 256
+      },
+      "state": "mute-kick"
+    },
+    {
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 10.666666666666666,
+        "tracksSamples": 256
+      },
+      "state": "mute-bass"
+    },
+    {
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 10.666666666666666,
+        "tracksSamples": 256
+      },
+      "state": "mute-lead"
+    },
+    {
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 10.666666666666666,
+        "tracksSamples": 256
+      },
+      "state": "unmute-kick"
+    },
+    {
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 10.666666666666666,
+        "tracksSamples": 256
+      },
+      "state": "unmute-bass"
+    },
+    {
+      "latency": {
+        "deviceMs": 5.333333333333333,
+        "graphMs": 5.333333333333333,
+        "masterSamples": 0,
+        "totalMs": 10.666666666666666,
+        "tracksSamples": 256
+      },
+      "state": "unmute-lead"
+    }
+  ],
+  "c3Delay": {
+    "muted": {
+      "deviceMs": 5.333333333333333,
+      "graphMs": 15.333333333333334,
+      "masterSamples": 0,
+      "totalMs": 20.666666666666668,
+      "tracksSamples": 736
+    },
+    "unmuted": {
+      "deviceMs": 5.333333333333333,
+      "graphMs": 15.333333333333334,
+      "masterSamples": 0,
+      "totalMs": 20.666666666666668,
+      "tracksSamples": 736
+    },
+    "unmutedAgain": {
+      "deviceMs": 5.333333333333333,
+      "graphMs": 15.333333333333334,
+      "masterSamples": 0,
+      "totalMs": 20.666666666666668,
+      "tracksSamples": 736
+    }
+  },
+  "sampleRate": 48000.0
+}

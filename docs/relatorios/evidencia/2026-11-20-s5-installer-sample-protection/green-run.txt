@@ -1,0 +1,101 @@
+﻿UpdateCTestConfiguration  from :D:/Core-build/s5-fix/build/DartConfiguration.tcl
+Test project D:/Core-build/s5-fix/build
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 20
+    Start 20: installer_samples
+
+20: Test command: C:\Users\vk_do\AppData\Local\Microsoft\WinGet\Packages\Kitware.CMake_Microsoft.Winget.Source_8wekyb3d8bbwe\cmake-4.4.4-windows-x86_64\bin\cmake.exe "-DSETUP=D:/Core-build/s5-fix/build/app/installer/CoreSetup_artefacts/Debug/Core Setup.exe" "-DWORK=D:/Core-build/s5-fix/build/tests/installer-samples" "-P" "D:/CORE/CORE/tests/installer_samples.cmake"
+20: Working Directory: D:/Core-build/s5-fix/build/tests
+20: Test timeout computed to be: 300
+20: -- PASS fixture kick hash
+20: -- PASS fixture snare hash
+20: -- PASS fixture bass hash
+20: -- PASS fixture keys hash
+20: -- === target-main: (i) edited distributed, (ii) user-owned at distributed path, (iii) intact, (iv) user-owned same size+date previously listed ===
+20: -- PASS main install kick
+20: -- PASS main install snare
+20: -- PASS main install bass
+20: -- PASS main install keys
+20: -- PASS main _core-plan never copied
+20: -- PASS main manifest kick hash
+20: -- PASS main manifest snare hash
+20: -- PASS main manifest bass hash
+20: -- PASS main manifest keys hash
+20: -- PASS main pre-reinstall user kick
+20: -- PASS main pre-reinstall user snare
+20: -- PASS main pre-reinstall user keys
+20: -- PASS (i) reinstall keeps the user edit
+20: -- PASS (ii) reinstall keeps the user-owned snare
+20: -- PASS (iii) intact bass unchanged
+20: -- PASS (iv) reinstall keeps the user-owned keys
+20: -- PASS (i) edited kick dropped from manifest
+20: -- PASS (ii) user snare dropped from manifest
+20: -- PASS (iv) user keys dropped from manifest
+20: -- PASS (iii) intact bass stays listed
+20: -- PASS (iii) bass entry keeps the installed hash
+20: -- PASS (i) message names the preserved kick
+20: -- PASS (ii) message names the preserved snare
+20: -- PASS (iv) message names the preserved keys
+20: -- PASS (i) uninstall keeps the user edit
+20: -- PASS (ii) uninstall keeps the user-owned snare
+20: -- PASS (iv) uninstall keeps the user-owned keys
+20: -- PASS (iii) uninstall removes the intact distributed bass
+20: -- PASS main samples.txt removed
+20: -- PASS main Samples stays (user content)
+20: -- PASS main folder stays (user content)
+20: -- === target-fresh: (v) never-listed exact size+date match (Audit-27), (vi) non-distributed path ===
+20: -- PASS (v) never-listed user snare not overwritten
+20: -- PASS (v) never-listed user snare stays unlisted
+20: -- PASS (vi) non-distributed user take untouched
+20: -- PASS fresh bass listed
+20: -- PASS fresh kick listed
+20: -- PASS fresh keys listed
+20: -- PASS (v) uninstall keeps the never-listed user snare
+20: -- PASS (vi) uninstall keeps the non-distributed user take
+20: -- PASS fresh distributed bass removed
+20: -- PASS fresh distributed kick removed
+20: -- PASS fresh distributed keys removed
+20: -- PASS fresh samples.txt removed
+20: -- PASS fresh folder stays (user content)
+20: -- === target-evidence: (vii) listed user content vs non-listed user file; legacy manifest at uninstall ===
+20: -- PASS (vii) uninstall keeps the listed user-content keys
+20: -- PASS (vii) non-listed user take survives byte-identical
+20: -- PASS (vii) legacy intact bass removed
+20: -- PASS (vii) legacy intact kick removed
+20: -- PASS (vii) legacy intact snare removed
+20: -- PASS evidence samples.txt removed
+20: -- PASS (vii) message names the preserved keys
+20: -- PASS evidence MyRecordings stays
+20: -- === target-revalidate: hashed manifest entry re-validated at uninstall ===
+20: -- PASS revalidate bass hashed entry
+20: -- PASS revalidate uninstall keeps the edited bass
+20: -- PASS revalidate intact kick removed
+20: -- PASS revalidate intact snare removed
+20: -- PASS revalidate intact keys removed
+20: -- PASS revalidate samples.txt removed
+20: -- PASS revalidate message names the preserved bass
+20: -- === target-legacy-nosrc: legacy manifest, source unavailable at uninstall -> all preserved ===
+20: -- PASS nosrc legacy bass preserved
+20: -- PASS nosrc legacy kick preserved
+20: -- PASS nosrc legacy snare preserved
+20: -- PASS nosrc legacy keys preserved
+20: -- PASS nosrc samples.txt removed (entries dropped)
+20: -- PASS nosrc folder stays (samples preserved)
+20: -- PASS nosrc message names the preserved bass
+20: -- installer_samples: all 70 checks passed (7-case matrix + legacy/revalidation sub-cases)
+1/1 Test #20: installer_samples ................   Passed    4.77 sec
+
+The following tests passed:
+	installer_samples
+
+100% tests passed out of 1
+
+Label Time Summary:
+merge    =   4.77 sec*proc (1 test)
+
+Total Test time (real) =   4.77 sec

@@ -1,0 +1,43 @@
+{
+ "eb_with_editor": {
+  "blob1": {
+   "componentLen": 3079,
+   "controllerPresent": false,
+   "controllerLen": 0,
+   "xmlHead": "<?xml version=\"1.0\" encoding=\"UTF-8\"?> <VST3PluginState><IComponent>2305.VMGcWA...f....P......LzXtsD..fP5FIzPnA...HvTzUj"
+  },
+  "blob2": {
+   "componentLen": 3079,
+   "controllerPresent": false,
+   "controllerLen": 0,
+   "xmlHead": "<?xml version=\"1.0\" encoding=\"UTF-8\"?> <VST3PluginState><IComponent>2305.VMGcWA...f....P......LzXtsD..fP5FIzPnA...HvTzUj"
+  },
+  "stable": false
+ },
+ "eb_restore_after_editor": {
+  "Mix": "100.0",
+  "Feedback": "0.75"
+ },
+ "dec_live": {
+  "DriveText": "7.0",
+  "blob": {
+   "componentLen": 1264,
+   "controllerPresent": false,
+   "controllerLen": 0,
+   "xmlHead": "<?xml version=\"1.0\" encoding=\"UTF-8\"?> <VST3PluginState><IComponent>945.VMGcWA...f....P......LzXtsD..LPlFIzPnA...HvTzQzX"
+  },
+  "stable": false
+ },
+ "dec_restore": {
+  "Drive": {
+   "default": 0.0,
+   "id": "2",
+   "name": "Drive",
+   "steps": 0,
+   "text": "0.0",
+   "value": 0.0
+  },
+  "bitIdentical": false
+ },
+ "engine_exit": 0
+}

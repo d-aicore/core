@@ -1,0 +1,92 @@
+[
+ {
+  "case": "EB-06 automation Mix (redo)",
+  "plugin": "EchoBoy",
+  "version": "5.5.5.19885",
+  "format": "vst3",
+  "method": "headless envelope fx:eb:vst:3 + editor-init static refs + render x3 + sample compare",
+  "result": "FAIL",
+  "evidence": "echoboy-automation-vst.json; eb2-automix.wav; eb2-mix0.wav; eb2-mix1.wav",
+  "summary": "early|A-B|=0.003681 late|A-C|=0.0 late|A-B|=0.764308"
+ },
+ {
+  "case": "EB-10 tail (redo, editor-init)",
+  "plugin": "EchoBoy",
+  "version": "5.5.5.19885",
+  "format": "vst3",
+  "method": "headless editor-init state Mix=1 FB=0.6 + render tailMs=8000 + envelope analysis",
+  "result": "FAIL",
+  "evidence": "echoboy-tail-editor.json; eb2-tail.wav; eb2-tail-dry.wav; eb2-tail-fb0.wav",
+  "summary": "tail=5.4923s capped=False echoes=11 spacings=[0.3, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25] dryEnd=0.145"
+ },
+ {
+  "case": "EB-11 attribution boundary",
+  "plugin": "EchoBoy",
+  "version": "5.5.5.19885",
+  "format": "vst3",
+  "method": "headless C1 restore+editor-on-restore, C2 recapture->restore",
+  "result": "MEASURED",
+  "evidence": "echoboy-attribution-boundary.json",
+  "summary": "C1 before=100.0 afterEditor=100.0; C2 recapture-restore=100.0"
+ },
+ {
+  "case": "DEC-02 load",
+  "plugin": "Decapitator",
+  "version": "5.5.5.19885",
+  "format": "vst3",
+  "method": "headless project.load + plugins.missing/versions + plugin.params",
+  "result": "PASS",
+  "evidence": "decapitator-load.json",
+  "summary": "missing=[] Drive id=2 value=0.0"
+ },
+ {
+  "case": "DEC-04 editor open/close",
+  "plugin": "Decapitator",
+  "version": "5.5.5.19885",
+  "format": "vst3",
+  "method": "headless plugin.editor + EnumWindows(pid) + screenshots",
+  "result": "PASS",
+  "evidence": "decapitator-editor.json; decapitator-editor-open.png",
+  "summary": "open=[{'hwnd': 81989762, 'title': 'Decapitator', 'visible': True}] afterClose=[]"
+ },
+ {
+  "case": "DEC-06 automation Drive",
+  "plugin": "Decapitator",
+  "version": "5.5.5.19885",
+  "format": "vst3",
+  "method": "headless envelope fx:dec:vst:2 + editor-init static refs + render x3 + sample compare",
+  "result": "FAIL",
+  "evidence": "decapitator-automation.json; dec2-autodrive.wav; dec2-drive0.wav; dec2-drive1.wav",
+  "summary": "early|A-B|=0.0 late|A-C|=0.004531 late|A-B|=0.239022"
+ },
+ {
+  "case": "DEC-07 bypass",
+  "plugin": "Decapitator",
+  "version": "5.5.5.19885",
+  "format": "vst3",
+  "method": "headless bypass:true/false/absent + render sha256",
+  "result": "PASS",
+  "evidence": "decapitator-bypass.json; dec2-active.wav; dec2-bypass.wav; dec2-nofx.wav",
+  "summary": "bypass==nofx:True active!=bypass:True"
+ },
+ {
+  "case": "DEC-09 state save/reopen",
+  "plugin": "Decapitator",
+  "version": "5.5.5.19885",
+  "format": "vst3",
+  "method": "headless plugins.states + release + load(states), headless vs editor-init capture",
+  "result": "PASS",
+  "evidence": "decapitator-state.json",
+  "summary": "headlessRestore=0.0 editorInitReopen=7.0 stable=False"
+ },
+ {
+  "case": "DEC-08 render",
+  "plugin": "Decapitator",
+  "version": "5.5.5.19885",
+  "format": "vst3",
+  "method": "headless render offline 48kHz/24-bit",
+  "result": "PASS",
+  "evidence": "decapitator-renders.json",
+  "summary": "6 WAVs peaks/sha recorded"
+ }
+]

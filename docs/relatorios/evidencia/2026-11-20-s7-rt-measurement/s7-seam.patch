@@ -1,0 +1,77 @@
+﻿diff --git a/engine/src/io/device.cpp b/engine/src/io/device.cpp
+index 15a4ed0..90d171c 100644
+--- a/engine/src/io/device.cpp
++++ b/engine/src/io/device.cpp
+@@ -78,6 +78,18 @@ class MiniaudioOutput final : public AudioOutput {
+ 
+   static void callback(ma_device* device, void* output, const void*, ma_uint32 frames) {
+     auto* self = static_cast<MiniaudioOutput*>(device->pUserData);
++    // S7 test-only seam (device.hpp): null in production — one relaxed load, no behaviour change. When
++    // armed, the whole callback is the probe's in-callback window (engine call AND the timing record),
++    // and the thread id lets the probe attribute violations to the audio thread alone.
++    RtProbe* probe = rtProbe.load(std::memory_order_relaxed);
++    if (probe) {
++      probe->inCallback->store(true, std::memory_order_relaxed);
++#ifdef _WIN32
++      probe->audioThreadId->store((uint32_t)GetCurrentThreadId(), std::memory_order_relaxed);
++#else
++      probe->audioThreadId->store(0, std::memory_order_relaxed);
++#endif
++    }
+     setAudioFloatMode();  // FTZ + DAZ, whatever the backend did (float_mode.hpp); the workers take it from here
+     const uint64_t start = nowNs();
+     float* out = static_cast<float*>(output);
+@@ -103,6 +115,11 @@ class MiniaudioOutput final : public AudioOutput {
+     const uint64_t gap = self->lastStartNs_ ? start - self->lastStartNs_ : 0;
+     self->lastStartNs_ = start;
+     self->engine_->recordCallback(end - start, budget, gap, frames);
++    if (probe) {
++      if (probe->block) probe->block(end - start, budget, gap, frames);
++      if (probe->inject) probe->inject();  // negative controls: a directed fault inside the window
++      probe->inCallback->store(false, std::memory_order_relaxed);
++    }
+   }
+ 
+   void initContext(const json& args) {
+@@ -229,4 +246,7 @@ public:
+ 
+ std::unique_ptr<AudioOutput> makeMiniaudioOutput() { return std::make_unique<MiniaudioOutput>(); }
+ 
++// S7 test-only seam: null by default (see device.hpp). A measurement probe arms it; production never does.
++std::atomic<RtProbe*> rtProbe{nullptr};
++
+ } // namespace core
+diff --git a/engine/src/io/device.hpp b/engine/src/io/device.hpp
+index 782e292..3d45b5c 100644
+--- a/engine/src/io/device.hpp
++++ b/engine/src/io/device.hpp
+@@ -1,8 +1,29 @@
+ #pragma once
++#include <atomic>
++#include <cstdint>
+ #include <memory>
+ #include "core/server.hpp"
+ 
+ namespace core {
+ // Audio output through miniaudio (WASAPI shared/exclusive on Windows; null backend for headless tests).
+ std::unique_ptr<AudioOutput> makeMiniaudioOutput();
++
++// S7 (engine RT measurement, owner round-1 item 6): TEST-ONLY probe seam, null by default. Production
++// cost is ONE relaxed atomic load per callback (the null check in MiniaudioOutput::callback); nothing
++// else changes — no RT-path behaviour change, no default change (D51). When a measurement probe arms
++// it, the audio callback publishes its in-callback window and its thread id through the probe's own
++// state, may run the probe's directed fault (negative controls), and hands the probe the same per-block
++// timing recordCallback gets. Justification: quality bar 3 asks for alloc/lock/IO proof by measurement,
++// not by reading — the flag needs thread attribution so control-thread activity is never miscounted as
++// audio-thread work, the inject point lets the proof FAIL on purpose (a plugin-DLL fault would not be
++// seen by an exe-side probe: the DLL has its own CRT/imports), and the observer gives exact per-block
++// max/p99 (the existing EngineStats loadBands are 1 %-of-budget bands — 13.3 us at 64 samples/48 kHz —
++// too coarse for a p99 claim). One seam serves all three; engine.cpp stays untouched.
++struct RtProbe {
++  std::atomic<bool>* inCallback;        // probe-owned: true for the whole callback, false outside
++  std::atomic<uint32_t>* audioThreadId; // probe-owned: the device thread's id, written each callback
++  void (*inject)();                     // negative control run inside the window (null = none)
++  void (*block)(uint64_t renderNs, uint64_t budgetNs, uint64_t gapNs, uint64_t frames);  // observer (null = none)
++};
++extern std::atomic<RtProbe*> rtProbe;  // defined in device.cpp; null unless a probe arms it
+ } // namespace core

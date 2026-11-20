@@ -1,0 +1,245 @@
+{
+ "impulseWav": "D:\\Core-build\\chain-series\\impulse.wav",
+ "delayProbe": {
+  "category": "Fx",
+  "file": "D:\\Core-build\\s9\\delay-build\\CoreTestDelayProbe_artefacts\\Release\\VST3\\Core Test Delay Probe.vst3",
+  "format": "vst3",
+  "id": "VST3-Core Test Delay Probe-7c1488ef-bc3b5031",
+  "inputs": 0,
+  "instrument": false,
+  "name": "Core Test Delay Probe",
+  "outputs": 0,
+  "vendor": "Core",
+  "version": "1.0.0"
+ },
+ "cases": {
+  "P0": {
+   "stats": {
+    "path": "D:\\Core-build\\chain-series\\par-P0-dry.wav",
+    "sha256": "d359ae2b8d1c31a4967589bb0bbae41708bbbd4d16ee1dbcb16ba88aeba69922",
+    "sampleRate": 48000,
+    "frames": 120000,
+    "channels": 2,
+    "seconds": 2.5,
+    "peak": 0.501187,
+    "peakDb": -6.0,
+    "rms": 0.001447
+   },
+   "peaks": [
+    {
+     "sample": 0,
+     "t": 0.0,
+     "peak": 0.501187,
+     "widthSamples": 1
+    }
+   ],
+   "render": {
+    "channels": 2,
+    "denseEventBlocks": 0,
+    "path": "D:\\Core-build\\chain-series\\par-P0-dry.wav",
+    "peak": 0.5011871457099915,
+    "realtimeFactor": 726.1531311723016,
+    "renderMs": 3.4427999999999996,
+    "sampleRate": 48000.0,
+    "seconds": 2.5,
+    "stems": []
+   },
+   "latency": {
+    "deviceMs": 21.333333333333332,
+    "graphMs": 2.6666666666666665,
+    "masterSamples": 0,
+    "totalMs": 24.0,
+    "tracksSamples": 128
+   }
+  },
+  "P1": {
+   "gainParam": [
+    {
+     "default": 0.5,
+     "id": "3165055",
+     "name": "Gain",
+     "steps": 0,
+     "text": "1.00",
+     "value": 1.0
+    },
+    {
+     "default": 0.0,
+     "id": "1652125811",
+     "name": "Bypass",
+     "steps": 2,
+     "text": "Off",
+     "value": 0.0
+    }
+   ],
+   "stats": {
+    "path": "D:\\Core-build\\chain-series\\par-P1-gain.wav",
+    "sha256": "facb7aba7773e5ce71467d8dbeb83884dded934fe981ce512bc4e0b728e63c11",
+    "sampleRate": 48000,
+    "frames": 120000,
+    "channels": 2,
+    "seconds": 2.5,
+    "peak": 0.752376,
+    "peakDb": -2.47,
+    "rms": 0.002172
+   },
+   "peaks": [
+    {
+     "sample": 0,
+     "t": 0.0,
+     "peak": 0.752376,
+     "widthSamples": 1
+    }
+   ],
+   "render": {
+    "channels": 2,
+    "denseEventBlocks": 0,
+    "path": "D:\\Core-build\\chain-series\\par-P1-gain.wav",
+    "peak": 0.7523757219314575,
+    "realtimeFactor": 652.4348869982776,
+    "renderMs": 3.8318,
+    "sampleRate": 48000.0,
+    "seconds": 2.5,
+    "stems": []
+   },
+   "latency": {
+    "deviceMs": 21.333333333333332,
+    "graphMs": 2.6666666666666665,
+    "masterSamples": 0,
+    "totalMs": 24.0,
+    "tracksSamples": 128
+   }
+  },
+  "P2": {
+   "stats": {
+    "path": "D:\\Core-build\\chain-series\\par-P2-delay480.wav",
+    "sha256": "facb7aba7773e5ce71467d8dbeb83884dded934fe981ce512bc4e0b728e63c11",
+    "sampleRate": 48000,
+    "frames": 120000,
+    "channels": 2,
+    "seconds": 2.5,
+    "peak": 0.752376,
+    "peakDb": -2.47,
+    "rms": 0.002172
+   },
+   "peaks": [
+    {
+     "sample": 0,
+     "t": 0.0,
+     "peak": 0.752376,
+     "widthSamples": 1
+    }
+   ],
+   "render": {
+    "channels": 2,
+    "denseEventBlocks": 0,
+    "path": "D:\\Core-build\\chain-series\\par-P2-delay480.wav",
+    "peak": 0.7523757219314575,
+    "realtimeFactor": 605.3561915831276,
+    "renderMs": 4.1297999999999995,
+    "sampleRate": 48000.0,
+    "seconds": 2.5,
+    "stems": []
+   },
+   "latency": {
+    "deviceMs": 21.333333333333332,
+    "graphMs": 12.666666666666666,
+    "masterSamples": 0,
+    "totalMs": 34.0,
+    "tracksSamples": 608
+   }
+  },
+  "P3": {
+   "params": {
+    "Mix": "100.0",
+    "Feedback": "0.00"
+   },
+   "stats": {
+    "path": "D:\\Core-build\\chain-series\\par-P3-echoboy.wav",
+    "sha256": "3d7204d369dc075c2d3a5ec2a182ce647ff1212f7219972b7b0fca8090659efc",
+    "sampleRate": 48000,
+    "frames": 168000,
+    "channels": 2,
+    "seconds": 3.5,
+    "peak": 0.501187,
+    "peakDb": -6.0,
+    "rms": 0.001223
+   },
+   "peaks": [
+    {
+     "sample": 0,
+     "t": 0.0,
+     "peak": 0.501187,
+     "widthSamples": 1
+    }
+   ],
+   "render": {
+    "channels": 2,
+    "denseEventBlocks": 0,
+    "path": "D:\\Core-build\\chain-series\\par-P3-echoboy.wav",
+    "peak": 0.5011871457099915,
+    "realtimeFactor": 22.910767144127057,
+    "renderMs": 152.76659999999998,
+    "sampleRate": 48000.0,
+    "seconds": 3.5,
+    "stems": []
+   },
+   "latency": {
+    "deviceMs": 21.333333333333332,
+    "graphMs": 3.3333333333333335,
+    "masterSamples": 0,
+    "totalMs": 24.666666666666664,
+    "tracksSamples": 160
+   }
+  },
+  "P4": {
+   "stats": {
+    "path": "D:\\Core-build\\chain-series\\par-P4-bypass.wav",
+    "sha256": "7f074aac9710e2dc9745902431660bedfec25b88c16b7236bd341b05d74479f4",
+    "sampleRate": 48000,
+    "frames": 168000,
+    "channels": 2,
+    "seconds": 3.5,
+    "peak": 0.752376,
+    "peakDb": -2.47,
+    "rms": 0.001836
+   },
+   "peaks": [
+    {
+     "sample": 0,
+     "t": 0.0,
+     "peak": 0.752376,
+     "widthSamples": 1
+    }
+   ],
+   "render": {
+    "channels": 2,
+    "denseEventBlocks": 0,
+    "path": "D:\\Core-build\\chain-series\\par-P4-bypass.wav",
+    "peak": 0.7523757219314575,
+    "realtimeFactor": 29.5030008766606,
+    "renderMs": 118.63199999999999,
+    "sampleRate": 48000.0,
+    "seconds": 3.5,
+    "stems": []
+   },
+   "latency": {
+    "deviceMs": 21.333333333333332,
+    "graphMs": 0.0,
+    "masterSamples": 0,
+    "totalMs": 21.333333333333332,
+    "tracksSamples": 0
+   }
+  }
+ },
+ "engineExit": 0,
+ "verdicts": {
+  "P1_singleImpulse": true,
+  "P1_sameSampleAsDry": true,
+  "P1_amplitudeRatio": 1.5012,
+  "P2_singleImpulse": true,
+  "P2_offsetSamples": 0,
+  "P3_echoOffsetSamples": null,
+  "P3_expectedOffset": 12000,
+  "P4_equalsDry": false
+ }
+}

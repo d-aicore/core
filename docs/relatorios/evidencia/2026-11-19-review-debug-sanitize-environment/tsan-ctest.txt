@@ -1,0 +1,193 @@
+Internal ctest changing into directory: /home/diogo/core-review-build/tsan
+UpdateCTestConfiguration  from :/home/diogo/core-review-build/tsan/DartConfiguration.tcl
+UpdateCTestConfiguration  from :/home/diogo/core-review-build/tsan/DartConfiguration.tcl
+Test project /home/diogo/core-review-build/tsan
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 1
+      Start  1: engine_tests
+
+1: Test command: /home/diogo/core-review-build/tsan/tests/engine_tests
+1: Working Directory: /home/diogo/core-review-build/tsan/tests
+1: Test timeout computed to be: 300
+1: FATAL: ThreadSanitizer: unexpected memory mapping 0x605d45333000-0x605d45340000
+ 1/17 Test  #1: engine_tests .....................***Failed    0.01 sec
+test 2
+      Start  2: domain_tests
+
+2: Test command: /home/diogo/core-review-build/tsan/tests/domain_tests
+2: Working Directory: /home/diogo/core-review-build/tsan/tests
+2: Test timeout computed to be: 300
+2: FATAL: ThreadSanitizer: unexpected memory mapping 0x705cc8672000-0x705cc8b00000
+ 2/17 Test  #2: domain_tests .....................***Failed    0.01 sec
+test 3
+      Start  3: legacy_guard_tests
+
+3: Test command: /home/diogo/core-review-build/tsan/tests/legacy_guard_tests
+3: Working Directory: /home/diogo/core-review-build/tsan/tests
+3: Test timeout computed to be: 300
+3: FATAL: ThreadSanitizer: unexpected memory mapping 0x7688ede72000-0x7688ee300000
+ 3/17 Test  #3: legacy_guard_tests ...............***Failed    0.01 sec
+test 4
+      Start  4: role_tests
+
+4: Test command: /home/diogo/core-review-build/tsan/tests/role_tests
+4: Working Directory: /home/diogo/core-review-build/tsan/tests
+4: Test timeout computed to be: 300
+4: FATAL: ThreadSanitizer: unexpected memory mapping 0x618cdedfc000-0x618cdee09000
+ 4/17 Test  #4: role_tests .......................***Failed    0.01 sec
+test 5
+      Start  5: midi_tests
+
+5: Test command: /home/diogo/core-review-build/tsan/tests/midi_tests
+5: Working Directory: /home/diogo/core-review-build/tsan/tests
+5: Test timeout computed to be: 300
+5: FATAL: ThreadSanitizer: unexpected memory mapping 0x734d48a72000-0x734d48f00000
+ 5/17 Test  #5: midi_tests .......................***Failed    0.01 sec
+test 6
+      Start  6: bug_tests
+
+6: Test command: /home/diogo/core-review-build/tsan/tests/bug_tests
+6: Working Directory: /home/diogo/core-review-build/tsan/tests
+6: Test timeout computed to be: 300
+6: FATAL: ThreadSanitizer: unexpected memory mapping 0x5ffe9bed3000-0x5ffe9bee2000
+ 6/17 Test  #6: bug_tests ........................***Failed    0.01 sec
+test 7
+      Start  7: bitwig_tests
+
+7: Test command: /home/diogo/core-review-build/tsan/tests/bitwig_tests
+7: Working Directory: /home/diogo/core-review-build/tsan/tests
+7: Test timeout computed to be: 300
+7: FATAL: ThreadSanitizer: unexpected memory mapping 0x63386c376000-0x63386c382000
+ 7/17 Test  #7: bitwig_tests .....................***Failed    0.01 sec
+test 8
+      Start  8: audit_tests
+
+8: Test command: /home/diogo/core-review-build/tsan/tests/audit_tests
+8: Working Directory: /home/diogo/core-review-build/tsan/tests
+8: Test timeout computed to be: 300
+8: FATAL: ThreadSanitizer: unexpected memory mapping 0x5e47b32e6000-0x5e47b32f6000
+ 8/17 Test  #8: audit_tests ......................***Failed    0.01 sec
+test 9
+      Start  9: audit2_tests
+
+9: Test command: /home/diogo/core-review-build/tsan/tests/audit2_tests
+9: Working Directory: /home/diogo/core-review-build/tsan/tests
+9: Test timeout computed to be: 300
+9: ok   auditoria 2, bug 1: uma linha do motor com tipos errados nunca lanca no cliente
+9: ok   auditoria 2, ponto 4: uma resposta sem id valido termina a sessao logo, com o motivo
+9: ok   auditoria 2, bug 2: um project.load sem resposta volta a ser enviado sozinho, com uma revisao nova
+9: ok   auditoria 2, bug 3: o espaco do export conta os mono como mono e cada volume por si
+9: ok   auditoria 2, observacao: um autosave estragado diz que esta estragado, sem excecao do JSON
+9: ok   dados D2: o autosave de um Core que morreu e oferecido mesmo que o id dele ja seja de outro processo
+9: 6 testes, 80 verificacoes, 0 falhas
+ 9/17 Test  #9: audit2_tests .....................   Passed    0.02 sec
+test 10
+      Start 10: hunt_tests
+
+10: Test command: /home/diogo/core-review-build/tsan/tests/hunt_tests
+10: Working Directory: /home/diogo/core-review-build/tsan/tests
+10: Test timeout computed to be: 300
+10: FATAL: ThreadSanitizer: unexpected memory mapping 0x640f507f3000-0x640f50804000
+10/17 Test #10: hunt_tests .......................***Failed    0.01 sec
+test 11
+      Start 11: round3_tests
+
+11: Test command: /home/diogo/core-review-build/tsan/tests/round3_tests
+11: Working Directory: /home/diogo/core-review-build/tsan/tests
+11: Test timeout computed to be: 300
+11: FATAL: ThreadSanitizer: unexpected memory mapping 0x5b487a58a000-0x5b487a597000
+11/17 Test #11: round3_tests .....................***Failed    0.01 sec
+test 12
+      Start 12: calls_tests
+
+12: Test command: /home/diogo/core-review-build/tsan/tests/calls_tests
+12: Working Directory: /home/diogo/core-review-build/tsan/tests
+12: Test timeout computed to be: 300
+12: FATAL: ThreadSanitizer: unexpected memory mapping 0x6441e207f000-0x6441e208d000
+12/17 Test #12: calls_tests ......................***Failed    0.01 sec
+test 13
+      Start 13: menu_tests
+
+13: Test command: /home/diogo/core-review-build/tsan/tests/menu_tests
+13: Working Directory: /home/diogo/core-review-build/tsan/tests
+13: Test timeout computed to be: 300
+13: FATAL: ThreadSanitizer: unexpected memory mapping 0x5a90829ea000-0x5a90829ed000
+13/17 Test #13: menu_tests .......................***Failed    0.01 sec
+test 14
+      Start 14: cli_version
+
+14: Test command: /home/diogo/core-review-build/tsan/engine/core-engine "--version"
+14: Working Directory: /home/diogo/core-review-build/tsan/tests
+14: Test timeout computed to be: 300
+14: FATAL: ThreadSanitizer: unexpected memory mapping 0x71dc02672000-0x71dc02b00000
+14/17 Test #14: cli_version ......................***Failed  Required regular expression not found. Regex=[core-engine 0.7.0
+]  0.01 sec
+test 15
+      Start 15: cli_demo_render
+
+15: Test command: /usr/bin/cmake "-DENGINE=/home/diogo/core-review-build/tsan/engine/core-engine" "-DWORK=/home/diogo/core-review-build/tsan/tests/cli" "-P" "/home/diogo/core-review-src/tests/cli_demo_render.cmake"
+15: Working Directory: /home/diogo/core-review-build/tsan/tests
+15: Test timeout computed to be: 300
+15: CMake Error at /home/diogo/core-review-src/tests/cli_demo_render.cmake:5 (message):
+15:   core-engine demo saiu com Segmentation fault
+15: 
+15: 
+15/17 Test #15: cli_demo_render ..................***Failed    0.04 sec
+test 16
+      Start 16: cli_measure
+
+16: Test command: /usr/bin/cmake "-DENGINE=/home/diogo/core-review-build/tsan/engine/core-engine" "-DWORK=/home/diogo/core-review-build/tsan/tests/cli" "-P" "/home/diogo/core-review-src/tests/cli_measure.cmake"
+16: Working Directory: /home/diogo/core-review-build/tsan/tests
+16: Test timeout computed to be: 300
+16: CMake Error at /home/diogo/core-review-src/tests/cli_measure.cmake:5 (message):
+16:   core-engine measure saiu com 66: FATAL: ThreadSanitizer: unexpected memory
+16:   mapping 0x6046db8cf000-0x6046db8db000
+16: 
+16: 
+16: 
+16/17 Test #16: cli_measure ......................***Failed    0.02 sec
+test 17
+      Start 17: cli_unicode
+
+17: Test command: /usr/bin/cmake "-DENGINE=/home/diogo/core-review-build/tsan/engine/core-engine" "-DWORK=/home/diogo/core-review-build/tsan/tests/cli" "-P" "/home/diogo/core-review-src/tests/cli_unicode.cmake"
+17: Working Directory: /home/diogo/core-review-build/tsan/tests
+17: Test timeout computed to be: 300
+17: FATAL: ThreadSanitizer: unexpected memory mapping 0x64178b488000-0x64178b494000
+17: CMake Error at /home/diogo/core-review-src/tests/cli_unicode.cmake:6 (message):
+17:   core-engine demo saiu com 66
+17: 
+17: 
+17/17 Test #17: cli_unicode ......................***Failed    0.02 sec
+
+6% tests passed, 16 tests failed out of 17
+
+Label Time Summary:
+merge    =   0.21 sec*proc (17 tests)
+
+Total Test time (real) =   0.22 sec
+
+The following tests FAILED:
+	  1 - engine_tests (Failed)
+	  2 - domain_tests (Failed)
+	  3 - legacy_guard_tests (Failed)
+	  4 - role_tests (Failed)
+	  5 - midi_tests (Failed)
+	  6 - bug_tests (Failed)
+	  7 - bitwig_tests (Failed)
+	  8 - audit_tests (Failed)
+	 10 - hunt_tests (Failed)
+	 11 - round3_tests (Failed)
+	 12 - calls_tests (Failed)
+	 13 - menu_tests (Failed)
+	 14 - cli_version (Failed)
+	 15 - cli_demo_render (Failed)
+	 16 - cli_measure (Failed)
+	 17 - cli_unicode (Failed)
+Errors while running CTest
+Output from these tests are in: /home/diogo/core-review-build/tsan/Testing/Temporary/LastTest.log
+Use "--rerun-failed --output-on-failure" to re-run the failed cases verbosely.

@@ -1,0 +1,1233 @@
+config,rep,metric,value,unit,note
+t4_s0,1,price_bytes,23773.000000,B,toJson+dump size (what sizeOf charges)
+t4_s0,1,est_copy_bytes,45198.000000,B,deep-copy estimate; json via dump size
+t4_s0,1,toJson_ms,1.903540,ms,json tree build only
+t4_s0,1,toJson_dump_ms,2.309460,ms,tree + canonical string (sizeOf)
+t4_s0,1,doc_copy_ms,0.098200,ms,whole-Document copy ctor
+t4_s0,1,sameContent_ms,3.546480,ms,2x toJson + tree compare
+t4_s0,1,commit_mean_ms,8.845215,ms,60 commits, constant label (cancel-check active)
+t4_s0,1,commit_max_ms,12.650100,ms,
+t4_s0,1,commit_total_ms,530.712900,ms,
+t4_s0,1,states_after_commits,61.000000,count,current + undo + redo
+t4_s0,1,priced_stack_mb,1.360302,MB,(states-1) x price_bytes
+t4_s0,1,private_delta_commits_mb,10.617188,MB,heap growth over 60 commits
+t4_s0,1,unpriced_gap_mb,9.256886,MB,current + saved_ tree + allocator overhead
+t4_s0,1,undo_count,60.000000,count,60 minus steps trimmed
+t4_s0,1,undo_mean_ms,1.768277,ms,moves + sizeOf(toJson+dump) each
+t4_s0,1,undo_max_ms,3.574700,ms,
+t4_s0,1,states_after_undo,61.000000,count,
+t4_s0,1,private_after_undo_mb,10.617188,MB,
+t4_s0,1,redo_mean_ms,1.575778,ms,
+t4_s0,1,redo_max_ms,2.751600,ms,
+t4_s0,1,states_after_redo,61.000000,count,
+t4_s0,1,private_after_redo_mb,10.890625,MB,
+t4_s0,1,peak_workingset_mb,14.730469,MB,process-lifetime peak (cumulative)
+t4_s0,1,integrity_checks,10.000000,count,sameContent vs deterministic replay
+t4_s0,1,integrity_failures,0.000000,count,
+t4_s0,1,blob_intact,1.000000,bool,
+t4_s0,1,gesture_begin_ms,0.039300,ms,gestureStart_ = current_ copy
+t4_s0,1,gesture_update_mean_ms,0.050840,ms,current_ = next copy, no serialization
+t4_s0,1,gesture_end_ms,4.103400,ms,sameContent x2(+2) + sizeOf + trim
+t4_s0,1,modified_first_ms,1.263000,ms,dirty=true, 1x toJson
+t4_s0,1,modified_cached_ms,0.000100,ms,cached, no serialization
+t4_s0,1,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t4_s0,1,ceiling_stack_bytes_after_commits,213957.000000,B,vs cap
+t4_s0,1,ceiling_cap_bytes,237730.000000,B,
+t4_s0,1,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t4_s0,1,ceiling_stack_bytes_after_undo,213957.000000,B,conserved? <= cap means yes
+t4_s0,1,ceiling_respected,1.000000,bool,
+t4_s0,1,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t4_s0,1,pred_commit_no_serial_ms,0.196400,ms,2 x doc_copy; counter pricing ~0
+t4_s0,1,serial_share_of_commit,0.977796,frac,1 - (2 copies / commit)
+t4_s0,1,commit_over_copies,45.036736,x,
+t4_s0,2,price_bytes,23773.000000,B,toJson+dump size (what sizeOf charges)
+t4_s0,2,est_copy_bytes,45198.000000,B,deep-copy estimate; json via dump size
+t4_s0,2,toJson_ms,1.778440,ms,json tree build only
+t4_s0,2,toJson_dump_ms,1.736980,ms,tree + canonical string (sizeOf)
+t4_s0,2,doc_copy_ms,0.077900,ms,whole-Document copy ctor
+t4_s0,2,sameContent_ms,3.402220,ms,2x toJson + tree compare
+t4_s0,2,commit_mean_ms,7.493425,ms,60 commits, constant label (cancel-check active)
+t4_s0,2,commit_max_ms,9.502200,ms,
+t4_s0,2,commit_total_ms,449.605500,ms,
+t4_s0,2,states_after_commits,61.000000,count,current + undo + redo
+t4_s0,2,priced_stack_mb,1.360302,MB,(states-1) x price_bytes
+t4_s0,2,private_delta_commits_mb,9.960938,MB,heap growth over 60 commits
+t4_s0,2,unpriced_gap_mb,8.600636,MB,current + saved_ tree + allocator overhead
+t4_s0,2,undo_count,60.000000,count,60 minus steps trimmed
+t4_s0,2,undo_mean_ms,1.527337,ms,moves + sizeOf(toJson+dump) each
+t4_s0,2,undo_max_ms,2.207100,ms,
+t4_s0,2,states_after_undo,61.000000,count,
+t4_s0,2,private_after_undo_mb,10.238281,MB,
+t4_s0,2,redo_mean_ms,1.511998,ms,
+t4_s0,2,redo_max_ms,2.339900,ms,
+t4_s0,2,states_after_redo,61.000000,count,
+t4_s0,2,private_after_redo_mb,10.238281,MB,
+t4_s0,2,peak_workingset_mb,16.296875,MB,process-lifetime peak (cumulative)
+t4_s0,2,integrity_checks,10.000000,count,sameContent vs deterministic replay
+t4_s0,2,integrity_failures,0.000000,count,
+t4_s0,2,blob_intact,1.000000,bool,
+t4_s0,2,gesture_begin_ms,0.073600,ms,gestureStart_ = current_ copy
+t4_s0,2,gesture_update_mean_ms,0.057630,ms,current_ = next copy, no serialization
+t4_s0,2,gesture_end_ms,4.866900,ms,sameContent x2(+2) + sizeOf + trim
+t4_s0,2,modified_first_ms,1.293600,ms,dirty=true, 1x toJson
+t4_s0,2,modified_cached_ms,0.000000,ms,cached, no serialization
+t4_s0,2,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t4_s0,2,ceiling_stack_bytes_after_commits,213957.000000,B,vs cap
+t4_s0,2,ceiling_cap_bytes,237730.000000,B,
+t4_s0,2,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t4_s0,2,ceiling_stack_bytes_after_undo,213957.000000,B,conserved? <= cap means yes
+t4_s0,2,ceiling_respected,1.000000,bool,
+t4_s0,2,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t4_s0,2,pred_commit_no_serial_ms,0.155800,ms,2 x doc_copy; counter pricing ~0
+t4_s0,2,serial_share_of_commit,0.979208,frac,1 - (2 copies / commit)
+t4_s0,2,commit_over_copies,48.096438,x,
+t4_s0,3,price_bytes,23773.000000,B,toJson+dump size (what sizeOf charges)
+t4_s0,3,est_copy_bytes,45198.000000,B,deep-copy estimate; json via dump size
+t4_s0,3,toJson_ms,1.421860,ms,json tree build only
+t4_s0,3,toJson_dump_ms,1.675380,ms,tree + canonical string (sizeOf)
+t4_s0,3,doc_copy_ms,0.058420,ms,whole-Document copy ctor
+t4_s0,3,sameContent_ms,2.897740,ms,2x toJson + tree compare
+t4_s0,3,commit_mean_ms,7.113992,ms,60 commits, constant label (cancel-check active)
+t4_s0,3,commit_max_ms,8.335400,ms,
+t4_s0,3,commit_total_ms,426.839500,ms,
+t4_s0,3,states_after_commits,61.000000,count,current + undo + redo
+t4_s0,3,priced_stack_mb,1.360302,MB,(states-1) x price_bytes
+t4_s0,3,private_delta_commits_mb,10.484375,MB,heap growth over 60 commits
+t4_s0,3,unpriced_gap_mb,9.124073,MB,current + saved_ tree + allocator overhead
+t4_s0,3,undo_count,60.000000,count,60 minus steps trimmed
+t4_s0,3,undo_mean_ms,1.478043,ms,moves + sizeOf(toJson+dump) each
+t4_s0,3,undo_max_ms,1.816300,ms,
+t4_s0,3,states_after_undo,61.000000,count,
+t4_s0,3,private_after_undo_mb,10.894531,MB,
+t4_s0,3,redo_mean_ms,1.467677,ms,
+t4_s0,3,redo_max_ms,2.005800,ms,
+t4_s0,3,states_after_redo,61.000000,count,
+t4_s0,3,private_after_redo_mb,10.894531,MB,
+t4_s0,3,peak_workingset_mb,16.652344,MB,process-lifetime peak (cumulative)
+t4_s0,3,integrity_checks,10.000000,count,sameContent vs deterministic replay
+t4_s0,3,integrity_failures,0.000000,count,
+t4_s0,3,blob_intact,1.000000,bool,
+t4_s0,3,gesture_begin_ms,0.035600,ms,gestureStart_ = current_ copy
+t4_s0,3,gesture_update_mean_ms,0.050490,ms,current_ = next copy, no serialization
+t4_s0,3,gesture_end_ms,4.243000,ms,sameContent x2(+2) + sizeOf + trim
+t4_s0,3,modified_first_ms,1.567600,ms,dirty=true, 1x toJson
+t4_s0,3,modified_cached_ms,0.000000,ms,cached, no serialization
+t4_s0,3,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t4_s0,3,ceiling_stack_bytes_after_commits,213957.000000,B,vs cap
+t4_s0,3,ceiling_cap_bytes,237730.000000,B,
+t4_s0,3,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t4_s0,3,ceiling_stack_bytes_after_undo,213957.000000,B,conserved? <= cap means yes
+t4_s0,3,ceiling_respected,1.000000,bool,
+t4_s0,3,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t4_s0,3,pred_commit_no_serial_ms,0.116840,ms,2 x doc_copy; counter pricing ~0
+t4_s0,3,serial_share_of_commit,0.983576,frac,1 - (2 copies / commit)
+t4_s0,3,commit_over_copies,60.886611,x,
+t16_s0,1,price_bytes,94345.000000,B,toJson+dump size (what sizeOf charges)
+t16_s0,1,est_copy_bytes,179862.000000,B,deep-copy estimate; json via dump size
+t16_s0,1,toJson_ms,6.294160,ms,json tree build only
+t16_s0,1,toJson_dump_ms,6.690360,ms,tree + canonical string (sizeOf)
+t16_s0,1,doc_copy_ms,0.266280,ms,whole-Document copy ctor
+t16_s0,1,sameContent_ms,13.165860,ms,2x toJson + tree compare
+t16_s0,1,commit_mean_ms,30.319697,ms,60 commits, constant label (cancel-check active)
+t16_s0,1,commit_max_ms,38.443300,ms,
+t16_s0,1,commit_total_ms,1819.181800,ms,
+t16_s0,1,states_after_commits,61.000000,count,current + undo + redo
+t16_s0,1,priced_stack_mb,5.398464,MB,(states-1) x price_bytes
+t16_s0,1,private_delta_commits_mb,40.683594,MB,heap growth over 60 commits
+t16_s0,1,unpriced_gap_mb,35.285130,MB,current + saved_ tree + allocator overhead
+t16_s0,1,undo_count,60.000000,count,60 minus steps trimmed
+t16_s0,1,undo_mean_ms,6.422168,ms,moves + sizeOf(toJson+dump) each
+t16_s0,1,undo_max_ms,9.974400,ms,
+t16_s0,1,states_after_undo,61.000000,count,
+t16_s0,1,private_after_undo_mb,41.125000,MB,
+t16_s0,1,redo_mean_ms,6.736868,ms,
+t16_s0,1,redo_max_ms,10.080800,ms,
+t16_s0,1,states_after_redo,61.000000,count,
+t16_s0,1,private_after_redo_mb,41.125000,MB,
+t16_s0,1,peak_workingset_mb,45.867188,MB,process-lifetime peak (cumulative)
+t16_s0,1,integrity_checks,10.000000,count,sameContent vs deterministic replay
+t16_s0,1,integrity_failures,0.000000,count,
+t16_s0,1,blob_intact,1.000000,bool,
+t16_s0,1,gesture_begin_ms,0.238200,ms,gestureStart_ = current_ copy
+t16_s0,1,gesture_update_mean_ms,0.228410,ms,current_ = next copy, no serialization
+t16_s0,1,gesture_end_ms,18.924400,ms,sameContent x2(+2) + sizeOf + trim
+t16_s0,1,modified_first_ms,5.637400,ms,dirty=true, 1x toJson
+t16_s0,1,modified_cached_ms,0.000000,ms,cached, no serialization
+t16_s0,1,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t16_s0,1,ceiling_stack_bytes_after_commits,849105.000000,B,vs cap
+t16_s0,1,ceiling_cap_bytes,943450.000000,B,
+t16_s0,1,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t16_s0,1,ceiling_stack_bytes_after_undo,849105.000000,B,conserved? <= cap means yes
+t16_s0,1,ceiling_respected,1.000000,bool,
+t16_s0,1,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t16_s0,1,pred_commit_no_serial_ms,0.532560,ms,2 x doc_copy; counter pricing ~0
+t16_s0,1,serial_share_of_commit,0.982435,frac,1 - (2 copies / commit)
+t16_s0,1,commit_over_copies,56.931983,x,
+t16_s0,2,price_bytes,94345.000000,B,toJson+dump size (what sizeOf charges)
+t16_s0,2,est_copy_bytes,179862.000000,B,deep-copy estimate; json via dump size
+t16_s0,2,toJson_ms,6.693680,ms,json tree build only
+t16_s0,2,toJson_dump_ms,6.836280,ms,tree + canonical string (sizeOf)
+t16_s0,2,doc_copy_ms,0.285560,ms,whole-Document copy ctor
+t16_s0,2,sameContent_ms,12.716600,ms,2x toJson + tree compare
+t16_s0,2,commit_mean_ms,30.610837,ms,60 commits, constant label (cancel-check active)
+t16_s0,2,commit_max_ms,35.922300,ms,
+t16_s0,2,commit_total_ms,1836.650200,ms,
+t16_s0,2,states_after_commits,61.000000,count,current + undo + redo
+t16_s0,2,priced_stack_mb,5.398464,MB,(states-1) x price_bytes
+t16_s0,2,private_delta_commits_mb,37.285156,MB,heap growth over 60 commits
+t16_s0,2,unpriced_gap_mb,31.886692,MB,current + saved_ tree + allocator overhead
+t16_s0,2,undo_count,60.000000,count,60 minus steps trimmed
+t16_s0,2,undo_mean_ms,6.367647,ms,moves + sizeOf(toJson+dump) each
+t16_s0,2,undo_max_ms,7.727200,ms,
+t16_s0,2,states_after_undo,61.000000,count,
+t16_s0,2,private_after_undo_mb,37.886719,MB,
+t16_s0,2,redo_mean_ms,6.434405,ms,
+t16_s0,2,redo_max_ms,8.075100,ms,
+t16_s0,2,states_after_redo,61.000000,count,
+t16_s0,2,private_after_redo_mb,37.886719,MB,
+t16_s0,2,peak_workingset_mb,52.421875,MB,process-lifetime peak (cumulative)
+t16_s0,2,integrity_checks,10.000000,count,sameContent vs deterministic replay
+t16_s0,2,integrity_failures,0.000000,count,
+t16_s0,2,blob_intact,1.000000,bool,
+t16_s0,2,gesture_begin_ms,0.146800,ms,gestureStart_ = current_ copy
+t16_s0,2,gesture_update_mean_ms,0.253410,ms,current_ = next copy, no serialization
+t16_s0,2,gesture_end_ms,18.878600,ms,sameContent x2(+2) + sizeOf + trim
+t16_s0,2,modified_first_ms,5.799700,ms,dirty=true, 1x toJson
+t16_s0,2,modified_cached_ms,0.000100,ms,cached, no serialization
+t16_s0,2,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t16_s0,2,ceiling_stack_bytes_after_commits,849105.000000,B,vs cap
+t16_s0,2,ceiling_cap_bytes,943450.000000,B,
+t16_s0,2,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t16_s0,2,ceiling_stack_bytes_after_undo,849105.000000,B,conserved? <= cap means yes
+t16_s0,2,ceiling_respected,1.000000,bool,
+t16_s0,2,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t16_s0,2,pred_commit_no_serial_ms,0.571120,ms,2 x doc_copy; counter pricing ~0
+t16_s0,2,serial_share_of_commit,0.981343,frac,1 - (2 copies / commit)
+t16_s0,2,commit_over_copies,53.597907,x,
+t16_s0,3,price_bytes,94345.000000,B,toJson+dump size (what sizeOf charges)
+t16_s0,3,est_copy_bytes,179862.000000,B,deep-copy estimate; json via dump size
+t16_s0,3,toJson_ms,5.954220,ms,json tree build only
+t16_s0,3,toJson_dump_ms,6.617060,ms,tree + canonical string (sizeOf)
+t16_s0,3,doc_copy_ms,0.338780,ms,whole-Document copy ctor
+t16_s0,3,sameContent_ms,12.096220,ms,2x toJson + tree compare
+t16_s0,3,commit_mean_ms,30.447993,ms,60 commits, constant label (cancel-check active)
+t16_s0,3,commit_max_ms,34.166100,ms,
+t16_s0,3,commit_total_ms,1826.879600,ms,
+t16_s0,3,states_after_commits,61.000000,count,current + undo + redo
+t16_s0,3,priced_stack_mb,5.398464,MB,(states-1) x price_bytes
+t16_s0,3,private_delta_commits_mb,41.468750,MB,heap growth over 60 commits
+t16_s0,3,unpriced_gap_mb,36.070286,MB,current + saved_ tree + allocator overhead
+t16_s0,3,undo_count,60.000000,count,60 minus steps trimmed
+t16_s0,3,undo_mean_ms,6.489833,ms,moves + sizeOf(toJson+dump) each
+t16_s0,3,undo_max_ms,9.418000,ms,
+t16_s0,3,states_after_undo,61.000000,count,
+t16_s0,3,private_after_undo_mb,41.843750,MB,
+t16_s0,3,redo_mean_ms,6.466655,ms,
+t16_s0,3,redo_max_ms,7.805000,ms,
+t16_s0,3,states_after_redo,61.000000,count,
+t16_s0,3,private_after_redo_mb,41.843750,MB,
+t16_s0,3,peak_workingset_mb,53.156250,MB,process-lifetime peak (cumulative)
+t16_s0,3,integrity_checks,10.000000,count,sameContent vs deterministic replay
+t16_s0,3,integrity_failures,0.000000,count,
+t16_s0,3,blob_intact,1.000000,bool,
+t16_s0,3,gesture_begin_ms,0.151800,ms,gestureStart_ = current_ copy
+t16_s0,3,gesture_update_mean_ms,0.219760,ms,current_ = next copy, no serialization
+t16_s0,3,gesture_end_ms,18.450900,ms,sameContent x2(+2) + sizeOf + trim
+t16_s0,3,modified_first_ms,5.569200,ms,dirty=true, 1x toJson
+t16_s0,3,modified_cached_ms,0.000100,ms,cached, no serialization
+t16_s0,3,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t16_s0,3,ceiling_stack_bytes_after_commits,849105.000000,B,vs cap
+t16_s0,3,ceiling_cap_bytes,943450.000000,B,
+t16_s0,3,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t16_s0,3,ceiling_stack_bytes_after_undo,849105.000000,B,conserved? <= cap means yes
+t16_s0,3,ceiling_respected,1.000000,bool,
+t16_s0,3,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t16_s0,3,pred_commit_no_serial_ms,0.677560,ms,2 x doc_copy; counter pricing ~0
+t16_s0,3,serial_share_of_commit,0.977747,frac,1 - (2 copies / commit)
+t16_s0,3,commit_over_copies,44.937708,x,
+t32_s0,1,price_bytes,188457.000000,B,toJson+dump size (what sizeOf charges)
+t32_s0,1,est_copy_bytes,359430.000000,B,deep-copy estimate; json via dump size
+t32_s0,1,toJson_ms,12.140420,ms,json tree build only
+t32_s0,1,toJson_dump_ms,13.321620,ms,tree + canonical string (sizeOf)
+t32_s0,1,doc_copy_ms,0.693520,ms,whole-Document copy ctor
+t32_s0,1,sameContent_ms,24.435500,ms,2x toJson + tree compare
+t32_s0,1,commit_mean_ms,61.837270,ms,60 commits, constant label (cancel-check active)
+t32_s0,1,commit_max_ms,87.713300,ms,
+t32_s0,1,commit_total_ms,3710.236200,ms,
+t32_s0,1,states_after_commits,61.000000,count,current + undo + redo
+t32_s0,1,priced_stack_mb,10.783596,MB,(states-1) x price_bytes
+t32_s0,1,private_delta_commits_mb,75.156250,MB,heap growth over 60 commits
+t32_s0,1,unpriced_gap_mb,64.372654,MB,current + saved_ tree + allocator overhead
+t32_s0,1,undo_count,60.000000,count,60 minus steps trimmed
+t32_s0,1,undo_mean_ms,12.797485,ms,moves + sizeOf(toJson+dump) each
+t32_s0,1,undo_max_ms,16.652400,ms,
+t32_s0,1,states_after_undo,61.000000,count,
+t32_s0,1,private_after_undo_mb,76.328125,MB,
+t32_s0,1,redo_mean_ms,12.815443,ms,
+t32_s0,1,redo_max_ms,14.809200,ms,
+t32_s0,1,states_after_redo,61.000000,count,
+t32_s0,1,private_after_redo_mb,76.328125,MB,
+t32_s0,1,peak_workingset_mb,89.601562,MB,process-lifetime peak (cumulative)
+t32_s0,1,integrity_checks,10.000000,count,sameContent vs deterministic replay
+t32_s0,1,integrity_failures,0.000000,count,
+t32_s0,1,blob_intact,1.000000,bool,
+t32_s0,1,gesture_begin_ms,0.293800,ms,gestureStart_ = current_ copy
+t32_s0,1,gesture_update_mean_ms,0.462180,ms,current_ = next copy, no serialization
+t32_s0,1,gesture_end_ms,37.367300,ms,sameContent x2(+2) + sizeOf + trim
+t32_s0,1,modified_first_ms,12.081100,ms,dirty=true, 1x toJson
+t32_s0,1,modified_cached_ms,0.000000,ms,cached, no serialization
+t32_s0,1,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t32_s0,1,ceiling_stack_bytes_after_commits,1696113.000000,B,vs cap
+t32_s0,1,ceiling_cap_bytes,1884570.000000,B,
+t32_s0,1,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t32_s0,1,ceiling_stack_bytes_after_undo,1696113.000000,B,conserved? <= cap means yes
+t32_s0,1,ceiling_respected,1.000000,bool,
+t32_s0,1,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t32_s0,1,pred_commit_no_serial_ms,1.387040,ms,2 x doc_copy; counter pricing ~0
+t32_s0,1,serial_share_of_commit,0.977570,frac,1 - (2 copies / commit)
+t32_s0,1,commit_over_copies,44.582182,x,
+t32_s0,2,price_bytes,188457.000000,B,toJson+dump size (what sizeOf charges)
+t32_s0,2,est_copy_bytes,359430.000000,B,deep-copy estimate; json via dump size
+t32_s0,2,toJson_ms,11.714960,ms,json tree build only
+t32_s0,2,toJson_dump_ms,12.592780,ms,tree + canonical string (sizeOf)
+t32_s0,2,doc_copy_ms,0.537100,ms,whole-Document copy ctor
+t32_s0,2,sameContent_ms,24.538220,ms,2x toJson + tree compare
+t32_s0,2,commit_mean_ms,61.432933,ms,60 commits, constant label (cancel-check active)
+t32_s0,2,commit_max_ms,75.685800,ms,
+t32_s0,2,commit_total_ms,3685.976000,ms,
+t32_s0,2,states_after_commits,61.000000,count,current + undo + redo
+t32_s0,2,priced_stack_mb,10.783596,MB,(states-1) x price_bytes
+t32_s0,2,private_delta_commits_mb,73.710938,MB,heap growth over 60 commits
+t32_s0,2,unpriced_gap_mb,62.927341,MB,current + saved_ tree + allocator overhead
+t32_s0,2,undo_count,60.000000,count,60 minus steps trimmed
+t32_s0,2,undo_mean_ms,12.900300,ms,moves + sizeOf(toJson+dump) each
+t32_s0,2,undo_max_ms,18.674000,ms,
+t32_s0,2,states_after_undo,61.000000,count,
+t32_s0,2,private_after_undo_mb,75.027344,MB,
+t32_s0,2,redo_mean_ms,15.630380,ms,
+t32_s0,2,redo_max_ms,24.906900,ms,
+t32_s0,2,states_after_redo,61.000000,count,
+t32_s0,2,private_after_redo_mb,75.027344,MB,
+t32_s0,2,peak_workingset_mb,102.984375,MB,process-lifetime peak (cumulative)
+t32_s0,2,integrity_checks,10.000000,count,sameContent vs deterministic replay
+t32_s0,2,integrity_failures,0.000000,count,
+t32_s0,2,blob_intact,1.000000,bool,
+t32_s0,2,gesture_begin_ms,0.381100,ms,gestureStart_ = current_ copy
+t32_s0,2,gesture_update_mean_ms,0.483650,ms,current_ = next copy, no serialization
+t32_s0,2,gesture_end_ms,44.914400,ms,sameContent x2(+2) + sizeOf + trim
+t32_s0,2,modified_first_ms,12.135000,ms,dirty=true, 1x toJson
+t32_s0,2,modified_cached_ms,0.000000,ms,cached, no serialization
+t32_s0,2,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t32_s0,2,ceiling_stack_bytes_after_commits,1696113.000000,B,vs cap
+t32_s0,2,ceiling_cap_bytes,1884570.000000,B,
+t32_s0,2,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t32_s0,2,ceiling_stack_bytes_after_undo,1696113.000000,B,conserved? <= cap means yes
+t32_s0,2,ceiling_respected,1.000000,bool,
+t32_s0,2,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t32_s0,2,pred_commit_no_serial_ms,1.074200,ms,2 x doc_copy; counter pricing ~0
+t32_s0,2,serial_share_of_commit,0.982514,frac,1 - (2 copies / commit)
+t32_s0,2,commit_over_copies,57.189474,x,
+t32_s0,3,price_bytes,188457.000000,B,toJson+dump size (what sizeOf charges)
+t32_s0,3,est_copy_bytes,359430.000000,B,deep-copy estimate; json via dump size
+t32_s0,3,toJson_ms,11.674480,ms,json tree build only
+t32_s0,3,toJson_dump_ms,13.178060,ms,tree + canonical string (sizeOf)
+t32_s0,3,doc_copy_ms,0.562320,ms,whole-Document copy ctor
+t32_s0,3,sameContent_ms,23.818280,ms,2x toJson + tree compare
+t32_s0,3,commit_mean_ms,62.452487,ms,60 commits, constant label (cancel-check active)
+t32_s0,3,commit_max_ms,78.274200,ms,
+t32_s0,3,commit_total_ms,3747.149200,ms,
+t32_s0,3,states_after_commits,61.000000,count,current + undo + redo
+t32_s0,3,priced_stack_mb,10.783596,MB,(states-1) x price_bytes
+t32_s0,3,private_delta_commits_mb,72.039062,MB,heap growth over 60 commits
+t32_s0,3,unpriced_gap_mb,61.255466,MB,current + saved_ tree + allocator overhead
+t32_s0,3,undo_count,60.000000,count,60 minus steps trimmed
+t32_s0,3,undo_mean_ms,12.886780,ms,moves + sizeOf(toJson+dump) each
+t32_s0,3,undo_max_ms,16.149400,ms,
+t32_s0,3,states_after_undo,61.000000,count,
+t32_s0,3,private_after_undo_mb,73.195312,MB,
+t32_s0,3,redo_mean_ms,12.921915,ms,
+t32_s0,3,redo_max_ms,18.241600,ms,
+t32_s0,3,states_after_redo,61.000000,count,
+t32_s0,3,private_after_redo_mb,73.195312,MB,
+t32_s0,3,peak_workingset_mb,102.984375,MB,process-lifetime peak (cumulative)
+t32_s0,3,integrity_checks,10.000000,count,sameContent vs deterministic replay
+t32_s0,3,integrity_failures,0.000000,count,
+t32_s0,3,blob_intact,1.000000,bool,
+t32_s0,3,gesture_begin_ms,0.294700,ms,gestureStart_ = current_ copy
+t32_s0,3,gesture_update_mean_ms,0.511560,ms,current_ = next copy, no serialization
+t32_s0,3,gesture_end_ms,38.222700,ms,sameContent x2(+2) + sizeOf + trim
+t32_s0,3,modified_first_ms,12.551300,ms,dirty=true, 1x toJson
+t32_s0,3,modified_cached_ms,0.000000,ms,cached, no serialization
+t32_s0,3,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t32_s0,3,ceiling_stack_bytes_after_commits,1696113.000000,B,vs cap
+t32_s0,3,ceiling_cap_bytes,1884570.000000,B,
+t32_s0,3,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t32_s0,3,ceiling_stack_bytes_after_undo,1696113.000000,B,conserved? <= cap means yes
+t32_s0,3,ceiling_respected,1.000000,bool,
+t32_s0,3,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t32_s0,3,pred_commit_no_serial_ms,1.124640,ms,2 x doc_copy; counter pricing ~0
+t32_s0,3,serial_share_of_commit,0.981992,frac,1 - (2 copies / commit)
+t32_s0,3,commit_over_copies,55.531091,x,
+t64_s0,1,price_bytes,376681.000000,B,toJson+dump size (what sizeOf charges)
+t64_s0,1,est_copy_bytes,718566.000000,B,deep-copy estimate; json via dump size
+t64_s0,1,toJson_ms,24.091140,ms,json tree build only
+t64_s0,1,toJson_dump_ms,25.953680,ms,tree + canonical string (sizeOf)
+t64_s0,1,doc_copy_ms,1.390220,ms,whole-Document copy ctor
+t64_s0,1,sameContent_ms,48.906660,ms,2x toJson + tree compare
+t64_s0,1,commit_mean_ms,130.197865,ms,60 commits, constant label (cancel-check active)
+t64_s0,1,commit_max_ms,196.295000,ms,
+t64_s0,1,commit_total_ms,7811.871900,ms,
+t64_s0,1,states_after_commits,61.000000,count,current + undo + redo
+t64_s0,1,priced_stack_mb,21.553860,MB,(states-1) x price_bytes
+t64_s0,1,private_delta_commits_mb,150.296875,MB,heap growth over 60 commits
+t64_s0,1,unpriced_gap_mb,128.743015,MB,current + saved_ tree + allocator overhead
+t64_s0,1,undo_count,60.000000,count,60 minus steps trimmed
+t64_s0,1,undo_mean_ms,25.751307,ms,moves + sizeOf(toJson+dump) each
+t64_s0,1,undo_max_ms,29.986900,ms,
+t64_s0,1,states_after_undo,61.000000,count,
+t64_s0,1,private_after_undo_mb,152.773438,MB,
+t64_s0,1,redo_mean_ms,27.127797,ms,
+t64_s0,1,redo_max_ms,47.002100,ms,
+t64_s0,1,states_after_redo,61.000000,count,
+t64_s0,1,private_after_redo_mb,152.773438,MB,
+t64_s0,1,peak_workingset_mb,174.476562,MB,process-lifetime peak (cumulative)
+t64_s0,1,integrity_checks,10.000000,count,sameContent vs deterministic replay
+t64_s0,1,integrity_failures,0.000000,count,
+t64_s0,1,blob_intact,1.000000,bool,
+t64_s0,1,gesture_begin_ms,0.640800,ms,gestureStart_ = current_ copy
+t64_s0,1,gesture_update_mean_ms,1.461230,ms,current_ = next copy, no serialization
+t64_s0,1,gesture_end_ms,127.580500,ms,sameContent x2(+2) + sizeOf + trim
+t64_s0,1,modified_first_ms,37.682500,ms,dirty=true, 1x toJson
+t64_s0,1,modified_cached_ms,0.000100,ms,cached, no serialization
+t64_s0,1,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t64_s0,1,ceiling_stack_bytes_after_commits,3390129.000000,B,vs cap
+t64_s0,1,ceiling_cap_bytes,3766810.000000,B,
+t64_s0,1,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t64_s0,1,ceiling_stack_bytes_after_undo,3390129.000000,B,conserved? <= cap means yes
+t64_s0,1,ceiling_respected,1.000000,bool,
+t64_s0,1,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t64_s0,1,pred_commit_no_serial_ms,2.780440,ms,2 x doc_copy; counter pricing ~0
+t64_s0,1,serial_share_of_commit,0.978645,frac,1 - (2 copies / commit)
+t64_s0,1,commit_over_copies,46.826353,x,
+t64_s0,2,price_bytes,376681.000000,B,toJson+dump size (what sizeOf charges)
+t64_s0,2,est_copy_bytes,718566.000000,B,deep-copy estimate; json via dump size
+t64_s0,2,toJson_ms,27.058240,ms,json tree build only
+t64_s0,2,toJson_dump_ms,25.990780,ms,tree + canonical string (sizeOf)
+t64_s0,2,doc_copy_ms,1.549380,ms,whole-Document copy ctor
+t64_s0,2,sameContent_ms,53.026760,ms,2x toJson + tree compare
+t64_s0,2,commit_mean_ms,131.890687,ms,60 commits, constant label (cancel-check active)
+t64_s0,2,commit_max_ms,205.974900,ms,
+t64_s0,2,commit_total_ms,7913.441200,ms,
+t64_s0,2,states_after_commits,61.000000,count,current + undo + redo
+t64_s0,2,priced_stack_mb,21.553860,MB,(states-1) x price_bytes
+t64_s0,2,private_delta_commits_mb,151.851562,MB,heap growth over 60 commits
+t64_s0,2,unpriced_gap_mb,130.297703,MB,current + saved_ tree + allocator overhead
+t64_s0,2,undo_count,60.000000,count,60 minus steps trimmed
+t64_s0,2,undo_mean_ms,26.305740,ms,moves + sizeOf(toJson+dump) each
+t64_s0,2,undo_max_ms,35.374800,ms,
+t64_s0,2,states_after_undo,61.000000,count,
+t64_s0,2,private_after_undo_mb,154.187500,MB,
+t64_s0,2,redo_mean_ms,30.377505,ms,
+t64_s0,2,redo_max_ms,47.442600,ms,
+t64_s0,2,states_after_redo,61.000000,count,
+t64_s0,2,private_after_redo_mb,154.187500,MB,
+t64_s0,2,peak_workingset_mb,201.433594,MB,process-lifetime peak (cumulative)
+t64_s0,2,integrity_checks,10.000000,count,sameContent vs deterministic replay
+t64_s0,2,integrity_failures,0.000000,count,
+t64_s0,2,blob_intact,1.000000,bool,
+t64_s0,2,gesture_begin_ms,0.711600,ms,gestureStart_ = current_ copy
+t64_s0,2,gesture_update_mean_ms,1.068780,ms,current_ = next copy, no serialization
+t64_s0,2,gesture_end_ms,76.144700,ms,sameContent x2(+2) + sizeOf + trim
+t64_s0,2,modified_first_ms,24.548400,ms,dirty=true, 1x toJson
+t64_s0,2,modified_cached_ms,0.000000,ms,cached, no serialization
+t64_s0,2,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t64_s0,2,ceiling_stack_bytes_after_commits,3390129.000000,B,vs cap
+t64_s0,2,ceiling_cap_bytes,3766810.000000,B,
+t64_s0,2,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t64_s0,2,ceiling_stack_bytes_after_undo,3390129.000000,B,conserved? <= cap means yes
+t64_s0,2,ceiling_respected,1.000000,bool,
+t64_s0,2,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t64_s0,2,pred_commit_no_serial_ms,3.098760,ms,2 x doc_copy; counter pricing ~0
+t64_s0,2,serial_share_of_commit,0.976505,frac,1 - (2 copies / commit)
+t64_s0,2,commit_over_copies,42.562408,x,
+t64_s0,3,price_bytes,376681.000000,B,toJson+dump size (what sizeOf charges)
+t64_s0,3,est_copy_bytes,718566.000000,B,deep-copy estimate; json via dump size
+t64_s0,3,toJson_ms,23.916260,ms,json tree build only
+t64_s0,3,toJson_dump_ms,24.851980,ms,tree + canonical string (sizeOf)
+t64_s0,3,doc_copy_ms,1.159900,ms,whole-Document copy ctor
+t64_s0,3,sameContent_ms,48.393920,ms,2x toJson + tree compare
+t64_s0,3,commit_mean_ms,129.792738,ms,60 commits, constant label (cancel-check active)
+t64_s0,3,commit_max_ms,172.570900,ms,
+t64_s0,3,commit_total_ms,7787.564300,ms,
+t64_s0,3,states_after_commits,61.000000,count,current + undo + redo
+t64_s0,3,priced_stack_mb,21.553860,MB,(states-1) x price_bytes
+t64_s0,3,private_delta_commits_mb,148.457031,MB,heap growth over 60 commits
+t64_s0,3,unpriced_gap_mb,126.903172,MB,current + saved_ tree + allocator overhead
+t64_s0,3,undo_count,60.000000,count,60 minus steps trimmed
+t64_s0,3,undo_mean_ms,28.892205,ms,moves + sizeOf(toJson+dump) each
+t64_s0,3,undo_max_ms,45.536000,ms,
+t64_s0,3,states_after_undo,61.000000,count,
+t64_s0,3,private_after_undo_mb,150.781250,MB,
+t64_s0,3,redo_mean_ms,26.098143,ms,
+t64_s0,3,redo_max_ms,35.078900,ms,
+t64_s0,3,states_after_redo,61.000000,count,
+t64_s0,3,private_after_redo_mb,150.781250,MB,
+t64_s0,3,peak_workingset_mb,202.156250,MB,process-lifetime peak (cumulative)
+t64_s0,3,integrity_checks,10.000000,count,sameContent vs deterministic replay
+t64_s0,3,integrity_failures,0.000000,count,
+t64_s0,3,blob_intact,1.000000,bool,
+t64_s0,3,gesture_begin_ms,0.696400,ms,gestureStart_ = current_ copy
+t64_s0,3,gesture_update_mean_ms,0.981080,ms,current_ = next copy, no serialization
+t64_s0,3,gesture_end_ms,76.734900,ms,sameContent x2(+2) + sizeOf + trim
+t64_s0,3,modified_first_ms,23.927000,ms,dirty=true, 1x toJson
+t64_s0,3,modified_cached_ms,0.000000,ms,cached, no serialization
+t64_s0,3,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t64_s0,3,ceiling_stack_bytes_after_commits,3390129.000000,B,vs cap
+t64_s0,3,ceiling_cap_bytes,3766810.000000,B,
+t64_s0,3,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t64_s0,3,ceiling_stack_bytes_after_undo,3390129.000000,B,conserved? <= cap means yes
+t64_s0,3,ceiling_respected,1.000000,bool,
+t64_s0,3,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t64_s0,3,pred_commit_no_serial_ms,2.319800,ms,2 x doc_copy; counter pricing ~0
+t64_s0,3,serial_share_of_commit,0.982127,frac,1 - (2 copies / commit)
+t64_s0,3,commit_over_copies,55.949969,x,
+t4_s318128,1,price_bytes,1296285.000000,B,toJson+dump size (what sizeOf charges)
+t4_s318128,1,est_copy_bytes,1317710.000000,B,deep-copy estimate; json via dump size
+t4_s318128,1,toJson_ms,2.817680,ms,json tree build only
+t4_s318128,1,toJson_dump_ms,11.537700,ms,tree + canonical string (sizeOf)
+t4_s318128,1,doc_copy_ms,0.154080,ms,whole-Document copy ctor
+t4_s318128,1,sameContent_ms,4.979460,ms,2x toJson + tree compare
+t4_s318128,1,commit_mean_ms,16.408357,ms,60 commits, constant label (cancel-check active)
+t4_s318128,1,commit_max_ms,19.373700,ms,
+t4_s318128,1,commit_total_ms,984.501400,ms,
+t4_s318128,1,states_after_commits,52.000000,count,current + undo + redo
+t4_s318128,1,priced_stack_mb,63.047919,MB,(states-1) x price_bytes
+t4_s318128,1,private_delta_commits_mb,71.707031,MB,heap growth over 60 commits
+t4_s318128,1,unpriced_gap_mb,8.659112,MB,current + saved_ tree + allocator overhead
+t4_s318128,1,undo_count,51.000000,count,60 minus steps trimmed
+t4_s318128,1,undo_mean_ms,9.924837,ms,moves + sizeOf(toJson+dump) each
+t4_s318128,1,undo_max_ms,13.289100,ms,
+t4_s318128,1,states_after_undo,52.000000,count,
+t4_s318128,1,private_after_undo_mb,71.707031,MB,
+t4_s318128,1,redo_mean_ms,10.276706,ms,
+t4_s318128,1,redo_max_ms,15.014500,ms,
+t4_s318128,1,states_after_redo,52.000000,count,
+t4_s318128,1,private_after_redo_mb,71.707031,MB,
+t4_s318128,1,peak_workingset_mb,202.300781,MB,process-lifetime peak (cumulative)
+t4_s318128,1,integrity_checks,8.000000,count,sameContent vs deterministic replay
+t4_s318128,1,integrity_failures,0.000000,count,
+t4_s318128,1,blob_intact,1.000000,bool,
+t4_s318128,1,gesture_begin_ms,0.065400,ms,gestureStart_ = current_ copy
+t4_s318128,1,gesture_update_mean_ms,0.089910,ms,current_ = next copy, no serialization
+t4_s318128,1,gesture_end_ms,12.657400,ms,sameContent x2(+2) + sizeOf + trim
+t4_s318128,1,modified_first_ms,1.839500,ms,dirty=true, 1x toJson
+t4_s318128,1,modified_cached_ms,0.000100,ms,cached, no serialization
+t4_s318128,1,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t4_s318128,1,ceiling_stack_bytes_after_commits,11666565.000000,B,vs cap
+t4_s318128,1,ceiling_cap_bytes,12962850.000000,B,
+t4_s318128,1,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t4_s318128,1,ceiling_stack_bytes_after_undo,11666565.000000,B,conserved? <= cap means yes
+t4_s318128,1,ceiling_respected,1.000000,bool,
+t4_s318128,1,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t4_s318128,1,pred_commit_no_serial_ms,0.308160,ms,2 x doc_copy; counter pricing ~0
+t4_s318128,1,serial_share_of_commit,0.981219,frac,1 - (2 copies / commit)
+t4_s318128,1,commit_over_copies,53.246225,x,
+t4_s318128,2,price_bytes,1296285.000000,B,toJson+dump size (what sizeOf charges)
+t4_s318128,2,est_copy_bytes,1317710.000000,B,deep-copy estimate; json via dump size
+t4_s318128,2,toJson_ms,1.745040,ms,json tree build only
+t4_s318128,2,toJson_dump_ms,8.899500,ms,tree + canonical string (sizeOf)
+t4_s318128,2,doc_copy_ms,0.106280,ms,whole-Document copy ctor
+t4_s318128,2,sameContent_ms,3.514660,ms,2x toJson + tree compare
+t4_s318128,2,commit_mean_ms,16.236492,ms,60 commits, constant label (cancel-check active)
+t4_s318128,2,commit_max_ms,19.986800,ms,
+t4_s318128,2,commit_total_ms,974.189500,ms,
+t4_s318128,2,states_after_commits,52.000000,count,current + undo + redo
+t4_s318128,2,priced_stack_mb,63.047919,MB,(states-1) x price_bytes
+t4_s318128,2,private_delta_commits_mb,70.996094,MB,heap growth over 60 commits
+t4_s318128,2,unpriced_gap_mb,7.948174,MB,current + saved_ tree + allocator overhead
+t4_s318128,2,undo_count,51.000000,count,60 minus steps trimmed
+t4_s318128,2,undo_mean_ms,9.058378,ms,moves + sizeOf(toJson+dump) each
+t4_s318128,2,undo_max_ms,10.225000,ms,
+t4_s318128,2,states_after_undo,52.000000,count,
+t4_s318128,2,private_after_undo_mb,71.031250,MB,
+t4_s318128,2,redo_mean_ms,8.998167,ms,
+t4_s318128,2,redo_max_ms,9.768900,ms,
+t4_s318128,2,states_after_redo,52.000000,count,
+t4_s318128,2,private_after_redo_mb,71.031250,MB,
+t4_s318128,2,peak_workingset_mb,202.300781,MB,process-lifetime peak (cumulative)
+t4_s318128,2,integrity_checks,8.000000,count,sameContent vs deterministic replay
+t4_s318128,2,integrity_failures,0.000000,count,
+t4_s318128,2,blob_intact,1.000000,bool,
+t4_s318128,2,gesture_begin_ms,0.065500,ms,gestureStart_ = current_ copy
+t4_s318128,2,gesture_update_mean_ms,0.096810,ms,current_ = next copy, no serialization
+t4_s318128,2,gesture_end_ms,13.556400,ms,sameContent x2(+2) + sizeOf + trim
+t4_s318128,2,modified_first_ms,2.222600,ms,dirty=true, 1x toJson
+t4_s318128,2,modified_cached_ms,0.000000,ms,cached, no serialization
+t4_s318128,2,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t4_s318128,2,ceiling_stack_bytes_after_commits,11666565.000000,B,vs cap
+t4_s318128,2,ceiling_cap_bytes,12962850.000000,B,
+t4_s318128,2,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t4_s318128,2,ceiling_stack_bytes_after_undo,11666565.000000,B,conserved? <= cap means yes
+t4_s318128,2,ceiling_respected,1.000000,bool,
+t4_s318128,2,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t4_s318128,2,pred_commit_no_serial_ms,0.212560,ms,2 x doc_copy; counter pricing ~0
+t4_s318128,2,serial_share_of_commit,0.986909,frac,1 - (2 copies / commit)
+t4_s318128,2,commit_over_copies,76.385452,x,
+t4_s318128,3,price_bytes,1296285.000000,B,toJson+dump size (what sizeOf charges)
+t4_s318128,3,est_copy_bytes,1317710.000000,B,deep-copy estimate; json via dump size
+t4_s318128,3,toJson_ms,1.656340,ms,json tree build only
+t4_s318128,3,toJson_dump_ms,9.251260,ms,tree + canonical string (sizeOf)
+t4_s318128,3,doc_copy_ms,0.110280,ms,whole-Document copy ctor
+t4_s318128,3,sameContent_ms,3.572140,ms,2x toJson + tree compare
+t4_s318128,3,commit_mean_ms,16.013705,ms,60 commits, constant label (cancel-check active)
+t4_s318128,3,commit_max_ms,21.353100,ms,
+t4_s318128,3,commit_total_ms,960.822300,ms,
+t4_s318128,3,states_after_commits,52.000000,count,current + undo + redo
+t4_s318128,3,priced_stack_mb,63.047919,MB,(states-1) x price_bytes
+t4_s318128,3,private_delta_commits_mb,71.746094,MB,heap growth over 60 commits
+t4_s318128,3,unpriced_gap_mb,8.698174,MB,current + saved_ tree + allocator overhead
+t4_s318128,3,undo_count,51.000000,count,60 minus steps trimmed
+t4_s318128,3,undo_mean_ms,8.982259,ms,moves + sizeOf(toJson+dump) each
+t4_s318128,3,undo_max_ms,9.517100,ms,
+t4_s318128,3,states_after_undo,52.000000,count,
+t4_s318128,3,private_after_undo_mb,71.746094,MB,
+t4_s318128,3,redo_mean_ms,9.047702,ms,
+t4_s318128,3,redo_max_ms,10.846600,ms,
+t4_s318128,3,states_after_redo,52.000000,count,
+t4_s318128,3,private_after_redo_mb,71.785156,MB,
+t4_s318128,3,peak_workingset_mb,202.300781,MB,process-lifetime peak (cumulative)
+t4_s318128,3,integrity_checks,8.000000,count,sameContent vs deterministic replay
+t4_s318128,3,integrity_failures,0.000000,count,
+t4_s318128,3,blob_intact,1.000000,bool,
+t4_s318128,3,gesture_begin_ms,0.064500,ms,gestureStart_ = current_ copy
+t4_s318128,3,gesture_update_mean_ms,0.083750,ms,current_ = next copy, no serialization
+t4_s318128,3,gesture_end_ms,12.799700,ms,sameContent x2(+2) + sizeOf + trim
+t4_s318128,3,modified_first_ms,1.747200,ms,dirty=true, 1x toJson
+t4_s318128,3,modified_cached_ms,0.000000,ms,cached, no serialization
+t4_s318128,3,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t4_s318128,3,ceiling_stack_bytes_after_commits,11666565.000000,B,vs cap
+t4_s318128,3,ceiling_cap_bytes,12962850.000000,B,
+t4_s318128,3,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t4_s318128,3,ceiling_stack_bytes_after_undo,11666565.000000,B,conserved? <= cap means yes
+t4_s318128,3,ceiling_respected,1.000000,bool,
+t4_s318128,3,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t4_s318128,3,pred_commit_no_serial_ms,0.220560,ms,2 x doc_copy; counter pricing ~0
+t4_s318128,3,serial_share_of_commit,0.986227,frac,1 - (2 copies / commit)
+t4_s318128,3,commit_over_copies,72.604756,x,
+t16_s318128,1,price_bytes,5184393.000000,B,toJson+dump size (what sizeOf charges)
+t16_s318128,1,est_copy_bytes,5269910.000000,B,deep-copy estimate; json via dump size
+t16_s318128,1,toJson_ms,7.088540,ms,json tree build only
+t16_s318128,1,toJson_dump_ms,36.841680,ms,tree + canonical string (sizeOf)
+t16_s318128,1,doc_copy_ms,0.671720,ms,whole-Document copy ctor
+t16_s318128,1,sameContent_ms,14.407620,ms,2x toJson + tree compare
+t16_s318128,1,commit_mean_ms,72.551043,ms,60 commits, constant label (cancel-check active)
+t16_s318128,1,commit_max_ms,79.730900,ms,
+t16_s318128,1,commit_total_ms,4353.062600,ms,
+t16_s318128,1,states_after_commits,51.000000,count,current + undo + redo
+t16_s318128,1,priced_stack_mb,247.211123,MB,(states-1) x price_bytes
+t16_s318128,1,private_delta_commits_mb,285.992188,MB,heap growth over 60 commits
+t16_s318128,1,unpriced_gap_mb,38.781065,MB,current + saved_ tree + allocator overhead
+t16_s318128,1,undo_count,50.000000,count,60 minus steps trimmed
+t16_s318128,1,undo_mean_ms,37.558232,ms,moves + sizeOf(toJson+dump) each
+t16_s318128,1,undo_max_ms,41.755100,ms,
+t16_s318128,1,states_after_undo,51.000000,count,
+t16_s318128,1,private_after_undo_mb,282.562500,MB,
+t16_s318128,1,redo_mean_ms,37.295174,ms,
+t16_s318128,1,redo_max_ms,43.035600,ms,
+t16_s318128,1,states_after_redo,51.000000,count,
+t16_s318128,1,private_after_redo_mb,285.613281,MB,
+t16_s318128,1,peak_workingset_mb,343.652344,MB,process-lifetime peak (cumulative)
+t16_s318128,1,integrity_checks,8.000000,count,sameContent vs deterministic replay
+t16_s318128,1,integrity_failures,0.000000,count,
+t16_s318128,1,blob_intact,1.000000,bool,
+t16_s318128,1,gesture_begin_ms,0.292700,ms,gestureStart_ = current_ copy
+t16_s318128,1,gesture_update_mean_ms,0.349280,ms,current_ = next copy, no serialization
+t16_s318128,1,gesture_end_ms,52.696500,ms,sameContent x2(+2) + sizeOf + trim
+t16_s318128,1,modified_first_ms,8.862400,ms,dirty=true, 1x toJson
+t16_s318128,1,modified_cached_ms,0.000000,ms,cached, no serialization
+t16_s318128,1,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t16_s318128,1,ceiling_stack_bytes_after_commits,46659537.000000,B,vs cap
+t16_s318128,1,ceiling_cap_bytes,51843930.000000,B,
+t16_s318128,1,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t16_s318128,1,ceiling_stack_bytes_after_undo,46659537.000000,B,conserved? <= cap means yes
+t16_s318128,1,ceiling_respected,1.000000,bool,
+t16_s318128,1,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t16_s318128,1,pred_commit_no_serial_ms,1.343440,ms,2 x doc_copy; counter pricing ~0
+t16_s318128,1,serial_share_of_commit,0.981483,frac,1 - (2 copies / commit)
+t16_s318128,1,commit_over_copies,54.003933,x,
+t16_s318128,2,price_bytes,5184393.000000,B,toJson+dump size (what sizeOf charges)
+t16_s318128,2,est_copy_bytes,5269910.000000,B,deep-copy estimate; json via dump size
+t16_s318128,2,toJson_ms,7.611880,ms,json tree build only
+t16_s318128,2,toJson_dump_ms,36.782660,ms,tree + canonical string (sizeOf)
+t16_s318128,2,doc_copy_ms,0.724820,ms,whole-Document copy ctor
+t16_s318128,2,sameContent_ms,14.656820,ms,2x toJson + tree compare
+t16_s318128,2,commit_mean_ms,70.623885,ms,60 commits, constant label (cancel-check active)
+t16_s318128,2,commit_max_ms,79.995900,ms,
+t16_s318128,2,commit_total_ms,4237.433100,ms,
+t16_s318128,2,states_after_commits,51.000000,count,current + undo + redo
+t16_s318128,2,priced_stack_mb,247.211123,MB,(states-1) x price_bytes
+t16_s318128,2,private_delta_commits_mb,281.710938,MB,heap growth over 60 commits
+t16_s318128,2,unpriced_gap_mb,34.499815,MB,current + saved_ tree + allocator overhead
+t16_s318128,2,undo_count,50.000000,count,60 minus steps trimmed
+t16_s318128,2,undo_mean_ms,37.303820,ms,moves + sizeOf(toJson+dump) each
+t16_s318128,2,undo_max_ms,45.130300,ms,
+t16_s318128,2,states_after_undo,51.000000,count,
+t16_s318128,2,private_after_undo_mb,277.433594,MB,
+t16_s318128,2,redo_mean_ms,36.587574,ms,
+t16_s318128,2,redo_max_ms,41.127400,ms,
+t16_s318128,2,states_after_redo,51.000000,count,
+t16_s318128,2,private_after_redo_mb,278.050781,MB,
+t16_s318128,2,peak_workingset_mb,405.492188,MB,process-lifetime peak (cumulative)
+t16_s318128,2,integrity_checks,8.000000,count,sameContent vs deterministic replay
+t16_s318128,2,integrity_failures,0.000000,count,
+t16_s318128,2,blob_intact,1.000000,bool,
+t16_s318128,2,gesture_begin_ms,0.290500,ms,gestureStart_ = current_ copy
+t16_s318128,2,gesture_update_mean_ms,0.401420,ms,current_ = next copy, no serialization
+t16_s318128,2,gesture_end_ms,52.696700,ms,sameContent x2(+2) + sizeOf + trim
+t16_s318128,2,modified_first_ms,8.359700,ms,dirty=true, 1x toJson
+t16_s318128,2,modified_cached_ms,0.000000,ms,cached, no serialization
+t16_s318128,2,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t16_s318128,2,ceiling_stack_bytes_after_commits,46659537.000000,B,vs cap
+t16_s318128,2,ceiling_cap_bytes,51843930.000000,B,
+t16_s318128,2,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t16_s318128,2,ceiling_stack_bytes_after_undo,46659537.000000,B,conserved? <= cap means yes
+t16_s318128,2,ceiling_respected,1.000000,bool,
+t16_s318128,2,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t16_s318128,2,pred_commit_no_serial_ms,1.449640,ms,2 x doc_copy; counter pricing ~0
+t16_s318128,2,serial_share_of_commit,0.979474,frac,1 - (2 copies / commit)
+t16_s318128,2,commit_over_copies,48.718223,x,
+t16_s318128,3,price_bytes,5184393.000000,B,toJson+dump size (what sizeOf charges)
+t16_s318128,3,est_copy_bytes,5269910.000000,B,deep-copy estimate; json via dump size
+t16_s318128,3,toJson_ms,6.989820,ms,json tree build only
+t16_s318128,3,toJson_dump_ms,35.779900,ms,tree + canonical string (sizeOf)
+t16_s318128,3,doc_copy_ms,0.579700,ms,whole-Document copy ctor
+t16_s318128,3,sameContent_ms,14.003040,ms,2x toJson + tree compare
+t16_s318128,3,commit_mean_ms,69.452843,ms,60 commits, constant label (cancel-check active)
+t16_s318128,3,commit_max_ms,79.643200,ms,
+t16_s318128,3,commit_total_ms,4167.170600,ms,
+t16_s318128,3,states_after_commits,51.000000,count,current + undo + redo
+t16_s318128,3,priced_stack_mb,247.211123,MB,(states-1) x price_bytes
+t16_s318128,3,private_delta_commits_mb,279.726562,MB,heap growth over 60 commits
+t16_s318128,3,unpriced_gap_mb,32.515440,MB,current + saved_ tree + allocator overhead
+t16_s318128,3,undo_count,50.000000,count,60 minus steps trimmed
+t16_s318128,3,undo_mean_ms,36.405900,ms,moves + sizeOf(toJson+dump) each
+t16_s318128,3,undo_max_ms,41.265600,ms,
+t16_s318128,3,states_after_undo,51.000000,count,
+t16_s318128,3,private_after_undo_mb,276.207031,MB,
+t16_s318128,3,redo_mean_ms,36.253140,ms,
+t16_s318128,3,redo_max_ms,39.883200,ms,
+t16_s318128,3,states_after_redo,51.000000,count,
+t16_s318128,3,private_after_redo_mb,276.375000,MB,
+t16_s318128,3,peak_workingset_mb,405.492188,MB,process-lifetime peak (cumulative)
+t16_s318128,3,integrity_checks,8.000000,count,sameContent vs deterministic replay
+t16_s318128,3,integrity_failures,0.000000,count,
+t16_s318128,3,blob_intact,1.000000,bool,
+t16_s318128,3,gesture_begin_ms,0.274200,ms,gestureStart_ = current_ copy
+t16_s318128,3,gesture_update_mean_ms,0.354480,ms,current_ = next copy, no serialization
+t16_s318128,3,gesture_end_ms,52.409100,ms,sameContent x2(+2) + sizeOf + trim
+t16_s318128,3,modified_first_ms,8.066500,ms,dirty=true, 1x toJson
+t16_s318128,3,modified_cached_ms,0.000000,ms,cached, no serialization
+t16_s318128,3,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t16_s318128,3,ceiling_stack_bytes_after_commits,46659537.000000,B,vs cap
+t16_s318128,3,ceiling_cap_bytes,51843930.000000,B,
+t16_s318128,3,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t16_s318128,3,ceiling_stack_bytes_after_undo,46659537.000000,B,conserved? <= cap means yes
+t16_s318128,3,ceiling_respected,1.000000,bool,
+t16_s318128,3,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t16_s318128,3,pred_commit_no_serial_ms,1.159400,ms,2 x doc_copy; counter pricing ~0
+t16_s318128,3,serial_share_of_commit,0.983307,frac,1 - (2 copies / commit)
+t16_s318128,3,commit_over_copies,59.904126,x,
+t32_s65536,1,price_bytes,2285609.000000,B,toJson+dump size (what sizeOf charges)
+t32_s65536,1,est_copy_bytes,2456582.000000,B,deep-copy estimate; json via dump size
+t32_s65536,1,toJson_ms,19.564800,ms,json tree build only
+t32_s65536,1,toJson_dump_ms,34.068520,ms,tree + canonical string (sizeOf)
+t32_s65536,1,doc_copy_ms,1.302240,ms,whole-Document copy ctor
+t32_s65536,1,sameContent_ms,37.770020,ms,2x toJson + tree compare
+t32_s65536,1,commit_mean_ms,79.198800,ms,60 commits, constant label (cancel-check active)
+t32_s65536,1,commit_max_ms,97.449000,ms,
+t32_s65536,1,commit_total_ms,4751.928000,ms,
+t32_s65536,1,states_after_commits,51.000000,count,current + undo + redo
+t32_s65536,1,priced_stack_mb,108.986330,MB,(states-1) x price_bytes
+t32_s65536,1,private_delta_commits_mb,174.136719,MB,heap growth over 60 commits
+t32_s65536,1,unpriced_gap_mb,65.150389,MB,current + saved_ tree + allocator overhead
+t32_s65536,1,undo_count,50.000000,count,60 minus steps trimmed
+t32_s65536,1,undo_mean_ms,25.676088,ms,moves + sizeOf(toJson+dump) each
+t32_s65536,1,undo_max_ms,27.298600,ms,
+t32_s65536,1,states_after_undo,51.000000,count,
+t32_s65536,1,private_after_undo_mb,174.136719,MB,
+t32_s65536,1,redo_mean_ms,25.840144,ms,
+t32_s65536,1,redo_max_ms,28.647000,ms,
+t32_s65536,1,states_after_redo,51.000000,count,
+t32_s65536,1,private_after_redo_mb,174.136719,MB,
+t32_s65536,1,peak_workingset_mb,405.492188,MB,process-lifetime peak (cumulative)
+t32_s65536,1,integrity_checks,8.000000,count,sameContent vs deterministic replay
+t32_s65536,1,integrity_failures,0.000000,count,
+t32_s65536,1,blob_intact,1.000000,bool,
+t32_s65536,1,gesture_begin_ms,0.527000,ms,gestureStart_ = current_ copy
+t32_s65536,1,gesture_update_mean_ms,0.722380,ms,current_ = next copy, no serialization
+t32_s65536,1,gesture_end_ms,53.723800,ms,sameContent x2(+2) + sizeOf + trim
+t32_s65536,1,modified_first_ms,12.460400,ms,dirty=true, 1x toJson
+t32_s65536,1,modified_cached_ms,0.000000,ms,cached, no serialization
+t32_s65536,1,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t32_s65536,1,ceiling_stack_bytes_after_commits,20570481.000000,B,vs cap
+t32_s65536,1,ceiling_cap_bytes,22856090.000000,B,
+t32_s65536,1,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t32_s65536,1,ceiling_stack_bytes_after_undo,20570481.000000,B,conserved? <= cap means yes
+t32_s65536,1,ceiling_respected,1.000000,bool,
+t32_s65536,1,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t32_s65536,1,pred_commit_no_serial_ms,2.604480,ms,2 x doc_copy; counter pricing ~0
+t32_s65536,1,serial_share_of_commit,0.967115,frac,1 - (2 copies / commit)
+t32_s65536,1,commit_over_copies,30.408680,x,
+t32_s65536,2,price_bytes,2285609.000000,B,toJson+dump size (what sizeOf charges)
+t32_s65536,2,est_copy_bytes,2456582.000000,B,deep-copy estimate; json via dump size
+t32_s65536,2,toJson_ms,12.146080,ms,json tree build only
+t32_s65536,2,toJson_dump_ms,25.263320,ms,tree + canonical string (sizeOf)
+t32_s65536,2,doc_copy_ms,0.909200,ms,whole-Document copy ctor
+t32_s65536,2,sameContent_ms,26.488740,ms,2x toJson + tree compare
+t32_s65536,2,commit_mean_ms,78.053190,ms,60 commits, constant label (cancel-check active)
+t32_s65536,2,commit_max_ms,86.510500,ms,
+t32_s65536,2,commit_total_ms,4683.191400,ms,
+t32_s65536,2,states_after_commits,51.000000,count,current + undo + redo
+t32_s65536,2,priced_stack_mb,108.986330,MB,(states-1) x price_bytes
+t32_s65536,2,private_delta_commits_mb,175.980469,MB,heap growth over 60 commits
+t32_s65536,2,unpriced_gap_mb,66.994139,MB,current + saved_ tree + allocator overhead
+t32_s65536,2,undo_count,50.000000,count,60 minus steps trimmed
+t32_s65536,2,undo_mean_ms,25.896748,ms,moves + sizeOf(toJson+dump) each
+t32_s65536,2,undo_max_ms,28.210600,ms,
+t32_s65536,2,states_after_undo,51.000000,count,
+t32_s65536,2,private_after_undo_mb,175.980469,MB,
+t32_s65536,2,redo_mean_ms,25.883734,ms,
+t32_s65536,2,redo_max_ms,33.178000,ms,
+t32_s65536,2,states_after_redo,51.000000,count,
+t32_s65536,2,private_after_redo_mb,175.980469,MB,
+t32_s65536,2,peak_workingset_mb,405.492188,MB,process-lifetime peak (cumulative)
+t32_s65536,2,integrity_checks,8.000000,count,sameContent vs deterministic replay
+t32_s65536,2,integrity_failures,0.000000,count,
+t32_s65536,2,blob_intact,1.000000,bool,
+t32_s65536,2,gesture_begin_ms,1.246200,ms,gestureStart_ = current_ copy
+t32_s65536,2,gesture_update_mean_ms,0.811930,ms,current_ = next copy, no serialization
+t32_s65536,2,gesture_end_ms,57.355100,ms,sameContent x2(+2) + sizeOf + trim
+t32_s65536,2,modified_first_ms,13.437600,ms,dirty=true, 1x toJson
+t32_s65536,2,modified_cached_ms,0.000000,ms,cached, no serialization
+t32_s65536,2,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t32_s65536,2,ceiling_stack_bytes_after_commits,20570481.000000,B,vs cap
+t32_s65536,2,ceiling_cap_bytes,22856090.000000,B,
+t32_s65536,2,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t32_s65536,2,ceiling_stack_bytes_after_undo,20570481.000000,B,conserved? <= cap means yes
+t32_s65536,2,ceiling_respected,1.000000,bool,
+t32_s65536,2,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t32_s65536,2,pred_commit_no_serial_ms,1.818400,ms,2 x doc_copy; counter pricing ~0
+t32_s65536,2,serial_share_of_commit,0.976703,frac,1 - (2 copies / commit)
+t32_s65536,2,commit_over_copies,42.924104,x,
+t32_s65536,3,price_bytes,2285609.000000,B,toJson+dump size (what sizeOf charges)
+t32_s65536,3,est_copy_bytes,2456582.000000,B,deep-copy estimate; json via dump size
+t32_s65536,3,toJson_ms,12.377880,ms,json tree build only
+t32_s65536,3,toJson_dump_ms,24.953880,ms,tree + canonical string (sizeOf)
+t32_s65536,3,doc_copy_ms,0.776520,ms,whole-Document copy ctor
+t32_s65536,3,sameContent_ms,26.084480,ms,2x toJson + tree compare
+t32_s65536,3,commit_mean_ms,77.567080,ms,60 commits, constant label (cancel-check active)
+t32_s65536,3,commit_max_ms,86.118200,ms,
+t32_s65536,3,commit_total_ms,4654.024800,ms,
+t32_s65536,3,states_after_commits,51.000000,count,current + undo + redo
+t32_s65536,3,priced_stack_mb,108.986330,MB,(states-1) x price_bytes
+t32_s65536,3,private_delta_commits_mb,169.460938,MB,heap growth over 60 commits
+t32_s65536,3,unpriced_gap_mb,60.474607,MB,current + saved_ tree + allocator overhead
+t32_s65536,3,undo_count,50.000000,count,60 minus steps trimmed
+t32_s65536,3,undo_mean_ms,29.021242,ms,moves + sizeOf(toJson+dump) each
+t32_s65536,3,undo_max_ms,36.395300,ms,
+t32_s65536,3,states_after_undo,51.000000,count,
+t32_s65536,3,private_after_undo_mb,169.460938,MB,
+t32_s65536,3,redo_mean_ms,31.124868,ms,
+t32_s65536,3,redo_max_ms,41.823800,ms,
+t32_s65536,3,states_after_redo,51.000000,count,
+t32_s65536,3,private_after_redo_mb,169.460938,MB,
+t32_s65536,3,peak_workingset_mb,405.492188,MB,process-lifetime peak (cumulative)
+t32_s65536,3,integrity_checks,8.000000,count,sameContent vs deterministic replay
+t32_s65536,3,integrity_failures,0.000000,count,
+t32_s65536,3,blob_intact,1.000000,bool,
+t32_s65536,3,gesture_begin_ms,0.930100,ms,gestureStart_ = current_ copy
+t32_s65536,3,gesture_update_mean_ms,0.861410,ms,current_ = next copy, no serialization
+t32_s65536,3,gesture_end_ms,81.700500,ms,sameContent x2(+2) + sizeOf + trim
+t32_s65536,3,modified_first_ms,21.906300,ms,dirty=true, 1x toJson
+t32_s65536,3,modified_cached_ms,0.000100,ms,cached, no serialization
+t32_s65536,3,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t32_s65536,3,ceiling_stack_bytes_after_commits,20570481.000000,B,vs cap
+t32_s65536,3,ceiling_cap_bytes,22856090.000000,B,
+t32_s65536,3,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t32_s65536,3,ceiling_stack_bytes_after_undo,20570481.000000,B,conserved? <= cap means yes
+t32_s65536,3,ceiling_respected,1.000000,bool,
+t32_s65536,3,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t32_s65536,3,pred_commit_no_serial_ms,1.553040,ms,2 x doc_copy; counter pricing ~0
+t32_s65536,3,serial_share_of_commit,0.979978,frac,1 - (2 copies / commit)
+t32_s65536,3,commit_over_copies,49.945320,x,
+t32_s318128,1,price_bytes,10368553.000000,B,toJson+dump size (what sizeOf charges)
+t32_s318128,1,est_copy_bytes,10539526.000000,B,deep-copy estimate; json via dump size
+t32_s318128,1,toJson_ms,14.934540,ms,json tree build only
+t32_s318128,1,toJson_dump_ms,73.582140,ms,tree + canonical string (sizeOf)
+t32_s318128,1,doc_copy_ms,1.635480,ms,whole-Document copy ctor
+t32_s318128,1,sameContent_ms,29.517440,ms,2x toJson + tree compare
+t32_s318128,1,commit_mean_ms,151.160832,ms,60 commits, constant label (cancel-check active)
+t32_s318128,1,commit_max_ms,161.965900,ms,
+t32_s318128,1,commit_total_ms,9069.649900,ms,
+t32_s318128,1,states_after_commits,51.000000,count,current + undo + redo
+t32_s318128,1,priced_stack_mb,494.411135,MB,(states-1) x price_bytes
+t32_s318128,1,private_delta_commits_mb,563.570312,MB,heap growth over 60 commits
+t32_s318128,1,unpriced_gap_mb,69.159178,MB,current + saved_ tree + allocator overhead
+t32_s318128,1,undo_count,50.000000,count,60 minus steps trimmed
+t32_s318128,1,undo_mean_ms,76.414078,ms,moves + sizeOf(toJson+dump) each
+t32_s318128,1,undo_max_ms,84.629100,ms,
+t32_s318128,1,states_after_undo,51.000000,count,
+t32_s318128,1,private_after_undo_mb,563.027344,MB,
+t32_s318128,1,redo_mean_ms,76.239462,ms,
+t32_s318128,1,redo_max_ms,87.385700,ms,
+t32_s318128,1,states_after_redo,51.000000,count,
+t32_s318128,1,private_after_redo_mb,570.660156,MB,
+t32_s318128,1,peak_workingset_mb,687.531250,MB,process-lifetime peak (cumulative)
+t32_s318128,1,integrity_checks,8.000000,count,sameContent vs deterministic replay
+t32_s318128,1,integrity_failures,0.000000,count,
+t32_s318128,1,blob_intact,1.000000,bool,
+t32_s318128,1,gesture_begin_ms,0.791600,ms,gestureStart_ = current_ copy
+t32_s318128,1,gesture_update_mean_ms,0.908560,ms,current_ = next copy, no serialization
+t32_s318128,1,gesture_end_ms,109.890000,ms,sameContent x2(+2) + sizeOf + trim
+t32_s318128,1,modified_first_ms,18.133000,ms,dirty=true, 1x toJson
+t32_s318128,1,modified_cached_ms,0.000000,ms,cached, no serialization
+t32_s318128,1,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t32_s318128,1,ceiling_stack_bytes_after_commits,93316977.000000,B,vs cap
+t32_s318128,1,ceiling_cap_bytes,103685530.000000,B,
+t32_s318128,1,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t32_s318128,1,ceiling_stack_bytes_after_undo,93316977.000000,B,conserved? <= cap means yes
+t32_s318128,1,ceiling_respected,1.000000,bool,
+t32_s318128,1,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t32_s318128,1,pred_commit_no_serial_ms,3.270960,ms,2 x doc_copy; counter pricing ~0
+t32_s318128,1,serial_share_of_commit,0.978361,frac,1 - (2 copies / commit)
+t32_s318128,1,commit_over_copies,46.212987,x,
+t32_s318128,2,price_bytes,10368553.000000,B,toJson+dump size (what sizeOf charges)
+t32_s318128,2,est_copy_bytes,10539526.000000,B,deep-copy estimate; json via dump size
+t32_s318128,2,toJson_ms,14.665300,ms,json tree build only
+t32_s318128,2,toJson_dump_ms,73.035160,ms,tree + canonical string (sizeOf)
+t32_s318128,2,doc_copy_ms,1.583140,ms,whole-Document copy ctor
+t32_s318128,2,sameContent_ms,31.698640,ms,2x toJson + tree compare
+t32_s318128,2,commit_mean_ms,147.750970,ms,60 commits, constant label (cancel-check active)
+t32_s318128,2,commit_max_ms,169.065700,ms,
+t32_s318128,2,commit_total_ms,8865.058200,ms,
+t32_s318128,2,states_after_commits,51.000000,count,current + undo + redo
+t32_s318128,2,priced_stack_mb,494.411135,MB,(states-1) x price_bytes
+t32_s318128,2,private_delta_commits_mb,556.460938,MB,heap growth over 60 commits
+t32_s318128,2,unpriced_gap_mb,62.049803,MB,current + saved_ tree + allocator overhead
+t32_s318128,2,undo_count,50.000000,count,60 minus steps trimmed
+t32_s318128,2,undo_mean_ms,74.823616,ms,moves + sizeOf(toJson+dump) each
+t32_s318128,2,undo_max_ms,81.593200,ms,
+t32_s318128,2,states_after_undo,51.000000,count,
+t32_s318128,2,private_after_undo_mb,547.308594,MB,
+t32_s318128,2,redo_mean_ms,74.873316,ms,
+t32_s318128,2,redo_max_ms,81.347600,ms,
+t32_s318128,2,states_after_redo,51.000000,count,
+t32_s318128,2,private_after_redo_mb,549.445312,MB,
+t32_s318128,2,peak_workingset_mb,807.101562,MB,process-lifetime peak (cumulative)
+t32_s318128,2,integrity_checks,8.000000,count,sameContent vs deterministic replay
+t32_s318128,2,integrity_failures,0.000000,count,
+t32_s318128,2,blob_intact,1.000000,bool,
+t32_s318128,2,gesture_begin_ms,0.731000,ms,gestureStart_ = current_ copy
+t32_s318128,2,gesture_update_mean_ms,0.795290,ms,current_ = next copy, no serialization
+t32_s318128,2,gesture_end_ms,112.102000,ms,sameContent x2(+2) + sizeOf + trim
+t32_s318128,2,modified_first_ms,17.652700,ms,dirty=true, 1x toJson
+t32_s318128,2,modified_cached_ms,0.000000,ms,cached, no serialization
+t32_s318128,2,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t32_s318128,2,ceiling_stack_bytes_after_commits,93316977.000000,B,vs cap
+t32_s318128,2,ceiling_cap_bytes,103685530.000000,B,
+t32_s318128,2,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t32_s318128,2,ceiling_stack_bytes_after_undo,93316977.000000,B,conserved? <= cap means yes
+t32_s318128,2,ceiling_respected,1.000000,bool,
+t32_s318128,2,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t32_s318128,2,pred_commit_no_serial_ms,3.166280,ms,2 x doc_copy; counter pricing ~0
+t32_s318128,2,serial_share_of_commit,0.978570,frac,1 - (2 copies / commit)
+t32_s318128,2,commit_over_copies,46.663899,x,
+t32_s318128,3,price_bytes,10368553.000000,B,toJson+dump size (what sizeOf charges)
+t32_s318128,3,est_copy_bytes,10539526.000000,B,deep-copy estimate; json via dump size
+t32_s318128,3,toJson_ms,15.858860,ms,json tree build only
+t32_s318128,3,toJson_dump_ms,74.940580,ms,tree + canonical string (sizeOf)
+t32_s318128,3,doc_copy_ms,1.582360,ms,whole-Document copy ctor
+t32_s318128,3,sameContent_ms,30.975280,ms,2x toJson + tree compare
+t32_s318128,3,commit_mean_ms,146.231972,ms,60 commits, constant label (cancel-check active)
+t32_s318128,3,commit_max_ms,159.470100,ms,
+t32_s318128,3,commit_total_ms,8773.918300,ms,
+t32_s318128,3,states_after_commits,51.000000,count,current + undo + redo
+t32_s318128,3,priced_stack_mb,494.411135,MB,(states-1) x price_bytes
+t32_s318128,3,private_delta_commits_mb,565.105469,MB,heap growth over 60 commits
+t32_s318128,3,unpriced_gap_mb,70.694334,MB,current + saved_ tree + allocator overhead
+t32_s318128,3,undo_count,50.000000,count,60 minus steps trimmed
+t32_s318128,3,undo_mean_ms,75.693536,ms,moves + sizeOf(toJson+dump) each
+t32_s318128,3,undo_max_ms,79.339400,ms,
+t32_s318128,3,states_after_undo,51.000000,count,
+t32_s318128,3,private_after_undo_mb,552.890625,MB,
+t32_s318128,3,redo_mean_ms,76.047454,ms,
+t32_s318128,3,redo_max_ms,91.302200,ms,
+t32_s318128,3,states_after_redo,51.000000,count,
+t32_s318128,3,private_after_redo_mb,559.007812,MB,
+t32_s318128,3,peak_workingset_mb,807.101562,MB,process-lifetime peak (cumulative)
+t32_s318128,3,integrity_checks,8.000000,count,sameContent vs deterministic replay
+t32_s318128,3,integrity_failures,0.000000,count,
+t32_s318128,3,blob_intact,1.000000,bool,
+t32_s318128,3,gesture_begin_ms,0.904300,ms,gestureStart_ = current_ copy
+t32_s318128,3,gesture_update_mean_ms,0.756050,ms,current_ = next copy, no serialization
+t32_s318128,3,gesture_end_ms,109.929000,ms,sameContent x2(+2) + sizeOf + trim
+t32_s318128,3,modified_first_ms,17.623800,ms,dirty=true, 1x toJson
+t32_s318128,3,modified_cached_ms,0.000000,ms,cached, no serialization
+t32_s318128,3,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t32_s318128,3,ceiling_stack_bytes_after_commits,93316977.000000,B,vs cap
+t32_s318128,3,ceiling_cap_bytes,103685530.000000,B,
+t32_s318128,3,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t32_s318128,3,ceiling_stack_bytes_after_undo,93316977.000000,B,conserved? <= cap means yes
+t32_s318128,3,ceiling_respected,1.000000,bool,
+t32_s318128,3,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t32_s318128,3,pred_commit_no_serial_ms,3.164720,ms,2 x doc_copy; counter pricing ~0
+t32_s318128,3,serial_share_of_commit,0.978358,frac,1 - (2 copies / commit)
+t32_s318128,3,commit_over_copies,46.206922,x,
+t64_s318128,1,price_bytes,20736873.000000,B,toJson+dump size (what sizeOf charges)
+t64_s318128,1,est_copy_bytes,21078758.000000,B,deep-copy estimate; json via dump size
+t64_s318128,1,toJson_ms,36.160300,ms,json tree build only
+t64_s318128,1,toJson_dump_ms,156.665520,ms,tree + canonical string (sizeOf)
+t64_s318128,1,doc_copy_ms,3.789160,ms,whole-Document copy ctor
+t64_s318128,1,sameContent_ms,69.776060,ms,2x toJson + tree compare
+t64_s318128,1,commit_mean_ms,320.167947,ms,60 commits, constant label (cancel-check active)
+t64_s318128,1,commit_max_ms,346.447600,ms,
+t64_s318128,1,commit_total_ms,19210.076800,ms,
+t64_s318128,1,states_after_commits,51.000000,count,current + undo + redo
+t64_s318128,1,priced_stack_mb,988.811159,MB,(states-1) x price_bytes
+t64_s318128,1,private_delta_commits_mb,1147.156250,MB,heap growth over 60 commits
+t64_s318128,1,unpriced_gap_mb,158.345091,MB,current + saved_ tree + allocator overhead
+t64_s318128,1,undo_count,50.000000,count,60 minus steps trimmed
+t64_s318128,1,undo_mean_ms,166.530078,ms,moves + sizeOf(toJson+dump) each
+t64_s318128,1,undo_max_ms,211.579400,ms,
+t64_s318128,1,states_after_undo,51.000000,count,
+t64_s318128,1,private_after_undo_mb,1145.019531,MB,
+t64_s318128,1,redo_mean_ms,174.707800,ms,
+t64_s318128,1,redo_max_ms,210.256100,ms,
+t64_s318128,1,states_after_redo,51.000000,count,
+t64_s318128,1,private_after_redo_mb,1158.445312,MB,
+t64_s318128,1,peak_workingset_mb,1371.242188,MB,process-lifetime peak (cumulative)
+t64_s318128,1,integrity_checks,8.000000,count,sameContent vs deterministic replay
+t64_s318128,1,integrity_failures,0.000000,count,
+t64_s318128,1,blob_intact,1.000000,bool,
+t64_s318128,1,gesture_begin_ms,2.381900,ms,gestureStart_ = current_ copy
+t64_s318128,1,gesture_update_mean_ms,2.139020,ms,current_ = next copy, no serialization
+t64_s318128,1,gesture_end_ms,243.008900,ms,sameContent x2(+2) + sizeOf + trim
+t64_s318128,1,modified_first_ms,41.070400,ms,dirty=true, 1x toJson
+t64_s318128,1,modified_cached_ms,0.000100,ms,cached, no serialization
+t64_s318128,1,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t64_s318128,1,ceiling_stack_bytes_after_commits,186631857.000000,B,vs cap
+t64_s318128,1,ceiling_cap_bytes,207368730.000000,B,
+t64_s318128,1,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t64_s318128,1,ceiling_stack_bytes_after_undo,186631857.000000,B,conserved? <= cap means yes
+t64_s318128,1,ceiling_respected,1.000000,bool,
+t64_s318128,1,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t64_s318128,1,pred_commit_no_serial_ms,7.578320,ms,2 x doc_copy; counter pricing ~0
+t64_s318128,1,serial_share_of_commit,0.976330,frac,1 - (2 copies / commit)
+t64_s318128,1,commit_over_copies,42.247879,x,
+t64_s318128,2,price_bytes,20736873.000000,B,toJson+dump size (what sizeOf charges)
+t64_s318128,2,est_copy_bytes,21078758.000000,B,deep-copy estimate; json via dump size
+t64_s318128,2,toJson_ms,50.118420,ms,json tree build only
+t64_s318128,2,toJson_dump_ms,198.237380,ms,tree + canonical string (sizeOf)
+t64_s318128,2,doc_copy_ms,4.333720,ms,whole-Document copy ctor
+t64_s318128,2,sameContent_ms,101.139820,ms,2x toJson + tree compare
+t64_s318128,2,commit_mean_ms,322.394257,ms,60 commits, constant label (cancel-check active)
+t64_s318128,2,commit_max_ms,403.937700,ms,
+t64_s318128,2,commit_total_ms,19343.655400,ms,
+t64_s318128,2,states_after_commits,51.000000,count,current + undo + redo
+t64_s318128,2,priced_stack_mb,988.811159,MB,(states-1) x price_bytes
+t64_s318128,2,private_delta_commits_mb,1137.492188,MB,heap growth over 60 commits
+t64_s318128,2,unpriced_gap_mb,148.681028,MB,current + saved_ tree + allocator overhead
+t64_s318128,2,undo_count,50.000000,count,60 minus steps trimmed
+t64_s318128,2,undo_mean_ms,155.222098,ms,moves + sizeOf(toJson+dump) each
+t64_s318128,2,undo_max_ms,158.866800,ms,
+t64_s318128,2,states_after_undo,51.000000,count,
+t64_s318128,2,private_after_undo_mb,1119.812500,MB,
+t64_s318128,2,redo_mean_ms,155.780466,ms,
+t64_s318128,2,redo_max_ms,164.793000,ms,
+t64_s318128,2,states_after_redo,51.000000,count,
+t64_s318128,2,private_after_redo_mb,1123.488281,MB,
+t64_s318128,2,peak_workingset_mb,1618.027344,MB,process-lifetime peak (cumulative)
+t64_s318128,2,integrity_checks,8.000000,count,sameContent vs deterministic replay
+t64_s318128,2,integrity_failures,0.000000,count,
+t64_s318128,2,blob_intact,1.000000,bool,
+t64_s318128,2,gesture_begin_ms,2.532700,ms,gestureStart_ = current_ copy
+t64_s318128,2,gesture_update_mean_ms,2.043920,ms,current_ = next copy, no serialization
+t64_s318128,2,gesture_end_ms,234.255300,ms,sameContent x2(+2) + sizeOf + trim
+t64_s318128,2,modified_first_ms,38.089000,ms,dirty=true, 1x toJson
+t64_s318128,2,modified_cached_ms,0.000000,ms,cached, no serialization
+t64_s318128,2,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t64_s318128,2,ceiling_stack_bytes_after_commits,186631857.000000,B,vs cap
+t64_s318128,2,ceiling_cap_bytes,207368730.000000,B,
+t64_s318128,2,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t64_s318128,2,ceiling_stack_bytes_after_undo,186631857.000000,B,conserved? <= cap means yes
+t64_s318128,2,ceiling_respected,1.000000,bool,
+t64_s318128,2,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t64_s318128,2,pred_commit_no_serial_ms,8.667440,ms,2 x doc_copy; counter pricing ~0
+t64_s318128,2,serial_share_of_commit,0.973115,frac,1 - (2 copies / commit)
+t64_s318128,2,commit_over_copies,37.196018,x,
+t64_s318128,3,price_bytes,20736873.000000,B,toJson+dump size (what sizeOf charges)
+t64_s318128,3,est_copy_bytes,21078758.000000,B,deep-copy estimate; json via dump size
+t64_s318128,3,toJson_ms,33.671000,ms,json tree build only
+t64_s318128,3,toJson_dump_ms,151.434740,ms,tree + canonical string (sizeOf)
+t64_s318128,3,doc_copy_ms,3.795400,ms,whole-Document copy ctor
+t64_s318128,3,sameContent_ms,68.988300,ms,2x toJson + tree compare
+t64_s318128,3,commit_mean_ms,327.638360,ms,60 commits, constant label (cancel-check active)
+t64_s318128,3,commit_max_ms,412.055800,ms,
+t64_s318128,3,commit_total_ms,19658.301600,ms,
+t64_s318128,3,states_after_commits,51.000000,count,current + undo + redo
+t64_s318128,3,priced_stack_mb,988.811159,MB,(states-1) x price_bytes
+t64_s318128,3,private_delta_commits_mb,1137.820312,MB,heap growth over 60 commits
+t64_s318128,3,unpriced_gap_mb,149.009153,MB,current + saved_ tree + allocator overhead
+t64_s318128,3,undo_count,50.000000,count,60 minus steps trimmed
+t64_s318128,3,undo_mean_ms,165.704282,ms,moves + sizeOf(toJson+dump) each
+t64_s318128,3,undo_max_ms,202.587600,ms,
+t64_s318128,3,states_after_undo,51.000000,count,
+t64_s318128,3,private_after_undo_mb,1119.472656,MB,
+t64_s318128,3,redo_mean_ms,160.667772,ms,
+t64_s318128,3,redo_max_ms,192.601300,ms,
+t64_s318128,3,states_after_redo,51.000000,count,
+t64_s318128,3,private_after_redo_mb,1128.058594,MB,
+t64_s318128,3,peak_workingset_mb,1618.027344,MB,process-lifetime peak (cumulative)
+t64_s318128,3,integrity_checks,8.000000,count,sameContent vs deterministic replay
+t64_s318128,3,integrity_failures,0.000000,count,
+t64_s318128,3,blob_intact,1.000000,bool,
+t64_s318128,3,gesture_begin_ms,2.680600,ms,gestureStart_ = current_ copy
+t64_s318128,3,gesture_update_mean_ms,2.023870,ms,current_ = next copy, no serialization
+t64_s318128,3,gesture_end_ms,242.709400,ms,sameContent x2(+2) + sizeOf + trim
+t64_s318128,3,modified_first_ms,58.294100,ms,dirty=true, 1x toJson
+t64_s318128,3,modified_cached_ms,0.000000,ms,cached, no serialization
+t64_s318128,3,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t64_s318128,3,ceiling_stack_bytes_after_commits,186631857.000000,B,vs cap
+t64_s318128,3,ceiling_cap_bytes,207368730.000000,B,
+t64_s318128,3,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t64_s318128,3,ceiling_stack_bytes_after_undo,186631857.000000,B,conserved? <= cap means yes
+t64_s318128,3,ceiling_respected,1.000000,bool,
+t64_s318128,3,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t64_s318128,3,pred_commit_no_serial_ms,7.590800,ms,2 x doc_copy; counter pricing ~0
+t64_s318128,3,serial_share_of_commit,0.976832,frac,1 - (2 copies / commit)
+t64_s318128,3,commit_over_copies,43.162560,x,
+t32_s1048576,1,price_bytes,33742889.000000,B,toJson+dump size (what sizeOf charges)
+t32_s1048576,1,est_copy_bytes,33913862.000000,B,deep-copy estimate; json via dump size
+t32_s1048576,1,toJson_ms,43.630540,ms,json tree build only
+t32_s1048576,1,toJson_dump_ms,242.574380,ms,tree + canonical string (sizeOf)
+t32_s1048576,1,doc_copy_ms,7.175240,ms,whole-Document copy ctor
+t32_s1048576,1,sameContent_ms,90.005960,ms,2x toJson + tree compare
+t32_s1048576,1,commit_mean_ms,414.807730,ms,60 commits, constant label (cancel-check active)
+t32_s1048576,1,commit_max_ms,503.937700,ms,
+t32_s1048576,1,commit_total_ms,24888.463800,ms,
+t32_s1048576,1,states_after_commits,32.000000,count,current + undo + redo
+t32_s1048576,1,priced_stack_mb,997.571525,MB,(states-1) x price_bytes
+t32_s1048576,1,private_delta_commits_mb,1114.332031,MB,heap growth over 60 commits
+t32_s1048576,1,unpriced_gap_mb,116.760507,MB,current + saved_ tree + allocator overhead
+t32_s1048576,1,undo_count,31.000000,count,60 minus steps trimmed
+t32_s1048576,1,undo_mean_ms,250.429871,ms,moves + sizeOf(toJson+dump) each
+t32_s1048576,1,undo_max_ms,294.707500,ms,
+t32_s1048576,1,states_after_undo,32.000000,count,
+t32_s1048576,1,private_after_undo_mb,1114.332031,MB,
+t32_s1048576,1,redo_mean_ms,237.980103,ms,
+t32_s1048576,1,redo_max_ms,261.536900,ms,
+t32_s1048576,1,states_after_redo,32.000000,count,
+t32_s1048576,1,private_after_redo_mb,1114.332031,MB,
+t32_s1048576,1,peak_workingset_mb,1618.027344,MB,process-lifetime peak (cumulative)
+t32_s1048576,1,integrity_checks,6.000000,count,sameContent vs deterministic replay
+t32_s1048576,1,integrity_failures,0.000000,count,
+t32_s1048576,1,blob_intact,1.000000,bool,
+t32_s1048576,1,gesture_begin_ms,4.738200,ms,gestureStart_ = current_ copy
+t32_s1048576,1,gesture_update_mean_ms,5.881470,ms,current_ = next copy, no serialization
+t32_s1048576,1,gesture_end_ms,313.424500,ms,sameContent x2(+2) + sizeOf + trim
+t32_s1048576,1,modified_first_ms,40.753000,ms,dirty=true, 1x toJson
+t32_s1048576,1,modified_cached_ms,0.000000,ms,cached, no serialization
+t32_s1048576,1,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t32_s1048576,1,ceiling_stack_bytes_after_commits,303686001.000000,B,vs cap
+t32_s1048576,1,ceiling_cap_bytes,337428890.000000,B,
+t32_s1048576,1,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t32_s1048576,1,ceiling_stack_bytes_after_undo,303686001.000000,B,conserved? <= cap means yes
+t32_s1048576,1,ceiling_respected,1.000000,bool,
+t32_s1048576,1,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t32_s1048576,1,pred_commit_no_serial_ms,14.350480,ms,2 x doc_copy; counter pricing ~0
+t32_s1048576,1,serial_share_of_commit,0.965405,frac,1 - (2 copies / commit)
+t32_s1048576,1,commit_over_copies,28.905495,x,
+t32_s1048576,2,price_bytes,33742889.000000,B,toJson+dump size (what sizeOf charges)
+t32_s1048576,2,est_copy_bytes,33913862.000000,B,deep-copy estimate; json via dump size
+t32_s1048576,2,toJson_ms,39.768400,ms,json tree build only
+t32_s1048576,2,toJson_dump_ms,236.942220,ms,tree + canonical string (sizeOf)
+t32_s1048576,2,doc_copy_ms,6.609540,ms,whole-Document copy ctor
+t32_s1048576,2,sameContent_ms,82.604840,ms,2x toJson + tree compare
+t32_s1048576,2,commit_mean_ms,413.502500,ms,60 commits, constant label (cancel-check active)
+t32_s1048576,2,commit_max_ms,489.205300,ms,
+t32_s1048576,2,commit_total_ms,24810.150000,ms,
+t32_s1048576,2,states_after_commits,32.000000,count,current + undo + redo
+t32_s1048576,2,priced_stack_mb,997.571525,MB,(states-1) x price_bytes
+t32_s1048576,2,private_delta_commits_mb,1110.992188,MB,heap growth over 60 commits
+t32_s1048576,2,unpriced_gap_mb,113.420663,MB,current + saved_ tree + allocator overhead
+t32_s1048576,2,undo_count,31.000000,count,60 minus steps trimmed
+t32_s1048576,2,undo_mean_ms,236.132932,ms,moves + sizeOf(toJson+dump) each
+t32_s1048576,2,undo_max_ms,246.298300,ms,
+t32_s1048576,2,states_after_undo,32.000000,count,
+t32_s1048576,2,private_after_undo_mb,1110.996094,MB,
+t32_s1048576,2,redo_mean_ms,253.382781,ms,
+t32_s1048576,2,redo_max_ms,289.278500,ms,
+t32_s1048576,2,states_after_redo,32.000000,count,
+t32_s1048576,2,private_after_redo_mb,1110.996094,MB,
+t32_s1048576,2,peak_workingset_mb,1722.406250,MB,process-lifetime peak (cumulative)
+t32_s1048576,2,integrity_checks,6.000000,count,sameContent vs deterministic replay
+t32_s1048576,2,integrity_failures,0.000000,count,
+t32_s1048576,2,blob_intact,1.000000,bool,
+t32_s1048576,2,gesture_begin_ms,5.438700,ms,gestureStart_ = current_ copy
+t32_s1048576,2,gesture_update_mean_ms,5.964830,ms,current_ = next copy, no serialization
+t32_s1048576,2,gesture_end_ms,320.797900,ms,sameContent x2(+2) + sizeOf + trim
+t32_s1048576,2,modified_first_ms,39.376900,ms,dirty=true, 1x toJson
+t32_s1048576,2,modified_cached_ms,0.000100,ms,cached, no serialization
+t32_s1048576,2,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t32_s1048576,2,ceiling_stack_bytes_after_commits,303686001.000000,B,vs cap
+t32_s1048576,2,ceiling_cap_bytes,337428890.000000,B,
+t32_s1048576,2,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t32_s1048576,2,ceiling_stack_bytes_after_undo,303686001.000000,B,conserved? <= cap means yes
+t32_s1048576,2,ceiling_respected,1.000000,bool,
+t32_s1048576,2,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t32_s1048576,2,pred_commit_no_serial_ms,13.219080,ms,2 x doc_copy; counter pricing ~0
+t32_s1048576,2,serial_share_of_commit,0.968031,frac,1 - (2 copies / commit)
+t32_s1048576,2,commit_over_copies,31.280732,x,
+t32_s1048576,3,price_bytes,33742889.000000,B,toJson+dump size (what sizeOf charges)
+t32_s1048576,3,est_copy_bytes,33913862.000000,B,deep-copy estimate; json via dump size
+t32_s1048576,3,toJson_ms,40.392200,ms,json tree build only
+t32_s1048576,3,toJson_dump_ms,237.312220,ms,tree + canonical string (sizeOf)
+t32_s1048576,3,doc_copy_ms,6.345820,ms,whole-Document copy ctor
+t32_s1048576,3,sameContent_ms,83.855320,ms,2x toJson + tree compare
+t32_s1048576,3,commit_mean_ms,412.616027,ms,60 commits, constant label (cancel-check active)
+t32_s1048576,3,commit_max_ms,526.643500,ms,
+t32_s1048576,3,commit_total_ms,24756.961600,ms,
+t32_s1048576,3,states_after_commits,32.000000,count,current + undo + redo
+t32_s1048576,3,priced_stack_mb,997.571525,MB,(states-1) x price_bytes
+t32_s1048576,3,private_delta_commits_mb,1062.597656,MB,heap growth over 60 commits
+t32_s1048576,3,unpriced_gap_mb,65.026132,MB,current + saved_ tree + allocator overhead
+t32_s1048576,3,undo_count,31.000000,count,60 minus steps trimmed
+t32_s1048576,3,undo_mean_ms,233.988245,ms,moves + sizeOf(toJson+dump) each
+t32_s1048576,3,undo_max_ms,247.245000,ms,
+t32_s1048576,3,states_after_undo,32.000000,count,
+t32_s1048576,3,private_after_undo_mb,1062.597656,MB,
+t32_s1048576,3,redo_mean_ms,234.782713,ms,
+t32_s1048576,3,redo_max_ms,240.301500,ms,
+t32_s1048576,3,states_after_redo,32.000000,count,
+t32_s1048576,3,private_after_redo_mb,1062.597656,MB,
+t32_s1048576,3,peak_workingset_mb,1723.800781,MB,process-lifetime peak (cumulative)
+t32_s1048576,3,integrity_checks,6.000000,count,sameContent vs deterministic replay
+t32_s1048576,3,integrity_failures,0.000000,count,
+t32_s1048576,3,blob_intact,1.000000,bool,
+t32_s1048576,3,gesture_begin_ms,4.923000,ms,gestureStart_ = current_ copy
+t32_s1048576,3,gesture_update_mean_ms,5.760170,ms,current_ = next copy, no serialization
+t32_s1048576,3,gesture_end_ms,319.114700,ms,sameContent x2(+2) + sizeOf + trim
+t32_s1048576,3,modified_first_ms,41.247500,ms,dirty=true, 1x toJson
+t32_s1048576,3,modified_cached_ms,0.000000,ms,cached, no serialization
+t32_s1048576,3,ceiling_states_after_12_commits,10.000000,count,cap=10xprice; hard trim on commit
+t32_s1048576,3,ceiling_stack_bytes_after_commits,303686001.000000,B,vs cap
+t32_s1048576,3,ceiling_cap_bytes,337428890.000000,B,
+t32_s1048576,3,ceiling_states_after_full_undo,10.000000,count,redo stack holds the steps
+t32_s1048576,3,ceiling_stack_bytes_after_undo,303686001.000000,B,conserved? <= cap means yes
+t32_s1048576,3,ceiling_respected,1.000000,bool,
+t32_s1048576,3,floor_states_cap_half_step,2.000000,count,kFloorSteps=1 keeps one undo above cap
+t32_s1048576,3,pred_commit_no_serial_ms,12.691640,ms,2 x doc_copy; counter pricing ~0
+t32_s1048576,3,serial_share_of_commit,0.969241,frac,1 - (2 copies / commit)
+t32_s1048576,3,commit_over_copies,32.510852,x,
+summary,0,private_end_mb,17.168,MB,
+summary,0,peak_workingset_mb,1727.625,MB,

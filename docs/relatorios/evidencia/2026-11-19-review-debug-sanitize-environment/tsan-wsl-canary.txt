@@ -1,0 +1,12 @@
+FATAL: ThreadSanitizer: unexpected memory mapping 0x5d642ae3e000-0x5d642ae3f000
+tsan-wsl run1 exit=66
+FATAL: ThreadSanitizer: unexpected memory mapping 0x70427c272000-0x70427c700000
+tsan-wsl run2 exit=66
+FATAL: ThreadSanitizer: unexpected memory mapping 0x622adc01b000-0x622adc01c000
+tsan-wsl run3 exit=66
+FATAL: ThreadSanitizer: unexpected memory mapping 0x64879386f000-0x648793870000
+tsan-wsl run4 exit=66
+FATAL: ThreadSanitizer: unexpected memory mapping 0x5d762141e000-0x5d762141f000
+tsan-wsl run5 exit=66
+tsan-wsl: non-zero exits 5/5
+tsan-wsl: report matched /ThreadSanitizer/

@@ -1,0 +1,34 @@
+﻿PDC sr=48000 BEFORE dry=2000 wet=2480 dev=480 (expect 480)
+PDC sr=48000 AFTER dry=2000 wet=2000 dev=0 ideal=2000
+PDC sr=48000 dry-vs-wet stem bitExact=1 maxDelta=0
+PDC sr=44100 BEFORE dry=-1 wet=-1 dev=0 (expect 480)
+  FALHOU D:\CORE\CORE\tests\timing_proof_tests.cpp:251: dryPos == S: medido -1, esperado 1838
+  FALHOU D:\CORE\CORE\tests\timing_proof_tests.cpp:252: beforeDev == (int64_t)delayN: medido 0, esperado 480
+PDC sr=44100 AFTER dry=-1 wet=-1 dev=0 ideal=1838
+  FALHOU D:\CORE\CORE\tests\timing_proof_tests.cpp:260: dryAfter == S: medido -1, esperado 1838
+  FALHOU D:\CORE\CORE\tests\timing_proof_tests.cpp:261: wetAfter == S: medido -1, esperado 1838
+PDC sr=44100 dry-vs-wet stem bitExact=1 maxDelta=0
+PDC block-independence 512 vs 64 bitExact=1 firstDiff=-1 maxDelta=0
+PDC block-independence 512 vs 128 bitExact=1 firstDiff=-1 maxDelta=0
+PDC block-independence 512 vs 256 bitExact=1 firstDiff=-1 maxDelta=0
+PDC serial-vs-parallel(2) bitExact=1 maxDelta=0
+MIDI sr=48000 events=128 maxSchedDev=0 maxOnsetDev=0
+MIDI sr=44100 events=128 maxSchedDev=0 maxOnsetDev=0
+AUTO sr=48000 Tstep=12 Sstep=60 start=64 end=95 gridStart=64 devFromStep=4 onGrid=1
+AUTO sr=48000 Tstep=13 Sstep=65 start=96 end=127 gridStart=96 devFromStep=31 onGrid=1
+AUTO sr=48000 Tstep=25 Sstep=125 start=128 end=159 gridStart=128 devFromStep=3 onGrid=1
+AUTO sr=48000 Tstep=26 Sstep=130 start=160 end=191 gridStart=160 devFromStep=30 onGrid=1
+AUTO sr=44100 Tstep=12 Sstep=55 start=64 end=95 gridStart=64 devFromStep=9 onGrid=1
+AUTO sr=44100 Tstep=13 Sstep=60 start=64 end=95 gridStart=64 devFromStep=4 onGrid=1
+AUTO sr=44100 Tstep=25 Sstep=115 start=128 end=159 gridStart=128 devFromStep=13 onGrid=1
+AUTO sr=44100 Tstep=26 Sstep=119 start=128 end=159 gridStart=128 devFromStep=9 onGrid=1
+PARALLEL bus dry=2000 wet=2000 dev=0 ideal=2000
+LATENCY-CHANGE 480->960: re-aligned wet=2000 ideal=2000
+FAIL Timing PDC: impulse dry vs known-delay — BEFORE (raw) and AFTER (compensated), 48k/44.1k
+ok   Timing PDC: block-size independence (64/128/512) and serial==parallel export, bit-exact
+ok   Timing MIDI: sample-accurate scheduling near block boundaries (EventLog + click onset), 48k/44.1k
+ok   Timing automation: gainDb step lands on the 32-sample sub-block grid, buffer-independent
+ok   Timing parallel: M7a bus recombination aligns branches of different latency (stems + subtraction)
+ok   Timing latency-change: Server::checkPluginLatency detects a reported change, rebuilds, re-aligns
+ok   Timing determinism: two identical renders are bit-exact (fake, no modulation)
+7 testes, 582 verificacoes, 4 falhas

@@ -1,0 +1,265 @@
+﻿Test project D:/Core-build/s5-fix/build
+Could not find executable D:/Core-build/s5-fix/build/tests/engine_tests.exe
+Looked in the following places:
+D:/Core-build/s5-fix/build/tests/engine_tests.exe
+D:/Core-build/s5-fix/build/tests/engine_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Release/engine_tests.exe
+D:/Core-build/s5-fix/build/tests/Release/engine_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Debug/engine_tests.exe
+D:/Core-build/s5-fix/build/tests/Debug/engine_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/engine_tests.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/engine_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/engine_tests.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/engine_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Deployment/engine_tests.exe
+D:/Core-build/s5-fix/build/tests/Deployment/engine_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Development/engine_tests.exe
+D:/Core-build/s5-fix/build/tests/Development/engine_tests.exe.exe
+  Test  #1: engine_tests
+Could not find executable D:/Core-build/s5-fix/build/tests/domain_tests.exe
+Looked in the following places:
+D:/Core-build/s5-fix/build/tests/domain_tests.exe
+D:/Core-build/s5-fix/build/tests/domain_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Release/domain_tests.exe
+D:/Core-build/s5-fix/build/tests/Release/domain_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Debug/domain_tests.exe
+D:/Core-build/s5-fix/build/tests/Debug/domain_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/domain_tests.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/domain_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/domain_tests.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/domain_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Deployment/domain_tests.exe
+D:/Core-build/s5-fix/build/tests/Deployment/domain_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Development/domain_tests.exe
+D:/Core-build/s5-fix/build/tests/Development/domain_tests.exe.exe
+  Test  #2: domain_tests
+Could not find executable D:/Core-build/s5-fix/build/tests/modules_tests.exe
+Looked in the following places:
+D:/Core-build/s5-fix/build/tests/modules_tests.exe
+D:/Core-build/s5-fix/build/tests/modules_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Release/modules_tests.exe
+D:/Core-build/s5-fix/build/tests/Release/modules_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Debug/modules_tests.exe
+D:/Core-build/s5-fix/build/tests/Debug/modules_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/modules_tests.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/modules_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/modules_tests.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/modules_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Deployment/modules_tests.exe
+D:/Core-build/s5-fix/build/tests/Deployment/modules_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Development/modules_tests.exe
+D:/Core-build/s5-fix/build/tests/Development/modules_tests.exe.exe
+  Test  #3: modules_tests
+Could not find executable D:/Core-build/s5-fix/build/tests/role_tests.exe
+Looked in the following places:
+D:/Core-build/s5-fix/build/tests/role_tests.exe
+D:/Core-build/s5-fix/build/tests/role_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Release/role_tests.exe
+D:/Core-build/s5-fix/build/tests/Release/role_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Debug/role_tests.exe
+D:/Core-build/s5-fix/build/tests/Debug/role_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/role_tests.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/role_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/role_tests.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/role_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Deployment/role_tests.exe
+D:/Core-build/s5-fix/build/tests/Deployment/role_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Development/role_tests.exe
+D:/Core-build/s5-fix/build/tests/Development/role_tests.exe.exe
+  Test  #4: role_tests
+Could not find executable D:/Core-build/s5-fix/build/tests/midi_tests.exe
+Looked in the following places:
+D:/Core-build/s5-fix/build/tests/midi_tests.exe
+D:/Core-build/s5-fix/build/tests/midi_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Release/midi_tests.exe
+D:/Core-build/s5-fix/build/tests/Release/midi_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Debug/midi_tests.exe
+D:/Core-build/s5-fix/build/tests/Debug/midi_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/midi_tests.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/midi_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/midi_tests.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/midi_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Deployment/midi_tests.exe
+D:/Core-build/s5-fix/build/tests/Deployment/midi_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Development/midi_tests.exe
+D:/Core-build/s5-fix/build/tests/Development/midi_tests.exe.exe
+  Test  #5: midi_tests
+Could not find executable D:/Core-build/s5-fix/build/tests/bug_tests.exe
+Looked in the following places:
+D:/Core-build/s5-fix/build/tests/bug_tests.exe
+D:/Core-build/s5-fix/build/tests/bug_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Release/bug_tests.exe
+D:/Core-build/s5-fix/build/tests/Release/bug_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Debug/bug_tests.exe
+D:/Core-build/s5-fix/build/tests/Debug/bug_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/bug_tests.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/bug_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/bug_tests.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/bug_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Deployment/bug_tests.exe
+D:/Core-build/s5-fix/build/tests/Deployment/bug_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Development/bug_tests.exe
+D:/Core-build/s5-fix/build/tests/Development/bug_tests.exe.exe
+  Test  #6: bug_tests
+Could not find executable D:/Core-build/s5-fix/build/tests/bitwig_tests.exe
+Looked in the following places:
+D:/Core-build/s5-fix/build/tests/bitwig_tests.exe
+D:/Core-build/s5-fix/build/tests/bitwig_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Release/bitwig_tests.exe
+D:/Core-build/s5-fix/build/tests/Release/bitwig_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Debug/bitwig_tests.exe
+D:/Core-build/s5-fix/build/tests/Debug/bitwig_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/bitwig_tests.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/bitwig_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/bitwig_tests.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/bitwig_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Deployment/bitwig_tests.exe
+D:/Core-build/s5-fix/build/tests/Deployment/bitwig_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Development/bitwig_tests.exe
+D:/Core-build/s5-fix/build/tests/Development/bitwig_tests.exe.exe
+  Test  #7: bitwig_tests
+Could not find executable D:/Core-build/s5-fix/build/tests/audit_tests.exe
+Looked in the following places:
+D:/Core-build/s5-fix/build/tests/audit_tests.exe
+D:/Core-build/s5-fix/build/tests/audit_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Release/audit_tests.exe
+D:/Core-build/s5-fix/build/tests/Release/audit_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Debug/audit_tests.exe
+D:/Core-build/s5-fix/build/tests/Debug/audit_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/audit_tests.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/audit_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/audit_tests.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/audit_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Deployment/audit_tests.exe
+D:/Core-build/s5-fix/build/tests/Deployment/audit_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Development/audit_tests.exe
+D:/Core-build/s5-fix/build/tests/Development/audit_tests.exe.exe
+  Test  #8: audit_tests
+Could not find executable D:/Core-build/s5-fix/build/tests/audit2_tests.exe
+Looked in the following places:
+D:/Core-build/s5-fix/build/tests/audit2_tests.exe
+D:/Core-build/s5-fix/build/tests/audit2_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Release/audit2_tests.exe
+D:/Core-build/s5-fix/build/tests/Release/audit2_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Debug/audit2_tests.exe
+D:/Core-build/s5-fix/build/tests/Debug/audit2_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/audit2_tests.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/audit2_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/audit2_tests.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/audit2_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Deployment/audit2_tests.exe
+D:/Core-build/s5-fix/build/tests/Deployment/audit2_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Development/audit2_tests.exe
+D:/Core-build/s5-fix/build/tests/Development/audit2_tests.exe.exe
+  Test  #9: audit2_tests
+Could not find executable D:/Core-build/s5-fix/build/tests/hunt_tests.exe
+Looked in the following places:
+D:/Core-build/s5-fix/build/tests/hunt_tests.exe
+D:/Core-build/s5-fix/build/tests/hunt_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Release/hunt_tests.exe
+D:/Core-build/s5-fix/build/tests/Release/hunt_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Debug/hunt_tests.exe
+D:/Core-build/s5-fix/build/tests/Debug/hunt_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/hunt_tests.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/hunt_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/hunt_tests.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/hunt_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Deployment/hunt_tests.exe
+D:/Core-build/s5-fix/build/tests/Deployment/hunt_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Development/hunt_tests.exe
+D:/Core-build/s5-fix/build/tests/Development/hunt_tests.exe.exe
+  Test #10: hunt_tests
+Could not find executable D:/Core-build/s5-fix/build/tests/round3_tests.exe
+Looked in the following places:
+D:/Core-build/s5-fix/build/tests/round3_tests.exe
+D:/Core-build/s5-fix/build/tests/round3_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Release/round3_tests.exe
+D:/Core-build/s5-fix/build/tests/Release/round3_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Debug/round3_tests.exe
+D:/Core-build/s5-fix/build/tests/Debug/round3_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/round3_tests.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/round3_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/round3_tests.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/round3_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Deployment/round3_tests.exe
+D:/Core-build/s5-fix/build/tests/Deployment/round3_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Development/round3_tests.exe
+D:/Core-build/s5-fix/build/tests/Development/round3_tests.exe.exe
+  Test #11: round3_tests
+Could not find executable D:/Core-build/s5-fix/build/tests/calls_tests.exe
+Looked in the following places:
+D:/Core-build/s5-fix/build/tests/calls_tests.exe
+D:/Core-build/s5-fix/build/tests/calls_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Release/calls_tests.exe
+D:/Core-build/s5-fix/build/tests/Release/calls_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Debug/calls_tests.exe
+D:/Core-build/s5-fix/build/tests/Debug/calls_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/calls_tests.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/calls_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/calls_tests.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/calls_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Deployment/calls_tests.exe
+D:/Core-build/s5-fix/build/tests/Deployment/calls_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Development/calls_tests.exe
+D:/Core-build/s5-fix/build/tests/Development/calls_tests.exe.exe
+  Test #12: calls_tests
+Could not find executable D:/Core-build/s5-fix/build/tests/menu_tests.exe
+Looked in the following places:
+D:/Core-build/s5-fix/build/tests/menu_tests.exe
+D:/Core-build/s5-fix/build/tests/menu_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Release/menu_tests.exe
+D:/Core-build/s5-fix/build/tests/Release/menu_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Debug/menu_tests.exe
+D:/Core-build/s5-fix/build/tests/Debug/menu_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/menu_tests.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/menu_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/menu_tests.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/menu_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Deployment/menu_tests.exe
+D:/Core-build/s5-fix/build/tests/Deployment/menu_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Development/menu_tests.exe
+D:/Core-build/s5-fix/build/tests/Development/menu_tests.exe.exe
+  Test #13: menu_tests
+Could not find executable D:/Core-build/s5-fix/build/tests/window_tests.exe
+Looked in the following places:
+D:/Core-build/s5-fix/build/tests/window_tests.exe
+D:/Core-build/s5-fix/build/tests/window_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Release/window_tests.exe
+D:/Core-build/s5-fix/build/tests/Release/window_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Debug/window_tests.exe
+D:/Core-build/s5-fix/build/tests/Debug/window_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/window_tests.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/window_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/window_tests.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/window_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Deployment/window_tests.exe
+D:/Core-build/s5-fix/build/tests/Deployment/window_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Development/window_tests.exe
+D:/Core-build/s5-fix/build/tests/Development/window_tests.exe.exe
+  Test #14: window_tests
+  Test #15: cli_version
+  Test #16: cli_demo_render
+  Test #17: cli_measure
+  Test #18: cli_unicode
+  Test #19: cli_package_stale
+  Test #20: installer_samples
+Could not find executable D:/Core-build/s5-fix/build/tests/engine_process_tests.exe
+Looked in the following places:
+D:/Core-build/s5-fix/build/tests/engine_process_tests.exe
+D:/Core-build/s5-fix/build/tests/engine_process_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Release/engine_process_tests.exe
+D:/Core-build/s5-fix/build/tests/Release/engine_process_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Debug/engine_process_tests.exe
+D:/Core-build/s5-fix/build/tests/Debug/engine_process_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/engine_process_tests.exe
+D:/Core-build/s5-fix/build/tests/MinSizeRel/engine_process_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/engine_process_tests.exe
+D:/Core-build/s5-fix/build/tests/RelWithDebInfo/engine_process_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Deployment/engine_process_tests.exe
+D:/Core-build/s5-fix/build/tests/Deployment/engine_process_tests.exe.exe
+D:/Core-build/s5-fix/build/tests/Development/engine_process_tests.exe
+D:/Core-build/s5-fix/build/tests/Development/engine_process_tests.exe.exe
+  Test #21: engine_process_tests
+  Test #22: cli_plugin_crash_render
+
+Total Tests: 22

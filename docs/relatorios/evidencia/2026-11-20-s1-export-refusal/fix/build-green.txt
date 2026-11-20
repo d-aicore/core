@@ -1,0 +1,69 @@
+[0/2] Re-checking globbed directories...
+[1/46] Building VST3 manifest helper for CoreTestSynth
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/s1-fix/build/vst3_helpers/CoreTestSynth
+ninja: no work to do.
+[2/46] Core version
+[3/44] Building VST3 manifest helper for CoreTestGain
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/s1-fix/build/vst3_helpers/CoreTestGain
+ninja: no work to do.
+[4/44] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\engine.cpp.obj
+[5/44] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\graph.cpp.obj
+[6/44] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\render_job.cpp.obj
+[7/44] Building VST3 manifest helper for CoreTestThrow
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/s1-fix/build/vst3_helpers/CoreTestThrow
+ninja: no work to do.
+[8/44] Building VST3 manifest helper for CoreTestCrash
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/s1-fix/build/vst3_helpers/CoreTestCrash
+ninja: no work to do.
+[9/44] Building VST3 manifest helper for CoreTestCrashRestart
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/s1-fix/build/vst3_helpers/CoreTestCrashRestart
+ninja: no work to do.
+[10/44] Building VST3 manifest helper for CoreTestFault
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/s1-fix/build/vst3_helpers/CoreTestFault
+ninja: no work to do.
+[11/44] Building CXX object engine\CMakeFiles\core-engine.dir\src\app\measure.cpp.obj
+[12/44] Building CXX object engine\CMakeFiles\core-engine.dir\src\app\main.cpp.obj
+[13/44] Building CXX object engine\CMakeFiles\core_engine_lib.dir\src\core\server.cpp.obj
+D:\CORE\CORE\engine\src\core\server.cpp(809): warning C4996: 'std::filesystem::u8path': warning STL4021: The std::filesystem::u8path() overloads are deprecated in C++20. The constructors of std::filesystem::path provide equivalent functionality via construction from u8string, u8string_view, or iterators with value_type char8_t. You can define _SILENCE_CXX20_U8PATH_DEPRECATION_WARNING or _SILENCE_ALL_CXX20_DEPRECATION_WARNINGS to suppress this warning.
+[14/44] Linking CXX static library engine\core_engine_lib.lib
+[15/44] Building CXX object engine\CMakeFiles\core-engine.dir\src\io\device.cpp.obj
+[16/44] Building CXX object tests\CMakeFiles\engine_tests.dir\__\engine\src\io\device.cpp.obj
+[17/44] Building CXX object tests\CMakeFiles\engine_tests.dir\__\engine\src\app\measure.cpp.obj
+[18/44] Building CXX object tests\CMakeFiles\engine_tests.dir\engine_tests.cpp.obj
+[19/44] Building CXX object tests\CMakeFiles\audit_tests.dir\audit_tests.cpp.obj
+[20/44] Building CXX object tests\CMakeFiles\domain_tests.dir\domain_tests.cpp.obj
+[21/44] Linking CXX executable tests\wav_float_tests.exe
+[22/44] Linking CXX executable tests\engine_tests.exe
+[23/44] Linking CXX executable tests\role_tests.exe
+[24/44] Linking CXX executable tests\domain_tests.exe
+[25/44] Linking CXX executable tests\midi_tests.exe
+[26/44] Linking CXX executable engine\core-engine.exe
+[27/44] Linking CXX executable tests\bug_tests.exe
+[28/44] Linking CXX executable tests\bitwig_tests.exe
+[29/44] Linking CXX executable tests\round3_tests.exe
+[30/44] Linking CXX executable tests\audit_tests.exe
+[31/44] Building CXX object tests\CMakeFiles\export_plugin_failure_tests.dir\export_plugin_failure_tests.cpp.obj
+[32/44] Building CXX object tests\CMakeFiles\audit2_tests.dir\audit2_tests.cpp.obj
+[33/44] Linking CXX executable tests\export_plugin_failure_tests.exe
+[34/44] Linking CXX executable tests\audit2_tests.exe
+[35/44] Linking CXX executable app\desktop\CoreApp_artefacts\Debug\Core.exe
+[36/44] Building CXX object tests\CMakeFiles\hunt_tests.dir\hunt_tests.cpp.obj
+[37/44] Linking CXX executable tests\hunt_tests.exe
+[38/44] Packing the Core package for the installer
+[39/44] Generating juce_binarydata_CoreSetupData/JuceLibraryCode/BinaryData1.cpp, juce_binarydata_CoreSetupData/JuceLibraryCode/CoreSetupData.h
+[40/44] Building CXX object app\installer\CMakeFiles\CoreSetup.dir\Setup.cpp.obj
+[41/44] Building CXX object app\installer\CMakeFiles\CoreSetupData.dir\juce_binarydata_CoreSetupData\JuceLibraryCode\BinaryData1.cpp.obj
+[42/44] Linking CXX static library app\installer\CoreSetupData.lib
+[43/44] Linking CXX executable "app\installer\CoreSetup_artefacts\Debug\Core Setup.exe"

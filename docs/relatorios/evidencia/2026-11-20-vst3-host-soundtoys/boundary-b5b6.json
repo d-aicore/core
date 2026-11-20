@@ -1,0 +1,6 @@
+{
+ "B5_move_while_open_close_then_capture": "80.0",
+ "B6_capture_while_open": "80.0",
+ "B5_vs_B6_blob_identical": false,
+ "engine_exit": 0
+}

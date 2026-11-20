@@ -1,0 +1,72 @@
+[
+ {
+  "case": "EB-02 load",
+  "plugin": "EchoBoy",
+  "version": "5.5.5.19885",
+  "format": "vst3",
+  "method": "headless project.load + plugins.missing/versions + plugin.params",
+  "result": "PASS",
+  "evidence": "echoboy-load.json",
+  "summary": "missing=[] versions=[] Mix id=3 value=0.5 text=50.0"
+ },
+ {
+  "case": "EB-04 editor open/close",
+  "plugin": "EchoBoy",
+  "version": "5.5.5.19885",
+  "format": "vst3",
+  "method": "headless plugin.editor seam + EnumWindows(pid) + screenshots",
+  "result": "PASS",
+  "evidence": "echoboy-editor.json; echoboy-editor-open.png; echoboy-editor-close.png",
+  "summary": "open windows=[{'hwnd': 42144098, 'title': 'EchoBoy', 'visible': True}] visible-after-close=[]"
+ },
+ {
+  "case": "EB-06 automation Mix",
+  "plugin": "EchoBoy",
+  "version": "5.5.5.19885",
+  "format": "vst3",
+  "method": "headless envelope fx:eb:3 + render x3 + sample comparison",
+  "result": "FAIL",
+  "evidence": "echoboy-automation.json; eb-automix.wav; eb-mix0.wav; eb-mix1.wav",
+  "summary": "early|A-B|=0.0 late|A-C|=0.354477 late|A-B|=0.0"
+ },
+ {
+  "case": "EB-07 bypass",
+  "plugin": "EchoBoy",
+  "version": "5.5.5.19885",
+  "format": "vst3",
+  "method": "headless project.load bypass:true/false/absent + render sha256",
+  "result": "PASS",
+  "evidence": "echoboy-bypass.json; eb-active.wav; eb-bypass.wav; eb-nofx.wav",
+  "summary": "bypass==nofx:True active!=bypass:True peaks 0.391894/0.448819"
+ },
+ {
+  "case": "EB-09 save/reopen",
+  "plugin": "EchoBoy",
+  "version": "5.5.5.19885",
+  "format": "vst3",
+  "method": "headless plugins.states sha256 + document save + plugins.release + project.load",
+  "result": "FAIL",
+  "evidence": "echoboy-save-reopen.json; probe-echoboy-saved.core-project.json",
+  "summary": "state sha 4ab36c1ca957==8e34ec276de7:False Mix=50.0 renderEq=True"
+ },
+ {
+  "case": "EB-10 tail",
+  "plugin": "EchoBoy",
+  "version": "5.5.5.19885",
+  "format": "vst3",
+  "method": "headless render tailMs=6000 + WAV envelope analysis (numpy)",
+  "result": "FAIL",
+  "evidence": "echoboy-tail.json; eb-tail.wav; eb-tail-dry.wav",
+  "summary": "tail=0.2551s past note end, 2 echoes, spacings=[0.29]"
+ },
+ {
+  "case": "EB-08 render",
+  "plugin": "EchoBoy",
+  "version": "5.5.5.19885",
+  "format": "vst3",
+  "method": "headless render (offline, blocking) 48kHz/24-bit",
+  "result": "PASS",
+  "evidence": "echoboy-renders.json",
+  "summary": "10 WAVs, peaks/sha recorded"
+ }
+]

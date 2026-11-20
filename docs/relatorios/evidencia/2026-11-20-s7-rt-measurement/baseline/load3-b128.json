@@ -1,0 +1,210 @@
+{
+  "cpu": {
+    "intervalMs": 60015.2527,
+    "load": {
+      "avgPct": 1.9735326432231892,
+      "marginPct": 83.33500000000001,
+      "maxPct": 16.665
+    },
+    "master": {
+      "cpuPct": 0.0,
+      "effects": []
+    },
+    "totalPct": 1.2704560352538514,
+    "tracks": [
+      {
+        "cpuPct": 0.5331859579089967,
+        "effects": [],
+        "id": "t0",
+        "instrument": {
+          "cpuPct": 0.5331859579089967,
+          "name": "Core Test Synth"
+        }
+      },
+      {
+        "cpuPct": 0.38236763102057225,
+        "effects": [],
+        "id": "t1",
+        "instrument": {
+          "cpuPct": 0.38236763102057225,
+          "name": "Core Test Synth"
+        }
+      },
+      {
+        "cpuPct": 0.35490244632428253,
+        "effects": [],
+        "id": "t2",
+        "instrument": {
+          "cpuPct": 0.35490244632428253,
+          "name": "Core Test Synth"
+        }
+      }
+    ]
+  },
+  "deliveredSeconds": 60.010666666666665,
+  "device": {
+    "backend": "WASAPI",
+    "blockSize": 128,
+    "device": "Auscultadores (USB-C Audio)",
+    "exclusive": true,
+    "internalSampleRate": 48000,
+    "latency": {
+      "deviceMs": 5.333333333333333,
+      "graphMs": 2.6666666666666665,
+      "masterSamples": 0,
+      "totalMs": 8.0,
+      "tracksSamples": 128
+    },
+    "latencyMs": 5.333333333333333,
+    "periods": 2,
+    "sampleRate": 48000.0,
+    "scheduling": "Pro Audio"
+  },
+  "error": "",
+  "liveThreads": 0,
+  "pluginInstances": 3,
+  "plugins": [
+    {
+      "file": "D:\\Core-build\\s7\\build\\app\\selftest-plugins\\CoreTestSynth_artefacts\\Release\\VST3\\Core Test Synth.vst3",
+      "id": "VST3-Core Test Synth-458c357b-bc3b5f3e",
+      "name": "Core Test Synth",
+      "role": "instrument",
+      "vendor": "Core",
+      "version": "1.0.0"
+    },
+    {
+      "file": "D:\\Core-build\\s7\\build\\app\\selftest-plugins\\CoreTestGain_artefacts\\Release\\VST3\\Core Test Gain.vst3",
+      "id": "VST3-Core Test Gain-e64fbaf9-bc3b5333",
+      "name": "Core Test Gain",
+      "role": "insert",
+      "vendor": "Core",
+      "version": "1.0.0"
+    }
+  ],
+  "requestedBlock": 128,
+  "scenario": "load3-b128",
+  "secondsRequested": 60.0,
+  "stats": {
+    "auditionSteals": 0,
+    "avgLoadPct": 1.9735326432231892,
+    "avgRenderMs": 0.05262752399573409,
+    "callbackErrors": 0,
+    "callbacks": 22504,
+    "denseEventBlocks": 0,
+    "device": {
+      "backend": "WASAPI",
+      "blockSize": 128,
+      "device": "Auscultadores (USB-C Audio)",
+      "exclusive": true,
+      "internalSampleRate": 48000,
+      "latencyMs": 5.333333333333333,
+      "periods": 2,
+      "sampleRate": 48000.0,
+      "scheduling": "Pro Audio"
+    },
+    "deviceDriftPpm": -63.869673081380974,
+    "deviceNotification": 0,
+    "droppedNotes": 0,
+    "failedPlugins": [],
+    "failedUnits": [],
+    "graphSwaps": 0,
+    "lastRebuildMs": 25.3232,
+    "latency": {
+      "deviceMs": 5.333333333333333,
+      "graphMs": 2.6666666666666665,
+      "masterSamples": 0,
+      "totalMs": 8.0,
+      "tracksSamples": 128
+    },
+    "leakedGraphs": 0,
+    "liveFallback": false,
+    "liveNotesRejected": 0,
+    "liveOffAllTracks": 0,
+    "liveOffOverflows": 0,
+    "liveStallBlocks": 0,
+    "liveStalls": 0,
+    "liveThreads": 0,
+    "loadP50Pct": 2.0,
+    "loadP95Pct": 3.0,
+    "loadP99Pct": 4.0,
+    "maxCallbackFrames": 128,
+    "maxEditToAudioMs": 0.0,
+    "maxLoadPct": 16.665,
+    "maxRenderMs": 0.44439999999999996,
+    "minCallbackFrames": 128,
+    "nativeFailures": 0,
+    "nonFiniteBlocks": 0,
+    "overruns": 0,
+    "pluginFailures": 0,
+    "pluginNotesDropped": 0,
+    "starvations": 3251
+  },
+  "timing": {
+    "blocks": 22504,
+    "maxLoadPct": 16.66500416625104,
+    "maxMs": 0.4444,
+    "meanLoadPct": 1.973532643223231,
+    "meanMs": 0.05262752399573409,
+    "overBudget": 0,
+    "p50Ms": 0.0513,
+    "p95Ms": 0.0781,
+    "p99LoadPct": 3.8850009712502427,
+    "p99Ms": 0.1036
+  },
+  "tracks": 3,
+  "violations": {
+    "audioExact": {
+      "allocs": 3,
+      "io": 0,
+      "locks": 544428,
+      "locksPerCallback": 24.192499111269107
+    },
+    "ringTail": {
+      "audio": 65128,
+      "control": 229,
+      "kinds": {
+        "AcquireSRWLockExclusive": {
+          "audio": 0,
+          "control": 29,
+          "other": 48
+        },
+        "EnterCriticalSection": {
+          "audio": 32564,
+          "control": 76,
+          "other": 40
+        },
+        "HeapAlloc": {
+          "audio": 0,
+          "control": 0,
+          "other": 9
+        },
+        "HeapFree": {
+          "audio": 0,
+          "control": 13,
+          "other": 0
+        },
+        "LeaveCriticalSection": {
+          "audio": 32564,
+          "control": 75,
+          "other": 40
+        },
+        "ReleaseSRWLockExclusive": {
+          "audio": 0,
+          "control": 30,
+          "other": 42
+        },
+        "Sleep": {
+          "audio": 0,
+          "control": 6,
+          "other": 0
+        },
+        "lostToRingWrap": 482836
+      },
+      "lost": 482836,
+      "other": 179
+    },
+    "total": 548372
+  },
+  "wallSeconds": 62.1293116,
+  "workerJobs": 0
+}

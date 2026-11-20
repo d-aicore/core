@@ -1,0 +1,45 @@
+{
+ "B1_truly_headless_restore": "50.0",
+ "B2_editor_init_restore": "50.0",
+ "B3_fresh_instance_headless_restore": "50.0",
+ "B4_editor_touched_headless_move_restore": "50.0",
+ "B1_vs_B2_blob_identical": false,
+ "engine_exit": 0,
+ "regrade_EB06": {
+  "pass": true,
+  "diffs": {
+   "early_A_B": 0.003681,
+   "late_A_C": 0.0,
+   "late_A_B": 0.764308
+  },
+  "note": "early diff = EchoBoy internal Mix smoothing from default 0.5 to envelope 0; late A==C exact"
+ },
+ "regrade_DEC06": {
+  "pass": true,
+  "diffs": {
+   "early_A_B": 0.0,
+   "late_A_C": 0.004531,
+   "late_A_B": 0.239022
+  },
+  "note": "late A-C 0.0045 = Decapitator internal smoothing/AutoGain; late A-B 0.239"
+ },
+ "regrade_EB10": {
+  "pass": true,
+  "tailLengthS": 5.4923,
+  "echoToEchoSpacings": [
+   0.25,
+   0.25,
+   0.25,
+   0.25,
+   0.25,
+   0.25,
+   0.25,
+   0.25,
+   0.25
+  ],
+  "echoes": 11,
+  "dryEndS": 0.145,
+  "noteEndS": 0.145,
+  "capped": false
+ }
+}

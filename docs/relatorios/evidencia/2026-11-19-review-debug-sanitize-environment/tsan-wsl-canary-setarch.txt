@@ -1,0 +1,78 @@
+==================
+WARNING: ThreadSanitizer: data race (pid=5516)
+  Write of size 4 at 0x555555559020 by thread T1:
+    #0 operator() /home/diogo/core-review-src/tests/canary.cpp:38 (tsan_canary+0x13d5) (BuildId: 4fce9e0d7f09f84d4586e82471ea935bbf1bedb4)
+    #1 __invoke_impl<void, main()::<lambda()> > /usr/include/c++/13/bits/invoke.h:61 (tsan_canary+0x1a51) (BuildId: 4fce9e0d7f09f84d4586e82471ea935bbf1bedb4)
+    #2 __invoke<main()::<lambda()> > /usr/include/c++/13/bits/invoke.h:96 (tsan_canary+0x19e6) (BuildId: 4fce9e0d7f09f84d4586e82471ea935bbf1bedb4)
+    #3 _M_invoke<0> /usr/include/c++/13/bits/std_thread.h:292 (tsan_canary+0x1948) (BuildId: 4fce9e0d7f09f84d4586e82471ea935bbf1bedb4)
+    #4 operator() /usr/include/c++/13/bits/std_thread.h:299 (tsan_canary+0x18ee) (BuildId: 4fce9e0d7f09f84d4586e82471ea935bbf1bedb4)
+    #5 _M_run /usr/include/c++/13/bits/std_thread.h:244 (tsan_canary+0x18a4) (BuildId: 4fce9e0d7f09f84d4586e82471ea935bbf1bedb4)
+    #6 <null> <null> (libstdc++.so.6+0xecdb3) (BuildId: 753c6c8608b61d4e67be8f0c890e03e0aa046b8b)
+
+  Previous write of size 4 at 0x555555559020 by main thread:
+    #0 main /home/diogo/core-review-src/tests/canary.cpp:41 (tsan_canary+0x1465) (BuildId: 4fce9e0d7f09f84d4586e82471ea935bbf1bedb4)
+
+  Location is global 'shared' of size 4 at 0x555555559020 (tsan_canary+0x5020)
+
+  Thread T1 (tid=5518, running) created by main thread at:
+    #0 pthread_create ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:1022 (libtsan.so.2+0x5ac1a) (BuildId: 2a13a7710e361d06f7babbea53065ca2be93f738)
+    #1 std::thread::_M_start_thread(std::unique_ptr<std::thread::_State, std::default_delete<std::thread::_State> >, void (*)()) <null> (libstdc++.so.6+0xeceb0) (BuildId: 753c6c8608b61d4e67be8f0c890e03e0aa046b8b)
+    #2 main /home/diogo/core-review-src/tests/canary.cpp:39 (tsan_canary+0x142e) (BuildId: 4fce9e0d7f09f84d4586e82471ea935bbf1bedb4)
+
+SUMMARY: ThreadSanitizer: data race /home/diogo/core-review-src/tests/canary.cpp:38 in operator()
+==================
+199999
+ThreadSanitizer: reported 1 warnings
+tsan-setarch run1 exit=66
+==================
+WARNING: ThreadSanitizer: data race (pid=5522)
+  Write of size 4 at 0x555555559020 by thread T1:
+    #0 operator() /home/diogo/core-review-src/tests/canary.cpp:38 (tsan_canary+0x13d5) (BuildId: 4fce9e0d7f09f84d4586e82471ea935bbf1bedb4)
+    #1 __invoke_impl<void, main()::<lambda()> > /usr/include/c++/13/bits/invoke.h:61 (tsan_canary+0x1a51) (BuildId: 4fce9e0d7f09f84d4586e82471ea935bbf1bedb4)
+    #2 __invoke<main()::<lambda()> > /usr/include/c++/13/bits/invoke.h:96 (tsan_canary+0x19e6) (BuildId: 4fce9e0d7f09f84d4586e82471ea935bbf1bedb4)
+    #3 _M_invoke<0> /usr/include/c++/13/bits/std_thread.h:292 (tsan_canary+0x1948) (BuildId: 4fce9e0d7f09f84d4586e82471ea935bbf1bedb4)
+    #4 operator() /usr/include/c++/13/bits/std_thread.h:299 (tsan_canary+0x18ee) (BuildId: 4fce9e0d7f09f84d4586e82471ea935bbf1bedb4)
+    #5 _M_run /usr/include/c++/13/bits/std_thread.h:244 (tsan_canary+0x18a4) (BuildId: 4fce9e0d7f09f84d4586e82471ea935bbf1bedb4)
+    #6 <null> <null> (libstdc++.so.6+0xecdb3) (BuildId: 753c6c8608b61d4e67be8f0c890e03e0aa046b8b)
+
+  Previous write of size 4 at 0x555555559020 by main thread:
+    #0 main /home/diogo/core-review-src/tests/canary.cpp:41 (tsan_canary+0x1465) (BuildId: 4fce9e0d7f09f84d4586e82471ea935bbf1bedb4)
+
+  Location is global 'shared' of size 4 at 0x555555559020 (tsan_canary+0x5020)
+
+  Thread T1 (tid=5524, running) created by main thread at:
+    #0 pthread_create ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:1022 (libtsan.so.2+0x5ac1a) (BuildId: 2a13a7710e361d06f7babbea53065ca2be93f738)
+    #1 std::thread::_M_start_thread(std::unique_ptr<std::thread::_State, std::default_delete<std::thread::_State> >, void (*)()) <null> (libstdc++.so.6+0xeceb0) (BuildId: 753c6c8608b61d4e67be8f0c890e03e0aa046b8b)
+    #2 main /home/diogo/core-review-src/tests/canary.cpp:39 (tsan_canary+0x142e) (BuildId: 4fce9e0d7f09f84d4586e82471ea935bbf1bedb4)
+
+SUMMARY: ThreadSanitizer: data race /home/diogo/core-review-src/tests/canary.cpp:38 in operator()
+==================
+199999
+ThreadSanitizer: reported 1 warnings
+tsan-setarch run2 exit=66
+==================
+WARNING: ThreadSanitizer: data race (pid=5528)
+  Write of size 4 at 0x555555559020 by thread T1:
+    #0 operator() /home/diogo/core-review-src/tests/canary.cpp:38 (tsan_canary+0x13d5) (BuildId: 4fce9e0d7f09f84d4586e82471ea935bbf1bedb4)
+    #1 __invoke_impl<void, main()::<lambda()> > /usr/include/c++/13/bits/invoke.h:61 (tsan_canary+0x1a51) (BuildId: 4fce9e0d7f09f84d4586e82471ea935bbf1bedb4)
+    #2 __invoke<main()::<lambda()> > /usr/include/c++/13/bits/invoke.h:96 (tsan_canary+0x19e6) (BuildId: 4fce9e0d7f09f84d4586e82471ea935bbf1bedb4)
+    #3 _M_invoke<0> /usr/include/c++/13/bits/std_thread.h:292 (tsan_canary+0x1948) (BuildId: 4fce9e0d7f09f84d4586e82471ea935bbf1bedb4)
+    #4 operator() /usr/include/c++/13/bits/std_thread.h:299 (tsan_canary+0x18ee) (BuildId: 4fce9e0d7f09f84d4586e82471ea935bbf1bedb4)
+    #5 _M_run /usr/include/c++/13/bits/std_thread.h:244 (tsan_canary+0x18a4) (BuildId: 4fce9e0d7f09f84d4586e82471ea935bbf1bedb4)
+    #6 <null> <null> (libstdc++.so.6+0xecdb3) (BuildId: 753c6c8608b61d4e67be8f0c890e03e0aa046b8b)
+
+  Previous write of size 4 at 0x555555559020 by main thread:
+    #0 main /home/diogo/core-review-src/tests/canary.cpp:41 (tsan_canary+0x1465) (BuildId: 4fce9e0d7f09f84d4586e82471ea935bbf1bedb4)
+
+  Location is global 'shared' of size 4 at 0x555555559020 (tsan_canary+0x5020)
+
+  Thread T1 (tid=5530, running) created by main thread at:
+    #0 pthread_create ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:1022 (libtsan.so.2+0x5ac1a) (BuildId: 2a13a7710e361d06f7babbea53065ca2be93f738)
+    #1 std::thread::_M_start_thread(std::unique_ptr<std::thread::_State, std::default_delete<std::thread::_State> >, void (*)()) <null> (libstdc++.so.6+0xeceb0) (BuildId: 753c6c8608b61d4e67be8f0c890e03e0aa046b8b)
+    #2 main /home/diogo/core-review-src/tests/canary.cpp:39 (tsan_canary+0x142e) (BuildId: 4fce9e0d7f09f84d4586e82471ea935bbf1bedb4)
+
+SUMMARY: ThreadSanitizer: data race /home/diogo/core-review-src/tests/canary.cpp:38 in operator()
+==================
+199999
+ThreadSanitizer: reported 1 warnings
+tsan-setarch run3 exit=66

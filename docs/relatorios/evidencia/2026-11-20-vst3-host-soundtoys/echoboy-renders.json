@@ -1,0 +1,115 @@
+{
+ "note": "offline renders, null device, 48 kHz/24-bit; peaks/sha per file",
+ "files": [
+  {
+   "path": "D:\\Core-build\\vst3-host\\eb-automix.wav",
+   "sha256": "f7272f426f0300c8919d107ce6877f7794d94d380410fa75a8df69748be46189",
+   "sampleRate": 48000,
+   "frames": 240000,
+   "channels": 2,
+   "seconds": 5.0,
+   "peak": 0.391894,
+   "peakDb": -8.14,
+   "rms": 0.082976
+  },
+  {
+   "path": "D:\\Core-build\\vst3-host\\eb-mix0.wav",
+   "sha256": "f7272f426f0300c8919d107ce6877f7794d94d380410fa75a8df69748be46189",
+   "sampleRate": 48000,
+   "frames": 240000,
+   "channels": 2,
+   "seconds": 5.0,
+   "peak": 0.391894,
+   "peakDb": -8.14,
+   "rms": 0.082976
+  },
+  {
+   "path": "D:\\Core-build\\vst3-host\\eb-mix1.wav",
+   "sha256": "979a42fced7653058026958917ef8299934f7cfbf92c5d927ee3933005f32839",
+   "sampleRate": 48000,
+   "frames": 240000,
+   "channels": 2,
+   "seconds": 5.0,
+   "peak": 0.448819,
+   "peakDb": -6.96,
+   "rms": 0.200981
+  },
+  {
+   "path": "D:\\Core-build\\vst3-host\\eb-active.wav",
+   "sha256": "f7272f426f0300c8919d107ce6877f7794d94d380410fa75a8df69748be46189",
+   "sampleRate": 48000,
+   "frames": 240000,
+   "channels": 2,
+   "seconds": 5.0,
+   "peak": 0.391894,
+   "peakDb": -8.14,
+   "rms": 0.082976
+  },
+  {
+   "path": "D:\\Core-build\\vst3-host\\eb-bypass.wav",
+   "sha256": "979a42fced7653058026958917ef8299934f7cfbf92c5d927ee3933005f32839",
+   "sampleRate": 48000,
+   "frames": 240000,
+   "channels": 2,
+   "seconds": 5.0,
+   "peak": 0.448819,
+   "peakDb": -6.96,
+   "rms": 0.200981
+  },
+  {
+   "path": "D:\\Core-build\\vst3-host\\eb-nofx.wav",
+   "sha256": "979a42fced7653058026958917ef8299934f7cfbf92c5d927ee3933005f32839",
+   "sampleRate": 48000,
+   "frames": 240000,
+   "channels": 2,
+   "seconds": 5.0,
+   "peak": 0.448819,
+   "peakDb": -6.96,
+   "rms": 0.200981
+  },
+  {
+   "path": "D:\\Core-build\\vst3-host\\eb-tail.wav",
+   "sha256": "1827b88239062f59781f68e711daa93bbb3650bea7423d6baff7771764074fc9",
+   "sampleRate": 48000,
+   "frames": 384000,
+   "channels": 2,
+   "seconds": 8.0,
+   "peak": 0.391894,
+   "peakDb": -8.14,
+   "rms": 0.036513
+  },
+  {
+   "path": "D:\\Core-build\\vst3-host\\eb-tail-dry.wav",
+   "sha256": "cd925cd08a009c522b23a2a0e3015dad7b19a0a23f7f5c77c958c57c9b3d7e57",
+   "sampleRate": 48000,
+   "frames": 384000,
+   "channels": 2,
+   "seconds": 8.0,
+   "peak": 0.377663,
+   "peakDb": -8.46,
+   "rms": 0.04227
+  },
+  {
+   "path": "D:\\Core-build\\vst3-host\\eb-before-reopen.wav",
+   "sha256": "f7272f426f0300c8919d107ce6877f7794d94d380410fa75a8df69748be46189",
+   "sampleRate": 48000,
+   "frames": 240000,
+   "channels": 2,
+   "seconds": 5.0,
+   "peak": 0.391894,
+   "peakDb": -8.14,
+   "rms": 0.082976
+  },
+  {
+   "path": "D:\\Core-build\\vst3-host\\eb-after-reopen.wav",
+   "sha256": "f7272f426f0300c8919d107ce6877f7794d94d380410fa75a8df69748be46189",
+   "sampleRate": 48000,
+   "frames": 240000,
+   "channels": 2,
+   "seconds": 5.0,
+   "peak": 0.391894,
+   "peakDb": -8.14,
+   "rms": 0.082976
+  }
+ ]
+}

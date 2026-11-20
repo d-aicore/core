@@ -1,0 +1,161 @@
+﻿proof-windows.ps1 2026-11-19T23:36:45.7267786+00:00
+
+=== P1 (invocation rc=0) ===
+context: fp1 sha=a9a038430d781959829f8510067ce59afffaad62 local=427B3D1CAB8B04C1F51EEFAF04481827607EA229402AD70F234E8C0B4CE0365A juce=no-git/E421E8709FAADEF6AD25BC48DA04342315CA1D1BC98E12636F6BC1DFBCC99830 script=DCCD2F161F76403D99A738F97A4B56B514A36047D61F8A2149392D4C5D44FDCE
+RUN 00-env
+RC 00-env = 0   log=D:\Core-build\core-review\proof\00-env.txt
+SKIP(filter) 01-configure-debug
+SKIP(filter) 02-build-debug
+SKIP(filter) 03-ctest-debug
+SKIP 04-symbols (core_engine_lib.lib or stack_probe.cpp missing)
+SKIP(filter) 05-configure-asan
+SKIP(filter) 06-build-asan
+SKIP(filter) 08-asan-ctest
+SKIP(filter) 09-lsp-smoke
+SKIP(filter) 10-desktop-selftest
+Core review environment - Windows/MSVC run (run-all.ps1, SHA-bound validation)
+src:  D:\CORE\CORE @ a9a038430d781959829f8510067ce59afffaad62
+root: D:\Core-build\core-review\proof
+context: fp1 sha=a9a038430d781959829f8510067ce59afffaad62 local=427B3D1CAB8B04C1F51EEFAF04481827607EA229402AD70F234E8C0B4CE0365A juce=no-git/E421E8709FAADEF6AD25BC48DA04342315CA1D1BC98E12636F6BC1DFBCC99830 script=DCCD2F161F76403D99A738F97A4B56B514A36047D61F8A2149392D4C5D44FDCE
+steps done: 00-env
+run-all.ps1 finished
+
+=== P2 (invocation rc=0) ===
+context: fp1 sha=a9a038430d781959829f8510067ce59afffaad62 local=427B3D1CAB8B04C1F51EEFAF04481827607EA229402AD70F234E8C0B4CE0365A juce=no-git/E421E8709FAADEF6AD25BC48DA04342315CA1D1BC98E12636F6BC1DFBCC99830 script=DCCD2F161F76403D99A738F97A4B56B514A36047D61F8A2149392D4C5D44FDCE
+SKIP(reuse) 00-env
+SKIP(filter) 01-configure-debug
+SKIP(filter) 02-build-debug
+SKIP(filter) 03-ctest-debug
+SKIP 04-symbols (core_engine_lib.lib or stack_probe.cpp missing)
+SKIP(filter) 05-configure-asan
+SKIP(filter) 06-build-asan
+SKIP(filter) 08-asan-ctest
+SKIP(filter) 09-lsp-smoke
+SKIP(filter) 10-desktop-selftest
+Core review environment - Windows/MSVC run (run-all.ps1, SHA-bound validation)
+src:  D:\CORE\CORE @ a9a038430d781959829f8510067ce59afffaad62
+root: D:\Core-build\core-review\proof
+context: fp1 sha=a9a038430d781959829f8510067ce59afffaad62 local=427B3D1CAB8B04C1F51EEFAF04481827607EA229402AD70F234E8C0B4CE0365A juce=no-git/E421E8709FAADEF6AD25BC48DA04342315CA1D1BC98E12636F6BC1DFBCC99830 script=DCCD2F161F76403D99A738F97A4B56B514A36047D61F8A2149392D4C5D44FDCE
+steps done: 00-env, P1-00-env
+run-all.ps1 finished
+
+=== P3 (invocation rc=0) ===
+context: fp1 sha=8c6837e80030e2185d5f6016f0365bae2c3f52bd local=E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855 juce=no-git/8E593B9824C6171ABD34544AE26A71E389D9D678043C6394757C73CB724ECF91 script=DCCD2F161F76403D99A738F97A4B56B514A36047D61F8A2149392D4C5D44FDCE
+INVALIDATED 00-env - recorded result belongs to a different SHA/local-change/JUCE/script/config
+RUN 00-env
+RC 00-env = 0   log=D:\Core-build\core-review\proof\00-env.txt
+SKIP(filter) 01-configure-debug
+SKIP(filter) 02-build-debug
+SKIP(filter) 03-ctest-debug
+SKIP 04-symbols (core_engine_lib.lib or stack_probe.cpp missing)
+SKIP(filter) 05-configure-asan
+SKIP(filter) 06-build-asan
+SKIP(filter) 08-asan-ctest
+SKIP(filter) 09-lsp-smoke
+SKIP(filter) 10-desktop-selftest
+Core review environment - Windows/MSVC run (run-all.ps1, SHA-bound validation)
+src:  D:\Core-build\core-review\proof-src-old @ 8c6837e80030e2185d5f6016f0365bae2c3f52bd
+root: D:\Core-build\core-review\proof
+context: fp1 sha=8c6837e80030e2185d5f6016f0365bae2c3f52bd local=E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855 juce=no-git/8E593B9824C6171ABD34544AE26A71E389D9D678043C6394757C73CB724ECF91 script=DCCD2F161F76403D99A738F97A4B56B514A36047D61F8A2149392D4C5D44FDCE
+steps done: 00-env, P1-00-env, P2-00-env
+run-all.ps1 finished
+
+=== P4 (invocation rc=0) ===
+context: fp1 sha=a9a038430d781959829f8510067ce59afffaad62 local=427B3D1CAB8B04C1F51EEFAF04481827607EA229402AD70F234E8C0B4CE0365A juce=no-git/E421E8709FAADEF6AD25BC48DA04342315CA1D1BC98E12636F6BC1DFBCC99830 script=DCCD2F161F76403D99A738F97A4B56B514A36047D61F8A2149392D4C5D44FDCE
+SKIP(filter) 00-env
+SKIP(filter) 01-configure-debug
+SKIP(filter) 02-build-debug
+SKIP(filter) 03-ctest-debug
+SKIP 04-symbols (core_engine_lib.lib or stack_probe.cpp missing)
+RUN 05-configure-asan
+RC 05-configure-asan = 0   log=D:\Core-build\core-review\proof\05-configure-asan.txt
+SKIP(filter) 06-build-asan
+07b asan flags: 67/68 translation units instrumented
+SKIP(filter) 08-asan-ctest
+SKIP(filter) 09-lsp-smoke
+SKIP(filter) 10-desktop-selftest
+Core review environment - Windows/MSVC run (run-all.ps1, SHA-bound validation)
+src:  D:\CORE\CORE @ a9a038430d781959829f8510067ce59afffaad62
+root: D:\Core-build\core-review\proof
+context: fp1 sha=a9a038430d781959829f8510067ce59afffaad62 local=427B3D1CAB8B04C1F51EEFAF04481827607EA229402AD70F234E8C0B4CE0365A juce=no-git/E421E8709FAADEF6AD25BC48DA04342315CA1D1BC98E12636F6BC1DFBCC99830 script=DCCD2F161F76403D99A738F97A4B56B514A36047D61F8A2149392D4C5D44FDCE
+steps done: 00-env, 05-configure-asan, P1-00-env, P2-00-env, P3-00-env
+run-all.ps1 finished
+
+=== P5 (invocation rc=0) ===
+context: fp1 sha=a9a038430d781959829f8510067ce59afffaad62 local=427B3D1CAB8B04C1F51EEFAF04481827607EA229402AD70F234E8C0B4CE0365A juce=no-git/E421E8709FAADEF6AD25BC48DA04342315CA1D1BC98E12636F6BC1DFBCC99830 script=DCCD2F161F76403D99A738F97A4B56B514A36047D61F8A2149392D4C5D44FDCE
+SKIP(filter) 00-env
+SKIP(filter) 01-configure-debug
+SKIP(filter) 02-build-debug
+SKIP(filter) 03-ctest-debug
+SKIP 04-symbols (core_engine_lib.lib or stack_probe.cpp missing)
+SKIP(reuse) 05-configure-asan
+SKIP(filter) 06-build-asan
+07b asan flags: 67/68 translation units instrumented
+SKIP(filter) 08-asan-ctest
+SKIP(filter) 09-lsp-smoke
+SKIP(filter) 10-desktop-selftest
+Core review environment - Windows/MSVC run (run-all.ps1, SHA-bound validation)
+src:  D:\CORE\CORE @ a9a038430d781959829f8510067ce59afffaad62
+root: D:\Core-build\core-review\proof
+context: fp1 sha=a9a038430d781959829f8510067ce59afffaad62 local=427B3D1CAB8B04C1F51EEFAF04481827607EA229402AD70F234E8C0B4CE0365A juce=no-git/E421E8709FAADEF6AD25BC48DA04342315CA1D1BC98E12636F6BC1DFBCC99830 script=DCCD2F161F76403D99A738F97A4B56B514A36047D61F8A2149392D4C5D44FDCE
+steps done: 00-env, 05-configure-asan, P1-00-env, P2-00-env, P3-00-env, P4-05-configure-asan
+run-all.ps1 finished
+
+=== P6 (invocation rc=0) ===
+context: fp1 sha=a9a038430d781959829f8510067ce59afffaad62 local=427B3D1CAB8B04C1F51EEFAF04481827607EA229402AD70F234E8C0B4CE0365A juce=no-git/E421E8709FAADEF6AD25BC48DA04342315CA1D1BC98E12636F6BC1DFBCC99830 script=DCCD2F161F76403D99A738F97A4B56B514A36047D61F8A2149392D4C5D44FDCE
+SKIP(filter) 00-env
+SKIP(filter) 01-configure-debug
+SKIP(filter) 02-build-debug
+SKIP(filter) 03-ctest-debug
+SKIP 04-symbols (core_engine_lib.lib or stack_probe.cpp missing)
+INVALIDATED 05-configure-asan - recorded result belongs to a different SHA/local-change/JUCE/script/config
+RUN 05-configure-asan
+RC 05-configure-asan = 0   log=D:\Core-build\core-review\proof\05-configure-asan.txt
+SKIP(filter) 06-build-asan
+07b asan flags: 48/49 translation units instrumented
+SKIP(filter) 08-asan-ctest
+SKIP(filter) 09-lsp-smoke
+SKIP(filter) 10-desktop-selftest
+Core review environment - Windows/MSVC run (run-all.ps1, SHA-bound validation)
+src:  D:\CORE\CORE @ a9a038430d781959829f8510067ce59afffaad62
+root: D:\Core-build\core-review\proof
+context: fp1 sha=a9a038430d781959829f8510067ce59afffaad62 local=427B3D1CAB8B04C1F51EEFAF04481827607EA229402AD70F234E8C0B4CE0365A juce=no-git/E421E8709FAADEF6AD25BC48DA04342315CA1D1BC98E12636F6BC1DFBCC99830 script=DCCD2F161F76403D99A738F97A4B56B514A36047D61F8A2149392D4C5D44FDCE
+steps done: 00-env, 05-configure-asan, P1-00-env, P2-00-env, P3-00-env, P4-05-configure-asan, P5-05-configure-asan
+run-all.ps1 finished
+
+=== P7 (invocation rc=0) ===
+context: fp1 sha=8c6837e80030e2185d5f6016f0365bae2c3f52bd local=5EFD433FCA3FBBA187011F16D63D506619B0E882D1B54DA5FE35036242AA098E juce=no-git/8E593B9824C6171ABD34544AE26A71E389D9D678043C6394757C73CB724ECF91 script=DCCD2F161F76403D99A738F97A4B56B514A36047D61F8A2149392D4C5D44FDCE
+INVALIDATED 00-env - recorded result belongs to a different SHA/local-change/JUCE/script/config
+RUN 00-env
+RC 00-env = 0   log=D:\Core-build\core-review\proof\00-env.txt
+SKIP(filter) 01-configure-debug
+SKIP(filter) 02-build-debug
+SKIP(filter) 03-ctest-debug
+SKIP 04-symbols (core_engine_lib.lib or stack_probe.cpp missing)
+SKIP(filter) 05-configure-asan
+SKIP(filter) 06-build-asan
+07b asan flags: 48/49 translation units instrumented
+SKIP(filter) 08-asan-ctest
+SKIP(filter) 09-lsp-smoke
+SKIP(filter) 10-desktop-selftest
+Core review environment - Windows/MSVC run (run-all.ps1, SHA-bound validation)
+src:  D:\Core-build\core-review\proof-src-old @ 8c6837e80030e2185d5f6016f0365bae2c3f52bd
+root: D:\Core-build\core-review\proof
+context: fp1 sha=8c6837e80030e2185d5f6016f0365bae2c3f52bd local=5EFD433FCA3FBBA187011F16D63D506619B0E882D1B54DA5FE35036242AA098E juce=no-git/8E593B9824C6171ABD34544AE26A71E389D9D678043C6394757C73CB724ECF91 script=DCCD2F161F76403D99A738F97A4B56B514A36047D61F8A2149392D4C5D44FDCE
+steps done: 00-env, 05-configure-asan, P1-00-env, P2-00-env, P3-00-env, P4-05-configure-asan, P5-05-configure-asan, P6-05-configure-asan
+run-all.ps1 finished
+stage 0.2 Windows proof summary (expected -> observed)
+P1 first 00-env runs:            PASS
+P2 same context reuses:          PASS
+P3 old revision invalidates:     PASS
+P4 asan configure runs:          PASS
+P5 same config reuses:           PASS
+P6 flag change invalidates:      PASS
+P7 local change invalidates:     PASS
+
+marker fingerprints (first line of each snapshot):
+P1-00-env.done: fp1 sha=a9a038430d781959829f8510067ce59afffaad62 local=427B3D1CAB8B04C1F51EEFAF04481827607EA229402AD70F234E8C0B4CE0365A juce=no-git/E421E8709FAADEF6AD25BC48DA04342315CA1D1BC98E12636F6BC1DFBCC99830 script=DCCD2F161F76403D99A738F97A4B56B514A36047D61F8A2149392D4C5D44FDCE cfg=env
+P3-00-env.done: fp1 sha=8c6837e80030e2185d5f6016f0365bae2c3f52bd local=E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855 juce=no-git/8E593B9824C6171ABD34544AE26A71E389D9D678043C6394757C73CB724ECF91 script=DCCD2F161F76403D99A738F97A4B56B514A36047D61F8A2149392D4C5D44FDCE cfg=env
+P4-05-configure-asan.done: fp1 sha=a9a038430d781959829f8510067ce59afffaad62 local=427B3D1CAB8B04C1F51EEFAF04481827607EA229402AD70F234E8C0B4CE0365A juce=no-git/E421E8709FAADEF6AD25BC48DA04342315CA1D1BC98E12636F6BC1DFBCC99830 script=DCCD2F161F76403D99A738F97A4B56B514A36047D61F8A2149392D4C5D44FDCE cfg=asan-address-testsON
+P6-05-configure-asan.done: fp1 sha=a9a038430d781959829f8510067ce59afffaad62 local=427B3D1CAB8B04C1F51EEFAF04481827607EA229402AD70F234E8C0B4CE0365A juce=no-git/E421E8709FAADEF6AD25BC48DA04342315CA1D1BC98E12636F6BC1DFBCC99830 script=DCCD2F161F76403D99A738F97A4B56B514A36047D61F8A2149392D4C5D44FDCE cfg=asan-address-testsOFF
+P7-00-env.done: fp1 sha=8c6837e80030e2185d5f6016f0365bae2c3f52bd local=5EFD433FCA3FBBA187011F16D63D506619B0E882D1B54DA5FE35036242AA098E juce=no-git/8E593B9824C6171ABD34544AE26A71E389D9D678043C6394757C73CB724ECF91 script=DCCD2F161F76403D99A738F97A4B56B514A36047D61F8A2149392D4C5D44FDCE cfg=env

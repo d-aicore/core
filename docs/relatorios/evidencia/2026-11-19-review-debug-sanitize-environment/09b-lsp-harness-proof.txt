@@ -1,0 +1,88 @@
+# LSP navigation proof inside the Harness - 2026-11-19
+
+Tool: `lsp` registered by the @local/dsh-cpp-lsp bundle (seam @deepseek-ai/dsh-lsp,
+clangd provider @deepseek-ai/dsh-lsp-stdio, model tool @deepseek-ai/dsh-tool-lsp).
+Server: clangd 23.1.0, args: --background-index --compile-commands-dir=D:/Core-build/core-review/debug
+--query-driver=C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Tools\MSVC\*\bin\Hostx64\x64\cl.exe
+(verified from the live process command line; the app does not inherit vcvars, hence --query-driver).
+Compile database: D:\Core-build\core-review\debug\compile_commands.json (505 translation units,
+MSVC 19.51.36260 / toolset 14.51.36231, CMAKE_BUILD_TYPE=Debug, exported by CMake).
+Workspace resolved by the tool: file:///D:/CORE/CORE (session working directory).
+Timestamp: 2026-11-19T22:22:22.726Z
+
+## 1. goToDefinition: tempo_map.hpp:21:10 (declaration of sampleAt) -> tempo_map.cpp
+{
+  "kind": "locations",
+  "locations": [
+    {
+      "uri": "file:///D:/CORE/CORE/engine/src/core/tempo_map.cpp",
+      "range": {
+        "start": {
+          "line": 46,
+          "character": 17
+        },
+        "end": {
+          "line": 46,
+          "character": 25
+        }
+      }
+    }
+  ],
+  "resolvedWorkspaceUri": "file:///D:/CORE/CORE"
+}
+
+## 2. goToDefinition from a DIFFERENT translation unit: server.cpp:552:44 (call site) -> tempo_map.cpp:47
+(line 552 is `? (int64_t)std::llround(tempo.sampleAt(std::clamp(numArg(args, "tick", 0), ...` ;
+ the cursor at character 44 sits on sampleAt.)
+Result: identical location file:///D:/CORE/CORE/engine/src/core/tempo_map.cpp:47:18
+
+## 3. findReferences on sampleAt (declaration in tempo_map.hpp:21)
+{
+  "kind": "locations",
+  "locations": [
+    {
+      "uri": "file:///D:/CORE/CORE/engine/src/core/tempo_map.hpp",
+      "range": {
+        "start": {
+          "line": 20,
+          "character": 9
+        }
+      }
+    },
+    {
+      "uri": "file:///D:/CORE/CORE/engine/src/core/tempo_map.cpp",
+      "range": {
+        "start": {
+          "line": 46,
+          "character": 17
+        }
+      }
+    },
+    {
+      "uri": "file:///D:/CORE/CORE/engine/src/core/tempo_map.cpp",
+      "range": {
+        "start": {
+          "line": 47,
+          "character": 82
+        }
+      }
+    }
+  ],
+  "resolvedWorkspaceUri": "file:///D:/CORE/CORE"
+}
+(3 locations in 2 files: declaration, out-of-line definition, call inside sampleOfTick.
+ Further call sites in server.cpp/main.cpp appear as the background index finishes.)
+
+## 4. hover on the same symbol
+{
+  "kind": "hover",
+  "hover": {
+    "contents": "### instance-method `sampleAt` | double sampleAt(double tick) const (In TempoMap)"
+  }
+}
+
+## Notes
+- The first goToDefinition call (before the index had parsed tempo_map.cpp) returned the declaration;
+  the retry returned the .cpp definition. Cold-index latency is real; the tool needs a few seconds on a
+  fresh DSH start (clangd background index at D:/Core-build/core-review/debug/.cache/clangd).
+- This proof ran through the DSH session's own `lsp` tool, not with a standalone client.

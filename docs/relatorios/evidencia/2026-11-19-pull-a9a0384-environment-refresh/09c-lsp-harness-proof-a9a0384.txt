@@ -1,0 +1,24 @@
+Harness lsp tool proof at a9a038430d781959829f8510067ce59afffaad62 (2026-11-19, DSH lead session a69b320fbfab)
+Compile database: D:/Core-build/core-review/debug (507 TUs, MSVC flags), dsh-cpp-lsp desktop profile wiring.
+No cold-index retry was needed for these queries.
+
+1) goToDefinition engine/src/core/tempo_map.hpp:21:12 (sampleAt declaration)
+   -> engine/src/core/tempo_map.cpp:47:18
+
+2) goToDefinition engine/src/core/server.cpp:617:42 (cross-TU call site; the 8c6837e proof used
+   server.cpp:552, which moved upstream)
+   -> engine/src/core/tempo_map.cpp:47:18
+
+3) findReferences engine/src/core/tempo_map.hpp:21:12 -> 10 locations in 6 files:
+   engine/src/core/tempo_map.hpp:21:10
+   engine/src/core/server.cpp:617:39
+   engine/src/core/server.cpp:634:63
+   engine/src/core/server.cpp:636:61
+   engine/src/core/engine.cpp:220:70
+   engine/src/core/graph.cpp:391:40
+   engine/src/core/graph.cpp:822:61
+   engine/src/core/tempo_map.cpp:47:18
+   engine/src/core/tempo_map.cpp:48:83
+   tests/bug_tests.cpp:651:14
+
+Standalone clangd parity at the same SHA: 09-lsp-smoke.txt (run-all.ps1 step 09, rc=0, PASS).

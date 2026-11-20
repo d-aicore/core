@@ -1,0 +1,24 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 041309d..b73c587 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -94,6 +94,19 @@ if(CORE_SANITIZE)
+     CoreApp CoreTestSynth CoreTestGain CoreSetup
+     engine_tests domain_tests role_tests midi_tests bug_tests bitwig_tests
+     audit_tests audit2_tests hunt_tests round3_tests calls_tests engine_process_tests
++    # legacy_guard_tests and menu_tests are merge tests (tests/CMakeLists.txt:114) but were missing
++    # from this list: they link the instrumented core_domain/core_engine_lib, so a sanitized build
++    # failed at link (MSVC LNK2038 annotate_string/vector/optional; GCC undefined reference to
++    # __asan_*). Measured 2026-11-19 on 8c6837e; without the two names no sanitized run of this
++    # tree could be produced. Keep them in the same instrumentation as the libraries they link.
++    legacy_guard_tests menu_tests
++    # Extension 2026-11-19 at a9a0384 (pull of origin/main, 86 commits): modules_tests and
++    # window_tests are new unconditional merge tests linking the instrumented core_domain /
++    # core_control, so they need the same instrumentation (same MSVC LNK2038 / GCC __asan_*
++    # link failure otherwise). legacy_guard_tests above was deleted upstream by the built-in
++    # sound removal; the name is kept verbatim from the 8c6837e measurement and is inert here
++    # (the if(TARGET) guard below skips it).
++    modules_tests window_tests
+     asan_canary ubsan_canary tsan_canary)
+   foreach(tgt IN LISTS CORE_SANITIZED_TARGETS)
+     if(TARGET ${tgt})

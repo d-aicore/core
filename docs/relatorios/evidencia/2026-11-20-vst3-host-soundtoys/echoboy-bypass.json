@@ -1,0 +1,72 @@
+{
+ "active": {
+  "path": "D:\\Core-build\\vst3-host\\eb-active.wav",
+  "sha256": "f7272f426f0300c8919d107ce6877f7794d94d380410fa75a8df69748be46189",
+  "sampleRate": 48000,
+  "frames": 240000,
+  "channels": 2,
+  "seconds": 5.0,
+  "peak": 0.391894,
+  "peakDb": -8.14,
+  "rms": 0.082976
+ },
+ "bypass": {
+  "path": "D:\\Core-build\\vst3-host\\eb-bypass.wav",
+  "sha256": "979a42fced7653058026958917ef8299934f7cfbf92c5d927ee3933005f32839",
+  "sampleRate": 48000,
+  "frames": 240000,
+  "channels": 2,
+  "seconds": 5.0,
+  "peak": 0.448819,
+  "peakDb": -6.96,
+  "rms": 0.200981
+ },
+ "nofx": {
+  "path": "D:\\Core-build\\vst3-host\\eb-nofx.wav",
+  "sha256": "979a42fced7653058026958917ef8299934f7cfbf92c5d927ee3933005f32839",
+  "sampleRate": 48000,
+  "frames": 240000,
+  "channels": 2,
+  "seconds": 5.0,
+  "peak": 0.448819,
+  "peakDb": -6.96,
+  "rms": 0.200981
+ },
+ "bypassBitIdenticalToNoFx": true,
+ "activeDiffersFromBypass": true,
+ "renders": {
+  "active": {
+   "channels": 2,
+   "denseEventBlocks": 0,
+   "path": "D:\\Core-build\\vst3-host\\eb-active.wav",
+   "peak": 0.3918937146663666,
+   "realtimeFactor": 22.48574516185464,
+   "renderMs": 222.3631,
+   "sampleRate": 48000.0,
+   "seconds": 5.0,
+   "stems": []
+  },
+  "bypass": {
+   "channels": 2,
+   "denseEventBlocks": 0,
+   "path": "D:\\Core-build\\vst3-host\\eb-bypass.wav",
+   "peak": 0.4488188922405243,
+   "realtimeFactor": 28.7071889690904,
+   "renderMs": 174.17239999999998,
+   "sampleRate": 48000.0,
+   "seconds": 5.0,
+   "stems": []
+  },
+  "nofx": {
+   "channels": 2,
+   "denseEventBlocks": 0,
+   "path": "D:\\Core-build\\vst3-host\\eb-nofx.wav",
+   "peak": 0.4488188922405243,
+   "realtimeFactor": 122.44098344597904,
+   "renderMs": 40.836,
+   "sampleRate": 48000.0,
+   "seconds": 5.0,
+   "stems": []
+  }
+ }
+}

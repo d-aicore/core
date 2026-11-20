@@ -1,0 +1,21 @@
+{
+ "load": {
+  "acceptedRevision": null,
+  "lengthSamples": 96000,
+  "missing": [],
+  "missingAssets": [],
+  "statesNeeded": [],
+  "tracks": 1
+ },
+ "missing": [],
+ "versions": [],
+ "mixParam": {
+  "default": 0.5,
+  "id": "3",
+  "name": "Mix",
+  "steps": 0,
+  "text": "50.0",
+  "value": 0.5
+ },
+ "paramCount": 25
+}

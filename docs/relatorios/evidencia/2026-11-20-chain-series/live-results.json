@@ -1,0 +1,1296 @@
+{
+ "bypassDEC-cont": {
+  "actions": [
+   {
+    "fx": "dec",
+    "ignored": [],
+    "kind": "bypass",
+    "latencyAfter": {
+     "deviceMs": 5.333333333333333,
+     "graphMs": 6.0,
+     "masterSamples": 0,
+     "totalMs": 11.333333333333332,
+     "tracksSamples": 288
+    },
+    "latencyBefore": {
+     "deviceMs": 5.333333333333333,
+     "graphMs": 9.958333333333334,
+     "masterSamples": 0,
+     "totalMs": 15.291666666666668,
+     "tracksSamples": 478
+    },
+    "positionAtApply": 72064,
+    "requestedAt": 72000
+   },
+   {
+    "fx": "dec",
+    "ignored": [],
+    "kind": "unbypass",
+    "latencyAfter": {
+     "deviceMs": 5.333333333333333,
+     "graphMs": 9.958333333333334,
+     "masterSamples": 0,
+     "totalMs": 15.291666666666668,
+     "tracksSamples": 478
+    },
+    "latencyBefore": {
+     "deviceMs": 5.333333333333333,
+     "graphMs": 6.0,
+     "masterSamples": 0,
+     "totalMs": 11.333333333333332,
+     "tracksSamples": 288
+    },
+    "positionAtApply": 120192,
+    "requestedAt": 120000
+   }
+  ],
+  "finalRender": {
+   "channels": 2,
+   "denseEventBlocks": 0,
+   "path": "D:\\Core-build\\chain-series\\live-bypassDEC-cont-final.wav",
+   "peak": 0.27766451239585876,
+   "realtimeFactor": 21.821487142283836,
+   "renderMs": 504.09029999999996,
+   "sampleRate": 48000.0,
+   "seconds": 11.0,
+   "stems": []
+  },
+  "frames": 192000,
+  "latencyStart": {
+   "deviceMs": 5.333333333333333,
+   "graphMs": 9.958333333333334,
+   "masterSamples": 0,
+   "totalMs": 15.291666666666668,
+   "tracksSamples": 478
+  },
+  "missing": [],
+  "name": "bypassDEC-cont",
+  "paramsAfter": {
+   "fx:src:dec": {
+    "Drive": {
+     "text": "7.0",
+     "value": 0.699999988079071
+    }
+   },
+   "fx:src:eb": {
+    "Feedback": {
+     "text": "0.75",
+     "value": 0.6000000238418579
+    },
+    "Mix": {
+     "text": "100.0",
+     "value": 1.0
+    }
+   }
+  },
+  "paramsRawSize": {
+   "dec": 12,
+   "eb": 25
+  },
+  "peak": 0.3774105906486511,
+  "silentWindows": [],
+  "stats": {
+   "auditionSteals": 0,
+   "avgLoadPct": 3.658413031780355,
+   "avgRenderMs": 0.09755765645805592,
+   "callbackErrors": 0,
+   "callbacks": 1502,
+   "denseEventBlocks": 0,
+   "device": {
+    "backend": "Null",
+    "blockSize": 128,
+    "device": "NULL Playback Device",
+    "exclusive": false,
+    "internalSampleRate": 48000,
+    "latencyMs": 5.333333333333333,
+    "periods": 2,
+    "sampleRate": 48000.0,
+    "scheduling": "Pro Audio"
+   },
+   "deviceDriftPpm": 0.0,
+   "deviceNotification": 0,
+   "droppedNotes": 0,
+   "failedPlugins": [],
+   "failedUnits": [],
+   "graphSwaps": 3,
+   "lastRebuildMs": 0.047799999999999995,
+   "latency": {
+    "deviceMs": 5.333333333333333,
+    "graphMs": 9.958333333333334,
+    "masterSamples": 0,
+    "totalMs": 15.291666666666668,
+    "tracksSamples": 478
+   },
+   "leakedGraphs": 0,
+   "liveFallback": false,
+   "liveNotesRejected": 0,
+   "liveOffAllTracks": 0,
+   "liveOffOverflows": 0,
+   "liveStallBlocks": 0,
+   "liveStalls": 0,
+   "liveThreads": 0,
+   "loadP50Pct": 4.0,
+   "loadP95Pct": 7.0,
+   "loadP99Pct": 16.0,
+   "maxCallbackFrames": 128,
+   "maxEditToAudioMs": 8.1228,
+   "maxLoadPct": 27.101200000000002,
+   "maxRenderMs": 0.7227,
+   "minCallbackFrames": 128,
+   "nativeFailures": 0,
+   "nonFiniteBlocks": 0,
+   "overruns": 0,
+   "pluginFailures": 0,
+   "pluginNotesDropped": 0,
+   "starvations": 366
+  },
+  "swaps": [
+   72064,
+   120192
+  ],
+  "tailBitExactVsRef": false,
+  "tailMaxDiffVsRef": 5.960464477539063e-08,
+  "threads": 0,
+  "transitions": [
+   {
+    "fx": "dec",
+    "kind": "bypass",
+    "maxSlewWindow": 0.054804135113954544,
+    "maxSlewWindowR": 0.034002333879470825,
+    "rmsAfter": 0.2591200330076623,
+    "rmsBefore": 0.2162867919741616,
+    "swapAt": 72064
+   },
+   {
+    "fx": "dec",
+    "kind": "unbypass",
+    "maxSlewWindow": 0.5300149917602539,
+    "maxSlewWindowR": 0.46205395460128784,
+    "rmsAfter": 0.2149817066711349,
+    "rmsBefore": 0.2351278697249503,
+    "swapAt": 120192
+   }
+  ]
+ },
+ "bypassEB-cont": {
+  "actions": [
+   {
+    "fx": "eb",
+    "ignored": [],
+    "kind": "bypass",
+    "latencyAfter": {
+     "deviceMs": 5.333333333333333,
+     "graphMs": 6.625,
+     "masterSamples": 0,
+     "totalMs": 11.958333333333332,
+     "tracksSamples": 318
+    },
+    "latencyBefore": {
+     "deviceMs": 5.333333333333333,
+     "graphMs": 9.958333333333334,
+     "masterSamples": 0,
+     "totalMs": 15.291666666666668,
+     "tracksSamples": 478
+    },
+    "positionAtApply": 72064,
+    "requestedAt": 72000
+   },
+   {
+    "fx": "eb",
+    "ignored": [],
+    "kind": "unbypass",
+    "latencyAfter": {
+     "deviceMs": 5.333333333333333,
+     "graphMs": 9.958333333333334,
+     "masterSamples": 0,
+     "totalMs": 15.291666666666668,
+     "tracksSamples": 478
+    },
+    "latencyBefore": {
+     "deviceMs": 5.333333333333333,
+     "graphMs": 6.625,
+     "masterSamples": 0,
+     "totalMs": 11.958333333333332,
+     "tracksSamples": 318
+    },
+    "positionAtApply": 120192,
+    "requestedAt": 120000
+   }
+  ],
+  "finalRender": {
+   "channels": 2,
+   "denseEventBlocks": 0,
+   "path": "D:\\Core-build\\chain-series\\live-bypassEB-cont-final.wav",
+   "peak": 0.27766451239585876,
+   "realtimeFactor": 21.77263275071088,
+   "renderMs": 505.22139999999996,
+   "sampleRate": 48000.0,
+   "seconds": 11.0,
+   "stems": []
+  },
+  "frames": 192000,
+  "latencyStart": {
+   "deviceMs": 5.333333333333333,
+   "graphMs": 9.958333333333334,
+   "masterSamples": 0,
+   "totalMs": 15.291666666666668,
+   "tracksSamples": 478
+  },
+  "missing": [],
+  "name": "bypassEB-cont",
+  "paramsAfter": {
+   "fx:src:dec": {
+    "Drive": {
+     "text": "7.0",
+     "value": 0.699999988079071
+    }
+   },
+   "fx:src:eb": {
+    "Feedback": {
+     "text": "0.75",
+     "value": 0.6000000238418579
+    },
+    "Mix": {
+     "text": "100.0",
+     "value": 1.0
+    }
+   }
+  },
+  "paramsRawSize": {
+   "dec": 12,
+   "eb": 25
+  },
+  "peak": 0.27318355441093445,
+  "silentWindows": [],
+  "stats": {
+   "auditionSteals": 0,
+   "avgLoadPct": 3.6725449673383697,
+   "avgRenderMs": 0.0979345079787234,
+   "callbackErrors": 0,
+   "callbacks": 1504,
+   "denseEventBlocks": 0,
+   "device": {
+    "backend": "Null",
+    "blockSize": 128,
+    "device": "NULL Playback Device",
+    "exclusive": false,
+    "internalSampleRate": 48000,
+    "latencyMs": 5.333333333333333,
+    "periods": 2,
+    "sampleRate": 48000.0,
+    "scheduling": "Pro Audio"
+   },
+   "deviceDriftPpm": 0.0,
+   "deviceNotification": 0,
+   "droppedNotes": 0,
+   "failedPlugins": [],
+   "failedUnits": [],
+   "graphSwaps": 3,
+   "lastRebuildMs": 0.038099999999999995,
+   "latency": {
+    "deviceMs": 5.333333333333333,
+    "graphMs": 9.958333333333334,
+    "masterSamples": 0,
+    "totalMs": 15.291666666666668,
+    "tracksSamples": 478
+   },
+   "leakedGraphs": 0,
+   "liveFallback": false,
+   "liveNotesRejected": 0,
+   "liveOffAllTracks": 0,
+   "liveOffOverflows": 0,
+   "liveStallBlocks": 0,
+   "liveStalls": 0,
+   "liveThreads": 0,
+   "loadP50Pct": 4.0,
+   "loadP95Pct": 6.0,
+   "loadP99Pct": 8.0,
+   "maxCallbackFrames": 128,
+   "maxEditToAudioMs": 8.0566,
+   "maxLoadPct": 21.0375,
+   "maxRenderMs": 0.5609999999999999,
+   "minCallbackFrames": 128,
+   "nativeFailures": 0,
+   "nonFiniteBlocks": 0,
+   "overruns": 0,
+   "pluginFailures": 0,
+   "pluginNotesDropped": 0,
+   "starvations": 368
+  },
+  "swaps": [
+   72064,
+   120192
+  ],
+  "tailBitExactVsRef": false,
+  "tailMaxDiffVsRef": 0.3403146266937256,
+  "threads": 0,
+  "transitions": [
+   {
+    "fx": "eb",
+    "kind": "bypass",
+    "maxSlewWindow": 0.3112700581550598,
+    "maxSlewWindowR": 0.32105159759521484,
+    "rmsAfter": 0.2109340576413505,
+    "rmsBefore": 0.2162867919741616,
+    "swapAt": 72064
+   },
+   {
+    "fx": "eb",
+    "kind": "unbypass",
+    "maxSlewWindow": 0.3286283612251282,
+    "maxSlewWindowR": 0.3346574306488037,
+    "rmsAfter": 0.21739323504075203,
+    "rmsBefore": 0.2130046714997872,
+    "swapAt": 120192
+   }
+  ]
+ },
+ "refAB-cont": {
+  "actions": [],
+  "finalRender": {
+   "channels": 2,
+   "denseEventBlocks": 0,
+   "path": "D:\\Core-build\\chain-series\\live-refAB-cont-final.wav",
+   "peak": 0.27766451239585876,
+   "realtimeFactor": 21.679686961087327,
+   "renderMs": 507.38739999999996,
+   "sampleRate": 48000.0,
+   "seconds": 11.0,
+   "stems": []
+  },
+  "frames": 192000,
+  "latencyStart": {
+   "deviceMs": 5.333333333333333,
+   "graphMs": 9.958333333333334,
+   "masterSamples": 0,
+   "totalMs": 15.291666666666668,
+   "tracksSamples": 478
+  },
+  "missing": [],
+  "name": "refAB-cont",
+  "paramsAfter": {
+   "fx:src:dec": {
+    "Drive": {
+     "text": "7.0",
+     "value": 0.699999988079071
+    }
+   },
+   "fx:src:eb": {
+    "Feedback": {
+     "text": "0.75",
+     "value": 0.6000000238418579
+    },
+    "Mix": {
+     "text": "100.0",
+     "value": 1.0
+    }
+   }
+  },
+  "paramsRawSize": {
+   "dec": 12,
+   "eb": 25
+  },
+  "peak": 0.27318355441093445,
+  "silentWindows": [],
+  "stats": {
+   "auditionSteals": 0,
+   "avgLoadPct": 3.70944703514619,
+   "avgRenderMs": 0.09891856287425149,
+   "callbackErrors": 0,
+   "callbacks": 1503,
+   "denseEventBlocks": 0,
+   "device": {
+    "backend": "Null",
+    "blockSize": 128,
+    "device": "NULL Playback Device",
+    "exclusive": false,
+    "internalSampleRate": 48000,
+    "latencyMs": 5.333333333333333,
+    "periods": 2,
+    "sampleRate": 48000.0,
+    "scheduling": "Pro Audio"
+   },
+   "deviceDriftPpm": 0.0,
+   "deviceNotification": 0,
+   "droppedNotes": 0,
+   "failedPlugins": [],
+   "failedUnits": [],
+   "graphSwaps": 1,
+   "lastRebuildMs": 1498.4278,
+   "latency": {
+    "deviceMs": 5.333333333333333,
+    "graphMs": 9.958333333333334,
+    "masterSamples": 0,
+    "totalMs": 15.291666666666668,
+    "tracksSamples": 478
+   },
+   "leakedGraphs": 0,
+   "liveFallback": false,
+   "liveNotesRejected": 0,
+   "liveOffAllTracks": 0,
+   "liveOffOverflows": 0,
+   "liveStallBlocks": 0,
+   "liveStalls": 0,
+   "liveThreads": 0,
+   "loadP50Pct": 4.0,
+   "loadP95Pct": 6.0,
+   "loadP99Pct": 7.0,
+   "maxCallbackFrames": 128,
+   "maxEditToAudioMs": 0.5246999999999999,
+   "maxLoadPct": 28.8712,
+   "maxRenderMs": 0.7698999999999999,
+   "minCallbackFrames": 128,
+   "nativeFailures": 0,
+   "nonFiniteBlocks": 0,
+   "overruns": 0,
+   "pluginFailures": 0,
+   "pluginNotesDropped": 0,
+   "starvations": 367
+  },
+  "swaps": [],
+  "threads": 0,
+  "transitions": []
+ },
+ "refAB-imp": {
+  "actions": [],
+  "finalRender": {
+   "channels": 2,
+   "denseEventBlocks": 0,
+   "path": "D:\\Core-build\\chain-series\\live-refAB-imp-final.wav",
+   "peak": 0.28104040026664734,
+   "realtimeFactor": 21.600986575968708,
+   "renderMs": 509.236,
+   "sampleRate": 48000.0,
+   "seconds": 11.0,
+   "stems": []
+  },
+  "frames": 192000,
+  "latencyStart": {
+   "deviceMs": 5.333333333333333,
+   "graphMs": 9.958333333333334,
+   "masterSamples": 0,
+   "totalMs": 15.291666666666668,
+   "tracksSamples": 478
+  },
+  "missing": [],
+  "name": "refAB-imp",
+  "paramsAfter": {
+   "fx:src:dec": {
+    "Drive": {
+     "text": "7.0",
+     "value": 0.699999988079071
+    }
+   },
+   "fx:src:eb": {
+    "Feedback": {
+     "text": "0.75",
+     "value": 0.6000000238418579
+    },
+    "Mix": {
+     "text": "100.0",
+     "value": 1.0
+    }
+   }
+  },
+  "paramsRawSize": {
+   "dec": 12,
+   "eb": 25
+  },
+  "peak": 0.27986520528793335,
+  "silentWindows": [
+   189440,
+   191488
+  ],
+  "stats": {
+   "auditionSteals": 0,
+   "avgLoadPct": 3.8071036778397493,
+   "avgRenderMs": 0.10152273936170213,
+   "callbackErrors": 0,
+   "callbacks": 1504,
+   "denseEventBlocks": 0,
+   "device": {
+    "backend": "Null",
+    "blockSize": 128,
+    "device": "NULL Playback Device",
+    "exclusive": false,
+    "internalSampleRate": 48000,
+    "latencyMs": 5.333333333333333,
+    "periods": 2,
+    "sampleRate": 48000.0,
+    "scheduling": "Pro Audio"
+   },
+   "deviceDriftPpm": 0.0,
+   "deviceNotification": 0,
+   "droppedNotes": 0,
+   "failedPlugins": [],
+   "failedUnits": [],
+   "graphSwaps": 1,
+   "lastRebuildMs": 221.6967,
+   "latency": {
+    "deviceMs": 5.333333333333333,
+    "graphMs": 9.958333333333334,
+    "masterSamples": 0,
+    "totalMs": 15.291666666666668,
+    "tracksSamples": 478
+   },
+   "leakedGraphs": 0,
+   "liveFallback": false,
+   "liveNotesRejected": 0,
+   "liveOffAllTracks": 0,
+   "liveOffOverflows": 0,
+   "liveStallBlocks": 0,
+   "liveStalls": 0,
+   "liveThreads": 0,
+   "loadP50Pct": 4.0,
+   "loadP95Pct": 6.0,
+   "loadP99Pct": 8.0,
+   "maxCallbackFrames": 128,
+   "maxEditToAudioMs": 0.4957,
+   "maxLoadPct": 20.01,
+   "maxRenderMs": 0.5336,
+   "minCallbackFrames": 128,
+   "nativeFailures": 0,
+   "nonFiniteBlocks": 0,
+   "overruns": 0,
+   "pluginFailures": 0,
+   "pluginNotesDropped": 0,
+   "starvations": 368
+  },
+  "swaps": [],
+  "threads": 0,
+  "transitions": []
+ },
+ "refBA-cont": {
+  "actions": [],
+  "finalRender": {
+   "channels": 2,
+   "denseEventBlocks": 0,
+   "path": "D:\\Core-build\\chain-series\\live-refBA-cont-final.wav",
+   "peak": 0.4854336380958557,
+   "realtimeFactor": 21.503640077546038,
+   "renderMs": 511.5413,
+   "sampleRate": 48000.0,
+   "seconds": 11.0,
+   "stems": []
+  },
+  "frames": 192000,
+  "latencyStart": {
+   "deviceMs": 5.333333333333333,
+   "graphMs": 9.958333333333334,
+   "masterSamples": 0,
+   "totalMs": 15.291666666666668,
+   "tracksSamples": 478
+  },
+  "missing": [],
+  "name": "refBA-cont",
+  "paramsAfter": {
+   "fx:src:dec": {
+    "Drive": {
+     "text": "7.0",
+     "value": 0.699999988079071
+    }
+   },
+   "fx:src:eb": {
+    "Feedback": {
+     "text": "0.75",
+     "value": 0.6000000238418579
+    },
+    "Mix": {
+     "text": "100.0",
+     "value": 1.0
+    }
+   }
+  },
+  "paramsRawSize": {
+   "dec": 12,
+   "eb": 25
+  },
+  "peak": 0.4853062629699707,
+  "silentWindows": [
+   1536,
+   2048,
+   2560,
+   3072,
+   3584,
+   4096,
+   4608,
+   5120,
+   5632,
+   6144,
+   6656,
+   7168,
+   7680,
+   8192,
+   8704,
+   9216,
+   9728,
+   10240,
+   10752,
+   11264
+  ],
+  "stats": {
+   "auditionSteals": 0,
+   "avgLoadPct": 3.848916244621088,
+   "avgRenderMs": 0.10263774086378737,
+   "callbackErrors": 0,
+   "callbacks": 1505,
+   "denseEventBlocks": 0,
+   "device": {
+    "backend": "Null",
+    "blockSize": 128,
+    "device": "NULL Playback Device",
+    "exclusive": false,
+    "internalSampleRate": 48000,
+    "latencyMs": 5.333333333333333,
+    "periods": 2,
+    "sampleRate": 48000.0,
+    "scheduling": "Pro Audio"
+   },
+   "deviceDriftPpm": 0.0,
+   "deviceNotification": 0,
+   "droppedNotes": 0,
+   "failedPlugins": [],
+   "failedUnits": [],
+   "graphSwaps": 1,
+   "lastRebuildMs": 229.4466,
+   "latency": {
+    "deviceMs": 5.333333333333333,
+    "graphMs": 9.958333333333334,
+    "masterSamples": 0,
+    "totalMs": 15.291666666666668,
+    "tracksSamples": 478
+   },
+   "leakedGraphs": 0,
+   "liveFallback": false,
+   "liveNotesRejected": 0,
+   "liveOffAllTracks": 0,
+   "liveOffOverflows": 0,
+   "liveStallBlocks": 0,
+   "liveStalls": 0,
+   "liveThreads": 0,
+   "loadP50Pct": 4.0,
+   "loadP95Pct": 6.0,
+   "loadP99Pct": 8.0,
+   "maxCallbackFrames": 128,
+   "maxEditToAudioMs": 0.45849999999999996,
+   "maxLoadPct": 17.4825,
+   "maxRenderMs": 0.4662,
+   "minCallbackFrames": 128,
+   "nativeFailures": 0,
+   "nonFiniteBlocks": 0,
+   "overruns": 0,
+   "pluginFailures": 0,
+   "pluginNotesDropped": 0,
+   "starvations": 367
+  },
+  "swaps": [],
+  "threads": 0,
+  "transitions": []
+ },
+ "refBA-imp": {
+  "actions": [],
+  "finalRender": {
+   "channels": 2,
+   "denseEventBlocks": 0,
+   "path": "D:\\Core-build\\chain-series\\live-refBA-imp-final.wav",
+   "peak": 0.27284252643585205,
+   "realtimeFactor": 22.486490729637563,
+   "renderMs": 489.1826,
+   "sampleRate": 48000.0,
+   "seconds": 11.0,
+   "stems": []
+  },
+  "frames": 192000,
+  "latencyStart": {
+   "deviceMs": 5.333333333333333,
+   "graphMs": 9.958333333333334,
+   "masterSamples": 0,
+   "totalMs": 15.291666666666668,
+   "tracksSamples": 478
+  },
+  "missing": [],
+  "name": "refBA-imp",
+  "paramsAfter": {
+   "fx:src:dec": {
+    "Drive": {
+     "text": "7.0",
+     "value": 0.699999988079071
+    }
+   },
+   "fx:src:eb": {
+    "Feedback": {
+     "text": "0.75",
+     "value": 0.6000000238418579
+    },
+    "Mix": {
+     "text": "100.0",
+     "value": 1.0
+    }
+   }
+  },
+  "paramsRawSize": {
+   "dec": 12,
+   "eb": 25
+  },
+  "peak": 0.2659550905227661,
+  "silentWindows": [
+   1536,
+   2048,
+   2560,
+   3072,
+   3584,
+   4096,
+   4608,
+   5120,
+   5632,
+   6144,
+   6656,
+   7168,
+   7680,
+   8192,
+   8704,
+   9216,
+   9728,
+   10240,
+   10752,
+   11264
+  ],
+  "stats": {
+   "auditionSteals": 0,
+   "avgLoadPct": 3.959649661008761,
+   "avgRenderMs": 0.10559063122923587,
+   "callbackErrors": 0,
+   "callbacks": 1505,
+   "denseEventBlocks": 0,
+   "device": {
+    "backend": "Null",
+    "blockSize": 128,
+    "device": "NULL Playback Device",
+    "exclusive": false,
+    "internalSampleRate": 48000,
+    "latencyMs": 5.333333333333333,
+    "periods": 2,
+    "sampleRate": 48000.0,
+    "scheduling": "Pro Audio"
+   },
+   "deviceDriftPpm": 0.0,
+   "deviceNotification": 0,
+   "droppedNotes": 0,
+   "failedPlugins": [],
+   "failedUnits": [],
+   "graphSwaps": 1,
+   "lastRebuildMs": 234.2518,
+   "latency": {
+    "deviceMs": 5.333333333333333,
+    "graphMs": 9.958333333333334,
+    "masterSamples": 0,
+    "totalMs": 15.291666666666668,
+    "tracksSamples": 478
+   },
+   "leakedGraphs": 0,
+   "liveFallback": false,
+   "liveNotesRejected": 0,
+   "liveOffAllTracks": 0,
+   "liveOffOverflows": 0,
+   "liveStallBlocks": 0,
+   "liveStalls": 0,
+   "liveThreads": 0,
+   "loadP50Pct": 4.0,
+   "loadP95Pct": 7.0,
+   "loadP99Pct": 15.0,
+   "maxCallbackFrames": 128,
+   "maxEditToAudioMs": 0.44039999999999996,
+   "maxLoadPct": 20.977500000000003,
+   "maxRenderMs": 0.5594,
+   "minCallbackFrames": 128,
+   "nativeFailures": 0,
+   "nonFiniteBlocks": 0,
+   "overruns": 0,
+   "pluginFailures": 0,
+   "pluginNotesDropped": 0,
+   "starvations": 366
+  },
+  "swaps": [],
+  "threads": 0,
+  "transitions": []
+ },
+ "reorder-cont": {
+  "actions": [
+   {
+    "fx": "",
+    "ignored": [],
+    "kind": "reorder",
+    "latencyAfter": {
+     "deviceMs": 5.333333333333333,
+     "graphMs": 9.958333333333334,
+     "masterSamples": 0,
+     "totalMs": 15.291666666666668,
+     "tracksSamples": 478
+    },
+    "latencyBefore": {
+     "deviceMs": 5.333333333333333,
+     "graphMs": 9.958333333333334,
+     "masterSamples": 0,
+     "totalMs": 15.291666666666668,
+     "tracksSamples": 478
+    },
+    "positionAtApply": 72192,
+    "requestedAt": 72000
+   }
+  ],
+  "finalRender": {
+   "channels": 2,
+   "denseEventBlocks": 0,
+   "path": "D:\\Core-build\\chain-series\\live-reorder-cont-final.wav",
+   "peak": 0.4854336380958557,
+   "realtimeFactor": 21.885939239061706,
+   "renderMs": 502.6058,
+   "sampleRate": 48000.0,
+   "seconds": 11.0,
+   "stems": []
+  },
+  "frames": 192000,
+  "latencyStart": {
+   "deviceMs": 5.333333333333333,
+   "graphMs": 9.958333333333334,
+   "masterSamples": 0,
+   "totalMs": 15.291666666666668,
+   "tracksSamples": 478
+  },
+  "missing": [],
+  "name": "reorder-cont",
+  "paramsAfter": {
+   "fx:src:dec": {
+    "Drive": {
+     "text": "7.0",
+     "value": 0.699999988079071
+    }
+   },
+   "fx:src:eb": {
+    "Feedback": {
+     "text": "0.75",
+     "value": 0.6000000238418579
+    },
+    "Mix": {
+     "text": "100.0",
+     "value": 1.0
+    }
+   }
+  },
+  "paramsRawSize": {
+   "dec": 12,
+   "eb": 25
+  },
+  "peak": 0.47515374422073364,
+  "silentWindows": [],
+  "stats": {
+   "auditionSteals": 0,
+   "avgLoadPct": 3.794708838157902,
+   "avgRenderMs": 0.1011922103861518,
+   "callbackErrors": 0,
+   "callbacks": 1502,
+   "denseEventBlocks": 0,
+   "device": {
+    "backend": "Null",
+    "blockSize": 128,
+    "device": "NULL Playback Device",
+    "exclusive": false,
+    "internalSampleRate": 48000,
+    "latencyMs": 5.333333333333333,
+    "periods": 2,
+    "sampleRate": 48000.0,
+    "scheduling": "Pro Audio"
+   },
+   "deviceDriftPpm": 0.0,
+   "deviceNotification": 0,
+   "droppedNotes": 0,
+   "failedPlugins": [],
+   "failedUnits": [],
+   "graphSwaps": 2,
+   "lastRebuildMs": 0.0436,
+   "latency": {
+    "deviceMs": 5.333333333333333,
+    "graphMs": 9.958333333333334,
+    "masterSamples": 0,
+    "totalMs": 15.291666666666668,
+    "tracksSamples": 478
+   },
+   "leakedGraphs": 0,
+   "liveFallback": false,
+   "liveNotesRejected": 0,
+   "liveOffAllTracks": 0,
+   "liveOffOverflows": 0,
+   "liveStallBlocks": 0,
+   "liveStalls": 0,
+   "liveThreads": 0,
+   "loadP50Pct": 4.0,
+   "loadP95Pct": 6.0,
+   "loadP99Pct": 8.0,
+   "maxCallbackFrames": 128,
+   "maxEditToAudioMs": 7.9939,
+   "maxLoadPct": 15.5175,
+   "maxRenderMs": 0.4138,
+   "minCallbackFrames": 128,
+   "nativeFailures": 0,
+   "nonFiniteBlocks": 0,
+   "overruns": 0,
+   "pluginFailures": 0,
+   "pluginNotesDropped": 0,
+   "starvations": 367
+  },
+  "swaps": [
+   72192
+  ],
+  "tailBitExactVsRef": false,
+  "tailMaxDiffVsRef": 0.028117477893829346,
+  "threads": 0,
+  "transitions": [
+   {
+    "fx": "",
+    "kind": "reorder",
+    "maxSlewWindow": 0.07455168664455414,
+    "maxSlewWindowR": 0.07415254414081573,
+    "rmsAfter": 0.258303806261797,
+    "rmsBefore": 0.21618163583236488,
+    "swapAt": 72192
+   }
+  ]
+ },
+ "reorder-cont-m5": {
+  "actions": [
+   {
+    "fx": "",
+    "ignored": [],
+    "kind": "reorder",
+    "latencyAfter": {
+     "deviceMs": 5.333333333333333,
+     "graphMs": 9.958333333333334,
+     "masterSamples": 0,
+     "totalMs": 15.291666666666668,
+     "tracksSamples": 478
+    },
+    "latencyBefore": {
+     "deviceMs": 5.333333333333333,
+     "graphMs": 9.958333333333334,
+     "masterSamples": 0,
+     "totalMs": 15.291666666666668,
+     "tracksSamples": 478
+    },
+    "positionAtApply": 72576,
+    "requestedAt": 72000
+   }
+  ],
+  "finalRender": {
+   "channels": 2,
+   "denseEventBlocks": 0,
+   "path": "D:\\Core-build\\chain-series\\live-reorder-cont-m5-final.wav",
+   "peak": 0.4854336380958557,
+   "realtimeFactor": 22.248160431080358,
+   "renderMs": 494.42289999999997,
+   "sampleRate": 48000.0,
+   "seconds": 11.0,
+   "stems": []
+  },
+  "frames": 192000,
+  "latencyStart": {
+   "deviceMs": 5.333333333333333,
+   "graphMs": 9.958333333333334,
+   "masterSamples": 0,
+   "totalMs": 15.291666666666668,
+   "tracksSamples": 478
+  },
+  "missing": [],
+  "name": "reorder-cont-m5",
+  "paramsAfter": {
+   "fx:src:dec": {
+    "Drive": {
+     "text": "7.0",
+     "value": 0.699999988079071
+    }
+   },
+   "fx:src:eb": {
+    "Feedback": {
+     "text": "0.75",
+     "value": 0.6000000238418579
+    },
+    "Mix": {
+     "text": "100.0",
+     "value": 1.0
+    }
+   }
+  },
+  "paramsRawSize": {
+   "dec": 12,
+   "eb": 25
+  },
+  "peak": 0.47561338543891907,
+  "silentWindows": [],
+  "stats": {
+   "auditionSteals": 0,
+   "avgLoadPct": 3.8259820321927194,
+   "avgRenderMs": 0.10202616201859228,
+   "callbackErrors": 0,
+   "callbacks": 1506,
+   "denseEventBlocks": 0,
+   "device": {
+    "backend": "Null",
+    "blockSize": 128,
+    "device": "NULL Playback Device",
+    "exclusive": false,
+    "internalSampleRate": 48000,
+    "latencyMs": 5.333333333333333,
+    "periods": 2,
+    "sampleRate": 48000.0,
+    "scheduling": "Pro Audio"
+   },
+   "deviceDriftPpm": 0.0,
+   "deviceNotification": 0,
+   "droppedNotes": 0,
+   "failedPlugins": [],
+   "failedUnits": [],
+   "graphSwaps": 2,
+   "lastRebuildMs": 0.0448,
+   "latency": {
+    "deviceMs": 5.333333333333333,
+    "graphMs": 9.958333333333334,
+    "masterSamples": 0,
+    "totalMs": 15.291666666666668,
+    "tracksSamples": 478
+   },
+   "leakedGraphs": 0,
+   "liveFallback": false,
+   "liveNotesRejected": 0,
+   "liveOffAllTracks": 0,
+   "liveOffOverflows": 0,
+   "liveStallBlocks": 0,
+   "liveStalls": 0,
+   "liveThreads": 4,
+   "loadP50Pct": 4.0,
+   "loadP95Pct": 6.0,
+   "loadP99Pct": 8.0,
+   "maxCallbackFrames": 128,
+   "maxEditToAudioMs": 8.8954,
+   "maxLoadPct": 16.5412,
+   "maxRenderMs": 0.4411,
+   "minCallbackFrames": 128,
+   "nativeFailures": 0,
+   "nonFiniteBlocks": 0,
+   "overruns": 0,
+   "pluginFailures": 0,
+   "pluginNotesDropped": 0,
+   "starvations": 367
+  },
+  "swaps": [
+   72576
+  ],
+  "tailBitExactVsRef": false,
+  "tailMaxDiffVsRef": 0.027137428522109985,
+  "threads": 4,
+  "transitions": [
+   {
+    "fx": "",
+    "kind": "reorder",
+    "maxSlewWindow": 0.09340636432170868,
+    "maxSlewWindowR": 0.04369990527629852,
+    "rmsAfter": 0.2587356051746856,
+    "rmsBefore": 0.2163413895219453,
+    "swapAt": 72576
+   }
+  ]
+ },
+ "reorder-imp": {
+  "actions": [
+   {
+    "fx": "",
+    "ignored": [],
+    "kind": "reorder",
+    "latencyAfter": {
+     "deviceMs": 5.333333333333333,
+     "graphMs": 9.958333333333334,
+     "masterSamples": 0,
+     "totalMs": 15.291666666666668,
+     "tracksSamples": 478
+    },
+    "latencyBefore": {
+     "deviceMs": 5.333333333333333,
+     "graphMs": 9.958333333333334,
+     "masterSamples": 0,
+     "totalMs": 15.291666666666668,
+     "tracksSamples": 478
+    },
+    "positionAtApply": 24064,
+    "requestedAt": 24000
+   }
+  ],
+  "finalRender": {
+   "channels": 2,
+   "denseEventBlocks": 0,
+   "path": "D:\\Core-build\\chain-series\\live-reorder-imp-final.wav",
+   "peak": 0.27284252643585205,
+   "realtimeFactor": 22.32770370731222,
+   "renderMs": 492.6615,
+   "sampleRate": 48000.0,
+   "seconds": 11.0,
+   "stems": []
+  },
+  "frames": 192000,
+  "latencyStart": {
+   "deviceMs": 5.333333333333333,
+   "graphMs": 9.958333333333334,
+   "masterSamples": 0,
+   "totalMs": 15.291666666666668,
+   "tracksSamples": 478
+  },
+  "missing": [],
+  "name": "reorder-imp",
+  "paramsAfter": {
+   "fx:src:dec": {
+    "Drive": {
+     "text": "7.0",
+     "value": 0.699999988079071
+    }
+   },
+   "fx:src:eb": {
+    "Feedback": {
+     "text": "0.75",
+     "value": 0.6000000238418579
+    },
+    "Mix": {
+     "text": "100.0",
+     "value": 1.0
+    }
+   }
+  },
+  "paramsRawSize": {
+   "dec": 12,
+   "eb": 25
+  },
+  "peak": 0.28004732728004456,
+  "silentWindows": [
+   33792,
+   34304,
+   34816,
+   35328,
+   70656,
+   71168,
+   82432,
+   82944,
+   83456,
+   94208,
+   94720,
+   95232,
+   105984,
+   106496,
+   107008,
+   118272,
+   118784,
+   119296,
+   129536,
+   130048,
+   130560,
+   131072,
+   141312,
+   141824,
+   142336,
+   142848,
+   143360,
+   153088,
+   153600,
+   154112,
+   154624,
+   155136,
+   164864,
+   165376,
+   165888,
+   166400,
+   166912,
+   167424,
+   177152,
+   177664,
+   178176,
+   178688,
+   179200,
+   187904,
+   188416,
+   188928,
+   189440,
+   189952,
+   190464,
+   190976
+  ],
+  "stats": {
+   "auditionSteals": 0,
+   "avgLoadPct": 3.6770531829117643,
+   "avgRenderMs": 0.09805472703062583,
+   "callbackErrors": 0,
+   "callbacks": 1502,
+   "denseEventBlocks": 0,
+   "device": {
+    "backend": "Null",
+    "blockSize": 128,
+    "device": "NULL Playback Device",
+    "exclusive": false,
+    "internalSampleRate": 48000,
+    "latencyMs": 5.333333333333333,
+    "periods": 2,
+    "sampleRate": 48000.0,
+    "scheduling": "Pro Audio"
+   },
+   "deviceDriftPpm": 0.0,
+   "deviceNotification": 0,
+   "droppedNotes": 0,
+   "failedPlugins": [],
+   "failedUnits": [],
+   "graphSwaps": 2,
+   "lastRebuildMs": 0.0382,
+   "latency": {
+    "deviceMs": 5.333333333333333,
+    "graphMs": 9.958333333333334,
+    "masterSamples": 0,
+    "totalMs": 15.291666666666668,
+    "tracksSamples": 478
+   },
+   "leakedGraphs": 0,
+   "liveFallback": false,
+   "liveNotesRejected": 0,
+   "liveOffAllTracks": 0,
+   "liveOffOverflows": 0,
+   "liveStallBlocks": 0,
+   "liveStalls": 0,
+   "liveThreads": 0,
+   "loadP50Pct": 4.0,
+   "loadP95Pct": 6.0,
+   "loadP99Pct": 8.0,
+   "maxCallbackFrames": 128,
+   "maxEditToAudioMs": 8.3172,
+   "maxLoadPct": 18.9112,
+   "maxRenderMs": 0.5043,
+   "minCallbackFrames": 128,
+   "nativeFailures": 0,
+   "nonFiniteBlocks": 0,
+   "overruns": 0,
+   "pluginFailures": 0,
+   "pluginNotesDropped": 0,
+   "starvations": 367
+  },
+  "swaps": [
+   24064
+  ],
+  "tailBitExactVsRef": false,
+  "tailMaxDiffVsRef": 0.0013489372795447707,
+  "threads": 0,
+  "transitions": [
+   {
+    "fx": "",
+    "kind": "reorder",
+    "maxSlewWindow": 0.0018679089844226837,
+    "maxSlewWindowR": 0.06336773186922073,
+    "rmsAfter": 0.19021377190326821,
+    "rmsBefore": 0.015074866354578232,
+    "swapAt": 24064
+   }
+  ]
+ },
+ "steadySlewContA": 0.027277156710624695,
+ "steadySlewContB": 0.028969503939151764
+}

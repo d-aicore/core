@@ -1,0 +1,91 @@
+[0/2] Re-checking globbed directories...
+[1/67] Core version
+[2/61] Building VST3 manifest helper for CoreTestGain
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/s2s3/build/vst3_helpers/CoreTestGain
+ninja: no work to do.
+[3/61] Building VST3 manifest helper for CoreTestSynth
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/s2s3/build/vst3_helpers/CoreTestSynth
+ninja: no work to do.
+[4/61] Building VST3 manifest helper for CoreTestThrow
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/s2s3/build/vst3_helpers/CoreTestThrow
+ninja: no work to do.
+[5/61] Building VST3 manifest helper for CoreTestCrashRestart
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/Core-build/s2s3/build/vst3_helpers/CoreTestCrashRestart
+ninja: no work to do.
+[6/61] Building VST3 manifest helper for CoreTestCrash
+-- Configuring done (0.0s)
+-- Generating done (0.1s)
+-- Build files have been written to: D:/Core-build/s2s3/build/vst3_helpers/CoreTestCrash
+ninja: no work to do.
+[7/61] Building VST3 manifest helper for CoreTestFault
+-- Configuring done (0.0s)
+-- Generating done (0.1s)
+-- Build files have been written to: D:/Core-build/s2s3/build/vst3_helpers/CoreTestFault
+ninja: no work to do.
+[8/61] Building CXX object tests\CMakeFiles\state_recovery_tests.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_core\juce_core_CompilationTime.cpp.obj
+[9/61] Building C object tests\CMakeFiles\state_recovery_tests.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_core\juce_core_zlib.c.obj
+[10/61] Linking CXX static library "app\selftest-plugins\CoreTestFault_artefacts\Debug\Core Test Fault_SharedCode.lib"
+[11/61] Linking CXX executable tests\menu_tests.exe
+[12/61] Linking CXX executable tests\window_tests.exe
+[13/61] Linking CXX executable tests\export_plugin_failure_tests.exe
+[14/61] Linking CXX executable tests\round3_tests.exe
+[15/61] Linking CXX executable tests\audit2_tests.exe
+[16/61] Linking CXX executable tests\calls_tests.exe
+[17/61] Generating juce_binarydata_CoreSetupData/JuceLibraryCode/BinaryData1.cpp, juce_binarydata_CoreSetupData/JuceLibraryCode/CoreSetupData.h
+[18/61] Linking CXX executable tests\audit_tests.exe
+[19/61] Linking CXX executable tests\hunt_tests.exe
+[20/61] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_Sheenbidi.c.obj
+[21/61] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libjpg_1.c.obj
+[22/61] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libjpg_2.c.obj
+[23/61] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libjpg_3.c.obj
+[24/61] Building CXX object tests\CMakeFiles\state_recovery_tests.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_events\juce_events.cpp.obj
+[25/61] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dec.c.obj
+[26/61] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_dec_avx2.c.obj
+[27/61] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libpng.c.obj
+[28/61] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_dec.c.obj
+[29/61] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_enc.c.obj
+[30/61] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_dec_sse41.c.obj
+[31/61] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_enc_avx2.c.obj
+[32/61] Building CXX object app\installer\CMakeFiles\CoreSetup.dir\Setup.cpp.obj
+[33/61] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_dsp_enc_sse41.c.obj
+[34/61] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_sharpyuv.c.obj
+[35/61] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_enc.c.obj
+[36/61] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_libwebp_utils.c.obj
+[37/61] Building CXX object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_core\juce_core_CompilationTime.cpp.obj
+[38/61] Building CXX object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics_2.cpp.obj
+[39/61] Building CXX object tests\CMakeFiles\state_recovery_tests.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_core\juce_core.cpp.obj
+[40/61] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_lunasvg.c.obj
+[41/61] Building C object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_core\juce_core_zlib.c.obj
+[42/61] Building CXX object tests\CMakeFiles\state_recovery_tests.dir\state_recovery_tests.cpp.obj
+[43/61] Building CXX object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics_4.cpp.obj
+[44/61] Building CXX object tests\CMakeFiles\state_recovery_tests.dir\__\app\desktop\src\EngineSession.cpp.obj
+[45/61] Linking CXX shared module "app\selftest-plugins\CoreTestFault_artefacts\Debug\VST3\Core Test Fault.vst3\Contents\x86_64-win\Core Test Fault.vst3"
+removing moduleinfo.json
+creating D:/Core-build/s2s3/build/app/selftest-plugins/CoreTestFault_artefacts/Debug/VST3/Core Test Fault.vst3/Contents/Resources/moduleinfo.json
+[46/61] Building CXX object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics_5.cpp.obj
+[47/61] Building CXX object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_data_structures\juce_data_structures.cpp.obj
+[48/61] Linking CXX shared module "app\selftest-plugins\CoreTestCrash_artefacts\Debug\VST3\Core Test Crash.vst3\Contents\x86_64-win\Core Test Crash.vst3"
+removing moduleinfo.json
+creating D:/Core-build/s2s3/build/app/selftest-plugins/CoreTestCrash_artefacts/Debug/VST3/Core Test Crash.vst3/Contents/Resources/moduleinfo.json
+[49/61] Linking CXX executable tests\state_recovery_tests.exe
+[50/61] Building CXX object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_events\juce_events.cpp.obj
+[51/61] Building CXX object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics_3.cpp.obj
+[52/61] Linking CXX shared module "app\selftest-plugins\CoreTestCrashRestart_artefacts\Debug\VST3\Core Test Crash Restart.vst3\Contents\x86_64-win\Core Test Crash Restart.vst3"
+removing moduleinfo.json
+creating D:/Core-build/s2s3/build/app/selftest-plugins/CoreTestCrashRestart_artefacts/Debug/VST3/Core Test Crash Restart.vst3/Contents/Resources/moduleinfo.json
+[53/61] Linking CXX executable tests\engine_process_tests.exe
+[54/61] Building CXX object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_core\juce_core.cpp.obj
+[55/61] Building CXX object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_gui_basics\juce_gui_basics.cpp.obj
+[56/61] Building CXX object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics.cpp.obj
+[57/61] Building CXX object app\installer\CMakeFiles\CoreSetupData.dir\juce_binarydata_CoreSetupData\JuceLibraryCode\BinaryData1.cpp.obj
+[58/61] Linking CXX static library app\installer\CoreSetupData.lib
+[59/61] Building CXX object app\installer\CMakeFiles\CoreSetup.dir\D_\Core-deps\JUCE-9.0.5\modules\juce_graphics\juce_graphics_Harfbuzz.cpp.obj
+[60/61] Linking CXX executable "app\installer\CoreSetup_artefacts\Debug\Core Setup.exe"

@@ -1,0 +1,25 @@
+{
+  "backend": "WASAPI",
+  "devices": [
+    {
+      "default": true,
+      "name": "Auscultadores (USB-C Audio)"
+    },
+    {
+      "default": false,
+      "name": "Altifalantes (Realtek(R) Audio)"
+    },
+    {
+      "default": false,
+      "name": "Q27G3XMN (NVIDIA High Definition Audio)"
+    },
+    {
+      "default": false,
+      "name": "KB272 G0 (NVIDIA High Definition Audio)"
+    },
+    {
+      "default": false,
+      "name": "Realtek Digital Output (Realtek(R) Audio)"
+    }
+  ]
+}
