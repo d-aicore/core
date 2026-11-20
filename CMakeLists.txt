@@ -65,6 +65,62 @@ if(CORE_BUILD_APP AND WIN32)
     URL https://github.com/juce-framework/JUCE/archive/refs/tags/9.0.5.tar.gz  # commit d60b7a78030661574a615b586d9325ba7a7fa7dd
     URL_HASH SHA256=d92207f51ba728d3d195b6d5e93ecd049717a915fc250ff6844c32ea7272315a)
   FetchContent_MakeAvailable(JUCE)
+
+  # D113: the host calls VST3Client::markCrashedByHost(), which exists only in JUCE carrying the
+  # vendored crash/restart patch. Without it, configure still succeeds and the build dies late at
+  # juce_host.cpp (C2039) — or, if that target is skipped, goes green with no crash fix at all
+  # (false green). So: apply the patch to a fetched JUCE idempotently, and refuse a local copy
+  # that does not already carry the FULL patch. Never modify a user-provided local deps dir.
+  find_program(GIT_EXECUTABLE git)
+  if(NOT GIT_EXECUTABLE)
+    message(FATAL_ERROR "D113: git was not found, but it is required to apply/verify "
+                        "ci/patches/juce-failed-plugin-restart.patch to JUCE. Install git and re-configure.")
+  endif()
+  set(CORE_JUCE_PATCH "${CMAKE_CURRENT_SOURCE_DIR}/ci/patches/juce-failed-plugin-restart.patch")
+  # `git apply --check -R` succeeds (rc=0) only when EVERY hunk is already present: it proves the
+  # FULL patch is applied. A pristine, partially patched, or incompatible JUCE tree fails the check.
+  execute_process(COMMAND "${GIT_EXECUTABLE}" apply --check -R "${CORE_JUCE_PATCH}"
+                  WORKING_DIRECTORY "${juce_SOURCE_DIR}"
+                  RESULT_VARIABLE CORE_JUCE_PATCH_RC
+                  OUTPUT_QUIET ERROR_QUIET)
+  if(CORE_JUCE_PATCH_RC EQUAL 0)
+    # Fully applied already: idempotent re-configure, nothing to do (fetched or local copy).
+    message(STATUS "D113: JUCE at ${juce_SOURCE_DIR} already carries the full crash/restart patch "
+                   "(verified: git apply --check -R)")
+  elseif(FETCHCONTENT_SOURCE_DIR_JUCE)
+    # Local copy provided: it must already carry the full D113 patch; fail early, do not touch it.
+    message(FATAL_ERROR
+      "D113: the local JUCE copy '${juce_SOURCE_DIR}' (FETCHCONTENT_SOURCE_DIR_JUCE) does NOT carry the "
+      "full crash/restart patch '${CORE_JUCE_PATCH}' (git apply --check -R rc=${CORE_JUCE_PATCH_RC}). "
+      "A local copy must already have the complete D113 patch applied (14 hunks in 2 files under "
+      "modules/juce_audio_processors_headless/); an unpatched or incompatible JUCE version otherwise "
+      "fails the build later with C2039 'markCrashedByHost'. Apply the full patch to the local copy "
+      "yourself, or unset FETCHCONTENT_SOURCE_DIR_JUCE so Core downloads and patches JUCE 9.0.5. "
+      "The local copy was NOT modified.")
+  else()
+    # Downloaded copy: apply the patch, then PROVE full application with the reverse check.
+    execute_process(COMMAND "${GIT_EXECUTABLE}" apply "${CORE_JUCE_PATCH}"
+                    WORKING_DIRECTORY "${juce_SOURCE_DIR}"
+                    RESULT_VARIABLE CORE_JUCE_APPLY_RC)
+    if(NOT CORE_JUCE_APPLY_RC EQUAL 0)
+      message(FATAL_ERROR
+        "D113: git apply of '${CORE_JUCE_PATCH}' to the fetched JUCE at '${juce_SOURCE_DIR}' failed "
+        "(rc=${CORE_JUCE_APPLY_RC}). The fetched JUCE version is incompatible with the D113 patch; "
+        "expected the pinned JUCE 9.0.5 (URL_HASH-verified above).")
+    endif()
+    execute_process(COMMAND "${GIT_EXECUTABLE}" apply --check -R "${CORE_JUCE_PATCH}"
+                    WORKING_DIRECTORY "${juce_SOURCE_DIR}"
+                    RESULT_VARIABLE CORE_JUCE_VERIFY_RC
+                    OUTPUT_QUIET ERROR_QUIET)
+    if(NOT CORE_JUCE_VERIFY_RC EQUAL 0)
+      message(FATAL_ERROR
+        "D113: the patch was applied to '${juce_SOURCE_DIR}' but the full-application verification "
+        "(git apply --check -R) failed (rc=${CORE_JUCE_VERIFY_RC}). Refusing to continue with a "
+        "possibly partial patch (false-green risk).")
+    endif()
+    message(STATUS "Applied D113 crash patch to fetched JUCE at ${juce_SOURCE_DIR} "
+                   "(full application verified: git apply --check -R)")
+  endif()
 endif()
 
 add_subdirectory(engine)
@@ -94,6 +150,19 @@ if(CORE_SANITIZE)
     CoreApp CoreTestSynth CoreTestGain CoreSetup
     engine_tests domain_tests role_tests midi_tests bug_tests bitwig_tests
     audit_tests audit2_tests hunt_tests round3_tests calls_tests engine_process_tests
+    # legacy_guard_tests and menu_tests are merge tests (tests/CMakeLists.txt:114) but were missing
+    # from this list: they link the instrumented core_domain/core_engine_lib, so a sanitized build
+    # failed at link (MSVC LNK2038 annotate_string/vector/optional; GCC undefined reference to
+    # __asan_*). Measured 2026-11-19 on 8c6837e; without the two names no sanitized run of this
+    # tree could be produced. Keep them in the same instrumentation as the libraries they link.
+    legacy_guard_tests menu_tests
+    # Extension 2026-11-19 at a9a0384 (pull of origin/main, 86 commits): modules_tests and
+    # window_tests are new unconditional merge tests linking the instrumented core_domain /
+    # core_control, so they need the same instrumentation (same MSVC LNK2038 / GCC __asan_*
+    # link failure otherwise). legacy_guard_tests above was deleted upstream by the built-in
+    # sound removal; the name is kept verbatim from the 8c6837e measurement and is inert here
+    # (the if(TARGET) guard below skips it).
+    modules_tests window_tests
     asan_canary ubsan_canary tsan_canary)
   foreach(tgt IN LISTS CORE_SANITIZED_TARGETS)
     if(TARGET ${tgt})
