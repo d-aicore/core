@@ -14,6 +14,17 @@ if(WIN32)
 endif()
 add_test(NAME engine_tests COMMAND engine_tests)
 
+# S4 (DATA priority): invalid float WAV samples (NaN, +/-Inf, float64 values that overflow the float
+# cast) must be refused at import with a message naming the file, frame and kind, and nothing may be
+# registered in the AssetStore (red measured at a9a0384). Fixtures are generated in the test; valid
+# files must import bit-identical. Runs in Debug AND Release: engine/CMakeLists.txt applies /fp:fast
+# to every MSVC config, so the validation is integer bit-pattern based and this suite guards both.
+add_executable(wav_float_tests wav_float_tests.cpp)
+target_include_directories(wav_float_tests PRIVATE ${CMAKE_SOURCE_DIR}/engine/src ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(wav_float_tests PRIVATE core_engine_lib)
+add_test(NAME wav_float_tests COMMAND wav_float_tests)
+set_tests_properties(wav_float_tests PROPERTIES LABELS merge TIMEOUT 300)
+
 add_executable(domain_tests domain_tests.cpp)
 target_include_directories(domain_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(domain_tests PRIVATE core_domain core_engine_lib)
@@ -62,6 +73,15 @@ add_executable(audit2_tests audit2_tests.cpp)
 target_include_directories(audit2_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/engine/src ${CMAKE_SOURCE_DIR}/app/engine-client/src)
 target_link_libraries(audit2_tests PRIVATE core_domain core_engine_lib)
 add_test(NAME audit2_tests COMMAND audit2_tests)
+
+# S1 (DATA priority): an export whose needed plugin failed to load or failed during the render is refused
+# before publish (plugin/track/why named, previous WAV byte-identical); bypass is not failure. In-process
+# offline path (RenderJobs + renderProject, fake providers); the real VST3 SEH crash is covered by
+# cli_plugin_crash_render. Red measured at a9a0384 (coordinator-round2/s1-repro-notes.md).
+add_executable(export_plugin_failure_tests export_plugin_failure_tests.cpp)
+target_include_directories(export_plugin_failure_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/engine/src)
+target_link_libraries(export_plugin_failure_tests PRIVATE core_engine_lib)
+add_test(NAME export_plugin_failure_tests COMMAND export_plugin_failure_tests)
 
 # The deep bug hunt (2026-11-16, RELATORIO-CAÇA-PROFUNDA.md, P01-P06): each case of the report.
 add_executable(hunt_tests hunt_tests.cpp)
@@ -116,7 +136,19 @@ if(TARGET core-package)
   set_tests_properties(cli_package_stale PROPERTIES LABELS merge TIMEOUT 300 RUN_SERIAL TRUE)
 endif()
 
-set_tests_properties(engine_tests domain_tests role_tests midi_tests bug_tests audit_tests audit2_tests hunt_tests round3_tests calls_tests bitwig_tests menu_tests modules_tests window_tests cli_version cli_demo_render cli_measure cli_unicode
+# S5 (DATA priority): the installer must never overwrite user-edited/user-owned samples at distributed
+# paths, and uninstall must never delete user content through samples.txt (red measured by execution
+# at a9a0384). Drives the real Core Setup.exe silent flow with synthetic fixtures in a temp dir under
+# the build tree; registered only where the installer is built (WIN32 + CORE_BUILD_APP). RUN_SERIAL:
+# it runs the one installer exe through sequential install/reinstall/uninstall steps.
+if(WIN32 AND CORE_BUILD_APP AND TARGET CoreSetup)
+  add_test(NAME installer_samples COMMAND ${CMAKE_COMMAND} -DSETUP=$<TARGET_FILE:CoreSetup>
+                                          -DWORK=${CMAKE_CURRENT_BINARY_DIR}/installer-samples
+                                          -P ${CMAKE_CURRENT_SOURCE_DIR}/installer_samples.cmake)
+  set_tests_properties(installer_samples PROPERTIES LABELS merge TIMEOUT 300 RUN_SERIAL TRUE)
+endif()
+
+set_tests_properties(engine_tests domain_tests role_tests midi_tests bug_tests audit_tests audit2_tests export_plugin_failure_tests hunt_tests round3_tests calls_tests bitwig_tests menu_tests modules_tests window_tests cli_version cli_demo_render cli_measure cli_unicode
                      PROPERTIES LABELS merge TIMEOUT 300)
 
 # The engine process driven through the app's client (core-engine serve, null audio backend): messages larger than
@@ -131,10 +163,12 @@ if(TARGET core_engine_client)
   set_tests_properties(engine_process_tests PROPERTIES LABELS merge TIMEOUT 120)
 endif()
 
-# A plugin that crashes in processBlock (app/selftest-plugins, CORE_TEST_CRASH) must not hang the engine: the offline
-# render ends, and the served engine goes on answering and exits. These need the test plugins, which are built with
-# JUCE (CORE_BUILD_APP on Windows, as the gate builds): without them the render test is not registered and
-# engine_process_tests is built without its crash case.
+# A plugin that crashes in processBlock (app/selftest-plugins, CORE_TEST_CRASH) must not hang the engine, and
+# (S1, DATA priority) an export whose needed plugin crashed or could not load is REFUSED before publish:
+# cli_plugin_crash_render drives the real CLI through the five refusal cases (previous WAV byte-identical,
+# stems whole set, bypass is not failure) with a healthy green control. These need the test plugins, which are
+# built with JUCE (CORE_BUILD_APP on Windows, as the gate builds): without them the render test is not
+# registered and engine_process_tests is built without its crash case.
 if(TARGET CoreTestCrash_VST3 AND TARGET CoreTestSynth_VST3 AND TARGET engine_process_tests)
   set(CORE_TEST_CRASH_VST3 "$<GENEX_EVAL:$<TARGET_PROPERTY:CoreTestCrash_VST3,JUCE_PLUGIN_ARTEFACT_FILE>>")
   set(CORE_TEST_SYNTH_VST3 "$<GENEX_EVAL:$<TARGET_PROPERTY:CoreTestSynth_VST3,JUCE_PLUGIN_ARTEFACT_FILE>>")
@@ -171,6 +205,133 @@ if(TARGET CoreTestCrashRestart_VST3 AND TARGET CoreTestSynth_VST3 AND TARGET eng
   set(CORE_TEST_CRASH_RESTART_VST3 "$<GENEX_EVAL:$<TARGET_PROPERTY:CoreTestCrashRestart_VST3,JUCE_PLUGIN_ARTEFACT_FILE>>")
   target_compile_definitions(engine_process_tests PRIVATE CORE_TEST_CRASH_RESTART_VST3="${CORE_TEST_CRASH_RESTART_VST3}")
   add_dependencies(engine_process_tests CoreTestCrashRestart_VST3)
+endif()
+
+# S6 (engine RT proofs): the M5 live multicore path must be BIT-EXACT with the serial path (quality bar 4),
+# measured with the deterministic test plugins through the real VST3 host: in-process Server + JuceHost +
+# null device (the serve architecture), the existing Engine::startCapture seam (it copies the output AFTER
+# the live-worker mix), and RtWorkerPool::workerJobs() as the parallel-usage proof (workers really ran, not
+# just configured). M5 stays OFF by default (D51): every parallel run opts in explicitly, RAII env guard.
+# The reset watchdog's 2 s bound is measured with timing evidence in engine_process_tests (Fault seams).
+if(TARGET CoreTestSynth_VST3 AND TARGET CoreTestGain_VST3 AND TARGET core_plugin_host)
+  add_executable(m5_bitexact_tests m5_bitexact_tests.cpp ${CMAKE_SOURCE_DIR}/engine/src/io/device.cpp)
+  target_include_directories(m5_bitexact_tests PRIVATE ${CMAKE_SOURCE_DIR}/engine/src ${CMAKE_CURRENT_SOURCE_DIR})
+  target_link_libraries(m5_bitexact_tests PRIVATE core_plugin_host core_engine_lib miniaudio_impl)
+  target_compile_definitions(m5_bitexact_tests PRIVATE
+    CORE_TEST_SYNTH_VST3="$<GENEX_EVAL:$<TARGET_PROPERTY:CoreTestSynth_VST3,JUCE_PLUGIN_ARTEFACT_FILE>>"
+    CORE_TEST_GAIN_VST3="$<GENEX_EVAL:$<TARGET_PROPERTY:CoreTestGain_VST3,JUCE_PLUGIN_ARTEFACT_FILE>>"
+    JUCE_MODAL_LOOPS_PERMITTED=1)
+  add_dependencies(m5_bitexact_tests CoreTestSynth_VST3 CoreTestGain_VST3)
+  if(WIN32)
+    target_link_libraries(m5_bitexact_tests PRIVATE dbghelp)
+  endif()
+  add_test(NAME m5_bitexact_tests COMMAND m5_bitexact_tests)
+  set_tests_properties(m5_bitexact_tests PROPERTIES LABELS merge TIMEOUT 600)
+endif()
+
+# S7 (engine RT measurement, owner round-1 item 6): quality bar 3 proven by TOOLING — alloc/lock/IO
+# detection in the audio callback (global operator new/delete overrides + IAT hooks on the exe's
+# kernel32/kernelbase/api-set imports: file IO, CriticalSection/SRWLOCK, blocking waits, HeapAlloc family
+# = the static CRT's malloc coverage), one test-only seam in device.cpp (core::rtProbe: in-callback window
+# + thread attribution + directed-fault inject + exact per-block timing). The negative controls MUST fire
+# (allocation, CreateFileW/ReadFile, EnterCriticalSection inside the callback); the clean engine path
+# (serial + M5(4), real VST3 test plugins, null backend) must record ZERO audio-thread violations.
+# --baseline mode: Release real-device load ramp (Phase B), same instrumentation. D51 default untouched.
+if(TARGET CoreTestSynth_VST3 AND TARGET CoreTestGain_VST3 AND TARGET core_plugin_host)
+  add_executable(s7_rt_probe_tests s7_rt_probe_tests.cpp ${CMAKE_SOURCE_DIR}/engine/src/io/device.cpp)
+  target_include_directories(s7_rt_probe_tests PRIVATE ${CMAKE_SOURCE_DIR}/engine/src ${CMAKE_CURRENT_SOURCE_DIR})
+  target_link_libraries(s7_rt_probe_tests PRIVATE core_plugin_host core_engine_lib miniaudio_impl)
+  target_compile_definitions(s7_rt_probe_tests PRIVATE
+    CORE_TEST_SYNTH_VST3="$<GENEX_EVAL:$<TARGET_PROPERTY:CoreTestSynth_VST3,JUCE_PLUGIN_ARTEFACT_FILE>>"
+    CORE_TEST_GAIN_VST3="$<GENEX_EVAL:$<TARGET_PROPERTY:CoreTestGain_VST3,JUCE_PLUGIN_ARTEFACT_FILE>>"
+    JUCE_MODAL_LOOPS_PERMITTED=1)
+  add_dependencies(s7_rt_probe_tests CoreTestSynth_VST3 CoreTestGain_VST3)
+  if(WIN32)
+    target_link_libraries(s7_rt_probe_tests PRIVATE dbghelp)
+    # The probe symbolizes violation stacks with dbghelp: it needs its own PDB (test target only;
+    # /DEBUG adds debug info, it changes no code). Without it every stack is raw addresses.
+    target_link_options(s7_rt_probe_tests PRIVATE /DEBUG)
+  endif()
+  add_test(NAME s7_rt_probe_tests COMMAND s7_rt_probe_tests)
+  set_tests_properties(s7_rt_probe_tests PROPERTIES LABELS merge TIMEOUT 600)
+  # The STRICT zero-lock gate: quality bar 3 as written, measured RED at a9a0384 + round-1 (JUCE
+  # MidiEventList's Array<Vst::Event, CriticalSection> locks on the audio thread / M5 workers). Kept out
+  # of merge on purpose — the ENV-03 precedent: a known measured failure is excluded explicitly and run
+  # separately, never a silent pass; it goes green only by an authorized fix or an explicit owner
+  # acceptance (owner-decision gate; see the S7 report). Nothing is relaxed: the full criterion lives here.
+  add_test(NAME s7_rt_strict_tests COMMAND s7_rt_probe_tests "S7 STRICT")
+  set_tests_properties(s7_rt_strict_tests PROPERTIES LABELS rt_strict TIMEOUT 600 ENVIRONMENT "CORE_S7_STRICT=1")
+endif()
+
+# S9 (mute CPU + fixed-128 block, owner round-2 «Restantes etapas», MEASUREMENT-FIRST): two separate
+# problems characterized, not fixed. (A) mute is a fader-only gate (graph.cpp:1329-1331): muted tracks pay
+# full instrument+insert CPU — measured per track via engine.cpu + the S7 seam's exact per-block timing,
+# serial AND M5(4), null backend; the non-zero muted-track CPU pins are the DEFECT itself (CSV-09), to be
+# updated consciously when an authorized suspend change lands. (B) the live plugin block is compile-time
+# 128 (juce_host.cpp:23, export-only 256/512 knob): device-block sweep 64/128/256/512 with latency
+# invariance. (C) the four suspend preconditions: tails (mute = ramped silence, tail computed not heard),
+# sidechain (M7c key path dormant for plugins, pre-mute capture by design), latency (PDC invariant under
+# mute rebuilds), click-free resume (capture seam: ramped, bit-exact warm steady state vs reference).
+# --measure/--covers modes write the JSON/raw evidence; the delay-tail probe uses an OUT-OF-REPO
+# CoreTestDelay build (no repo target). Additive block; the six plugin registration blocks above preserved.
+if(TARGET CoreTestSynth_VST3 AND TARGET CoreTestGain_VST3 AND TARGET core_plugin_host)
+  add_executable(s9_mute_block_tests s9_mute_block_tests.cpp ${CMAKE_SOURCE_DIR}/engine/src/io/device.cpp)
+  target_include_directories(s9_mute_block_tests PRIVATE ${CMAKE_SOURCE_DIR}/engine/src ${CMAKE_CURRENT_SOURCE_DIR})
+  target_link_libraries(s9_mute_block_tests PRIVATE core_plugin_host core_engine_lib miniaudio_impl)
+  target_compile_definitions(s9_mute_block_tests PRIVATE
+    CORE_TEST_SYNTH_VST3="$<GENEX_EVAL:$<TARGET_PROPERTY:CoreTestSynth_VST3,JUCE_PLUGIN_ARTEFACT_FILE>>"
+    CORE_TEST_GAIN_VST3="$<GENEX_EVAL:$<TARGET_PROPERTY:CoreTestGain_VST3,JUCE_PLUGIN_ARTEFACT_FILE>>"
+    JUCE_MODAL_LOOPS_PERMITTED=1)
+  add_dependencies(s9_mute_block_tests CoreTestSynth_VST3 CoreTestGain_VST3)
+  add_test(NAME s9_mute_block_tests COMMAND s9_mute_block_tests)
+  set_tests_properties(s9_mute_block_tests PROPERTIES LABELS merge TIMEOUT 600)
+endif()
+
+# STAGE 2 timing / latency-compensation / sound-integrity PROOF (owner round-2, gates Chain parallel).
+# Additive block; the seven plugin registration blocks above are preserved unchanged. Permanent regression:
+# a deterministic fake delay/click provider exercises the graph's PDC (before/after compensation), sample-
+# accurate MIDI scheduling (EventLog + click onset), automation sub-block landing, M7a bus recombination,
+# block-size independence (64/128/256/512) at 48k/44.1k, and the Server::checkPluginLatency change seam —
+# offline, no device, no JUCE at runtime. --evidence <outDir> [delayVst3] [clickVst3] runs the real-VST3
+# matrix (serve architecture + null device + the existing Engine::startCapture seam) with the OUT-OF-REPO
+# CoreTimingDelay/CoreTimingClick probes and writes probe songs, captures (.f32/.wav) and a JSON deviation
+# table. Method + results: docs/relatorios/2026-11-20-timing-latency-proof.md.
+if(TARGET CoreTestSynth_VST3 AND TARGET CoreTestGain_VST3 AND TARGET core_plugin_host)
+  add_executable(timing_proof_tests timing_proof_tests.cpp ${CMAKE_SOURCE_DIR}/engine/src/io/device.cpp)
+  target_include_directories(timing_proof_tests PRIVATE ${CMAKE_SOURCE_DIR}/engine/src ${CMAKE_CURRENT_SOURCE_DIR})
+  target_link_libraries(timing_proof_tests PRIVATE core_plugin_host core_engine_lib miniaudio_impl)
+  target_compile_definitions(timing_proof_tests PRIVATE
+    CORE_TEST_SYNTH_VST3="$<GENEX_EVAL:$<TARGET_PROPERTY:CoreTestSynth_VST3,JUCE_PLUGIN_ARTEFACT_FILE>>"
+    CORE_TEST_GAIN_VST3="$<GENEX_EVAL:$<TARGET_PROPERTY:CoreTestGain_VST3,JUCE_PLUGIN_ARTEFACT_FILE>>"
+    JUCE_MODAL_LOOPS_PERMITTED=1)
+  add_dependencies(timing_proof_tests CoreTestSynth_VST3 CoreTestGain_VST3)
+  if(WIN32)
+    target_link_libraries(timing_proof_tests PRIVATE dbghelp)
+  endif()
+  add_test(NAME timing_proof_tests COMMAND timing_proof_tests)
+  set_tests_properties(timing_proof_tests PROPERTIES LABELS merge TIMEOUT 600)
+endif()
+
+# S2+S3 (DATA priority): a song with missing plugins must be announced (name + why, engine answer AND the
+# app session's notice), relink must identify the instance and preserve state + automation (no-match and
+# duplicate cases recoverable), and an invalid plugin state must be reported with the document's ORIGINAL
+# blob preserved across the live-state refresh and save/reopen (never factory defaults in silence).
+# Serve harness as engine_process_tests, plus the app's own EngineSession (juce_events, null backend) and
+# document save/reopen path. Red measured at a9a0384 + round-1 (coordinator-round2/s2s3-notes.md).
+if(TARGET core_engine_client AND TARGET juce_events)
+  add_executable(state_recovery_tests state_recovery_tests.cpp ${CMAKE_SOURCE_DIR}/app/desktop/src/EngineSession.cpp)
+  target_include_directories(state_recovery_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/app/desktop/src)
+  target_link_libraries(state_recovery_tests PRIVATE core_engine_client core_domain juce::juce_events)
+  # The wait loop pumps the JUCE message queue (runDispatchLoopUntil is a modal-loop API, off by default in JUCE 9).
+  target_compile_definitions(state_recovery_tests PRIVATE JUCE_MODAL_LOOPS_PERMITTED=1 CORE_ENGINE_EXE="$<TARGET_FILE:core-engine>")
+  add_dependencies(state_recovery_tests core-engine)
+  add_test(NAME state_recovery_tests COMMAND state_recovery_tests)
+  set_tests_properties(state_recovery_tests PROPERTIES LABELS merge TIMEOUT 300)
+  if(TARGET CoreTestSynth_VST3)
+    target_compile_definitions(state_recovery_tests PRIVATE
+      CORE_TEST_SYNTH_VST3="$<GENEX_EVAL:$<TARGET_PROPERTY:CoreTestSynth_VST3,JUCE_PLUGIN_ARTEFACT_FILE>>")
+    add_dependencies(state_recovery_tests CoreTestSynth_VST3)
+  endif()
 endif()
 
 # The app's own end-to-end test (play, undo, save/reopen, export... on the null device, with its test plugins).

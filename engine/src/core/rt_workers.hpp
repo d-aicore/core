@@ -110,6 +110,11 @@ public:
     for (const auto& w : workers_) n += w->pending.load() ? 1 : 0;
     return n;
   }
+  // Tests/diagnostics: jobs actually executed by the worker threads (the audio thread's own take() is not
+  // counted). Proof the live path really ran in parallel: a configured pool can still play every job on the
+  // audio thread, and engine.stats only counts stalls. One relaxed add per job, on the workers only; the
+  // audio thread's path is untouched (S6, engine RT proofs).
+  uint64_t workerJobs() const { return workerJobs_.load(std::memory_order_relaxed); }
 
 private:
   struct Worker {
@@ -146,6 +151,7 @@ private:
         for (int i; (i = next_.fetch_add(1, std::memory_order_acq_rel)) < count_;) {
           if (const int64_t d = testDelayNs.load(std::memory_order_relaxed)) std::this_thread::sleep_for(std::chrono::nanoseconds(d));
           job_(context_, i);
+          workerJobs_.fetch_add(1, std::memory_order_relaxed);
         }
       } catch (...) {
         failed_.store(true, std::memory_order_release);
@@ -160,6 +166,7 @@ private:
   int count_ = 0;
   uint32_t mode_ = 0;
   std::atomic<int> next_{0};
+  std::atomic<uint64_t> workerJobs_{0};  // tests/diagnostics: jobs the workers ran (see workerJobs())
   std::atomic<bool> failed_{false};
   std::atomic<bool> stop_{false};
 };

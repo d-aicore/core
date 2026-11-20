@@ -78,6 +78,18 @@ class MiniaudioOutput final : public AudioOutput {
 
   static void callback(ma_device* device, void* output, const void*, ma_uint32 frames) {
     auto* self = static_cast<MiniaudioOutput*>(device->pUserData);
+    // S7 test-only seam (device.hpp): null in production — one relaxed load, no behaviour change. When
+    // armed, the whole callback is the probe's in-callback window (engine call AND the timing record),
+    // and the thread id lets the probe attribute violations to the audio thread alone.
+    RtProbe* probe = rtProbe.load(std::memory_order_relaxed);
+    if (probe) {
+      probe->inCallback->store(true, std::memory_order_relaxed);
+#ifdef _WIN32
+      probe->audioThreadId->store((uint32_t)GetCurrentThreadId(), std::memory_order_relaxed);
+#else
+      probe->audioThreadId->store(0, std::memory_order_relaxed);
+#endif
+    }
     setAudioFloatMode();  // FTZ + DAZ, whatever the backend did (float_mode.hpp); the workers take it from here
     const uint64_t start = nowNs();
     float* out = static_cast<float*>(output);
@@ -103,6 +115,11 @@ class MiniaudioOutput final : public AudioOutput {
     const uint64_t gap = self->lastStartNs_ ? start - self->lastStartNs_ : 0;
     self->lastStartNs_ = start;
     self->engine_->recordCallback(end - start, budget, gap, frames);
+    if (probe) {
+      if (probe->block) probe->block(end - start, budget, gap, frames);
+      if (probe->inject) probe->inject();  // negative controls: a directed fault inside the window
+      probe->inCallback->store(false, std::memory_order_relaxed);
+    }
   }
 
   void initContext(const json& args) {
@@ -228,5 +245,8 @@ public:
 } // namespace
 
 std::unique_ptr<AudioOutput> makeMiniaudioOutput() { return std::make_unique<MiniaudioOutput>(); }
+
+// S7 test-only seam: null by default (see device.hpp). A measurement probe arms it; production never does.
+std::atomic<RtProbe*> rtProbe{nullptr};
 
 } // namespace core
