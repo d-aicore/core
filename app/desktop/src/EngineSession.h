@@ -229,6 +229,10 @@ private:
   std::thread worker_;
 };
 
-const char* statusText(EngineStatus status);  // Portuguese label for the UI
+const char* statusText(EngineStatus status);  // the status line's label for the engine's state
+
+// S2 (DATA priority): the notice for plugins the engine could not load — the count and "name: why" per
+// plugin, in key order. "" when none. The session's message and the window's status line show the same text.
+std::string missingPluginsNotice(const std::map<std::string, std::string>& missingPlugins);
 
 } // namespace core::app

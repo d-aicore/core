@@ -63,6 +63,13 @@ void checkExportLevel(const ExportLevel& level, const RenderOutput& output);
 using DiskSpaceQuery = std::function<bool(const std::filesystem::path& folder, std::filesystem::space_info& out)>;
 uint64_t exportFileBytes(int64_t frames, int bits, bool mono);
 void checkExportSpace(const std::vector<RenderOutput>& outputs, int64_t frames, int bits, const DiskSpaceQuery& query = {});
+class Graph;
+// S1 (DATA priority): an export whose needed plugin failed to LOAD or failed DURING the render is refused
+// before anything is published — a degraded render must never replace the previous export. Call once
+// before rendering (catches load failures) and once after, before publish (catches render-time failures:
+// exception, crash, non-finite or runaway audio). Bypassed units are intentional silence, not failures.
+// Throws naming each plugin / track / why; the caller's failure path keeps every existing file untouched.
+void checkExportPlugins(const Graph& graph);
 // What the undo of a failed publication did (BUG-SWEEP-03): which old files went back to their paths, and
 // which old copies had to stay on disk as "<path>.previous..." because the path could not be taken back.
 // Every recoverable copy is kept and named; a failure never deletes an old file.

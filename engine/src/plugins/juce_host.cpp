@@ -347,8 +347,22 @@ struct JuceHost::Impl {
     const std::string state = plugin.value("state", "");
     if (carried && carried->getSize() > 0) instance->setStateInformation(carried->getData(), (int)carried->getSize());
     else if (!state.empty()) {
+      // S3 (DATA priority): an invalid state must never become factory defaults in silence. The instance is
+      // refused with a why, so the missing channel names it (the app announces it, the export refuses it)
+      // and plugins.states never hands its factory state to the document: the song keeps the ORIGINAL blob
+      // for recovery. A state that decodes but is not a VST3 state blob would be ignored by the wrapper
+      // (setStateInformation is void): detected here the same way, before it is applied.
       juce::MemoryOutputStream data;  // standard base64, as other hosts write it
-      if (juce::Base64::convertFromBase64(data, juce::String(state))) instance->setStateInformation(data.getData(), (int)data.getDataSize());
+      if (!juce::Base64::convertFromBase64(data, juce::String(state))) {
+        if (why) *why = "invalid state (not base64)";
+        return nullptr;
+      }
+      // This host loads VST3 only (above): its state is the JUCE binary XML getStateInformation writes.
+      if (!juce::AudioProcessor::getXmlFromBinary(data.getData(), (int)data.getDataSize())) {
+        if (why) *why = "invalid state (not a VST3 state blob)";
+        return nullptr;
+      }
+      instance->setStateInformation(data.getData(), (int)data.getDataSize());
     }
     instance->setNonRealtime(false);
     instance->prepareToPlay(sampleRate, kMaxBlock);

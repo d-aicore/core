@@ -291,6 +291,29 @@ void checkExportSpace(const std::vector<RenderOutput>& outputs, int64_t frames, 
     }
 }
 
+// S1 (DATA priority): the refusal both export paths share (the app's RenderJobs and the CLI's
+// renderProject). A needed plugin that could not load, or that failed while rendering, refuses the whole
+// export BEFORE anything is published: the previous export is never replaced by a degraded one (the red
+// measurement showed the degraded render byte-identical to the healthy control, published as success).
+// Bypassed units are intentional silence and never refuse. The error names each plugin / track / why, so
+// the CLI answer (ok:false) and the app job (State::Failed -> describe's error) both surface the reason.
+void checkExportPlugins(const Graph& graph) {
+  const std::vector<json> missing = graph.missingNeededPlugins();
+  const std::vector<json> failed = graph.failedPlugins();
+  if (missing.empty() && failed.empty()) return;
+  std::vector<std::string> parts;
+  for (const auto& m : missing)
+    parts.push_back("plugin '" + m.value("plugin", std::string("plugin")) + "' (" + m.value("key", std::string()) +
+                    ") did not load: " + m.value("why", std::string("unknown reason")));
+  for (const auto& f : failed)
+    parts.push_back("plugin '" + f.value("plugin", std::string("plugin")) + "' (" + f.value("key", std::string()) +
+                    ") failed during the render: " + f.value("why", std::string("unknown reason")));
+  std::string msg = "Export refused: ";
+  for (size_t i = 0; i < parts.size(); ++i) msg += (i ? "; " : "") + parts[i];
+  msg += ". Nothing was published; the previous export is untouched. Fix or bypass the plugin, then export again.";
+  throw std::runtime_error(msg);
+}
+
 json RenderJobs::start(RenderJobRequest request) {
   if (request.bits != 24 && request.bits != 32) throw std::runtime_error("bits must be 24 or 32.");
   if (!(request.tailSeconds >= 0 && request.tailSeconds <= 60)) throw std::runtime_error("tailMs must be 0-60000.");
@@ -365,6 +388,9 @@ void RenderJobs::run(std::shared_ptr<Job> job) {
         for (const auto& m : graph.missingAssets()) list += (list.empty() ? "" : "; ") + m;
         throw std::runtime_error("Missing audio, nothing exported: " + list);
       }
+      // S1: a needed plugin that could not load refuses the export before it renders — a silent track
+      // must never replace the previous export (bypassed units are intentional silence, not failures).
+      checkExportPlugins(graph);
       graph.useWorkers(&workers);
       graph.preroll();  // effect latency: the song starts on sample 0 of the file
       working[f] = reserveRenderWorkingFile(r.outputs[f].path);
@@ -389,7 +415,12 @@ void RenderJobs::run(std::shared_ptr<Job> job) {
         job->progress = ((double)f + (double)(pos + n) / (double)std::max<int64_t>(1, total)) / (double)count;
       }
       // A cancelled file's writer closes when it goes out of scope; then this job's working files are removed.
-      if (!job->cancel.load()) { wav.finish(); checkExportLevel(level, r.outputs[f]); }
+      if (!job->cancel.load()) {
+        // S1: a needed plugin that failed DURING the render (exception, crash, bad audio) refuses the whole
+        // export here — before publish, so every target keeps its previous content (stems: the whole set).
+        checkExportPlugins(graph);
+        wav.finish(); checkExportLevel(level, r.outputs[f]);
+      }
     }
     if (testHooks.beforePublish) testHooks.beforePublish(job->id);
     // One transition decides between cancel and publish: Running -> Publishing here, or Running ->

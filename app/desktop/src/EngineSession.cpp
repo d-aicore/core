@@ -42,6 +42,18 @@ const char* statusText(EngineStatus status) {
   return "";
 }
 
+std::string missingPluginsNotice(const std::map<std::string, std::string>& missingPlugins) {
+  if (missingPlugins.empty()) return {};
+  std::string text = "Plugins the engine could not load (" + std::to_string(missingPlugins.size()) + "): ";
+  bool first = true;
+  for (const auto& [key, nameAndWhy] : missingPlugins) {
+    if (!first) text += "; ";
+    first = false;
+    text += nameAndWhy;  // "name: why", as the load answer gave it
+  }
+  return text;
+}
+
 EngineSession::EngineSession(Options options, doc::Document document)
     : options_(std::move(options)), document_(std::move(document)) {
   wantedProjection_ = doc::toProjection(document_);
@@ -650,6 +662,12 @@ void EngineSession::sync(std::unique_lock<std::mutex>& lock) {
     const json missing = result.value("missingAssets", json::array());
     if (!missing.empty() && missing.is_array())
       snap_.message = "Audio the engine could not load (" + std::to_string(missing.size()) + "): " + client::engineLineText(missing[0]);
+    // S2 (DATA priority): plugins that could not be loaded are announced too (name + why per plugin), not
+    // only by the disabled Open menu: the user must know which places are silent and why. Their states stay
+    // in the document (relink or replace recovers them). After the assets line: a silent plugin is the
+    // bigger problem when both happen. The window also shows this from the map (the device line overwrites
+    // the message at engine start).
+    if (!snap_.missingPlugins.empty()) snap_.message = missingPluginsNotice(snap_.missingPlugins);
   } catch (const EngineError& e) {
     lock.lock();
     if (e.kind == EngineError::Kind::Rejected) {

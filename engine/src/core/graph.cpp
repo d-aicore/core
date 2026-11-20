@@ -279,6 +279,28 @@ void clearFailedUnits() {
   g_failedCount.store(0, std::memory_order_release);
 }
 
+// S1 (DATA priority): the plugin failures an export refuses, in the {key, plugin, why} shape
+// missingPlugins() and Server::failedPlugins already use. A bypassed unit is intentional silence, not a
+// failure: its key (recorded when the chain was built; bypass never changes while a graph plays) is
+// excluded from both lists. failedPlugins reads the same processor flag the SEH/exception catch marks
+// (runPlugin) — the source engine.stats' failedPlugins reports for the live graph.
+std::vector<json> Graph::missingNeededPlugins() const {
+  std::vector<json> out;
+  for (const auto& m : missingPlugins_)
+    if (std::find(bypassedPluginKeys_.begin(), bypassedPluginKeys_.end(), m.value("key", std::string())) == bypassedPluginKeys_.end())
+      out.push_back(m);
+  return out;
+}
+std::vector<json> Graph::failedPlugins() const {
+  std::vector<json> out;
+  for (const auto& p : plugins_) {
+    if (!p.processor || !p.processor->failed()) continue;
+    if (std::find(bypassedPluginKeys_.begin(), bypassedPluginKeys_.end(), p.key) != bypassedPluginKeys_.end()) continue;
+    out.push_back({{"key", p.key}, {"plugin", p.name}, {"why", PluginProcessor::failureName(p.processor->failure())}});
+  }
+  return out;
+}
+
 
 Graph::Graph(const Project& p, double sampleRate, AssetStore* assets, PluginProvider* plugins, bool offline)
     : sampleRate_(sampleRate), bpm_(p.bpm), masterGain_(std::pow(10.0, p.masterGainDb / 20)),
@@ -304,11 +326,16 @@ Graph::Graph(const Project& p, double sampleRate, AssetStore* assets, PluginProv
     bool any = false;
     for (const auto& fx : list) {
       if (fx.value("type", "") == "plugin") {
-        auto processor = loadPlugin("fx:" + owner + ":" + fx.value("id", std::to_string(chain.size())), fx.value("plugin", json::object()));
+        const std::string key = "fx:" + owner + ":" + fx.value("id", std::to_string(chain.size()));
+        const bool bypass = fx.value("bypass", false);
+        // S1: a bypassed unit is intentional silence — its key stays out of the export refusal sets
+        // (missingNeededPlugins / failedPlugins), whether or not its plugin loads.
+        if (bypass) bypassedPluginKeys_.push_back(key);
+        auto processor = loadPlugin(key, fx.value("plugin", json::object()));
         if (!processor) continue;
         auto e = std::make_unique<PluginEffect>(sampleRate, std::move(processor), owner == "master");
         e->id = fx.value("id", "");
-        e->bypass = fx.value("bypass", false);
+        e->bypass = bypass;
         any = any || !e->bypass;
         chain.push_back(std::move(e));
         continue;

@@ -1,8 +1,14 @@
-# A plugin that crashes in processBlock must not hang an offline render (2026-11-18). The host catches the crash with
-# structured exception handling, so no destructor runs and JUCE's process lock stays held; releasing or deleting that
-# instance afterwards waited for the lock forever and `core-engine render` never ended. Here: a song with the crashing
-# test plugin on one track and the test synth on another renders to the end, exits 0, writes the file, and the synth
-# is still heard.
+# S1 (DATA priority, owner-authorized): an export whose needed plugin failed to LOAD or failed DURING the
+# render is REFUSED before anything is published — CLI ok:false + non-zero exit, the reason naming
+# plugin/track/why, and the previous export byte-identical (SHA256). A bypassed unit is intentional
+# silence, not a failure. Red measured at a9a0384 (coordinator-round2/s1-repro-notes.md, cases a-e):
+# the unfixed engine published the degraded render with exit 0 / ok:true.
+#
+# This test's former contract (2026-11-18: "a crashing plugin must not hang the render; it ends, exits 0,
+# writes the file, the synth is still heard") is INVERTED by the S1 owner contract: the export must now be
+# refused. The anti-hang guarantee is kept (TIMEOUT on every render), the crash must still really happen
+# (the host's stderr line), and a healthy green control proves the refusal is not a blanket failure.
+# The in-process twin (RenderJobs + renderProject, fake providers) is export_plugin_failure_tests.
 file(MAKE_DIRECTORY "${WORK}")
 
 # The plugin as the engine describes it ({format, id, name, file, ...}): what a song's track carries.
@@ -22,43 +28,130 @@ scan_plugin("${CRASH_PLUGIN}" crash)
 scan_plugin("${SYNTH_PLUGIN}" synth)
 
 set(note "{\"tick\": 0, \"length\": 960, \"pitch\": 60, \"velocity\": 0.8}")
-file(WRITE "${WORK}/plugin-crash.json" "{\"format\": \"core-project\", \"version\": 2, \"name\": \"plugin crash\", \"bpm\": 120,
- \"lengthTicks\": 7680, \"masterGainDb\": 0, \"tracks\": [
-  {\"id\": \"crash\", \"name\": \"Crash\", \"instrument\": \"plugin\", \"plugin\": ${crash}, \"patternTicks\": 3840, \"notes\": [${note}]},
-  {\"id\": \"synth\", \"name\": \"Synth\", \"instrument\": \"plugin\", \"plugin\": ${synth}, \"patternTicks\": 3840, \"notes\": [${note}]}]}")
+function(write_song file tracks)
+  file(WRITE "${file}" "{\"format\": \"core-project\", \"version\": 2, \"name\": \"s1 export refusal\", \"bpm\": 120,
+ \"lengthTicks\": 3840, \"masterGainDb\": 0, \"tracks\": [${tracks}]}")
+endfunction()
+set(synth_track "{\"id\": \"synth\", \"name\": \"Synth\", \"instrument\": \"plugin\", \"plugin\": ${synth}, \"patternTicks\": 3840, \"notes\": [${note}]}")
+set(crash_track "{\"id\": \"crash\", \"name\": \"Crash\", \"instrument\": \"plugin\", \"plugin\": ${crash}, \"patternTicks\": 3840, \"notes\": [${note}]}")
 
-file(REMOVE "${WORK}/plugin-crash.wav")
-# 4 s of song render in well under a second; 45 s is the hang, reported as such (ctest's own timeout is the backstop).
-execute_process(COMMAND "${ENGINE}" render "${WORK}/plugin-crash.json" "${WORK}/plugin-crash.wav"
-                OUTPUT_VARIABLE out ERROR_VARIABLE err RESULT_VARIABLE rc TIMEOUT 45)
-if(rc MATCHES "timeout")
-  message(FATAL_ERROR "core-engine render did not end within 45 s after a plugin crashed in processBlock (the engine hangs): ${err}")
-endif()
+# render <song> <out> [extra args...]: runs the CLI, returns rc/out/err; a hang is a failure, not a wait.
+function(run_render song out)
+  execute_process(COMMAND "${ENGINE}" render "${song}" "${out}" ${ARGN}
+                  OUTPUT_VARIABLE ro ERROR_VARIABLE re RESULT_VARIABLE rr TIMEOUT 45)
+  if(rr MATCHES "timeout")
+    message(FATAL_ERROR "core-engine render did not end within 45 s (the engine hangs): ${re}")
+  endif()
+  set(rc "${rr}" PARENT_SCOPE)
+  set(out_json "${ro}" PARENT_SCOPE)
+  set(err_text "${re}" PARENT_SCOPE)
+endfunction()
+function(expect_refused label target before_sha)
+  if(rc EQUAL 0)
+    message(FATAL_ERROR "${label}: the export was NOT refused (exit 0): ${out_json}")
+  endif()
+  string(JSON ok GET "${out_json}" ok)
+  if(ok)
+    message(FATAL_ERROR "${label}: the answer says ok:true although a needed plugin failed: ${out_json}")
+  endif()
+  string(JSON why GET "${out_json}" error)
+  if(NOT why)
+    message(FATAL_ERROR "${label}: the refusal has no error text: ${out_json}")
+  endif()
+  file(SHA256 "${target}" after_sha)
+  if(NOT after_sha STREQUAL before_sha)
+    message(FATAL_ERROR "${label}: the previous export was changed (${before_sha} -> ${after_sha}): ${out_json}")
+  endif()
+  if(EXISTS "${target}.part")
+    message(FATAL_ERROR "${label}: a working .part was left beside the untouched target")
+  endif()
+  set(refusal_error "${why}" PARENT_SCOPE)
+endfunction()
+
+# --- case 3 first: the healthy green control (its WAV seeds the previous exports below) ------------------------
+write_song("${WORK}/s1-healthy.json" "${synth_track}")
+file(REMOVE "${WORK}/s1-healthy.wav")
+run_render("${WORK}/s1-healthy.json" "${WORK}/s1-healthy.wav" --tail-ms 500)
 if(NOT rc EQUAL 0)
-  message(FATAL_ERROR "core-engine render exited with ${rc}: ${err}${out}")
+  message(FATAL_ERROR "case 3 (healthy control): render exited with ${rc}: ${err_text}${out_json}")
 endif()
-string(JSON ok GET "${out}" ok)
+string(JSON ok GET "${out_json}" ok)
 if(NOT ok)
-  message(FATAL_ERROR "render without ok: ${out}")
+  message(FATAL_ERROR "case 3 (healthy control): render refused a healthy song: ${out_json}")
 endif()
-string(JSON missing LENGTH "${out}" result missing)
+string(JSON missing LENGTH "${out_json}" result missing)
 if(NOT missing EQUAL 0)
-  message(FATAL_ERROR "a test plugin did not load, so nothing was tested: ${out}")
+  message(FATAL_ERROR "case 3: a test plugin did not load, so nothing was tested: ${out_json}")
 endif()
-# The crash really happened: the host says it left that instance alone.
-if(NOT err MATCHES "crashed plugin")
-  message(FATAL_ERROR "the engine's log does not say that it left a crashed plugin alone, so the crash was not tested: ${err}")
-endif()
-if(NOT EXISTS "${WORK}/plugin-crash.wav")
-  message(FATAL_ERROR "render did not write ${WORK}/plugin-crash.wav")
-endif()
-file(SIZE "${WORK}/plugin-crash.wav" size)
-if(size LESS 1000000)
-  message(FATAL_ERROR "plugin-crash.wav has ${size} bytes: expected about 1.7 MB (4 s + tail, 48 kHz, stereo, 24 bits)")
-endif()
-# The other track plays on: the synth's note is in the file (velocity 0.8 x gain 0.5 = 0.4 before the master).
-string(JSON peak GET "${out}" result peak)
+string(JSON peak GET "${out_json}" result peak)
 if(peak LESS 0.05)
-  message(FATAL_ERROR "the song is silent (peak ${peak}): the crashed plugin took the other track down")
+  message(FATAL_ERROR "case 3: the healthy song is silent (peak ${peak}): ${out_json}")
 endif()
-message(STATUS "plugin-crash.wav ${size} bytes, peak ${peak}")
+file(SHA256 "${WORK}/s1-healthy.wav" healthy_sha)
+message(STATUS "case 3 (healthy control): ok, peak ${peak}, sha256 ${healthy_sha}")
+
+# --- case 1: load failure (a needed plugin whose file does not exist) ------------------------------------------
+string(JSON ghost SET "${synth}" file "\"${WORK}/no-such-plugin.vst3/Contents/x86_64-win/no-such-plugin.vst3\"")
+string(JSON ghost SET "${ghost}" id "\"VST3-Ghost-00000000\"")
+string(JSON ghost SET "${ghost}" name "\"Ghost Missing Plugin\"")
+set(ghost_track "{\"id\": \"ghost\", \"name\": \"Ghost\", \"instrument\": \"plugin\", \"plugin\": ${ghost}, \"patternTicks\": 3840, \"notes\": [${note}]}")
+write_song("${WORK}/s1-loadfail.json" "${synth_track},${ghost_track}")
+configure_file("${WORK}/s1-healthy.wav" "${WORK}/s1-loadfail.wav" COPYONLY)
+run_render("${WORK}/s1-loadfail.json" "${WORK}/s1-loadfail.wav" --tail-ms 500)
+expect_refused("case 1 (load failure)" "${WORK}/s1-loadfail.wav" "${healthy_sha}")
+if(NOT refusal_error MATCHES "ghost" OR NOT refusal_error MATCHES "Ghost Missing Plugin")
+  message(FATAL_ERROR "case 1: the refusal does not name the plugin and track: ${refusal_error}")
+endif()
+message(STATUS "case 1 (load failure): refused, previous WAV byte-identical: ${refusal_error}")
+
+# --- case 2: crash during render (Core Test Crash, SEH access violation 0.1 s into playback) -------------------
+write_song("${WORK}/s1-crash.json" "${crash_track},${synth_track}")
+configure_file("${WORK}/s1-healthy.wav" "${WORK}/s1-crash.wav" COPYONLY)
+run_render("${WORK}/s1-crash.json" "${WORK}/s1-crash.wav" --tail-ms 500)
+expect_refused("case 2 (crash during render)" "${WORK}/s1-crash.wav" "${healthy_sha}")
+if(NOT refusal_error MATCHES "track:crash" OR NOT refusal_error MATCHES "crash")
+  message(FATAL_ERROR "case 2: the refusal does not name the crashed plugin/track/why: ${refusal_error}")
+endif()
+# The crash really happened: the host says it left that instance alone (the anti-hang proof of 2026-11-18).
+if(NOT err_text MATCHES "crashed plugin")
+  message(FATAL_ERROR "case 2: the engine's log does not say it left a crashed plugin alone, so the crash was not tested: ${err_text}")
+endif()
+message(STATUS "case 2 (crash during render): refused before publish, previous WAV byte-identical: ${refusal_error}")
+
+# --- case 4: stems — a crashed track refuses the WHOLE set ------------------------------------------------------
+configure_file("${WORK}/s1-healthy.wav" "${WORK}/s1-stems.wav" COPYONLY)
+configure_file("${WORK}/s1-healthy.wav" "${WORK}/s1-stems-crash.wav" COPYONLY)
+configure_file("${WORK}/s1-healthy.wav" "${WORK}/s1-stems-synth.wav" COPYONLY)
+run_render("${WORK}/s1-crash.json" "${WORK}/s1-stems.wav" --stems --tail-ms 500)
+expect_refused("case 4 (stems mix)" "${WORK}/s1-stems.wav" "${healthy_sha}")
+file(SHA256 "${WORK}/s1-stems-crash.wav" stem_crash_sha)
+file(SHA256 "${WORK}/s1-stems-synth.wav" stem_synth_sha)
+if(NOT stem_crash_sha STREQUAL healthy_sha OR NOT stem_synth_sha STREQUAL healthy_sha)
+  message(FATAL_ERROR "case 4: a stem target was changed although the set was refused")
+endif()
+if(NOT refusal_error MATCHES "track:crash")
+  message(FATAL_ERROR "case 4: the refusal does not name the crashed track: ${refusal_error}")
+endif()
+message(STATUS "case 4 (stems): the WHOLE set refused, every pre-existing target byte-identical")
+
+# --- case 5: a bypassed crashing effect is intentional silence, not failure -------------------------------------
+set(bypass_track "{\"id\": \"synth\", \"name\": \"Synth\", \"instrument\": \"plugin\", \"plugin\": ${synth}, \"patternTicks\": 3840, \"notes\": [${note}],
+ \"effects\": [{\"type\": \"plugin\", \"id\": \"fx1\", \"plugin\": ${crash}, \"bypass\": true}]}")
+write_song("${WORK}/s1-bypass.json" "${bypass_track}")
+file(REMOVE "${WORK}/s1-bypass.wav")
+run_render("${WORK}/s1-bypass.json" "${WORK}/s1-bypass.wav" --tail-ms 500)
+if(NOT rc EQUAL 0)
+  message(FATAL_ERROR "case 5 (bypass): a bypassed effect refused the export (bypass is not failure): ${err_text}${out_json}")
+endif()
+string(JSON ok GET "${out_json}" ok)
+if(NOT ok)
+  message(FATAL_ERROR "case 5 (bypass): render refused a healthy song with a bypassed effect: ${out_json}")
+endif()
+string(JSON peak GET "${out_json}" result peak)
+if(peak LESS 0.05)
+  message(FATAL_ERROR "case 5 (bypass): the synth is silent (peak ${peak}): ${out_json}")
+endif()
+if(NOT EXISTS "${WORK}/s1-bypass.wav")
+  message(FATAL_ERROR "case 5 (bypass): the export did not write its WAV")
+endif()
+message(STATUS "case 5 (bypass): exported, peak ${peak} — bypass is intentional silence, not failure")

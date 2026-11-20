@@ -110,6 +110,13 @@ public:
   Graph(const Project& project, double sampleRate, AssetStore* assets = nullptr, PluginProvider* plugins = nullptr, bool offline = false);
   // Plugins that could not be loaded: {key, plugin name, why}. Their tracks / effects are silent.
   const std::vector<json>& missingPlugins() const { return missingPlugins_; }
+  // S1 (DATA priority): the load failures an export must refuse — missingPlugins() minus the bypassed
+  // units. A bypassed effect is intentional silence: its plugin file may be gone without changing the sound.
+  std::vector<json> missingNeededPlugins() const;
+  // S1: the loaded plugins that failed while playing (exception, crash, non-finite or runaway audio),
+  // minus the bypassed ones: {key, plugin name, why} — the shape Server::failedPlugins already reports.
+  // An export refuses before publish when this is non-empty; live playback keeps going (M3b).
+  std::vector<json> failedPlugins() const;
   const std::vector<std::string>& pluginKeys() const { return pluginKeys_; }  // the plugins this graph plays
   // ref: the song's description of it ({format, id, name, vendor, version, ...}, without its state).
   struct LoadedPlugin { std::string key, name; std::shared_ptr<PluginProcessor> processor; json ref; };
@@ -388,6 +395,7 @@ private:
   int liveMaxFrames_ = 0;
   std::vector<std::string> missingAssets_;
   std::vector<json> missingPlugins_;
+  std::vector<std::string> bypassedPluginKeys_;  // S1: plugin effects the song bypasses (intentional silence, not failure)
   std::vector<std::string> pluginKeys_;
   std::vector<LoadedPlugin> plugins_;
   std::shared_ptr<CpuMeter> cpu_;

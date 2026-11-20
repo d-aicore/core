@@ -13,6 +13,27 @@ namespace {
 
 uint32_t u32(const unsigned char* p) { return p[0] | (p[1] << 8) | (p[2] << 16) | ((uint32_t)p[3] << 24); }
 uint16_t u16(const unsigned char* p) { return (uint16_t)(p[0] | (p[1] << 8)); }
+uint64_t u64(const unsigned char* p) { return (uint64_t)u32(p) | ((uint64_t)u32(p + 4) << 32); }
+
+// Non-finite float samples are refused at import (S4, DATA priority): a NaN/Inf in an audio buffer
+// poisons every mix that touches it, and the import used to accept them raw. The checks below are
+// INTEGER bit-pattern tests on the raw WAV bytes, never isfinite/isnan or float comparisons:
+// engine/CMakeLists.txt compiles every MSVC config with /fp:fast, which assumes no NaN/Inf and may
+// optimize such guards away. Each returns the kind of defect, or nullptr for a finite sample.
+const char* float32Defect(uint32_t bits) {
+  if ((bits & 0x7F800000u) != 0x7F800000u) return nullptr;  // exponent not all ones: finite (zero and subnormals included)
+  return (bits & 0x007FFFFFu) != 0 ? "NaN" : "Infinity";
+}
+const char* float64Defect(uint64_t bits) {
+  const uint64_t mag = bits & 0x7FFFFFFFFFFFFFFFull;
+  if ((mag & 0x7FF0000000000000ull) == 0x7FF0000000000000ull)
+    return (mag & 0x000FFFFFFFFFFFFFull) != 0 ? "NaN" : "Infinity";
+  // Finite double: refuse what the (float) cast below would turn into Inf. Positive IEEE-754 doubles
+  // order monotonically as integers, so the magnitude bits compare directly against FLT_MAX's double
+  // pattern (0x47EFFFFFE0000000 = 3.4028234663852886e38) before any float math happens.
+  if (mag > 0x47EFFFFFE0000000ull) return "overflow (value exceeds float range)";
+  return nullptr;
+}
 
 std::filesystem::path utf8Path(const std::string& s) {
   return std::filesystem::path(std::u8string(reinterpret_cast<const char8_t*>(s.data()), s.size()));
@@ -126,6 +147,17 @@ AudioData readWav(const std::string& path, int64_t maxFrames) {
   out.L.resize((size_t)frames);
   if (h.channels == 2) out.R.resize((size_t)frames);
   std::vector<unsigned char> buf((size_t)frameBytes * 65536);
+  // The refusal names the file, the offending frame and the kind, in the same style as the header
+  // rejections above; it throws out of readWav before anything is returned, so the AssetStore never
+  // registers a file it could not read (assets.cpp inserts only after readWav succeeds).
+  const auto rejectSample = [&](int64_t frame, int channel, const char* kind) {
+    std::string msg = path + ": invalid float sample at frame " + std::to_string(frame);
+    if (h.channels == 2) msg += channel == 0 ? " (left)" : " (right)";
+    msg += ": ";
+    msg += kind;
+    msg += ".";
+    throw std::runtime_error(msg);
+  };
   for (int64_t at = 0; at < frames;) {
     const int64_t n = std::min<int64_t>(65536, frames - at);
     // A file cut short: the whole frames that were read are kept, then it stops (audit of main fa3b428, F07:
@@ -136,8 +168,13 @@ AudioData readWav(const std::string& path, int64_t maxFrames) {
       for (int c = 0; c < h.channels; ++c) {
         const unsigned char* p = &buf[(size_t)(i * frameBytes + c * bytes)];
         float v;
-        if (h.format == 3 && h.bits == 32) std::memcpy(&v, p, 4);
-        else if (h.format == 3) { double d; std::memcpy(&d, p, 8); v = (float)d; }
+        if (h.format == 3 && h.bits == 32) {
+          if (const char* kind = float32Defect(u32(p))) rejectSample(at + i, c, kind);
+          std::memcpy(&v, p, 4);
+        } else if (h.format == 3) {
+          if (const char* kind = float64Defect(u64(p))) rejectSample(at + i, c, kind);
+          double d; std::memcpy(&d, p, 8); v = (float)d;
+        }
         else if (h.bits == 16) v = (int16_t)u16(p) / 32768.0f;
         else if (h.bits == 24) v = (int32_t)((p[0] << 8) | (p[1] << 16) | ((uint32_t)p[2] << 24)) / 2147483648.0f;
         else v = (int32_t)u32(p) / 2147483648.0f;

@@ -149,6 +149,9 @@ RenderResult renderProject(const Project& project, double sampleRate, int blockS
   auto renderOnce = [&](int solo, std::vector<float>& L, std::vector<float>& R, EventLog* lg) {
     Graph g(project, sampleRate, assets, plugins, true);  // an export: its own plugin instances
     g.setSolo(solo, stemsWithoutMasterGain);
+    // S1 (DATA priority): a needed plugin that could not load refuses the export before it renders; the
+    // throw reaches Server::render's caller as ok:false (the CLI exits non-zero), nothing is written.
+    checkExportPlugins(g);
     g.useWorkers(&workers);
     g.preroll();  // plugin latency: the song starts on sample 0 of the file
     const int64_t total = g.songSamples() + (int64_t)(tailSeconds * sampleRate);
@@ -157,6 +160,9 @@ RenderResult renderProject(const Project& project, double sampleRate, int blockS
       int n = (int)std::min<int64_t>(blockSize, total - pos);
       g.process(L.data() + pos, R.data() + pos, n, pos, false, lg);
     }
+    // S1: a needed plugin that failed during the render refuses before any write/publish. The mix is
+    // rendered first, so a failure on any track refuses the whole stem set too (conservative, data first).
+    checkExportPlugins(g);
     out.denseEventBlocks += g.takeExtraEventPasses();
   };
   renderOnce(-1, out.L, out.R, log);

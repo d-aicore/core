@@ -31,6 +31,7 @@
 #include "bitwig.hpp"
 #include "core_plugins.hpp"
 #include "role_tools.hpp"
+#include "plugin_refs.hpp"
 
 namespace core::app {
 
@@ -3956,6 +3957,27 @@ void MainComponent::scanPlugins() {
     if (self == nullptr) return;
     notice_ = u8("Plugins: ") + juce::String(found) + u8(" found") +
               (failed ? u8(", ") + juce::String(failed) + u8(" with problems (set aside)") : juce::String()) + ".";
+    // S2 (DATA priority): the scan is in — relink the song's references that identify the same plugin on this
+    // computer (format+name+uid; the state and automation stay). What the plugins hold now goes into the
+    // document first, so the relink never drops unsaved edits. No match, or two copies: left as they are
+    // (missing, announced, recoverable — the user picks). One undo step brings the old references back.
+    {
+      std::vector<json> scanned = plugins_->instruments();
+      const auto effects = plugins_->effects();
+      scanned.insert(scanned.end(), effects.begin(), effects.end());
+      doc::Document probe = history_.current();
+      if (!scanned.empty() && doc::relinkPlugins(probe, scanned) > 0) {
+        fetchPluginStates();
+        doc::Document relinked = history_.current();
+        const int n = doc::relinkPlugins(relinked, scanned);
+        if (n > 0) {
+          history_.commit(relinked, "Relink plugins");
+          documentChanged(false);
+          notice_ = u8("Relinked ") + juce::String(n) + u8(" plugin reference(s) to this computer's plugins (state and automation kept).");
+          logLine(notice_);
+        }
+      }
+    }
     if (showPlugins_) refreshInstalledCards();
     menuItemsChanged();
     repaint();
@@ -4081,6 +4103,22 @@ void MainComponent::open() {
         session_->newSong(); session_->releasePlugins();
         missing_.clear();
         session_->setAssetRoot(projectDir(), false);
+        // S2 (DATA priority): a song from another computer points at plugin files this one does not have. The
+        // catalog (the last scan) may already identify the same plugins (format+name+uid): relink the
+        // references before the first load, so they play with their state and automation. No match, or two
+        // copies: left as they are — the load announces them missing, and a rescan relinks what it can. No
+        // live-state fetch here: the document just came from disk, and the engine may still hold the previous
+        // song's plugins (releasePlugins is on its way). One undo step brings the old references back.
+        {
+          std::vector<json> scanned = plugins_->instruments();
+          const auto effects = plugins_->effects();
+          scanned.insert(scanned.end(), effects.begin(), effects.end());
+          doc::Document relinked = history_.current();
+          if (const int n = doc::relinkPlugins(relinked, scanned)) {
+            history_.commit(relinked, "Relink plugins");
+            logLine("Relinked " + juce::String(n) + " plugin reference(s) to this computer's plugins (state and automation kept)");
+          }
+        }
         documentLoaded();
         documentChanged(true);
         notice_ = r.imported ? u8("Imported from ") + f.getFileName() + u8(": save it under a new name (the original is not changed).")
@@ -6723,7 +6761,11 @@ void MainComponent::timerCallback() {
   const bool refused = snap_.status == EngineStatus::Diverged;
   if (revertAccepted_.isVisible() != refused) { revertAccepted_.setVisible(refused); resized(); }
   revertAccepted_.setEnabled(snap_.hasAcceptedDocument);
-  message_.setText(refused ? u8(snap_.message) : (notice_.isNotEmpty() ? notice_ : u8(snap_.message)), juce::dontSendNotification);
+  // S2 (DATA priority): a song whose plugins could not load says so (name + why per plugin) until they are
+  // back — from the map, which survives the device line that overwrites snap_.message at engine start, and
+  // ahead of the transient notices, which would hide it. A refused document still speaks first.
+  const juce::String missingNotice = u8(missingPluginsNotice(snap_.missingPlugins));
+  message_.setText(refused ? u8(snap_.message) : (missingNotice.isNotEmpty() ? missingNotice : (notice_.isNotEmpty() ? notice_ : u8(snap_.message))), juce::dontSendNotification);
   const bool alive = snap_.status == EngineStatus::Ready || snap_.status == EngineStatus::Syncing;
   play_.setEnabled(alive);
   play_.setToggleState(snap_.playing, juce::dontSendNotification);
