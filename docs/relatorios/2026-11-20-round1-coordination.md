@@ -351,3 +351,30 @@ Auscultadores (USB-C Audio), 48 kHz, listenDb -15 + ear guard ON, matriz complet
    reproduzíveis a partir do SHA + receitas arquivadas. Lição: builds out-of-tree acumulam-se
    (~288 GB em D:\Core-build de muitas rondas); limpeza periódica das árvores superseded é
    manutenção legítima (não é limpeza de código/dados/história, AGENTS.md).
+
+## Addendum datado (2026-11-20 ~13:15) — COMMIT sob D116 + version==sha + push bloqueado
+
+O dono autorizou o commit e a atualização do ESTADO (D116: «acaba o que tem feito para fazer commit» +
+«update ao estado… proximo agente… tem de saber tudo»). Executado:
+
+- **5 commits em `main`** (exceto trabalho de outras sessões):
+  - `0d7d8ce` Build: ENV-01 sanitizer wiring + S11 patch JUCE D113 + `ci/review-env` (tooling no repo).
+  - `587bf5b` Data: S1 export refusal + S4 WAV float + S5 installer samples + S2/S3 plugin state (+ regressões).
+  - `234f956` Engine: S6 M5 bit-exact + watchdog + S7 RT probe + S9 mute/block + timing/PDC (+ registos).
+  - `aacc6d1` Docs: 17 relatórios + evidência verbatim + índice (README parcial: só as linhas desta ronda).
+  - `480c4b1` Ledger: ESTADO D115/D116 + estado medido + inventário de testes com finalidade + handover.
+- **HEAD = `480c4b1969dd5db33838a30523ae9efe478c83fc`**.
+- **version==sha PROVADO**: com as 2 linhas README de outra sessão temporariamente em stash (etiquetado,
+  restauradas depois), `ci/gate.ps1 -Build gate-final` (merge) → **VERDE 29/29**, `core-engine --version` =
+  **`0.7.0+480c4b1969` == HEAD, sem `.modified`**. Desktop 1/1 provado no gate-final anterior. A porta
+  `rt_strict` (fora de merge) continua vermelha por design (decisão do dono dos locks RT).
+- **Push BLOQUEADO por autenticação GitHub** (`Invalid username or token`, password auth não suportada).
+  Sem token configurado; AGENTS.md proíbe tokens novos para agentes. **Os commits estão locais, prontos;
+  o push precisa das credenciais do dono** (ou que ele faça push). `main` está 5 commits à frente de
+  `origin/main`.
+- **Preservado por commitar (outras sessões / pré-existente)**: 2 linhas README 17/11 (Plano interface /
+  Teste real) + relatórios/evidência 17/11; `.qoderignore`, `environment.yml`, `vc140.pdb` (artefacto de
+  build). O stash temporário do gate foi restaurado (pop); o stash@{0} não-relacionado (flawless-crash) intacto.
+- **ESTADO atualizado** pelo coordenador sob D116 (dispensa escrivão-only nesta entrega): bloco «Ronda S de
+  2026-11-20» com entregas, inventário de testes + finalidade, defeitos descobertos (propostos), decisões
+  pendentes, ambiente/reprodução e ponto de retoma. O próximo agente tem tudo.
